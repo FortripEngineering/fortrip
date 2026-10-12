@@ -1,0 +1,31 @@
+{
+  "name": "@fortrip/huizhi",
+  "version": "0.1.0",
+  "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
+  "type": "module",
+  "bin": {
+    "fortrip": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "packageManager": "pnpm@11.21.0"
+}
