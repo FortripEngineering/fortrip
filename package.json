@@ -1,5 +1,5 @@
 {
-  "name": "@fortrip/huizhi",
+  "name": "@fortrip/cli",
   "version": "0.1.0",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "type": "module",

@@ -1,11 +1,11 @@
 # fortrip-cli
 
 Search, price and book Fortrip hotels from the terminal or an AI agent. The
-npm package is `@fortrip/huizhi`; the command is `fortrip`.
+npm package is `@fortrip/cli`; the command is `fortrip`.
 
 ```bash
-npx @fortrip/huizhi login          # sign in through the browser
-npx @fortrip/huizhi search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
+npx @fortrip/cli login          # sign in through the browser
+npx @fortrip/cli search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
 ```
 
 Requires Node.js 22 or newer. No runtime dependencies.
@@ -17,13 +17,13 @@ Requires Node.js 22 or newer. No runtime dependencies.
 | `login [--no-browser]` | Device-code login: prints a code, opens `/cli/authorize`, waits for you to approve |
 | `logout` | Revokes the saved token on the server and deletes it locally |
 | `whoami` | The signed-in account |
-| `search` | `POST /api/huizhi/search` — hotels with indicative prices |
-| `hotel <hotelId> [--with-rooms]` | `GET /api/huizhi/hotels/{id}` — static detail |
-| `rates` | `POST /api/huizhi/rates` — live rooms and rates |
-| `book` | `POST /api/huizhi/bookings` — order + Stripe payment link |
+| `search` | Hotels with indicative prices |
+| `hotel <hotelId> [--with-rooms]` | Static hotel detail |
+| `rates` | Live rooms and rates |
+| `book` | Order + Stripe payment link |
 
 Run `fortrip --help` for every flag. `search`, `rates` and `book` also accept
-`--body '<json>'` or `--body @file.json` with the raw API request body; flags
+`--body '<json>'` or `--body @file.json` with the raw request body; flags
 override its fields.
 
 Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:

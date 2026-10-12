@@ -1,12 +1,12 @@
 ---
 name: fortrip-hotels
-description: Search hotels, compare live room rates and create a hotel booking with a payment link through Fortrip (Huizhi supplier inventory). Use when the user wants to find, price or book a hotel stay for specific dates, or asks for a hotel payment link.
+description: Search hotels, compare live room rates and create a hotel booking with a payment link through Fortrip. Use when the user wants to find, price or book a hotel stay for specific dates, or asks for a hotel payment link.
 ---
 
 # Fortrip hotels
 
-Fortrip sells hotel rooms from the Huizhi supplier at supplier net prices. The
-`fortrip` CLI (npm package `@fortrip/huizhi`) calls the Fortrip API as the
+Fortrip sells hotel rooms at supplier net prices. The
+`fortrip` CLI (npm package `@fortrip/cli`) calls the Fortrip API as the
 signed-in user and prints JSON.
 
 ## When to use
@@ -21,14 +21,14 @@ Not for flights, activities, or changing/cancelling an existing booking.
 
 ## Setup
 
-Run commands with `npx -y @fortrip/huizhi <command>` (or `fortrip <command>`
+Run commands with `npx -y @fortrip/cli <command>` (or `fortrip <command>`
 if installed globally).
 
 If any command exits with code **3** (not logged in, or the token was revoked),
 ask the user to run this in their own terminal, then retry:
 
 ```bash
-npx @fortrip/huizhi login
+npx @fortrip/cli login
 ```
 
 It opens a browser page where they sign in to Fortrip and confirm a code that
