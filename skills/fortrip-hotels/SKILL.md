@@ -6,7 +6,7 @@ description: Search hotels, compare live room rates and create a hotel booking w
 # Fortrip hotels
 
 Fortrip sells hotel rooms at supplier net prices. The
-`fortrip` CLI (npm package `@fortrip/cli`) calls the Fortrip API as the
+`fortrip` CLI (npm package `fortrip`) calls the Fortrip API as the
 signed-in user and prints JSON.
 
 ## When to use
@@ -21,14 +21,14 @@ Not for flights, activities, or changing/cancelling an existing booking.
 
 ## Setup
 
-Run commands with `npx -y @fortrip/cli <command>` (or `fortrip <command>`
+Run commands with `npx -y fortrip <command>` (or `fortrip <command>`
 if installed globally).
 
 If any command exits with code **3** (not logged in, or the token was revoked),
 ask the user to run this in their own terminal, then retry:
 
 ```bash
-npx @fortrip/cli login
+npx fortrip login
 ```
 
 It opens a browser page where they sign in to Fortrip and confirm a code that
