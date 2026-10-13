@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { login, logout, whoami } from "../src/auth.ts";
+import { canOpenBrowser } from "../src/browser.ts";
 import { loadStoredToken } from "../src/credentials.ts";
 import { CliError, EXIT } from "../src/errors.ts";
 
@@ -95,6 +96,40 @@ describe("login", () => {
     assert.ok(logs.some((line) => line.includes("/cli/authorize?code=BCDFGHJK")));
   });
 
+  it("keeps polling through server errors and rate limits", async () => {
+    pollScript = [
+      { status: 503, body: { success: false, error: "server_error" } },
+      { status: 429, body: { success: false, error: "rate_limited" } },
+      { status: 400, body: { success: false, error: "authorization_pending" } },
+      { status: 200, body: { success: true, data: { accessToken: TOKEN } } },
+    ];
+    await runLogin();
+
+    assert.equal(await loadStoredToken(apiUrl), TOKEN);
+    assert.equal(logs.filter((line) => line.includes("still trying")).length, 1);
+    assert.ok(logs.some((line) => line.startsWith("Reconnected")));
+    assert.equal(logs.at(-1), "Logged in as a@b.c.");
+  });
+
+  it("says the browser opened only when it did", async () => {
+    pollScript = [{ status: 200, body: { success: true, data: { accessToken: TOKEN } } }];
+    const opened: string[] = [];
+    await login({
+      apiUrl,
+      openBrowser: true,
+      log: (line) => logs.push(line),
+      wait: async () => {},
+      launch: async (url) => {
+        opened.push(url);
+        return true;
+      },
+    });
+
+    assert.deepEqual(opened, [`${apiUrl}/cli/authorize?code=BCDFGHJK`]);
+    assert.ok(logs.some((line) => line.startsWith("Opened ")));
+    assert.ok(!logs.some((line) => line.startsWith("Open this link")));
+  });
+
   it("stops on access_denied without saving anything", async () => {
     pollScript = [{ status: 400, body: { success: false, error: "access_denied" } }];
     await assert.rejects(runLogin(), (error) => {
@@ -103,6 +138,15 @@ describe("login", () => {
       return true;
     });
     assert.equal(await loadStoredToken(apiUrl), null);
+  });
+});
+
+describe("canOpenBrowser", () => {
+  it("skips SSH sessions and display-less Linux", () => {
+    assert.equal(canOpenBrowser({}, "darwin"), true);
+    assert.equal(canOpenBrowser({ SSH_CONNECTION: "1 2 3 4" }, "darwin"), false);
+    assert.equal(canOpenBrowser({}, "linux"), false);
+    assert.equal(canOpenBrowser({ WAYLAND_DISPLAY: "wayland-0" }, "linux"), true);
   });
 });
 
