@@ -1,11 +1,11 @@
 # fortrip-cli
 
 Search, price and book Fortrip hotels from the terminal or an AI agent. The
-npm package is `@fortrip/cli`; the command is `fortrip`.
+The npm package and the command are both `fortrip`.
 
 ```bash
-npx @fortrip/cli login          # sign in through the browser
-npx @fortrip/cli search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
+npx fortrip login          # sign in through the browser
+npx fortrip search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
 ```
 
 Requires Node.js 22 or newer. No runtime dependencies.
