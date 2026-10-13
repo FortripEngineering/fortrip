@@ -13,6 +13,7 @@ import { CliError, EXIT } from "../src/errors.ts";
 /** A fake Fortrip API whose token endpoint replays `pollScript`. */
 let pollScript: Array<{ status: number; body: unknown }>;
 let revoked = false;
+let deviceStartBody: unknown;
 const TOKEN = `fth_${"x".repeat(43)}`;
 let server: Server;
 let apiUrl: string;
@@ -25,18 +26,27 @@ before(async () => {
     };
     const authorized = req.headers.authorization === `Bearer ${TOKEN}` && !revoked;
     switch (`${req.method} ${req.url}`) {
-      case "POST /api/cli/auth/device":
-        return send(200, {
-          success: true,
-          data: {
-            deviceCode: "dc",
-            userCode: "BCDF-GHJK",
-            verificationUri: `${apiUrl}/cli/authorize`,
-            verificationUriComplete: `${apiUrl}/cli/authorize?code=BCDFGHJK`,
-            interval: 5,
-            expiresIn: 600,
-          },
+      case "POST /api/cli/auth/device": {
+        let raw = "";
+        req.on("data", (chunk) => {
+          raw += chunk;
         });
+        req.on("end", () => {
+          deviceStartBody = JSON.parse(raw);
+          send(200, {
+            success: true,
+            data: {
+              deviceCode: "dc",
+              userCode: "BCDF-GHJK",
+              verificationUri: `${apiUrl}/cli/authorize`,
+              verificationUriComplete: `${apiUrl}/cli/authorize?code=BCDFGHJK`,
+              interval: 5,
+              expiresIn: 600,
+            },
+          });
+        });
+        return;
+      }
       case "POST /api/cli/auth/token": {
         const next = pollScript.shift() ?? { status: 400, body: { error: "expired_token" } };
         return send(next.status, next.body);
@@ -93,6 +103,7 @@ describe("login", () => {
     assert.equal(await loadStoredToken(apiUrl), TOKEN);
     assert.ok(logs.some((line) => line.includes("BCDF-GHJK")));
     assert.ok(logs.some((line) => line.includes("/cli/authorize?code=BCDFGHJK")));
+    assert.equal((deviceStartBody as { platform?: string }).platform, process.platform);
   });
 
   it("stops on access_denied without saving anything", async () => {

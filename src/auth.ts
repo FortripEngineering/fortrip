@@ -47,7 +47,7 @@ export async function login({
   const start = unwrap(
     await request(apiUrl, "/api/cli/auth/device", {
       method: "POST",
-      body: { label: deviceLabel() },
+      body: { label: deviceLabel(), platform: process.platform },
     }),
   ) as DeviceStart;
 
