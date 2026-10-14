@@ -1,10 +1,6 @@
 {
   "name": "fortrip",
-<<<<<<< HEAD
   "version": "0.1.2",
-=======
-  "version": "0.1.1",
->>>>>>> origin/main
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "type": "module",
   "bin": {
