@@ -53,8 +53,10 @@ Tokens don't expire; `logout` revokes them.
 
 ## Agent skill
 
+安装订酒店 skill。Install the hotel-booking skill.
+
 ```bash
-npx skills add FortripEngineering/fortrip-cli
+npx skills add fortripengineering/fortrip-cli -y
 ```
 
 [`skills/fortrip-hotels/SKILL.md`](skills/fortrip-hotels/SKILL.md) only tells
