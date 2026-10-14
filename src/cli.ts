@@ -13,6 +13,7 @@ import {
 import { login, logout, requireToken, whoami } from "./auth.ts";
 import { resolveApiUrl } from "./credentials.ts";
 import { CliError, EXIT, type ExitCode, usageError } from "./errors.ts";
+import { readGuide } from "./guide.ts";
 import { VERSION } from "./version.ts";
 
 const HELP = `fortrip ${VERSION} — search, price and book Fortrip hotels
@@ -27,6 +28,7 @@ Commands:
   hotel <hotelId>             Static hotel detail [--with-rooms]
   rates                       Live rooms and rates (CNY) for up to 15 hotels
   book                        Create an order and get a payment link
+  skill                       Print the guide for AI agents (Markdown)
 
 search:  --query <text> | --city-code <n> | --near <lat,lng,km>
          --check-in YYYY-MM-DD --check-out YYYY-MM-DD
@@ -61,6 +63,11 @@ async function run(argv: string[]): Promise<unknown> {
   }
   if (command === "--version" || command === "-v") {
     process.stdout.write(`${VERSION}\n`);
+    return undefined;
+  }
+  if (command === "skill") {
+    parse(rest, {});
+    process.stdout.write(await readGuide());
     return undefined;
   }
 
