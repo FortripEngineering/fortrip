@@ -9,6 +9,7 @@
   "files": [
     "dist",
     "skills",
+    "AGENT_GUIDE.md",
     "README.md"
   ],
   "engines": {
