@@ -23,6 +23,17 @@ describe("skill", () => {
     assert.equal(stdout, guide);
   });
 
+  it("--version reports package.json's version", async () => {
+    const { version } = JSON.parse(await readFile("package.json", "utf8"));
+    const { stdout } = await run(process.execPath, [
+      "--import",
+      "tsx",
+      "src/cli.ts",
+      "--version",
+    ]);
+    assert.equal(stdout, `${version}\n`);
+  });
+
   it("SKILL.md loads the guide from the latest CLI", async () => {
     const skill = await readFile("skills/fortrip-hotels/SKILL.md", "utf8");
     assert.match(skill, /^---\nname: fortrip-hotels\n/);
