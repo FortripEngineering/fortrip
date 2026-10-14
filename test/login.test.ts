@@ -6,14 +6,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 
-import { login, logout, whoami } from "../src/auth.ts";
-import { loadStoredToken } from "../src/credentials.ts";
+import { login, logout, requireToken, whoami } from "../src/auth.ts";
+import { loadPendingLogin, loadStoredToken } from "../src/credentials.ts";
 import { CliError, EXIT } from "../src/errors.ts";
 
 /** A fake Fortrip API whose token endpoint replays `pollScript`. */
 let pollScript: Array<{ status: number; body: unknown }>;
 let revoked = false;
 let deviceStartBody: unknown;
+let deviceStarts = 0;
 const TOKEN = `fth_${"x".repeat(43)}`;
 let server: Server;
 let apiUrl: string;
@@ -33,13 +34,14 @@ before(async () => {
         });
         req.on("end", () => {
           deviceStartBody = JSON.parse(raw);
+          deviceStarts += 1;
           send(200, {
             success: true,
             data: {
-              deviceCode: "dc",
+              deviceCode: `dc${deviceStarts}`,
               userCode: "BCDF-GHJK",
               verificationUri: `${apiUrl}/cli/authorize`,
-              verificationUriComplete: `${apiUrl}/cli/authorize?code=BCDFGHJK`,
+              verificationUriComplete: `${apiUrl}/cli/authorize?code=BCDFGHJK${deviceStarts}`,
               interval: 5,
               expiresIn: 600,
             },
@@ -74,6 +76,8 @@ beforeEach(async () => {
   process.env.XDG_CONFIG_HOME = await mkdtemp(join(tmpdir(), "fortrip-cli-"));
   delete process.env.FORTRIP_TOKEN;
   revoked = false;
+  deviceStarts = 0;
+  pollScript = [];
   waits.length = 0;
   logs.length = 0;
 });
@@ -114,6 +118,40 @@ describe("login", () => {
       return true;
     });
     assert.equal(await loadStoredToken(apiUrl), null);
+  });
+});
+
+describe("login from a command (agents)", () => {
+  function rejectsWithLoginUrl(promise: Promise<unknown>, loginUrl: string) {
+    return assert.rejects(promise, (error) => {
+      assert.ok(error instanceof CliError);
+      assert.equal(error.exitCode, EXIT.unauthenticated);
+      assert.equal(error.details.loginUrl, loginUrl);
+      assert.equal(error.details.userCode, "BCDF-GHJK");
+      assert.equal(typeof error.details.expiresInSeconds, "number");
+      return true;
+    });
+  }
+
+  it("exits 3 with loginUrl, reuses it while pending, then finishes once approved", async () => {
+    const loginUrl = `${apiUrl}/cli/authorize?code=BCDFGHJK1`;
+    await rejectsWithLoginUrl(requireToken(apiUrl), loginUrl);
+
+    pollScript = [{ status: 400, body: { success: false, error: "authorization_pending" } }];
+    await rejectsWithLoginUrl(requireToken(apiUrl), loginUrl);
+    assert.equal(deviceStarts, 1);
+
+    pollScript = [{ status: 200, body: { success: true, data: { accessToken: TOKEN } } }];
+    assert.equal(await requireToken(apiUrl), TOKEN);
+    assert.equal(await loadStoredToken(apiUrl), TOKEN);
+    assert.equal(await loadPendingLogin(apiUrl), null);
+  });
+
+  it("starts a fresh login when the pending one expired or was denied", async () => {
+    await rejectsWithLoginUrl(requireToken(apiUrl), `${apiUrl}/cli/authorize?code=BCDFGHJK1`);
+    pollScript = [{ status: 400, body: { success: false, error: "access_denied" } }];
+    await rejectsWithLoginUrl(requireToken(apiUrl), `${apiUrl}/cli/authorize?code=BCDFGHJK2`);
+    assert.equal(deviceStarts, 2);
   });
 });
 

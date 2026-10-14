@@ -24,16 +24,21 @@ Not for flights, activities, or changing/cancelling an existing booking.
 Run commands with `npx -y fortrip <command>` (or `fortrip <command>`
 if installed globally).
 
-If any command exits with code **3** (not logged in, or the token was revoked),
-ask the user to run this in their own terminal, then retry:
+When the user first asks about hotels, run `fortrip whoami` before asking
+follow-up questions, so a login can happen while they answer.
 
-```bash
-npx fortrip login
-```
+If a command exits with code **3** and stderr has `loginUrl`, show it to the
+user as a link together with `userCode`, e.g. "Sign in to Fortrip: <loginUrl>
+(code BCDF-GHJK) and tell me when you're done." When they confirm, rerun the
+same command; it finishes the login itself. Don't run `fortrip login` — it
+waits for up to 10 minutes. If the rerun gives a new `loginUrl`, the old one
+expired or was denied; show the new one.
 
-It opens a browser page where they sign in to Fortrip and confirm a code that
-matches the one in the terminal. In CI or a remote sandbox, the user can set
-`FORTRIP_TOKEN` instead. Never ask the user to paste a token into the chat.
+If exit 3 has no `loginUrl`, the saved token was revoked: run `fortrip logout`,
+then rerun the command to get a link.
+
+In CI, the user can set `FORTRIP_TOKEN` instead. Never ask the user to paste a
+token into the chat.
 
 ## Exit codes
 
@@ -42,7 +47,7 @@ matches the one in the terminal. In CI or a remote sandbox, the user can set
 | 0 | Success; JSON on stdout | Continue |
 | 1 | Other error (supplier error, rate no longer bookable, network) | Read `error` on stderr; re-run `rates` if a rate went stale |
 | 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields |
-| 3 | Not logged in | Ask the user to run `login` (above) |
+| 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
 
 ## Recommended order

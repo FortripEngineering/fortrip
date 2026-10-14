@@ -41,6 +41,10 @@ Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 - `login` saves the token to `~/.config/fortrip/credentials.json`
   (`$XDG_CONFIG_HOME` is honoured), mode `0600`. Tokens are stored per API URL,
   so a token is only ever sent to the server that issued it.
+- Without a token, any other command starts a device login and exits 3 with
+  `loginUrl` on stderr instead of waiting. Once that link is approved in the
+  browser, rerunning the command saves the token and carries on. This is how
+  AI agents sign in, since they can't sit in `login`.
 - `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes).
 - `FORTRIP_API_URL` overrides the base URL (default `https://fortrip.ai`).
   Plain `http` is only accepted for `localhost`.

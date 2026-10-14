@@ -7,9 +7,11 @@ import { beforeEach, describe, it } from "node:test";
 import {
   credentialsPath,
   deleteToken,
+  loadPendingLogin,
   loadStoredToken,
   resolveApiUrl,
   resolveToken,
+  savePendingLogin,
   saveToken,
 } from "../src/credentials.ts";
 import { CliError } from "../src/errors.ts";
@@ -51,6 +53,29 @@ describe("credentials", () => {
     await deleteToken("https://fortrip.ai", env);
     assert.equal(await resolveToken("https://fortrip.ai", env), null);
     await assert.rejects(stat(credentialsPath(env)));
+  });
+
+  it("keeps a pending login until it expires or a token replaces it", async () => {
+    const pending = {
+      deviceCode: "dc",
+      userCode: "BCDF-GHJK",
+      loginUrl: "https://fortrip.ai/cli/authorize?code=BCDFGHJK",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    };
+    await savePendingLogin("https://fortrip.ai", pending, env);
+    assert.equal((await stat(credentialsPath(env))).mode & 0o777, 0o600);
+    assert.deepEqual(await loadPendingLogin("https://fortrip.ai", env), pending);
+    assert.equal(await loadPendingLogin("http://localhost:3000", env), null);
+
+    await saveToken("https://fortrip.ai", "fth_prod", env);
+    assert.equal(await loadPendingLogin("https://fortrip.ai", env), null);
+
+    await savePendingLogin(
+      "https://fortrip.ai",
+      { ...pending, expiresAt: new Date(Date.now() - 1).toISOString() },
+      env,
+    );
+    assert.equal(await loadPendingLogin("https://fortrip.ai", env), null);
   });
 });
 
