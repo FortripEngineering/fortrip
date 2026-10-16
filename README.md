@@ -64,6 +64,12 @@ and what to show the user before handing over a payment link. The guide ships
 with the package, so a CLI release updates every installed skill. Edit
 `AGENT_GUIDE.md`, not `SKILL.md`.
 
+`fortrip skill planning` prints [`guides/planning.md`](guides/planning.md):
+what to ask, how to rank and how to present options for flexible dates,
+budgets, split stays and several destinations. Both guides are printed with
+`fortrip@latest` replaced by the running version, so an agent keeps using the
+same CLI for the whole conversation.
+
 ## Development
 
 ```bash
