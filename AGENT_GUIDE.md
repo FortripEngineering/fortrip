@@ -73,8 +73,8 @@ token into the chat.
      [--nationality CN] [--board BB] [--free-cancellation]
    ```
 
-   This call takes about 15 seconds. `totalPrice` is CNY at a fixed exchange
-   rate. Present each option with meal plan (`boardCode`: RO room only,
+   This call takes about 15 seconds. `totalPrice` is CNY at Stripe's exchange
+   rate (refreshed hourly). Present each option with meal plan (`boardCode`: RO room only,
    BB breakfast, HB half board, FB full board, AI all inclusive),
    `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
    (taxes paid at the hotel, in their own currency).
@@ -105,8 +105,9 @@ token into the chat.
    `confirmByMins`) and `payAtHotelFees`.
 2. **Explain the amount.** `rates` showed CNY, but the charge is `amount` in
    `currency` (usually USD), and the Stripe page may display the user's local
-   currency at Stripe's rate. The amount on the payment page is what will be
-   charged; the CNY figure was a reference.
+   currency at Stripe's rate. The CNY figure used a Stripe rate too, so it is
+   usually close, but the amount on the payment page is what will be charged;
+   the CNY figure was a reference.
 3. The link is for **this user only**: whoever has it can pay. Don't post it
    in shared channels, logs or tickets. It expires after about 3 hours 45
    minutes; call `book` again with the same details for a fresh one.
