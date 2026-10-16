@@ -1,0 +1,53 @@
+# Publishes to npm when a v* tag is pushed. Authenticates with npm trusted
+# publishing (OIDC): no npm token is stored in GitHub. npmjs.com must list
+# this file's name, publish.yml, as the package's trusted publisher.
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      # Node 24 ships npm 11, which trusted publishing needs (>= 11.5.1).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+
+      - name: Check the tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::${GITHUB_REF_NAME} points at a commit that is not on main"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      # prepublishOnly runs typecheck, tests and the build first.
+      - run: npm publish

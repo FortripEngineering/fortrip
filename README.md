@@ -81,3 +81,22 @@ pnpm build                               # dist/cli.js
 ```
 
 Point at a local Fortrip app with `FORTRIP_API_URL=http://localhost:3000`.
+
+## Releasing
+
+Pushing a `v*` tag publishes to npm through
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml), which signs
+in with npm trusted publishing (no npm token in GitHub).
+
+1. Bump the version in a PR and merge it into `main`:
+   `npm version minor --no-git-tag-version` (or `patch`).
+2. Tag the merged commit on `main` and push the tag:
+
+   ```bash
+   git checkout main && git pull
+   git tag v0.2.0 && git push origin v0.2.0
+   ```
+
+The workflow refuses a tag that doesn't match `package.json` or isn't on
+`main`, then runs typecheck, tests and the build before publishing. Every
+installed skill picks up the new guide on its next `npx fortrip@latest skill`.
