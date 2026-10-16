@@ -14,6 +14,9 @@ signed-in user and prints JSON.
 
 Not for flights, activities, or changing/cancelling an existing booking.
 
+For flexible dates, a budget, split stays, several destinations or "find me
+the best", also run `npx -y fortrip@latest skill planning` before searching.
+
 ## Setup
 
 Run every command as `npx -y fortrip@latest <command>`, the same version that

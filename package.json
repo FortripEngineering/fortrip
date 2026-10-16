@@ -9,6 +9,7 @@
   "files": [
     "dist",
     "skills",
+    "guides",
     "AGENT_GUIDE.md",
     "README.md"
   ],
