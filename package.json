@@ -3,6 +3,10 @@
   "version": "0.1.2",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FortripEngineering/fortrip-cli.git"
+  },
   "bin": {
     "fortrip": "dist/cli.js"
   },
