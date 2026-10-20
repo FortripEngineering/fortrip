@@ -34,11 +34,11 @@ search:  --query <text> | --city-code <n> | --near <lat,lng,km>
          --check-in YYYY-MM-DD --check-out YYYY-MM-DD
          [--star-min n] [--star-max n] [--facility <name>]... [--price-min n]
          [--price-max n] [--sort recommended|price-asc|price-desc|star-desc|distance]
-         [--page n] [--page-size n] [--currency CNY]
+         [--page n] [--page-size n] [--currency CNY|USD]
 rates:   --hotel <id>... --check-in --check-out [--rooms 1] [--adults 2]
          [--child-age n]... [--nationality CN] [--board BB]...
          [--free-cancellation] [--include-unbookable] [--max-rooms n]
-         [--currency CNY]
+         [--currency CNY|USD]
 book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
          [--rooms 1] [--adults 2] [--child-age n]...
          --guest "First Last[:roomNo]"... --contact-name <name>
@@ -48,7 +48,7 @@ book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
 search, rates and book also take --body '<json>' (or --body @file.json) with
 the raw request body; flags override its fields.
 
-search and rates show prices in --currency (ISO 4217, default CNY), converted
+search and rates show prices in --currency (CNY by default, or USD), converted
 at Stripe's rate; book still charges the currency it returns (usually USD).
 
 Output is JSON on stdout; errors are JSON on stderr.

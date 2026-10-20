@@ -120,14 +120,14 @@ describe("rates", () => {
 });
 
 describe("currency", () => {
-  const env = { FORTRIP_CURRENCY: " eur " };
+  const env = { FORTRIP_CURRENCY: " usd " };
 
   it("--currency beats --body, which beats FORTRIP_CURRENCY", () => {
-    const flag = parse(["--currency", "jpy"], RATES_OPTIONS).values;
-    assert.equal(ratesBody(flag, env).currency, "JPY");
-    const body = parse(["--body", '{"currency":"USD"}'], SEARCH_OPTIONS).values;
-    assert.equal(searchBody(body, env).currency, "USD");
-    assert.equal(searchBody(parse([], SEARCH_OPTIONS).values, env).currency, "EUR");
+    const flag = parse(["--currency", "cny"], RATES_OPTIONS).values;
+    assert.equal(ratesBody(flag, env).currency, "CNY");
+    const body = parse(["--body", '{"currency":"CNY"}'], SEARCH_OPTIONS).values;
+    assert.equal(searchBody(body, env).currency, "CNY");
+    assert.equal(searchBody(parse([], SEARCH_OPTIONS).values, env).currency, "USD");
   });
 
   it("rejects a blank --currency instead of falling back", () => {

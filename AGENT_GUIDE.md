@@ -58,9 +58,9 @@ token into the chat.
    ```
 
    Use `--near lat,lng,radiusKm` for "near X", `--city-code` when known.
-   Pass `--currency` (ISO 4217, e.g. `USD`, `EUR`, `JPY`; default `CNY`) in
-   the user's own currency, inferred from their language or location, on both
-   `search` and `rates`; `--price-min` / `--price-max` are in that currency.
+   Pass `--currency` (`CNY`, the default, or `USD`) to suit the user, inferred
+   from their language or location, on both `search` and `rates`;
+   `--price-min` / `--price-max` are in that currency.
    `--facility` names must match the catalogue exactly (e.g. `Swimming pool`,
    `Parking`), otherwise nothing matches. Prices here (`price.nightlyFrom`,
    `totalFrom`) are **indicative floors**, not quotes — say so.
@@ -80,9 +80,9 @@ token into the chat.
    ```
 
    This call takes about 15 seconds. Prices are in the response's `currency`,
-   converted at Stripe's exchange rate (refreshed hourly; `fx` says how). If
-   `fx` is `null` nothing was converted, so read `currency` rather than
-   assuming the one you asked for. Present each option with meal plan (`boardCode`: RO room only,
+   converted at Stripe's exchange rate (refreshed hourly), or a fixed fallback
+   rate when Stripe is unavailable; `fx` says which, and is `null` when
+   nothing needed converting. Present each option with meal plan (`boardCode`: RO room only,
    BB breakfast, HB half board, FB full board, AI all inclusive),
    `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
    (taxes paid at the hotel, in their own currency).
