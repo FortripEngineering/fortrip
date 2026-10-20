@@ -42,7 +42,7 @@ describe("search", () => {
       ],
       SEARCH_OPTIONS,
     );
-    assert.deepEqual(searchBody(values), {
+    assert.deepEqual(searchBody(values, {}), {
       query: "Bangkok",
       checkIn: "2026-11-10",
       checkOut: "2026-11-12",
@@ -58,7 +58,7 @@ describe("search", () => {
       ["--body", '{"query":"Tokyo","pageSize":5}', "--query", "Osaka"],
       SEARCH_OPTIONS,
     );
-    assert.deepEqual(searchBody(values), { query: "Osaka", pageSize: 5 });
+    assert.deepEqual(searchBody(values, {}), { query: "Osaka", pageSize: 5 });
   });
 
   it("rejects bad numbers, a bad --near and non-object bodies", () => {
@@ -98,7 +98,7 @@ describe("rates", () => {
       ],
       RATES_OPTIONS,
     );
-    assert.deepEqual(ratesBody(values), {
+    assert.deepEqual(ratesBody(values, {}), {
       hotelIds: [266000, 266001, 3],
       checkIn: "2026-11-10",
       checkOut: "2026-11-12",
