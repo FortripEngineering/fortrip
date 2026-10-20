@@ -71,6 +71,7 @@ function list(value: unknown): string[] | undefined {
  *  with none of them the API answers in CNY. */
 function currency(values: Values, base: Body, env: NodeJS.ProcessEnv) {
   const flag = str(values.currency)?.trim().toUpperCase();
+  if (flag === "") throw usageError("--currency must not be empty");
   if (flag) return flag;
   if (base.currency !== undefined) return undefined;
   return env.FORTRIP_CURRENCY?.trim().toUpperCase() || undefined;

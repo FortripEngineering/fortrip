@@ -130,6 +130,13 @@ describe("currency", () => {
     assert.equal(searchBody(parse([], SEARCH_OPTIONS).values, env).currency, "EUR");
   });
 
+  it("rejects a blank --currency instead of falling back", () => {
+    for (const blank of ["", "  "]) {
+      const { values } = parse(["--currency", blank], RATES_OPTIONS);
+      assert.throws(() => ratesBody(values, env), isUsage);
+    }
+  });
+
   it("is left to the API default when nothing sets it", () => {
     assert.equal("currency" in ratesBody(parse([], RATES_OPTIONS).values, {}), false);
     assert.equal(
