@@ -48,8 +48,10 @@ book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
 search, rates and book also take --body '<json>' (or --body @file.json) with
 the raw request body; flags override its fields.
 
-search and rates show prices in --currency (CNY by default, or USD), converted
-at Stripe's rate; book still charges the currency it returns (usually USD).
+search and rates ask for prices in --currency (CNY by default, or USD),
+converted at Stripe's rate or a fixed fallback rate; the response's currency
+and fx fields say which. book still charges the currency it returns (usually
+USD).
 
 Output is JSON on stdout; errors are JSON on stderr.
 Exit codes: 0 ok, 1 error, 2 invalid arguments, 3 not logged in, 4 rate limited.
