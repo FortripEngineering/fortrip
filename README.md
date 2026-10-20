@@ -48,6 +48,9 @@ Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 - `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes).
 - `FORTRIP_API_URL` overrides the base URL (default `https://fortrip.ai`).
   Plain `http` is only accepted for `localhost`.
+- `FORTRIP_CURRENCY` sets the default `--currency` for `search` and `rates`
+  (ISO 4217, e.g. `USD`; the API defaults to `CNY`). Display only: `book`
+  charges the currency it returns.
 
 Tokens don't expire; `logout` revokes them.
 

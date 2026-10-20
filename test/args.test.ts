@@ -119,6 +119,26 @@ describe("rates", () => {
   });
 });
 
+describe("currency", () => {
+  const env = { FORTRIP_CURRENCY: " eur " };
+
+  it("--currency beats --body, which beats FORTRIP_CURRENCY", () => {
+    const flag = parse(["--currency", "jpy"], RATES_OPTIONS).values;
+    assert.equal(ratesBody(flag, env).currency, "JPY");
+    const body = parse(["--body", '{"currency":"USD"}'], SEARCH_OPTIONS).values;
+    assert.equal(searchBody(body, env).currency, "USD");
+    assert.equal(searchBody(parse([], SEARCH_OPTIONS).values, env).currency, "EUR");
+  });
+
+  it("is left to the API default when nothing sets it", () => {
+    assert.equal("currency" in ratesBody(parse([], RATES_OPTIONS).values, {}), false);
+    assert.equal(
+      "currency" in searchBody(parse([], SEARCH_OPTIONS).values, { FORTRIP_CURRENCY: " " }),
+      false,
+    );
+  });
+});
+
 describe("hotel", () => {
   it("builds the detail path", () => {
     const parsed = parse(["266000", "--with-rooms"], HOTEL_OPTIONS);
