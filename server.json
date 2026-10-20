@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.FortripEngineering/fortrip-hotels",
+  "title": "Fortrip Hotels",
+  "description": "Search hotels worldwide, compare live room rates, and create booking payment links.",
+  "version": "1.0.1",
+  "websiteUrl": "https://fortrip.ai",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://fortrip.ai/api/mcp"
+    }
+  ]
+}
