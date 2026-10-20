@@ -7,6 +7,7 @@ type Body = Record<string, unknown>;
 type Values = Record<string, string | boolean | string[] | undefined>;
 
 const BODY_OPTION = { body: { type: "string" } } as const;
+const CURRENCY_OPTION = { currency: { type: "string" } } as const;
 
 /** Wraps `util.parseArgs` so unknown flags and missing values exit 2. */
 export function parse<const O extends ParseArgsOptionsConfig>(
@@ -66,6 +67,16 @@ function list(value: unknown): string[] | undefined {
   return Array.isArray(value) && value.length ? value : undefined;
 }
 
+/** `--currency` beats a `--body` currency, which beats `FORTRIP_CURRENCY`;
+ *  with none of them the API answers in CNY. */
+function currency(values: Values, base: Body, env: NodeJS.ProcessEnv) {
+  const flag = str(values.currency)?.trim().toUpperCase();
+  if (flag === "") throw usageError("--currency must not be empty");
+  if (flag) return flag;
+  if (base.currency !== undefined) return undefined;
+  return env.FORTRIP_CURRENCY?.trim().toUpperCase() || undefined;
+}
+
 /** Drops undefined so flags left out don't erase `--body` fields. */
 function merge(base: Body, overrides: Body): Body {
   const body = { ...base };
@@ -77,6 +88,7 @@ function merge(base: Body, overrides: Body): Body {
 
 export const SEARCH_OPTIONS = {
   ...BODY_OPTION,
+  ...CURRENCY_OPTION,
   query: { type: "string", short: "q" },
   "city-code": { type: "string" },
   near: { type: "string" },
@@ -92,7 +104,11 @@ export const SEARCH_OPTIONS = {
   "page-size": { type: "string" },
 } as const;
 
-export function searchBody(values: Values): Body {
+export function searchBody(
+  values: Values,
+  env: NodeJS.ProcessEnv = process.env,
+): Body {
+  const base = baseBody(values);
   let near: Body | undefined;
   const nearRaw = str(values.near);
   if (nearRaw !== undefined) {
@@ -106,7 +122,7 @@ export function searchBody(values: Values): Body {
       radiusKm: num("near", radiusKm),
     };
   }
-  return merge(baseBody(values), {
+  return merge(base, {
     query: str(values.query),
     cityCode: num("city-code", str(values["city-code"])),
     near,
@@ -120,6 +136,7 @@ export function searchBody(values: Values): Body {
     sortBy: str(values.sort),
     page: num("page", str(values.page)),
     pageSize: num("page-size", str(values["page-size"])),
+    currency: currency(values, base, env),
   });
 }
 
@@ -155,6 +172,7 @@ function stayFields(values: Values, base: Body): Body {
 
 export const RATES_OPTIONS = {
   ...BODY_OPTION,
+  ...CURRENCY_OPTION,
   ...STAY_OPTIONS,
   hotel: { type: "string", multiple: true },
   nationality: { type: "string" },
@@ -164,7 +182,10 @@ export const RATES_OPTIONS = {
   "max-rooms": { type: "string" },
 } as const;
 
-export function ratesBody(values: Values): Body {
+export function ratesBody(
+  values: Values,
+  env: NodeJS.ProcessEnv = process.env,
+): Body {
   const base = baseBody(values);
   return merge(base, {
     hotelIds: nums("hotel", list(values.hotel)),
@@ -176,6 +197,7 @@ export function ratesBody(values: Values): Body {
     freeCancellation: values["free-cancellation"] ? true : undefined,
     bookableOnly: values["include-unbookable"] ? false : undefined,
     maxRoomsPerHotel: num("max-rooms", str(values["max-rooms"])),
+    currency: currency(values, base, env),
   });
 }
 

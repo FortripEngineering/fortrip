@@ -58,9 +58,12 @@ token into the chat.
    ```
 
    Use `--near lat,lng,radiusKm` for "near X", `--city-code` when known.
+   Pass `--currency` (`CNY`, the default, or `USD`) to suit the user, inferred
+   from their language or location, on both `search` and `rates`;
+   `--price-min` / `--price-max` are in that currency.
    `--facility` names must match the catalogue exactly (e.g. `Swimming pool`,
    `Parking`), otherwise nothing matches. Prices here (`price.nightlyFrom`,
-   `totalFrom`, CNY) are **indicative floors**, not quotes — say so.
+   `totalFrom`) are **indicative floors**, not quotes — say so.
 
 2. **Hotel detail** (optional) — description, policies, facilities, photos:
 
@@ -73,11 +76,13 @@ token into the chat.
    ```bash
    fortrip rates --hotel 266000 --hotel 266001 --check-in 2026-11-10 \
      --check-out 2026-11-12 --rooms 1 --adults 2 [--child-age 6] \
-     [--nationality CN] [--board BB] [--free-cancellation]
+     [--nationality CN] [--board BB] [--free-cancellation] [--currency USD]
    ```
 
-   This call takes about 15 seconds. `totalPrice` is CNY at Stripe's exchange
-   rate (refreshed hourly). Present each option with meal plan (`boardCode`: RO room only,
+   This call takes about 15 seconds. Prices are in the response's `currency`,
+   converted at Stripe's exchange rate (refreshed hourly), or a fixed fallback
+   rate when Stripe is unavailable; `fx` says which, and is `null` when
+   nothing needed converting. Present each option with meal plan (`boardCode`: RO room only,
    BB breakfast, HB half board, FB full board, AI all inclusive),
    `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
    (taxes paid at the hotel, in their own currency).
@@ -106,11 +111,11 @@ token into the chat.
    (`boardCode`, `boardCount`), cancellation (`refundable`, `freeCancelUntil`,
    the `cancellation` ladder), confirmation (`isInstantConfirm`,
    `confirmByMins`) and `payAtHotelFees`.
-2. **Explain the amount.** `rates` showed CNY, but the charge is `amount` in
-   `currency` (usually USD), and the Stripe page may display the user's local
-   currency at Stripe's rate. The CNY figure used a Stripe rate too, so it is
-   usually close, but the amount on the payment page is what will be charged;
-   the CNY figure was a reference.
+2. **Explain the amount.** `rates` showed a converted figure, but the charge
+   is `amount` in `currency` (usually USD), and the Stripe page may display
+   the user's local currency at Stripe's rate. The `rates` figure used a
+   Stripe rate too, so it is usually close, but the amount on the payment page
+   is what will be charged; the `rates` figure was a reference.
 3. The link is for **this user only**: whoever has it can pay. Don't post it
    in shared channels, logs or tickets. It expires after about 3 hours 45
    minutes; call `book` again with the same details for a fresh one.

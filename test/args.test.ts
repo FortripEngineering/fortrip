@@ -42,7 +42,7 @@ describe("search", () => {
       ],
       SEARCH_OPTIONS,
     );
-    assert.deepEqual(searchBody(values), {
+    assert.deepEqual(searchBody(values, {}), {
       query: "Bangkok",
       checkIn: "2026-11-10",
       checkOut: "2026-11-12",
@@ -58,7 +58,7 @@ describe("search", () => {
       ["--body", '{"query":"Tokyo","pageSize":5}', "--query", "Osaka"],
       SEARCH_OPTIONS,
     );
-    assert.deepEqual(searchBody(values), { query: "Osaka", pageSize: 5 });
+    assert.deepEqual(searchBody(values, {}), { query: "Osaka", pageSize: 5 });
   });
 
   it("rejects bad numbers, a bad --near and non-object bodies", () => {
@@ -98,7 +98,7 @@ describe("rates", () => {
       ],
       RATES_OPTIONS,
     );
-    assert.deepEqual(ratesBody(values), {
+    assert.deepEqual(ratesBody(values, {}), {
       hotelIds: [266000, 266001, 3],
       checkIn: "2026-11-10",
       checkOut: "2026-11-12",
@@ -116,6 +116,33 @@ describe("rates", () => {
     const body = ratesBody(values);
     assert.equal(body.rooms, 2);
     assert.equal(body.adults, 3);
+  });
+});
+
+describe("currency", () => {
+  const env = { FORTRIP_CURRENCY: " usd " };
+
+  it("--currency beats --body, which beats FORTRIP_CURRENCY", () => {
+    const flag = parse(["--currency", "cny"], RATES_OPTIONS).values;
+    assert.equal(ratesBody(flag, env).currency, "CNY");
+    const body = parse(["--body", '{"currency":"CNY"}'], SEARCH_OPTIONS).values;
+    assert.equal(searchBody(body, env).currency, "CNY");
+    assert.equal(searchBody(parse([], SEARCH_OPTIONS).values, env).currency, "USD");
+  });
+
+  it("rejects a blank --currency instead of falling back", () => {
+    for (const blank of ["", "  "]) {
+      const { values } = parse(["--currency", blank], RATES_OPTIONS);
+      assert.throws(() => ratesBody(values, env), isUsage);
+    }
+  });
+
+  it("is left to the API default when nothing sets it", () => {
+    assert.equal("currency" in ratesBody(parse([], RATES_OPTIONS).values, {}), false);
+    assert.equal(
+      "currency" in searchBody(parse([], SEARCH_OPTIONS).values, { FORTRIP_CURRENCY: " " }),
+      false,
+    );
   });
 });
 

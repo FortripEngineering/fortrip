@@ -24,9 +24,9 @@ Commands:
   login [--no-browser]        Sign in through the browser (device code)
   logout                      Revoke and forget the saved token
   whoami                      Show the signed-in account
-  search                      Find hotels with indicative prices (CNY)
+  search                      Find hotels with indicative prices
   hotel <hotelId>             Static hotel detail [--with-rooms]
-  rates                       Live rooms and rates (CNY) for up to 15 hotels
+  rates                       Live rooms and rates for up to 15 hotels
   book                        Create an order and get a payment link
   skill [planning]            Print the guide for AI agents (Markdown)
 
@@ -34,10 +34,11 @@ search:  --query <text> | --city-code <n> | --near <lat,lng,km>
          --check-in YYYY-MM-DD --check-out YYYY-MM-DD
          [--star-min n] [--star-max n] [--facility <name>]... [--price-min n]
          [--price-max n] [--sort recommended|price-asc|price-desc|star-desc|distance]
-         [--page n] [--page-size n]
+         [--page n] [--page-size n] [--currency CNY|USD]
 rates:   --hotel <id>... --check-in --check-out [--rooms 1] [--adults 2]
          [--child-age n]... [--nationality CN] [--board BB]...
          [--free-cancellation] [--include-unbookable] [--max-rooms n]
+         [--currency CNY|USD]
 book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
          [--rooms 1] [--adults 2] [--child-age n]...
          --guest "First Last[:roomNo]"... --contact-name <name>
@@ -47,12 +48,18 @@ book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
 search, rates and book also take --body '<json>' (or --body @file.json) with
 the raw request body; flags override its fields.
 
+search and rates ask for prices in --currency (CNY by default, or USD),
+converted at Stripe's rate or a fixed fallback rate; the response's currency
+and fx fields say which. book still charges the currency it returns (usually
+USD).
+
 Output is JSON on stdout; errors are JSON on stderr.
 Exit codes: 0 ok, 1 error, 2 invalid arguments, 3 not logged in, 4 rate limited.
 
 Environment:
   FORTRIP_TOKEN    Use this token instead of the saved login (CI, sandboxes)
   FORTRIP_API_URL  API base URL (default https://fortrip.ai)
+  FORTRIP_CURRENCY Default --currency for search and rates
 `;
 
 async function run(argv: string[]): Promise<unknown> {
