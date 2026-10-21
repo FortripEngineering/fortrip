@@ -108,7 +108,9 @@ Point at a local Fortrip app with `FORTRIP_API_URL=http://localhost:3000`.
 
 Pushing a `v*` tag publishes to npm through
 [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which signs
-in with npm trusted publishing (no npm token in GitHub).
+in with npm trusted publishing (no npm token in GitHub). Pull requests and
+pushes to `main` run typecheck, tests and the build through
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 1. Bump the version in a PR and merge it into `main`:
    `npm version minor --no-git-tag-version` (or `patch`).
@@ -120,8 +122,10 @@ in with npm trusted publishing (no npm token in GitHub).
    ```
 
 The workflow refuses a tag that doesn't match `package.json` or isn't on
-`main`, then runs typecheck, tests and the build before publishing. Every
-installed skill picks up the new guide on its next `npx fortrip@latest skill`.
+`main`. A `build` job runs typecheck, tests and the build and packs the
+tarball; a `publish` job in the `npm-publish` environment publishes that
+tarball, with no install or build of its own. Every installed skill picks up
+the new guide on its next `npx fortrip@latest skill`.
 
 ## License
 
