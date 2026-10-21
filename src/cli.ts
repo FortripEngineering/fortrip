@@ -1,4 +1,4 @@
-import { request, unwrap } from "./api.ts";
+import { unwrap } from "./api.ts";
 import {
   BOOK_OPTIONS,
   bookBody,
@@ -10,7 +10,7 @@ import {
   SEARCH_OPTIONS,
   searchBody,
 } from "./args.ts";
-import { login, logout, requireToken, whoami } from "./auth.ts";
+import { authorizedRequest, login, logout, whoami } from "./auth.ts";
 import { resolveApiUrl } from "./credentials.ts";
 import { CliError, EXIT, type ExitCode, usageError } from "./errors.ts";
 import { readGuide } from "./guide.ts";
@@ -127,8 +127,7 @@ async function call(
   path: string,
   body?: unknown,
 ): Promise<unknown> {
-  const token = await requireToken(apiUrl);
-  return unwrap(await request(apiUrl, path, { method, token, body }));
+  return unwrap(await authorizedRequest(apiUrl, path, { method, body }));
 }
 
 /** The API returns site-relative order links; an agent needs full URLs. */

@@ -1,7 +1,7 @@
 import { CliError, EXIT } from "./errors.ts";
 import { VERSION } from "./version.ts";
 
-export const LOGIN_HINT = "Run `npx fortrip login` first.";
+export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
 const REQUEST_TIMEOUT_MS = 120_000;
 
