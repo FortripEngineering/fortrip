@@ -73,6 +73,12 @@ budgets, split stays and several destinations. Both guides are printed with
 `fortrip@latest` replaced by the running version, so an agent keeps using the
 same CLI for the whole conversation.
 
+## Support
+
+For changes, cancellations, refunds or other help with a booking, email
+[info@fortrip.ai](mailto:info@fortrip.ai) with the booking's order link
+(`orderUrl`).
+
 ## Development
 
 ```bash
