@@ -3,7 +3,9 @@ import { VERSION } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
-const REQUEST_TIMEOUT_MS = 120_000;
+/** Longer than the API's longest route (`book`, 120 s), so the CLI doesn't
+ *  give up, and an agent retry, just as the server is answering. */
+export const REQUEST_TIMEOUT_MS = 150_000;
 
 export interface ApiResponse {
   status: number;

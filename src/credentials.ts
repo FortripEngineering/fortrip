@@ -12,6 +12,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { REQUEST_TIMEOUT_MS } from "./api.ts";
 import { usageError } from "./errors.ts";
 
 export const DEFAULT_API_URL = "https://fortrip.ai";
@@ -47,8 +48,9 @@ interface CredentialsFile {
 
 /** A credentials lock is held for one read and write. */
 const CREDENTIALS_LOCK_STALE_MS = 10_000;
-/** The login lock is held for a few polls, each up to the request timeout. */
-const LOGIN_LOCK_STALE_MS = 150_000;
+/** The login lock is held for a few requests; one can take the whole
+ *  request timeout. */
+const LOGIN_LOCK_STALE_MS = REQUEST_TIMEOUT_MS + 30_000;
 
 export function credentialsPath(env: NodeJS.ProcessEnv = process.env): string {
   const base = env.XDG_CONFIG_HOME || join(homedir(), ".config");
