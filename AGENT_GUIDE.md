@@ -13,6 +13,9 @@ signed-in user and prints JSON.
   the user pays in their browser).
 
 Not for flights, activities, or changing/cancelling an existing booking.
+For changes, cancellations, refunds or any other problem with a booking, the
+user emails info@fortrip.ai with the booking's `orderUrl` (never
+`paymentUrl` or `statusUrl`).
 
 For flexible dates, a budget, split stays, several destinations or "find me
 the best", also run `npx -y fortrip@latest skill planning` before searching.
