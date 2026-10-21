@@ -23,7 +23,8 @@ the best", also run `npx -y fortrip@latest skill planning` before searching.
 ## Setup
 
 Run every command as `npx -y fortrip@latest <command>`, the same version that
-printed this guide. The examples below shorten that to `fortrip`.
+printed this guide. The examples below shorten that to `fortrip`;
+`fortrip <command> --help` lists a command's flags.
 
 When the user first asks about hotels, run `fortrip whoami` before asking
 follow-up questions, so a login can happen while they answer.
@@ -35,18 +36,20 @@ same command; it finishes the login itself. Don't run `fortrip login` — it
 waits for up to 10 minutes. If the rerun gives a new `loginUrl`, the old one
 expired or was denied; show the new one.
 
-If exit 3 has no `loginUrl`, the saved token was revoked: run `fortrip logout`,
-then rerun the command to get a link.
+A saved sign-in the server no longer accepts is replaced the same way: the
+command exits 3 with a new `loginUrl`. Exit 3 without `loginUrl` means the
+`FORTRIP_TOKEN` the user set was rejected; tell them to replace or unset it,
+and don't rerun until they have.
 
-In CI, the user can set `FORTRIP_TOKEN` instead. Never ask the user to paste a
-token into the chat.
+Sign-in happens only in the browser. In CI, the user can set `FORTRIP_TOKEN`
+instead. Never ask the user to paste a token into the chat.
 
 ## Exit codes
 
 | Code | Meaning | What to do |
 |---|---|---|
 | 0 | Success; JSON on stdout | Continue |
-| 1 | Other error (supplier error, rate no longer bookable, network) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out), wait a few seconds and retry once; re-run `rates` if a rate went stale |
+| 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, or no response from Fortrip), wait a few seconds and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
 | 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields |
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
@@ -82,13 +85,28 @@ token into the chat.
      [--nationality CN] [--board BB] [--free-cancellation] [--currency USD]
    ```
 
+   `--adults` and `--child-age` are **per room**, and every room has the same
+   occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. If the party
+   doesn't divide evenly (3 adults in 2 rooms), ask the user whether to price
+   every room for the larger number or book the rooms separately. Limits:
+   1–8 rooms, 1–8 adults and 0–8 children (aged 0–17) per room, 1–15
+   nights, up to 15 hotels per call.
+
    This call takes about 15 seconds. Prices are in the response's `currency`,
    converted at Stripe's exchange rate (refreshed hourly), or a fixed fallback
    rate when Stripe is unavailable; `fx` says which, and is `null` when
-   nothing needed converting. Present each option with meal plan (`boardCode`: RO room only,
-   BB breakfast, HB half board, FB full board, AI all inclusive),
-   `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
-   (taxes paid at the hotel, in their own currency).
+   nothing needed converting. Present each option with:
+
+   - meal plan: `boardCode` (RO room only, BB breakfast, HB breakfast +
+     dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL
+     breakfast + lunch, HBLD lunch + dinner, AI all inclusive) together with
+     `boardCount`, the number of meal portions included (BB with `boardCount`
+     1 for 2 adults covers one person's breakfast);
+   - `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
+     (taxes paid at the hotel, in their own currency).
+
+   `--nationality` isn't sent with the booking: a rate restricted to that
+   nationality may change or be refused when booked.
 
 4. **Book** — only after the user picks one rate and gives guest details:
 
@@ -100,37 +118,61 @@ token into the chat.
    ```
 
    `--hotel`, `--room-id`, `--rate-plan`, dates, `--rooms`, `--adults` and
-   `--child-age` must be exactly the values used in `rates`. Guest names must
-   be in Latin letters as on the passport ("First Last"; last word is the last
-   name; `"First Last:2"` puts the guest in room 2). Each room needs at least
-   one guest. `--special-requests` must be in English and isn't guaranteed.
+   `--child-age` must be exactly the values used in `rates`; `book` requires
+   `--rooms` and `--adults`. Guest names must be in Latin letters as on the
+   passport ("First Last"; last word is the last name; `"First Last:2"` puts
+   the guest in room 2). Each room needs at least one guest.
+   `--special-requests` must be in English and isn't guaranteed.
+
+   `book` is safe to rerun with identical flags: it returns the same order,
+   with the same or a refreshed payment link.
 
 ## Before giving the payment link
 
-`book` returns `paymentUrl`, `amount`, `currency`, `terms`, `statusUrl` and
-`orderUrl`. Before you hand over `paymentUrl`:
+`book` returns `paymentUrl`, `amount`, `currency`, `terms`, `stay`,
+`statusUrl` and `orderUrl`. Before you hand over `paymentUrl`:
 
-1. **Show the `terms`** and get the user's confirmation: meal plan
-   (`boardCode`, `boardCount`), cancellation (`refundable`, `freeCancelUntil`,
-   the `cancellation` ladder), confirmation (`isInstantConfirm`,
-   `confirmByMins`) and `payAtHotelFees`.
+1. **Show what will be booked and ask the user to confirm.** From `stay`:
+   hotel (`hotelName`), room (`roomName`), dates, nights, rooms and guests per
+   room (`adultsPerRoom`, `childrenAgesPerRoom`); if `stay` is missing, use
+   the values you passed. From `terms`: meal plan (`boardCode` with
+   `boardCount`), cancellation (`refundable`, `freeCancelUntil`, the
+   `cancellation` ladder), confirmation (`isInstantConfirm`, `confirmByMins`)
+   and `payAtHotelFees`. Then the `amount` and `currency`, and end your reply
+   by asking them to confirm.
 2. **Explain the amount.** `rates` showed a converted figure, but the charge
    is `amount` in `currency` (usually USD), and the Stripe page may display
    the user's local currency at Stripe's rate. The `rates` figure used a
    Stripe rate too, so it is usually close, but the amount on the payment page
    is what will be charged; the `rates` figure was a reference.
-3. The link is for **this user only**: whoever has it can pay. Don't post it
+3. **Only after they confirm, give `paymentUrl` exactly as returned**: don't
+   shorten, rebuild or re-encode it. It opens a Fortrip page that recaps the
+   booking and continues to payment.
+4. The link is for **this user only**: whoever has it can pay. Don't post it
    in shared channels, logs or tickets. It expires after about 3 hours 45
    minutes; call `book` again with the same details for a fresh one.
+
+Never ask for, accept or pass on payment card details; payment happens only
+on the payment page.
 
 After paying, the user lands on `statusUrl`, which shows confirmation progress
 without signing in. `orderUrl` is the signed-in order page.
 
 ## Errors from `book`
 
-- `409` with `agentOrderId`: this exact stay is already paid or completed —
-  show `orderUrl`, don't book again.
-- `409` with `changes`: price or terms changed — re-run `rates` and confirm
-  again with the user.
-- `422`: the booking was refused (guest names, too many attempts, bookings
-  paused, or a preview deployment). Read `error`.
+Act on `reason` in stderr:
+
+- `already_booked` (409, with `agentOrderId`): this exact stay is already paid
+  or completed — show `orderUrl`, don't book again.
+- `price_or_terms_changed` (409, with `changes`): show what changed, re-run
+  `rates` and confirm again with the user.
+- `rate_unavailable` (422): the rate can no longer be booked — re-run `rates`
+  and offer what is left.
+- `supplier_unavailable` (503 or 504, `retryable: true`): wait a few seconds
+  and retry once.
+- `refused` (any other 422): the booking was refused (guest names, too many
+  attempts, bookings paused, or a preview deployment). Read `error`.
+
+Older servers send no `reason`: there a 409 with `agentOrderId` is
+`already_booked`, a 409 with `changes` is `price_or_terms_changed`, and a 422
+is `refused`.

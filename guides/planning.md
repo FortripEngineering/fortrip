@@ -8,9 +8,11 @@ for `npx -y fortrip@latest`.
 
 ## What to collect
 
-Keep track of: dates (or the flexible window), nights, destination(s), guests
-and rooms, room constraints (beds, connecting rooms, accessibility), budget,
-and what the user said matters most (cheapest, most flexible, closest to X).
+Keep track of: dates (or the flexible window), nights, destination(s), rooms
+and the guests in each room, room constraints (beds, connecting rooms,
+accessibility), budget, and what the user said matters most (cheapest, most
+flexible, closest to X). `--adults` and `--child-age` are per room and every
+room has the same occupancy, so 4 adults in 2 rooms is `--rooms 2 --adults 2`.
 
 Ask only for what changes which hotels qualify or how they rank. If children
 come along, ask each child's age; `rates` and `book` need it. Don't ask for
@@ -50,5 +52,6 @@ separate payment link.
   request needs more hotels or date combinations than a few calls can cover,
   narrow it with the user, or present the result as a comparison of the
   hotels you priced, not the best overall.
-- Urgency is not consent: create a payment link only after the user picked a
-  rate and confirmed its terms.
+- Urgency is not consent: run `book` only for the rate the user picked, and
+  give the payment link only after the user confirms the terms that `book`
+  returned.

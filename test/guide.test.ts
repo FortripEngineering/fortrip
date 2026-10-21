@@ -41,6 +41,48 @@ describe("skill", () => {
     assert.equal(stdout, guide);
   });
 
+  it("the main guide states the booking contract", async () => {
+    const guide = await readGuide();
+    for (const phrase of [
+      // Errors by reason.
+      "`already_booked`",
+      "`price_or_terms_changed`",
+      "`rate_unavailable`",
+      "`supplier_unavailable`",
+      "`refused`",
+      // Meal codes and quantity.
+      "RO room only, BB breakfast, HB breakfast +\n     dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL\n     breakfast + lunch, HBLD lunch + dinner, AI all inclusive",
+      "`boardCount`",
+      // Occupancy and consent.
+      "**per room**",
+      "`--rooms 2 --adults 2`",
+      "give `paymentUrl` exactly as returned",
+      "`stay`",
+      "Never ask for, accept or pass on payment card details",
+      "`--nationality` isn't sent with the booking",
+      "safe to rerun with identical flags",
+      // Sign-in and support.
+      "Never ask the user to paste a token",
+      "info@fortrip.ai",
+    ]) {
+      assert.ok(guide.includes(phrase), phrase);
+    }
+  });
+
+  it("the planning guide asks for confirmation of the terms book returned", async () => {
+    const guide = await readGuide("planning");
+    assert.ok(guide.includes("confirms the terms that `book`\n  returned"));
+    assert.ok(guide.includes("`--adults` and `--child-age` are per room"));
+  });
+
+  it("no guide or help text names the supplier", async () => {
+    const texts = [await readGuide(), await readGuide("planning")];
+    for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
+      texts.push((await run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args])).stdout);
+    }
+    for (const text of texts) assert.doesNotMatch(text, /huizhi/i);
+  });
+
   it("rejects an unknown guide with exit 2", async () => {
     await assert.rejects(
       run(process.execPath, ["--import", "tsx", "src/cli.ts", "skill", "nope"]),

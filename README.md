@@ -24,18 +24,22 @@ Requires Node.js 22 or newer. No runtime dependencies.
 | `search` | Hotels with indicative prices |
 | `hotel <hotelId> [--with-rooms]` | Static hotel detail |
 | `rates` | Live rooms and rates |
-| `book` | Order + Stripe payment link |
+| `book` | Order + payment link (a Fortrip page that continues to Stripe) |
 
-Run `fortrip --help` for every flag. `search`, `rates` and `book` also accept
-`--body '<json>'` or `--body @file.json` with the raw request body; flags
-override its fields.
+Run `fortrip --help` for every flag, or `fortrip <command> --help` for one
+command's. `search`, `rates` and `book` also accept `--body '<json>'` or
+`--body @file.json` with the raw request body; flags override its fields.
+
+`--adults` and `--child-age` are per room, and every room has the same
+occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `rates` defaults
+to 1 room for 2 adults; `book` requires `--rooms` and `--adults`.
 
 Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | Other error |
+| 1 | Other error (`retryable: true` on stderr: worth one retry) |
 | 2 | Invalid arguments (local or HTTP 400) |
 | 3 | Not logged in / token revoked (HTTP 401) |
 | 4 | Rate limited (HTTP 429; `retryAfterSeconds` on stderr) |
@@ -43,13 +47,16 @@ Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 ## Credentials
 
 - `login` saves the token to `~/.config/fortrip/credentials.json`
-  (`$XDG_CONFIG_HOME` is honoured), mode `0600`. Tokens are stored per API URL,
-  so a token is only ever sent to the server that issued it.
+  (`$XDG_CONFIG_HOME` is honoured), mode `0600`. Saved tokens are stored per
+  API URL, so a saved token is only sent to the server that issued it.
 - Without a token, any other command starts a device login and exits 3 with
   `loginUrl` on stderr instead of waiting. Once that link is approved in the
   browser, rerunning the command saves the token and carries on. This is how
-  AI agents sign in, since they can't sit in `login`.
-- `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes).
+  AI agents sign in, since they can't sit in `login`. If the server rejects
+  the saved token, the command deletes it and starts a new login the same way.
+- `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes). It is not
+  tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If the
+  server rejects it, commands exit 3 without a `loginUrl`.
 - `FORTRIP_API_URL` overrides the base URL (default `https://fortrip.ai`).
   Plain `http` is only accepted for `localhost`.
 - `FORTRIP_CURRENCY` sets the default `--currency` for `search` and `rates`
@@ -61,11 +68,12 @@ Tokens don't expire; `logout` revokes them.
 ## Agent skill
 
 ```bash
-npx skills add FortripEngineering/fortrip-plugins
+npx skills add FortripEngineering/fortrip-plugins --skill fortrip-cli
 ```
 
-The skill and the Claude plugin live in
-[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins). The
+The skill lives in
+[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins); the
+Claude directory plugin there uses the hosted MCP instead of the CLI. The
 skill only tells the agent to run `npx -y fortrip@latest skill`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
