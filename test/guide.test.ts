@@ -53,7 +53,9 @@ describe("skill", () => {
       "`refused`",
       // Meal codes and quantity.
       "RO room only, BB breakfast, HB breakfast + dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast + lunch, HBLD lunch + dinner, AI all inclusive",
-      "`boardCount`",
+      "`boardCount`, how many guests per room the meal plan covers",
+      "breakfast for 1 of 2",
+      "`retryAfterSeconds`",
       // Occupancy and consent.
       "**per room**",
       "`--rooms 2 --adults 2`",

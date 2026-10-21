@@ -51,7 +51,7 @@ instead. Never ask the user to paste a token into the chat.
 | Code | Meaning | What to do |
 |---|---|---|
 | 0 | Success; JSON on stdout | Continue |
-| 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, Fortrip briefly unavailable, or no response from Fortrip), wait a few seconds and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
+| 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, Fortrip briefly unavailable, or no response from Fortrip), wait `retryAfterSeconds` (or a few seconds) and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
 | 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields (a stay that is too long gives `requestedNights` and `maxNights` instead) |
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
@@ -72,8 +72,8 @@ instead. Never ask the user to paste a token into the chat.
    `--facility` names must match the catalogue exactly (e.g. `Swimming pool`,
    `Parking`), otherwise nothing matches. Prices here (`price.nightlyFrom`,
    `totalFrom`) are **indicative floors**, not quotes — say so. A search
-   that matches too many hotels fails with `reason: "refused"`, `matched` and
-   `maxMatches`: narrow it (a city, an area, stars or a price range).
+   that matches too many hotels fails with `matched` and `maxMatches`: narrow
+   it (a city, an area, stars or a price range).
 
 2. **Hotel detail** (optional) — description, policies, facilities, photos:
 
@@ -104,8 +104,10 @@ instead. Never ask the user to paste a token into the chat.
    - meal plan: `boardCode` (RO room only, BB breakfast, HB breakfast +
      dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL
      breakfast + lunch, HBLD lunch + dinner, AI all inclusive) together with
-     `boardCount`, the number of meal portions included (BB with `boardCount`
-     1 for 2 adults covers one person's breakfast);
+     `boardCount`, how many guests per room the meal plan covers; fewer than
+     the adults per room means not everyone gets the meals (BB with
+     `boardCount` 1 for 2 adults is breakfast for 1 of 2), so say who is
+     covered;
    - `freeCancelUntil` / `refundable`, `isInstantConfirm`, and any `fees`
      (taxes paid at the hotel, in their own currency).
 
@@ -125,7 +127,8 @@ instead. Never ask the user to paste a token into the chat.
    `--child-age` must be exactly the values used in `rates`; `book` requires
    `--rooms` and `--adults`. Guest names must be in Latin letters as on the
    passport ("First Last"; last word is the last name; `"First Last:2"` puts
-   the guest in room 2). Each room needs at least one guest.
+   the guest in room 2; 1–60 characters each). Each room needs at least one
+   guest. The contact name takes up to 120 characters, the phone 3–40.
    `--special-requests` must be in English and isn't guaranteed. `book`
    accepts only these fields: a `--body` with any other field (such as
    `nationality`) is rejected with exit 2.
@@ -175,8 +178,10 @@ Act on `reason` in stderr:
   `rates` and confirm again with the user.
 - `rate_unavailable` (422): the rate can no longer be booked — re-run `rates`
   and offer what is left.
-- `supplier_unavailable` (503 or 504, `retryable: true`): wait a few seconds
-  and retry once.
+- `supplier_unavailable` (503 or 504, `retryable: true`): wait
+  `retryAfterSeconds` and retry once with identical flags. A 503 with
+  `retryable: true` and no `reason` (a passing outage) is handled the same
+  way.
 - `refused` (any other 422): the booking was refused (guest names, too many
   attempts, bookings paused, or a preview deployment). Read `error`.
 

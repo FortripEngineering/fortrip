@@ -79,8 +79,9 @@ ${OCCUPANCY_NOTE}
 
 Meal codes (--board, boardCode): RO room only, BB breakfast, HB breakfast +
 dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast +
-lunch, HBLD lunch + dinner, AI all inclusive. boardCount is the number of
-meal portions included (BB with boardCount 1 for 2 adults covers one person).
+lunch, HBLD lunch + dinner, AI all inclusive. boardCount is how many guests
+per room the meal plan covers; fewer than --adults means not everyone gets
+the meals (BB with boardCount 1 for 2 adults is breakfast for 1 of 2).
 
 --nationality isn't sent with the booking: a rate restricted to that
 nationality may change or be refused at book.
@@ -98,7 +99,8 @@ order.
 ${FLAGS.book}
 
 Use exactly the hotel, room, rate plan, dates, rooms, adults and child ages
-from rates. ${OCCUPANCY_NOTE}
+from rates. ${OCCUPANCY_NOTE} Guest names are 1-60 characters each,
+--contact-name up to 120, --contact-phone 3-40.
 
 ${BODY_NOTE}
 `,
