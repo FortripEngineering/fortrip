@@ -12,7 +12,7 @@ describe("skill", () => {
   it("prints AGENT_GUIDE.md pinned to this version", async () => {
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
     const guide = await readGuide();
-    assert.match(guide, /^# Fortrip hotels\n/);
+    assert.match(guide, /^# Fortrip\n/);
     assert.ok(guide.includes(`npx -y fortrip@${version} <command>`));
     assert.ok(guide.includes(`npx -y fortrip@${version} skill planning`));
     assert.doesNotMatch(guide, /fortrip@latest/);
@@ -60,8 +60,8 @@ describe("skill", () => {
   });
 
   it("SKILL.md loads the guide from the latest CLI", async () => {
-    const skill = await readFile("skills/fortrip-hotels/SKILL.md", "utf8");
-    assert.match(skill, /^---\nname: fortrip-hotels\n/);
+    const skill = await readFile("skills/fortrip/SKILL.md", "utf8");
+    assert.match(skill, /^---\nname: fortrip\n/);
     assert.match(skill, /npx -y fortrip@latest skill/);
   });
 });

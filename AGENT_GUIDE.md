@@ -1,4 +1,4 @@
-# Fortrip hotels
+# Fortrip
 
 Fortrip sells hotel rooms at supplier net prices. The
 `fortrip` CLI (npm package `fortrip`) calls the Fortrip API as the

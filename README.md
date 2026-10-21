@@ -64,7 +64,7 @@ Tokens don't expire; `logout` revokes them.
 npx skills add FortripEngineering/fortrip-cli
 ```
 
-[`skills/fortrip-hotels/SKILL.md`](skills/fortrip-hotels/SKILL.md) only tells
+[`skills/fortrip/SKILL.md`](skills/fortrip/SKILL.md) only tells
 the agent to run `npx -y fortrip@latest skill`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
