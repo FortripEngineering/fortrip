@@ -22,6 +22,8 @@ const DEFAULT_INTERVAL_SECONDS = 5;
  *  normally needs one interval plus a slow_down; this bounds a holder stuck
  *  on an unreachable server, which each waiter would otherwise repeat. */
 const LOGIN_WAIT_MS = 30_000;
+/** A pending login with less time left than this gets a fresh one to show. */
+const SHOWABLE_FOR_MS = 120_000;
 
 interface DeviceStart {
   deviceCode: string;
@@ -46,6 +48,12 @@ type Exchange =
   | { status: "slow_down"; interval?: number }
   | { status: "access_denied" | "expired_token" };
 
+/** Options tests use to avoid real waiting. */
+export interface SignInOptions {
+  /** How long to wait for another command that is signing in. */
+  loginWaitMs?: number;
+}
+
 /**
  * The token the commands send. Without one, a pending device login the user
  * has approved is finished; otherwise exit 3 with `loginUrl`, so an agent
@@ -53,11 +61,22 @@ type Exchange =
  */
 export async function requireToken(
   apiUrl: string,
+  options: SignInOptions = {},
 ): Promise<{ token: string; source: "env" | "file" }> {
   const started = new Date().toISOString();
   const resolved = await resolveToken(apiUrl);
   if (resolved) return resolved;
-  return { token: await finishOrStartLogin(apiUrl, started), source: "file" };
+  return {
+    token: await finishOrStartLogin(apiUrl, { started, ...options }),
+    source: "file",
+  };
+}
+
+interface SignIn extends SignInOptions {
+  /** When the command started, as an ISO string. */
+  started: string;
+  /** A saved token the server just turned down: not an answer here. */
+  rejected?: string;
 }
 
 /**
@@ -66,15 +85,15 @@ export async function requireToken(
  * share one link and don't poll a login twice within its interval (which
  * would earn `slow_down`).
  */
-async function finishOrStartLogin(apiUrl: string, started: string): Promise<string> {
-  const giveUpAt = Date.now() + LOGIN_WAIT_MS;
+async function finishOrStartLogin(apiUrl: string, signIn: SignIn): Promise<string> {
+  const giveUpAt = Date.now() + (signIn.loginWaitMs ?? LOGIN_WAIT_MS);
   let release: (() => Promise<void>) | null;
   while (!(release = await tryLoginLock())) {
-    const saved = await loadStoredToken(apiUrl);
+    const saved = await savedToken(apiUrl, signIn);
     if (saved) return saved;
     if (Date.now() > giveUpAt) {
       const pending = (await loadPendingLogins(apiUrl)).at(-1);
-      if (pending) throw loginRequired(apiUrl, pending);
+      if (pending && isShowable(pending)) throw loginRequired(apiUrl, pending, signIn);
       throw new CliError(
         `Another fortrip command is still signing in to ${apiUrl}.`,
         EXIT.error,
@@ -84,10 +103,11 @@ async function finishOrStartLogin(apiUrl: string, started: string): Promise<stri
     await sleep(250);
   }
   try {
-    const approved = await pollPendingLogins(apiUrl, started);
+    const approved = await pollPendingLogins(apiUrl, signIn);
     if (approved) return approved;
     let pending = (await loadPendingLogins(apiUrl)).at(-1);
-    if (!pending) {
+    // Keep polling an older login, but show one the user has time to open.
+    if (!pending || !isShowable(pending)) {
       const start = await startDeviceLogin(apiUrl);
       const now = new Date();
       pending = {
@@ -101,32 +121,44 @@ async function finishOrStartLogin(apiUrl: string, started: string): Promise<stri
       await addPendingLogin(apiUrl, pending);
     }
     // `fortrip login` may have saved a token meanwhile.
-    const saved = await loadStoredToken(apiUrl);
+    const saved = await savedToken(apiUrl, signIn);
     if (saved) return saved;
-    throw loginRequired(apiUrl, pending);
+    throw loginRequired(apiUrl, pending, signIn);
   } finally {
     await release();
   }
+}
+
+/** A login link is worth showing while it has a couple of minutes left. */
+function isShowable(login: PendingLogin): boolean {
+  return Date.parse(login.expiresAt) - Date.now() >= SHOWABLE_FOR_MS;
+}
+
+async function savedToken(apiUrl: string, { rejected }: SignIn): Promise<string | null> {
+  const saved = await loadStoredToken(apiUrl);
+  return saved !== rejected ? saved : null;
 }
 
 /**
  * Polls each pending login and saves the token of the first one approved:
  * the user may have approved any link they were shown. A login known to be
  * unapproved since after this command started is skipped (a time in the
- * future is a clock step, not knowledge). Waits out each
- * login's interval, and polls once more after a `slow_down`. Returns that
- * token, or one another command saved.
+ * future is a clock step, not knowledge). Waits out each login's interval,
+ * and polls once more after a `slow_down`. Returns that token, or one
+ * another command saved.
  */
 async function pollPendingLogins(
   apiUrl: string,
-  started: string,
+  signIn: SignIn,
 ): Promise<string | null> {
-  const saved = await loadStoredToken(apiUrl);
+  const saved = await savedToken(apiUrl, signIn);
   if (saved) return saved;
   const now = new Date().toISOString();
   for (let login of await loadPendingLogins(apiUrl)) {
     const { checkedAt } = login;
-    if (checkedAt !== undefined && checkedAt > started && checkedAt <= now) continue;
+    if (checkedAt !== undefined && checkedAt > signIn.started && checkedAt <= now) {
+      continue;
+    }
     for (let attempt = 0; attempt < 2; attempt++) {
       const wait = nextPollAt(login) - Date.now();
       if (wait > 0) await sleep(wait);
@@ -137,7 +169,13 @@ async function pollPendingLogins(
       // The server spaces polls by when it handled them; this is no earlier.
       const lastPolledAt = new Date().toISOString();
       if (result.status === "ok") {
-        await saveToken(apiUrl, result.accessToken);
+        try {
+          await saveToken(apiUrl, result.accessToken);
+        } catch (error) {
+          // The login is redeemed: use the token rather than lose it. The
+          // message says where it was kept.
+          process.stderr.write(`${(error as Error).message}\n`);
+        }
         return result.accessToken;
       }
       if (result.status === "slow_down") {
@@ -156,7 +194,7 @@ async function pollPendingLogins(
       break;
     }
   }
-  return loadStoredToken(apiUrl);
+  return savedToken(apiUrl, signIn);
 }
 
 /** Seconds between polls, kept to a sane range in case the file was edited. */
@@ -176,10 +214,11 @@ function nextPollAt(login: PendingLogin): number {
 }
 
 /**
- * A request with the user's token. A saved token the server rejects
- * (revoked, or unused for 90 days) is forgotten and a new login started,
- * so the agent gets a `loginUrl` instead of a dead end. A rejected
- * `FORTRIP_TOKEN` is the user's to fix.
+ * A request with the user's token. When the server turns down the saved
+ * token, the command signs in again (finishing an approved login, or exiting
+ * 3 with `loginUrl`), and a new token replaces the saved one. The saved
+ * token is kept until then: a 401 can also come from a passing problem on
+ * the server's side, and the token may work on the next run.
  */
 export async function authorizedRequest(
   apiUrl: string,
@@ -191,15 +230,16 @@ export async function authorizedRequest(
   if (response.status !== 401) return response;
   if (auth.source === "env") {
     throw new CliError(
-      `FORTRIP_TOKEN was rejected by ${apiUrl} (revoked, expired or invalid). It replaces the saved login: the user has to set a valid token or unset FORTRIP_TOKEN to sign in through the browser.`,
+      `${apiUrl} didn't accept FORTRIP_TOKEN. If this keeps happening, the user should replace it, or unset it to sign in through the browser.`,
       EXIT.unauthenticated,
       { status: 401, tokenSource: "FORTRIP_TOKEN" },
     );
   }
-  await deleteToken(apiUrl, process.env, auth.token);
-  // Exits 3 with a new loginUrl, unless another command signed in meanwhile.
-  const fresh = await requireToken(apiUrl);
-  return request(apiUrl, path, { ...init, token: fresh.token });
+  const token = await finishOrStartLogin(apiUrl, {
+    started: new Date().toISOString(),
+    rejected: auth.token,
+  });
+  return request(apiUrl, path, { ...init, token });
 }
 
 /** RFC 8628 device login: print the code, open the browser, poll. */
@@ -278,9 +318,15 @@ async function exchange(apiUrl: string, deviceCode: string): Promise<Exchange> {
   }
 }
 
-function loginRequired(apiUrl: string, pending: PendingLogin): CliError {
+function loginRequired(
+  apiUrl: string,
+  pending: PendingLogin,
+  { rejected }: SignIn,
+): CliError {
   return new CliError(
-    `Not logged in to ${apiUrl}. Ask the user to open loginUrl and approve, then rerun this command.`,
+    rejected
+      ? `${apiUrl} didn't accept the saved sign-in (it may have been revoked or expired, or the server had a passing problem). Ask the user to open loginUrl and approve, then rerun this command. The saved sign-in is kept until then.`
+      : `Not logged in to ${apiUrl}. Ask the user to open loginUrl and approve, then rerun this command.`,
     EXIT.unauthenticated,
     {
       loginUrl: pending.loginUrl,

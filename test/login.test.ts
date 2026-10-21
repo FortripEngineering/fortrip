@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
+import fsp, { mkdtemp, readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { after, before, beforeEach, describe, it } from "node:test";
+import { syncBuiltinESMExports } from "node:module";
+import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 
@@ -44,6 +45,8 @@ let deviceStarts = 0;
  *  another command. */
 let onPoll: (() => Promise<void>) | undefined;
 let onDeviceStart: (() => Promise<void>) | undefined;
+/** The next whoami answers 401 whatever the token: a passing failure. */
+let rejectNext = false;
 /** Runs before a 401 from whoami is sent. */
 let onRejected: (() => Promise<void>) | undefined;
 const TOKEN = `fth_${"x".repeat(43)}`;
@@ -127,9 +130,10 @@ async function handle(
       return send(200, { success: true, data: { accessToken: minted } });
     }
     case "GET /api/cli/auth/whoami":
-      if (validTokens.has(token)) {
+      if (validTokens.has(token) && !rejectNext) {
         return send(200, { success: true, data: { userId: "user_1", email: "a@b.c" } });
       }
+      rejectNext = false;
       await onRejected?.();
       return send(401, { success: false, error: "Invalid or revoked token" });
     case "POST /api/cli/auth/revoke":
@@ -176,6 +180,7 @@ beforeEach(async () => {
   pollScript = [];
   onPoll = undefined;
   onDeviceStart = undefined;
+  rejectNext = false;
   onRejected = undefined;
   waits.length = 0;
   logs.length = 0;
@@ -425,6 +430,91 @@ describe("login from a command (agents)", () => {
     }
   });
 
+  it("gives up waiting for another sign-in: the pending link if it has time left, else a retryable error", { timeout: 15_000 }, async () => {
+    const release = await tryLoginLock();
+    assert.ok(release);
+    try {
+      let error = await failure(requireToken(apiUrl, { loginWaitMs: 300 }));
+      assert.equal(error.exitCode, EXIT.error);
+      assert.equal(error.details.retryable, true);
+
+      for (const [n, left] of [
+        [1, 60_000],
+        [2, 600_000],
+      ] as const) {
+        await addPendingLogin(apiUrl, {
+          deviceCode: `dc${n}`,
+          userCode: `CODE-${n}`,
+          loginUrl: `${apiUrl}/cli/authorize?code=CODE-${n}`,
+          expiresAt: new Date(Date.now() + left).toISOString(),
+        });
+        error = await failure(requireToken(apiUrl, { loginWaitMs: 300 }));
+        if (n === 1) {
+          // A link about to expire isn't worth showing.
+          assert.equal(error.exitCode, EXIT.error);
+        } else {
+          assert.equal(error.exitCode, EXIT.unauthenticated);
+          assert.equal(error.details.loginUrl, `${apiUrl}/cli/authorize?code=CODE-2`);
+        }
+      }
+    } finally {
+      await release();
+    }
+    assert.equal(polls, 0);
+    assert.equal(deviceStarts, 0);
+  });
+
+  it("shows a fresh link when the pending one is about to expire, and keeps polling the old one", async () => {
+    auths.set("dc0", { userCode: "CODE-0", status: "pending" });
+    await addPendingLogin(apiUrl, {
+      deviceCode: "dc0",
+      userCode: "CODE-0",
+      loginUrl: `${apiUrl}/cli/authorize?code=CODE-0`,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      interval: 0,
+    });
+    const url = await loginUrlOf(requireToken(apiUrl));
+    assert.equal(url, `${apiUrl}/cli/authorize?code=CODE-1`);
+    assert.equal(polls, 1);
+    assert.deepEqual(
+      (await loadPendingLogins(apiUrl)).map((login) => login.deviceCode),
+      ["dc0", "dc1"],
+    );
+
+    // The user approves the old link after all.
+    decide(`${apiUrl}/cli/authorize?code=CODE-0`, "approved");
+    const { token } = await requireToken(apiUrl);
+    assert.ok(validTokens.has(token));
+  });
+
+  it("I3: uses a token it couldn't save, and says where it was kept", async () => {
+    const loginUrl = await loginUrlOf(requireToken(apiUrl));
+    decide(loginUrl, "approved");
+    mock.method(fsp, "rename", async () => {
+      throw Object.assign(new Error("EPERM"), { code: "EPERM" });
+    });
+    syncBuiltinESMExports();
+    const notes: string[] = [];
+    mock.method(process.stderr, "write", (chunk: string) => {
+      notes.push(String(chunk));
+      return true;
+    });
+    let token: string;
+    try {
+      ({ token } = await requireToken(apiUrl));
+    } finally {
+      mock.restoreAll();
+      syncBuiltinESMExports();
+    }
+    assert.ok(validTokens.has(token));
+    const kept = notes.join("").match(/kept in (\S+?):/)?.[1];
+    assert.ok(kept, notes.join(""));
+    assert.equal(
+      JSON.parse(await readFile(kept, "utf8")).tokens[apiUrl].accessToken,
+      token,
+    );
+  });
+
   it("parallel CLI processes share one link, and reruns poll it once", async () => {
     deviceInterval = 1;
     minPollGapMs = 500;
@@ -465,16 +555,36 @@ describe("login from a command (agents)", () => {
   });
 });
 
-describe("a rejected token", () => {
-  it("a saved token the server rejects is forgotten and a new login starts in the same run", async () => {
+describe("I1: a 401 never deletes the saved token", () => {
+  it("keeps it, and starts a login in the same run", async () => {
     await saveToken(apiUrl, TOKEN);
     validTokens.delete(TOKEN);
 
     const error = await failure(whoami(apiUrl));
     assert.equal(error.exitCode, EXIT.unauthenticated);
     assert.equal(error.details.loginUrl, `${apiUrl}/cli/authorize?code=CODE-1`);
-    assert.equal(await loadStoredToken(apiUrl), null);
-    assert.equal((await loadPendingLogins(apiUrl)).length, 1);
+    assert.doesNotMatch(error.message, /\b(?:was|is) revoked/);
+    assert.equal(await loadStoredToken(apiUrl), TOKEN);
+  });
+
+  it("after a passing 401, the next run works with the saved token", async () => {
+    await saveToken(apiUrl, TOKEN);
+    rejectNext = true;
+    await failure(whoami(apiUrl));
+
+    assert.deepEqual(await whoami(apiUrl), { userId: "user_1", email: "a@b.c", apiUrl });
+    assert.equal(await loadStoredToken(apiUrl), TOKEN);
+  });
+
+  it("once the user approves, the new token replaces the rejected one", async () => {
+    await saveToken(apiUrl, TOKEN);
+    validTokens.delete(TOKEN);
+    decide((await failure(whoami(apiUrl))).details.loginUrl, "approved");
+
+    assert.deepEqual(await whoami(apiUrl), { userId: "user_1", email: "a@b.c", apiUrl });
+    const saved = await loadStoredToken(apiUrl);
+    assert.notEqual(saved, TOKEN);
+    assert.ok(validTokens.has(saved as string));
   });
 
   it("keeps a token another command saved meanwhile and retries with it", async () => {
@@ -487,13 +597,14 @@ describe("a rejected token", () => {
     assert.equal(deviceStarts, 0);
   });
 
-  it("a rejected FORTRIP_TOKEN is reported as such; the saved login is left alone", async () => {
+  it("a rejected FORTRIP_TOKEN is reported as such, not called bad; the saved login is left alone", async () => {
     await saveToken(apiUrl, TOKEN);
     process.env.FORTRIP_TOKEN = `fth_${"y".repeat(43)}`;
 
     const error = await failure(whoami(apiUrl));
     assert.equal(error.exitCode, EXIT.unauthenticated);
     assert.match(error.message, /FORTRIP_TOKEN/);
+    assert.match(error.message, /If this keeps happening/);
     assert.equal(error.details.loginUrl, undefined);
     assert.equal(error.details.tokenSource, "FORTRIP_TOKEN");
     assert.equal(await loadStoredToken(apiUrl), TOKEN);
