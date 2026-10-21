@@ -161,8 +161,9 @@ async function run(argv: string[]): Promise<unknown> {
     process.stdout.write(HELP);
     return undefined;
   }
-  if (USAGE[command] && wantsHelp(rest)) {
-    process.stdout.write(USAGE[command]);
+  const usage = Object.hasOwn(USAGE, command) ? USAGE[command] : undefined;
+  if (usage && wantsHelp(rest)) {
+    process.stdout.write(usage);
     return undefined;
   }
   if (command === "--version" || command === "-v") {

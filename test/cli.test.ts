@@ -171,6 +171,12 @@ describe("help", () => {
     }
   });
 
+  it("a command named like an object property is just unknown", async () => {
+    const { code, stderr } = await cli(["constructor", "--help"]);
+    assert.equal(code, 2);
+    assert.match(JSON.parse(stderr).error, /Unknown command/);
+  });
+
   it("--help after -- is an argument, not a request for help", async () => {
     const { code } = await cli(["hotel", "--", "--help"]);
     assert.equal(code, 2);

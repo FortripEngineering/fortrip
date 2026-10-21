@@ -158,11 +158,9 @@ describe("transport errors", () => {
   });
 
   it("a 401 doesn't send agents to the blocking login command", () => {
-    try {
-      unwrap(response(401, { success: false, error: "Unauthorized" }));
-    } catch (error) {
-      assert.ok(error instanceof CliError);
-      assert.doesNotMatch(error.message, /fortrip login/);
-    }
+    assert.throws(
+      () => unwrap(response(401, { success: false, error: "Unauthorized" })),
+      (error) => error instanceof CliError && !/fortrip login/.test(error.message),
+    );
   });
 });
