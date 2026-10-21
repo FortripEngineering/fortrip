@@ -61,20 +61,16 @@ Tokens don't expire; `logout` revokes them.
 ## Agent skill
 
 ```bash
-npx skills add FortripEngineering/fortrip-cli
+npx skills add FortripEngineering/fortrip-plugins
 ```
 
-[`skills/fortrip/SKILL.md`](skills/fortrip/SKILL.md) only tells
-the agent to run `npx -y fortrip@latest skill`, which prints
+The skill and the Claude plugin live in
+[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins). The
+skill only tells the agent to run `npx -y fortrip@latest skill`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
 with the package, so a CLI release updates every installed skill. Edit
-`AGENT_GUIDE.md`, not `SKILL.md`.
-
-The repository is also a Claude Code plugin
-([`.claude-plugin/plugin.json`](.claude-plugin/plugin.json)). Claude Code keeps
-users on the `version` it names, so bump that version whenever `SKILL.md`
-changes.
+`AGENT_GUIDE.md`, not the skill.
 
 `fortrip skill planning` prints [`guides/planning.md`](guides/planning.md):
 what to ask, how to rank and how to present options for flexible dates,

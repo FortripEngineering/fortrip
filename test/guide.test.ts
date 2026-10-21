@@ -58,10 +58,4 @@ describe("skill", () => {
     ]);
     assert.equal(stdout, `${version}\n`);
   });
-
-  it("SKILL.md loads the guide from the latest CLI", async () => {
-    const skill = await readFile("skills/fortrip/SKILL.md", "utf8");
-    assert.match(skill, /^---\nname: fortrip\n/);
-    assert.match(skill, /npx -y fortrip@latest skill/);
-  });
 });
