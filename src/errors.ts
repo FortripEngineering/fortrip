@@ -19,6 +19,10 @@ export class CliError extends Error {
   }
 }
 
+/** Said alongside a command's JSON result, or its JSON error, as extra
+ *  fields (`warning`, `recoveryFile`), so stdout and stderr stay JSON. */
+export const notices: Record<string, unknown> = {};
+
 export function usageError(message: string): CliError {
   return new CliError(message, EXIT.usage);
 }

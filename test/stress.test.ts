@@ -63,7 +63,7 @@ describe("I4 stress: processes past an abandoned lock", () => {
 
 describe("I2 stress: 0.3.0 writing while this version writes", () => {
   const rounds = ROUNDS ?? 6;
-  it(`${rounds} rounds: no token is lost to a misread, nobody crashes`, { timeout: 600_000 }, async () => {
+  it(`${rounds} rounds: no token either version saved is lost, nobody crashes`, { timeout: 600_000 }, async () => {
     const api = await startFakeApi();
     // Every login 0.3.0 polls is dead, so each 0.3.0 run writes the file.
     api.options.expireAll = true;
@@ -102,6 +102,20 @@ describe("I2 stress: 0.3.0 writing while this version writes", () => {
           current.map((result) => result.stderr).join("\n"),
         );
         assert.equal(saves.length, 3);
+        // What this version saved meanwhile is there too: it checks again
+        // after saving and saves again if 0.3.0 overwrote it, and what it
+        // still couldn't save comes back with the next write.
+        await saveToken("https://after.example", "fth_after", env);
+        const saved = JSON.parse(await readFile(join(xdg, "fortrip", "credentials.json"), "utf8"));
+        for (let p = 0; p < 3; p++) {
+          for (let n = 0; n < 20; n++) {
+            assert.equal(
+              saved.tokens[`https://r${round}p${p}-${n}.example`]?.accessToken,
+              `fth_r${round}p${p}_${n}`,
+              `round ${round}`,
+            );
+          }
+        }
         // Both versions only ever rewrite what they read, so a token that
         // was there before the round is still there unless something took
         // a half-written file for the whole file.

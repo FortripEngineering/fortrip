@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import fsp, { mkdtemp, readFile } from "node:fs/promises";
+import fsp, { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -15,11 +15,12 @@ import {
   addPendingLogin,
   deleteToken,
   loadPendingLogins,
+  loadRecoveredTokens,
   loadStoredToken,
   saveToken,
   tryLoginLock,
 } from "../src/credentials.ts";
-import { CliError, EXIT } from "../src/errors.ts";
+import { CliError, EXIT, notices } from "../src/errors.ts";
 
 const run = promisify(execFile);
 
@@ -47,6 +48,8 @@ let onPoll: (() => Promise<void>) | undefined;
 let onDeviceStart: (() => Promise<void>) | undefined;
 /** The next whoami answers 401 whatever the token: a passing failure. */
 let rejectNext = false;
+/** Every token a revoke was asked for. */
+let revokeCalls: string[] = [];
 /** Runs before a 401 from whoami is sent. */
 let onRejected: (() => Promise<void>) | undefined;
 const TOKEN = `fth_${"x".repeat(43)}`;
@@ -137,6 +140,7 @@ async function handle(
       await onRejected?.();
       return send(401, { success: false, error: "Invalid or revoked token" });
     case "POST /api/cli/auth/revoke":
+      revokeCalls.push(token);
       if (!validTokens.delete(token)) {
         return send(401, { success: false, error: "Invalid or revoked token" });
       }
@@ -181,6 +185,8 @@ beforeEach(async () => {
   onPoll = undefined;
   onDeviceStart = undefined;
   rejectNext = false;
+  revokeCalls = [];
+  for (const key of Object.keys(notices)) delete notices[key];
   onRejected = undefined;
   waits.length = 0;
   logs.length = 0;
@@ -494,11 +500,6 @@ describe("login from a command (agents)", () => {
       throw Object.assign(new Error("EPERM"), { code: "EPERM" });
     });
     syncBuiltinESMExports();
-    const notes: string[] = [];
-    mock.method(process.stderr, "write", (chunk: string) => {
-      notes.push(String(chunk));
-      return true;
-    });
     let token: string;
     try {
       ({ token } = await requireToken(apiUrl));
@@ -507,12 +508,40 @@ describe("login from a command (agents)", () => {
       syncBuiltinESMExports();
     }
     assert.ok(validTokens.has(token));
-    const kept = notes.join("").match(/kept in (\S+?):/)?.[1];
-    assert.ok(kept, notes.join(""));
+    assert.match(String(notices.warning), /kept in/);
+    const kept = String(notices.recoveryFile);
     assert.equal(
       JSON.parse(await readFile(kept, "utf8")).tokens[apiUrl].accessToken,
       token,
     );
+  });
+
+  it("I3: the CLI's output stays JSON when a sign-in can't be saved, and the next command recovers it", { timeout: 30_000 }, async () => {
+    const env = { ...process.env, FORTRIP_API_URL: apiUrl, FORTRIP_TOKEN: "" };
+    const cli = (args: string[]) =>
+      run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args], { env }).then(
+        ({ stdout, stderr }) => ({ code: 0, stdout, stderr }),
+        (error: { code: number; stdout: string; stderr: string }) => error,
+      );
+    const path = join(process.env.XDG_CONFIG_HOME as string, "fortrip", "credentials.json");
+
+    const first = await cli(["whoami"]);
+    decide(JSON.parse(first.stderr).loginUrl, "approved");
+    // A killed 0.3.0 write leaves the file empty as the login is redeemed.
+    onPoll = () => writeFile(path, "");
+    const failed = await cli(["search", "--query", "x"]);
+    onPoll = undefined;
+    assert.equal(failed.code, 1);
+    const error = JSON.parse(failed.stderr);
+    assert.equal(error.error, "not found");
+    assert.match(error.warning, /kept in/);
+    assert.match(error.recoveryFile, /credentials\.recovered-/);
+
+    const next = await cli(["whoami"]);
+    assert.equal(next.code, 0, next.stderr);
+    assert.equal(JSON.parse(next.stdout).email, "a@b.c");
+    assert.equal(next.stderr, "");
+    await assert.rejects(readFile(error.recoveryFile));
   });
 
   it("parallel CLI processes share one link, and reruns poll it once", async () => {
@@ -585,6 +614,8 @@ describe("I1: a 401 never deletes the saved token", () => {
     const saved = await loadStoredToken(apiUrl);
     assert.notEqual(saved, TOKEN);
     assert.ok(validTokens.has(saved as string));
+    // The replaced token is revoked, in case the 401 was a passing problem.
+    assert.deepEqual(revokeCalls, [TOKEN]);
   });
 
   it("keeps a token another command saved meanwhile and retries with it", async () => {
@@ -609,6 +640,30 @@ describe("I1: a 401 never deletes the saved token", () => {
     assert.equal(error.details.tokenSource, "FORTRIP_TOKEN");
     assert.equal(await loadStoredToken(apiUrl), TOKEN);
     assert.equal(deviceStarts, 0);
+  });
+});
+
+describe("credentials file problems", () => {
+  it("login fails on a credentials file it can't update before the user approves anything", { timeout: 10_000 }, async () => {
+    const path = join(process.env.XDG_CONFIG_HOME as string, "fortrip", "credentials.json");
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "{not json");
+    const error = await failure(runLogin());
+    assert.match(error.message, /Move it away/);
+    assert.equal(deviceStarts, 0);
+  });
+
+  it("logout revokes and removes sign-ins kept in recovery files", async () => {
+    const dir = join(process.env.XDG_CONFIG_HOME as string, "fortrip");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, "credentials.recovered-1-a.json"),
+      JSON.stringify({ tokens: { [apiUrl]: { accessToken: TOKEN, createdAt: "x" } } }),
+    );
+    assert.deepEqual(await logout(apiUrl), { loggedOut: true, apiUrl });
+    assert.deepEqual(revokeCalls, [TOKEN]);
+    assert.equal(await loadStoredToken(apiUrl), null);
+    assert.deepEqual(await loadRecoveredTokens(apiUrl), []);
   });
 });
 

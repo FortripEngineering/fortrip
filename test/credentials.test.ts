@@ -29,6 +29,7 @@ import {
   resolveApiUrl,
   resolveToken,
   saveToken,
+  loadRecoveredTokens,
   tryLock,
   tryLoginLock,
   updatePendingLogin,
@@ -67,11 +68,11 @@ describe("credentials", () => {
     });
   });
 
-  it("deleting the last token removes the file", async () => {
+  it("deleting the last token keeps the file, which 0.3.0 may be writing", async () => {
     await saveToken("https://fortrip.ai", "fth_prod", env);
     await deleteToken("https://fortrip.ai", env);
     assert.equal(await resolveToken("https://fortrip.ai", env), null);
-    await assert.rejects(stat(credentialsPath(env)));
+    assert.deepEqual(JSON.parse(await readFile(credentialsPath(env), "utf8")).tokens, {});
   });
 
   it("keeps pending logins until they expire or a token replaces them", async () => {
@@ -131,9 +132,9 @@ describe("credentials", () => {
 
   it("deleteToken with `only` keeps a token saved meanwhile", async () => {
     await saveToken("https://fortrip.ai", "fth_new", env);
-    await deleteToken("https://fortrip.ai", env, "fth_old");
+    await deleteToken("https://fortrip.ai", env, ["fth_old"]);
     assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-    await deleteToken("https://fortrip.ai", env, "fth_new");
+    await deleteToken("https://fortrip.ai", env, ["fth_old", "fth_new"]);
     assert.equal(await loadStoredToken("https://fortrip.ai", env), null);
   });
 
@@ -276,6 +277,64 @@ describe("I4: one lock holder at a time", () => {
     }
   });
 
+  it("takes over a lock and takeover guard both left by a process that ended", async () => {
+    const path = join(env.XDG_CONFIG_HOME as string, "test.lock");
+    const owner = ownerOf(await exitedPid());
+    await writeFile(path, owner);
+    await writeFile(`${path}.takeover`, owner);
+    let release = null;
+    for (let tries = 0; !release && tries < 5; tries++) release = await tryLock(path, 60_000);
+    assert.ok(release);
+  });
+
+  it("a live holder under another user still holds its lock", async () => {
+    // pid 1 runs as root: signalling it fails with EPERM, which means running.
+    const path = join(env.XDG_CONFIG_HOME as string, "test.lock");
+    await writeFile(path, ownerOf(1));
+    for (let tries = 0; tries < 3; tries++) assert.equal(await tryLock(path, 60_000), null);
+    assert.equal(await readFile(path, "utf8"), ownerOf(1));
+  });
+
+  it("a lock it can't read is judged by age", async () => {
+    const path = join(env.XDG_CONFIG_HOME as string, "test.lock");
+    await writeFile(path, ownerOf(process.pid), { mode: 0o000 });
+    assert.equal(await tryLock(path, 300), null);
+    await sleep(350);
+    assert.equal(await tryLock(path, 300), null); // removes it
+    assert.ok(await tryLock(path, 300));
+  });
+
+  it("gives up on a lock it can never take, naming it", { timeout: 20_000 }, async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(`${path}.lock`, ownerOf(process.pid));
+    // The lock can't even be looked at (say, a directory it can't list).
+    const realLstat = fsp.lstat;
+    mock.method(fsp, "lstat", async (...args: Parameters<typeof realLstat>) => {
+      if (String(args[0]).endsWith(".lock")) {
+        throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+      }
+      return realLstat(...args);
+    });
+    syncBuiltinESMExports();
+    mock.timers.enable({ apis: ["Date"], now: Date.now() });
+    const ticking = setInterval(() => mock.timers.tick(5_000), 20);
+    try {
+      await assert.rejects(
+        deleteToken("https://fortrip.ai", env),
+        (error) =>
+          error instanceof CliError &&
+          error.details.retryable === true &&
+          error.details.lockFile === `${path}.lock`,
+      );
+    } finally {
+      clearInterval(ticking);
+      mock.timers.reset();
+      mock.restoreAll();
+      syncBuiltinESMExports();
+    }
+  });
+
   it("two waiters can't both take over the same abandoned lock", async () => {
     const path = join(env.XDG_CONFIG_HOME as string, "test.lock");
     for (let round = 0; round < 50; round++) {
@@ -371,33 +430,57 @@ describe("I2: the file 0.3.0 shares", () => {
     assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
   });
 
-  it("never overwrites or removes a file it can't parse; the error is retryable", async () => {
+  it("never overwrites a file it can't parse: retryable while it may be mid-write, else says to move it", async () => {
     const path = credentialsPath(env);
     await mkdir(dirname(path), { recursive: true });
-    for (const text of ["", '{"tokens": {"https://keep', "[]"]) {
+    await writeFile(path, "");
+    await assert.rejects(
+      deleteToken("https://fortrip.ai", env),
+      (error) => error instanceof CliError && error.details.retryable === true,
+    );
+    assert.equal(await readFile(path, "utf8"), "");
+    for (const text of ['{"tokens": {"https://keep', "[]"]) {
       await writeFile(path, text);
       await assert.rejects(
         deleteToken("https://fortrip.ai", env),
-        (error) => error instanceof CliError && error.details.retryable === true,
+        (error) =>
+          error instanceof CliError &&
+          error.details.retryable === undefined &&
+          error.message.includes(path) &&
+          /Move it away/.test(error.message),
       );
       assert.equal(await readFile(path, "utf8"), text);
     }
   });
 
-  it("makes its change again when 0.3.0 wrote between its read and its write", async () => {
+  it("an empty file nobody has touched for a while counts as empty", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "");
+    const before = new Date(Date.now() - 10_000);
+    await utimes(path, before, before);
+    const started = Date.now();
+    assert.equal(await loadStoredToken("https://fortrip.ai", env), null);
+    assert.ok(Date.now() - started < 500, "no retries for a file left empty");
+    await saveToken("https://fortrip.ai", "fth_new", env);
+    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
+  });
+
+  it("saves the token again when 0.3.0 overwrites it just after the save", async () => {
     await saveToken("https://keep.example", "fth_keep", env);
     const path = credentialsPath(env);
-    const real = fsp.readFile;
-    let reads = 0;
-    // The second read of the file (the check before writing) finds that
-    // 0.3.0 saved a token meanwhile.
-    mock.method(fsp, "readFile", async (...args: Parameters<typeof real>) => {
-      if (args[0] === path && ++reads === 2) {
-        const file = JSON.parse(String(await real(path, "utf8")));
+    const realRename = fsp.rename;
+    let clobbered = false;
+    // 0.3.0 read the file before this save and writes its own token after.
+    mock.method(fsp, "rename", async (...args: Parameters<typeof realRename>) => {
+      const before = await readFile(path, "utf8");
+      await realRename(...args);
+      if (!clobbered && args[1] === path) {
+        clobbered = true;
+        const file = JSON.parse(before);
         file.tokens["https://old.example"] = { accessToken: "fth_030", createdAt: "x" };
         await writeFile(path, JSON.stringify(file));
       }
-      return real(...args);
     });
     syncBuiltinESMExports();
     try {
@@ -406,9 +489,71 @@ describe("I2: the file 0.3.0 shares", () => {
       mock.restoreAll();
       syncBuiltinESMExports();
     }
+    assert.ok(clobbered);
+    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
+    assert.equal(await loadStoredToken("https://old.example", env), "fth_030");
+    assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep");
+  });
+
+  it("makes its change again when 0.3.0 wrote while the new file was being prepared", async () => {
+    await saveToken("https://keep.example", "fth_keep", env);
+    const path = credentialsPath(env);
+    const realWriteFile = fsp.writeFile;
+    let injected = false;
+    // Right after the temp file is written, before it replaces the old one,
+    // 0.3.0 saves a token of its own.
+    mock.method(fsp, "writeFile", async (...args: Parameters<typeof realWriteFile>) => {
+      await realWriteFile(...args);
+      if (!injected && String(args[0]).endsWith(".tmp")) {
+        injected = true;
+        const file = JSON.parse(await readFile(path, "utf8"));
+        file.tokens["https://old.example"] = { accessToken: "fth_030", createdAt: "x" };
+        await realWriteFile(path, JSON.stringify(file));
+      }
+    });
+    syncBuiltinESMExports();
+    try {
+      await saveToken("https://fortrip.ai", "fth_new", env);
+    } finally {
+      mock.restoreAll();
+      syncBuiltinESMExports();
+    }
+    assert.ok(injected);
     assert.equal(await loadStoredToken("https://old.example", env), "fth_030");
     assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
     assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep");
+  });
+});
+
+describe("I3: recovery files", () => {
+  const recovery = (name: string) =>
+    join(env.XDG_CONFIG_HOME as string, "fortrip", `credentials.recovered-${name}.json`);
+  const token = (accessToken: string, createdAt: string) => ({ accessToken, createdAt });
+
+  it("the next successful write merges them back, newest per API URL, and removes them", async () => {
+    await saveToken("https://a.example", "fth_a_saved", env);
+    await saveToken("https://b.example", "fth_b_saved", env);
+    const later = new Date(Date.now() + 60_000).toISOString();
+    await writeFile(
+      recovery("1"),
+      JSON.stringify({
+        tokens: {
+          "https://a.example": token("fth_a_kept", later),
+          "https://b.example": token("fth_b_kept", "2000-01-01T00:00:00.000Z"),
+          "https://c.example": token("fth_c_kept", later),
+        },
+      }),
+    );
+    await writeFile(recovery("2"), "not json");
+
+    assert.deepEqual(await loadRecoveredTokens("https://a.example", env), ["fth_a_kept"]);
+    await addPendingLogin("https://d.example", login(1), env);
+
+    assert.equal(await loadStoredToken("https://a.example", env), "fth_a_kept");
+    assert.equal(await loadStoredToken("https://b.example", env), "fth_b_saved");
+    assert.equal(await loadStoredToken("https://c.example", env), "fth_c_kept");
+    await assert.rejects(stat(recovery("1")));
+    assert.equal(await readFile(recovery("2"), "utf8"), "not json");
   });
 });
 

@@ -12,7 +12,7 @@ import {
 } from "./args.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
 import { resolveApiUrl } from "./credentials.ts";
-import { CliError, EXIT, type ExitCode, usageError } from "./errors.ts";
+import { CliError, EXIT, type ExitCode, notices, usageError } from "./errors.ts";
 import { readGuide } from "./guide.ts";
 import { VERSION } from "./version.ts";
 
@@ -288,7 +288,11 @@ async function main(): Promise<ExitCode> {
   try {
     const result = await run(process.argv.slice(2));
     if (result !== undefined) {
-      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      const output =
+        result && typeof result === "object" && !Array.isArray(result)
+          ? { ...result, ...notices }
+          : result;
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
     }
     return EXIT.ok;
   } catch (error) {
@@ -297,7 +301,7 @@ async function main(): Promise<ExitCode> {
         ? error
         : new CliError((error as Error)?.message ?? String(error), EXIT.error);
     process.stderr.write(
-      `${JSON.stringify({ error: failure.message, exitCode: failure.exitCode, ...failure.details }, null, 2)}\n`,
+      `${JSON.stringify({ error: failure.message, exitCode: failure.exitCode, ...failure.details, ...notices }, null, 2)}\n`,
     );
     return failure.exitCode;
   }

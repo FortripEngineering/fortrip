@@ -7,6 +7,7 @@ import {
   addPendingLogin,
   deleteToken,
   loadPendingLogins,
+  loadRecoveredTokens,
   loadStoredToken,
   type PendingLogin,
   resolveToken,
@@ -14,7 +15,7 @@ import {
   tryLoginLock,
   updatePendingLogin,
 } from "./credentials.ts";
-import { CliError, EXIT } from "./errors.ts";
+import { CliError, EXIT, notices } from "./errors.ts";
 
 /** RFC 8628's default poll interval, for logins saved without one. */
 const DEFAULT_INTERVAL_SECONDS = 5;
@@ -172,9 +173,12 @@ async function pollPendingLogins(
         try {
           await saveToken(apiUrl, result.accessToken);
         } catch (error) {
-          // The login is redeemed: use the token rather than lose it. The
-          // message says where it was kept.
-          process.stderr.write(`${(error as Error).message}\n`);
+          // The login is redeemed: use the token rather than lose it, and
+          // say where it was kept in the command's JSON output.
+          notices.warning = (error as Error).message;
+          if (error instanceof CliError && error.details.recoveryFile) {
+            notices.recoveryFile = error.details.recoveryFile;
+          }
         }
         return result.accessToken;
       }
@@ -239,6 +243,11 @@ export async function authorizedRequest(
     started: new Date().toISOString(),
     rejected: auth.token,
   });
+  // The new token replaces the old one, which may still work if the 401 was
+  // a passing problem: revoke it, best effort.
+  await request(apiUrl, "/api/cli/auth/revoke", { method: "POST", token: auth.token }).catch(
+    () => undefined,
+  );
   return request(apiUrl, path, { ...init, token });
 }
 
@@ -249,6 +258,9 @@ export async function login({
   log,
   wait = sleep,
 }: LoginOptions): Promise<unknown> {
+  // A credentials file that can't be updated fails here, not after the
+  // user has approved.
+  await loadStoredToken(apiUrl);
   const start = await startDeviceLogin(apiUrl);
 
   log(`Confirm this code in your browser: ${start.userCode}`);
@@ -339,19 +351,29 @@ function loginRequired(
   );
 }
 
-/** Revokes the saved token for this API URL on the server, then forgets it. */
+/** Revokes the saved token for this API URL on the server, then forgets it,
+ *  with any kept in recovery files. */
 export async function logout(apiUrl: string): Promise<unknown> {
   const token = await loadStoredToken(apiUrl);
-  if (!token) {
+  const recovered = await loadRecoveredTokens(apiUrl);
+  if (!token && !recovered.length) {
     throw new CliError(`Not logged in to ${apiUrl}.`, EXIT.unauthenticated);
   }
-  const response = await request(apiUrl, "/api/cli/auth/revoke", {
-    method: "POST",
-    token,
-  });
-  // 401: already revoked or unknown — forgetting it locally is still right.
-  if (response.status !== 401) unwrap(response);
-  await deleteToken(apiUrl, process.env, token);
+  if (token) {
+    const response = await request(apiUrl, "/api/cli/auth/revoke", {
+      method: "POST",
+      token,
+    });
+    // 401: already revoked or unknown — forgetting it locally is still right.
+    if (response.status !== 401) unwrap(response);
+  }
+  for (const kept of recovered) {
+    await request(apiUrl, "/api/cli/auth/revoke", { method: "POST", token: kept }).catch(
+      () => undefined,
+    );
+  }
+  // Also merges the recovery files back and removes them.
+  await deleteToken(apiUrl, process.env, [...(token ? [token] : []), ...recovered]);
   return { loggedOut: true, apiUrl };
 }
 
