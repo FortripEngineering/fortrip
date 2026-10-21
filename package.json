@@ -1,6 +1,7 @@
 {
   "name": "fortrip",
   "version": "0.3.0",
+  "license": "MIT",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "type": "module",
   "repository": {
@@ -12,6 +13,7 @@
   },
   "files": [
     "dist",
+    "examples",
     "skills",
     "guides",
     "AGENT_GUIDE.md",
