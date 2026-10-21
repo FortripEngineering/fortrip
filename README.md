@@ -4,7 +4,7 @@ Search, price and book Fortrip hotels from the terminal or an AI agent.
 The npm package and the command are both `fortrip`.
 
 For MCP clients, see the separately maintained
-[Fortrip Hotel MCP](https://github.com/FortripEngineering/fortrip-hotel-mcp)
+[Fortrip MCP](https://github.com/FortripEngineering/fortrip-mcp)
 repository for local and hosted connection instructions.
 
 ```bash
