@@ -1,4 +1,4 @@
-name: Publish Fortrip Hotels to MCP Registry
+name: Publish Fortrip to MCP Registry
 
 on:
   workflow_dispatch:
@@ -28,3 +28,5 @@ jobs:
         run: ./mcp-publisher login github-oidc
       - name: Publish remote MCP metadata
         run: ./mcp-publisher publish server.json
+      - name: Deprecate previous server name
+        run: ./mcp-publisher status --status deprecated --all-versions --message "Renamed to io.github.FortripEngineering/fortrip; connect to the same https://fortrip.ai/api/mcp endpoint." io.github.FortripEngineering/fortrip-hotels
