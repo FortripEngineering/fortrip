@@ -43,7 +43,7 @@ token into the chat.
 | Code | Meaning | What to do |
 |---|---|---|
 | 0 | Success; JSON on stdout | Continue |
-| 1 | Other error (supplier error, rate no longer bookable, network) | Read `error` on stderr; re-run `rates` if a rate went stale |
+| 1 | Other error (supplier error, rate no longer bookable, network) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out), wait a few seconds and retry once; re-run `rates` if a rate went stale |
 | 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields |
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
