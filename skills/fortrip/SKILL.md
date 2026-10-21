@@ -1,9 +1,9 @@
 ---
-name: fortrip-hotels
+name: fortrip
 description: Search hotels, compare live room rates and create a hotel booking with a payment link through Fortrip. Use when the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations, or asks for a hotel payment link.
 ---
 
-# Fortrip hotels
+# Fortrip
 
 Before anything else, run:
 
