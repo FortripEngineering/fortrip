@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { createServer, type RequestListener } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, it } from "node:test";
 
-import { unwrap } from "../src/api.ts";
+import { request, unwrap } from "../src/api.ts";
 import { CliError, EXIT } from "../src/errors.ts";
 
 function response(
@@ -77,6 +79,90 @@ describe("unwrap", () => {
         status: 400,
         issues: [{ path: "checkIn", message: "Required" }],
       });
+    }
+  });
+});
+
+describe("transport errors", () => {
+  /** Runs `fn` against a one-off server answering with `handler`. */
+  async function withServer<T>(
+    handler: RequestListener,
+    fn: (url: string) => Promise<T>,
+  ): Promise<T> {
+    const server = createServer(handler);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      return await fn(`http://127.0.0.1:${(server.address() as AddressInfo).port}`);
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
+  }
+
+  async function failure(promise: ReturnType<typeof request>): Promise<CliError> {
+    try {
+      unwrap(await promise);
+    } catch (error) {
+      assert.ok(error instanceof CliError);
+      return error;
+    }
+    assert.fail("expected a CliError");
+  }
+
+  it("an unreachable server is retryable", async () => {
+    const url = await withServer(
+      () => {},
+      async (url) => url,
+    );
+    const error = await failure(request(url, "/api/x"));
+    assert.equal(error.exitCode, EXIT.error);
+    assert.equal(error.details.retryable, true);
+  });
+
+  it("a connection dropped mid-response is retryable", async () => {
+    const error = await withServer(
+      (_req, res) => {
+        res.writeHead(200, { "content-type": "application/json", "content-length": "100" });
+        res.write('{"success":');
+        setTimeout(() => res.socket?.destroy(), 20);
+      },
+      (url) => failure(request(url, "/api/x")),
+    );
+    assert.equal(error.exitCode, EXIT.error);
+    assert.equal(error.details.retryable, true);
+  });
+
+  it("a 5xx that isn't the API's JSON is retryable; the API's own 5xx says for itself", async () => {
+    const answer = (status: number, body: string): RequestListener =>
+      (_req, res) => {
+        res.writeHead(status, { "content-type": "text/html" });
+        res.end(body);
+      };
+    for (const [status, body, retryable] of [
+      [502, "<html>Bad gateway</html>", true],
+      [504, "", true],
+      [500, '{"success":false,"error":"server_error"}', undefined],
+      [
+        503,
+        '{"success":false,"error":"Supplier unavailable","reason":"supplier_unavailable","retryable":true}',
+        true,
+      ],
+      [404, "<html>Not found</html>", undefined],
+    ] as const) {
+      const error = await withServer(answer(status, body), (url) =>
+        failure(request(url, "/api/x")),
+      );
+      assert.equal(error.exitCode, EXIT.error, `${status} ${body}`);
+      assert.equal(error.details.retryable, retryable, `${status} ${body}`);
+    }
+  });
+
+  it("a 401 doesn't send agents to the blocking login command", () => {
+    try {
+      unwrap(response(401, { success: false, error: "Unauthorized" }));
+    } catch (error) {
+      assert.ok(error instanceof CliError);
+      assert.doesNotMatch(error.message, /fortrip login/);
     }
   });
 });

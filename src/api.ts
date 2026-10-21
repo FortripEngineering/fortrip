@@ -38,12 +38,14 @@ export async function request(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new CliError(
-      `Could not reach ${apiUrl}: ${(error as Error).message}`,
-      EXIT.error,
-    );
+    throw transportError(apiUrl, error);
   }
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    throw transportError(apiUrl, error, response.status);
+  }
   let parsed: unknown = null;
   try {
     parsed = text ? JSON.parse(text) : {};
@@ -51,13 +53,25 @@ export async function request(
     parsed = null;
   }
   const isObject = parsed !== null && typeof parsed === "object";
-  return {
-    status: response.status,
-    body: isObject
-      ? (parsed as Record<string, unknown>)
-      : { error: `Unexpected ${response.status} response`, raw: text.slice(0, 200) },
-    headers: response.headers,
-  };
+  const result: Record<string, unknown> = isObject
+    ? (parsed as Record<string, unknown>)
+    : { error: `Unexpected ${response.status} response`, raw: text.slice(0, 200) };
+  // A 5xx without the API's JSON (a proxy's error page, or nothing) is a
+  // platform hiccup.
+  if (response.status >= 500 && !(isObject && text)) result.retryable = true;
+  return { status: response.status, body: result, headers: response.headers };
+}
+
+/** No answer, or the connection dropped: worth one retry. */
+function transportError(apiUrl: string, error: unknown, status?: number): CliError {
+  const message =
+    (error as Error)?.name === "TimeoutError"
+      ? `No response from ${apiUrl} within ${REQUEST_TIMEOUT_MS / 1_000} s`
+      : `Could not reach ${apiUrl}: ${(error as Error)?.message ?? String(error)}`;
+  return new CliError(message, EXIT.error, {
+    ...(status !== undefined ? { status } : {}),
+    retryable: true,
+  });
 }
 
 /** The `data` of a successful `{ success: true, data }` response, or a
