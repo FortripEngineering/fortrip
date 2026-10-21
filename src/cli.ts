@@ -93,8 +93,8 @@ ${BODY_NOTE}
 Creates the order and returns paymentUrl with the amount, currency, terms and
 stay. Show those to the user and get their confirmation, then give them
 paymentUrl exactly as returned. Payment happens only on that page: never ask
-for or pass on card details. Rerunning with the same flags returns the same
-order.
+for or pass on card details. Takes up to about 2 minutes; rerunning with the
+same flags returns the same order.
 
 ${FLAGS.book}
 

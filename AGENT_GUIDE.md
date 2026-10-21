@@ -37,11 +37,14 @@ waits for up to 10 minutes. Commands that exit 3 together share one
 `loginUrl`; show it once. If the rerun gives a different `loginUrl`, show
 that one.
 
-A saved sign-in the server no longer accepts (revoked, or unused for 90
-days) is replaced the same way: the command exits 3 with a new `loginUrl`.
-Exit 3 with `tokenSource: "FORTRIP_TOKEN"` means the token the user set in
-`FORTRIP_TOKEN` was rejected; tell them to replace or unset it, and don't
-rerun until they have.
+When Fortrip doesn't accept the saved sign-in (it was revoked or has
+expired, or Fortrip had a passing problem), the command also exits 3 with a
+`loginUrl`; handle it the same way. The saved sign-in is kept until the
+user approves the new link, so after a passing problem the next command
+works without signing in again. Exit 3 with `tokenSource: "FORTRIP_TOKEN"` means Fortrip
+didn't accept the token the user set in `FORTRIP_TOKEN`: retry once a
+little later, and if it keeps happening, tell the user to replace or unset
+it.
 
 Sign-in happens only in the browser. In CI, the user can set `FORTRIP_TOKEN`
 instead. Never ask the user to paste a token into the chat.
@@ -52,7 +55,7 @@ instead. Never ask the user to paste a token into the chat.
 |---|---|---|
 | 0 | Success; JSON on stdout | Continue |
 | 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, Fortrip briefly unavailable, or no response from Fortrip), wait `retryAfterSeconds` (or a few seconds) and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
-| 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields (a stay that is too long gives `requestedNights` and `maxNights` instead) |
+| 2 | Invalid arguments | Fix the flags; stderr `issues` lists each bad field with a message |
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
 
@@ -133,8 +136,11 @@ instead. Never ask the user to paste a token into the chat.
    accepts only these fields: a `--body` with any other field (such as
    `nationality`) is rejected with exit 2.
 
-   `book` is safe to rerun with identical flags: it returns the same order,
-   with the same or a refreshed payment link.
+   One booking covers at most 15 nights; book a longer stay as separate
+   bookings. `book` checks the rate with the supplier again and can take up
+   to about 2 minutes: allow the command at least 3 minutes, and if it times
+   out, run it again with identical flags. That is always safe: it returns
+   the same order, with the same or a refreshed payment link.
 
 ## Before giving the payment link
 
@@ -163,7 +169,8 @@ instead. Never ask the user to paste a token into the chat.
    minutes; call `book` again with the same details for a fresh one.
 
 Never ask for, accept or pass on payment card details; payment happens only
-on the payment page. A card number in any field is rejected with exit 2.
+on the payment page. A card number in a guest name, the contact name or the
+special requests is rejected with exit 2.
 
 After paying, the user lands on `statusUrl`, which shows confirmation progress
 without signing in. `orderUrl` is the signed-in order page.

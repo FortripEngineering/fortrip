@@ -63,14 +63,15 @@ describe("skill", () => {
       "`stay`",
       "Never ask for, accept or pass on payment card details",
       "`--nationality` isn't sent with the booking",
-      "safe to rerun with identical flags",
+      "run it again with identical flags",
       "`nationality`) is rejected",
       // Errors and sign-in edge cases.
       "`maxMatches`",
-      "`requestedNights`",
+      "at most 15 nights; book a longer stay as separate bookings",
       "any other 409 is `rate_unavailable`",
       'Exit 3 with `tokenSource: "FORTRIP_TOKEN"`',
-      "unused for 90 days",
+      "The saved sign-in is kept until the user approves the new link",
+      "allow the command at least 3 minutes",
       // Sign-in and support.
       "Never ask the user to paste a token",
       "info@fortrip.ai",
