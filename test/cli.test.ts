@@ -156,3 +156,30 @@ describe("book links", () => {
     });
   });
 });
+
+describe("help", () => {
+  it("<command> --help prints that command's usage and exits 0", async () => {
+    for (const [command, flag, expected] of [
+      ["book", "--help", /^Usage: fortrip book /],
+      ["rates", "-h", /^Usage: fortrip rates /],
+      ["hotel", "--help", /^Usage: fortrip hotel <hotelId>/],
+      ["login", "-h", /^Usage: fortrip login /],
+    ] as const) {
+      const { code, stdout } = await cli([command, "--hotel", "1", flag]);
+      assert.equal(code, 0, `${command} ${flag}`);
+      assert.match(stdout, expected);
+    }
+  });
+
+  it("--help after -- is an argument, not a request for help", async () => {
+    const { code } = await cli(["hotel", "--", "--help"]);
+    assert.equal(code, 2);
+  });
+
+  it("the overall help points to per-command help", async () => {
+    const { code, stdout } = await cli(["--help"]);
+    assert.equal(code, 0);
+    assert.match(stdout, /fortrip <command> --help/);
+    assert.match(stdout, /--adults and --child-age are per room/);
+  });
+});

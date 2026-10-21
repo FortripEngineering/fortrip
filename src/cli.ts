@@ -16,9 +16,103 @@ import { CliError, EXIT, type ExitCode, usageError } from "./errors.ts";
 import { readGuide } from "./guide.ts";
 import { VERSION } from "./version.ts";
 
+const FLAGS = {
+  search: `  --query <text> | --city-code <n> | --near <lat,lng,km>
+  --check-in YYYY-MM-DD --check-out YYYY-MM-DD
+  [--star-min n] [--star-max n] [--facility <name>]... [--price-min n]
+  [--price-max n] [--sort recommended|price-asc|price-desc|star-desc|distance]
+  [--page n] [--page-size n] [--currency CNY|USD]`,
+  rates: `  --hotel <id>... --check-in YYYY-MM-DD --check-out YYYY-MM-DD
+  [--rooms 1] [--adults 2] [--child-age n]... [--nationality CN]
+  [--board BB]... [--free-cancellation] [--include-unbookable]
+  [--max-rooms n] [--currency CNY|USD]`,
+  book: `  --hotel <id> --room-id <id> --rate-plan <code>
+  --check-in YYYY-MM-DD --check-out YYYY-MM-DD --rooms <n> --adults <n>
+  [--child-age n]... --guest "First Last[:roomNo]"...
+  --contact-name <name> --contact-phone <phone> [--contact-email <email>]
+  [--special-requests <english text>]`,
+};
+
+const BODY_NOTE = `Also takes --body '<json>' (or --body @file.json) with the raw request
+body; flags override its fields.`;
+
+const OCCUPANCY_NOTE = `--adults and --child-age are per room, and every room has the same
+occupancy: 2 rooms for 4 adults is --rooms 2 --adults 2. Limits: 1-8 rooms,
+1-8 adults and 0-8 children (aged 0-17) per room, 1-15 nights.`;
+
+/** `fortrip <command> --help`. */
+const USAGE: Record<string, string> = {
+  login: `Usage: fortrip login [--no-browser]
+
+Signs in through the browser with a device code and waits up to 10 minutes
+for approval. Any other command starts the same login itself and exits 3
+with loginUrl instead of waiting; AI agents should rely on that.
+`,
+  logout: `Usage: fortrip logout
+
+Revokes the saved token on the server and deletes it locally.
+`,
+  whoami: `Usage: fortrip whoami
+
+Shows the signed-in account.
+`,
+  search: `Usage: fortrip search [options]
+
+Finds hotels with indicative prices: floors, not quotes.
+
+${FLAGS.search}
+
+${BODY_NOTE}
+`,
+  hotel: `Usage: fortrip hotel <hotelId> [--with-rooms]
+
+Static hotel detail: description, policies, facilities and photos;
+--with-rooms adds the room types.
+`,
+  rates: `Usage: fortrip rates [options]
+
+Live rooms and rates for up to 15 hotels; takes about 15 seconds.
+
+${FLAGS.rates}
+
+${OCCUPANCY_NOTE}
+
+Meal codes (--board, boardCode): RO room only, BB breakfast, HB breakfast +
+dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast +
+lunch, HBLD lunch + dinner, AI all inclusive. boardCount is the number of
+meal portions included (BB with boardCount 1 for 2 adults covers one person).
+
+--nationality isn't sent with the booking: a rate restricted to that
+nationality may change or be refused at book.
+
+${BODY_NOTE}
+`,
+  book: `Usage: fortrip book [options]
+
+Creates the order and returns paymentUrl with the amount, currency, terms and
+stay. Show those to the user and get their confirmation, then give them
+paymentUrl exactly as returned. Payment happens only on that page: never ask
+for or pass on card details. Rerunning with the same flags returns the same
+order.
+
+${FLAGS.book}
+
+Use exactly the hotel, room, rate plan, dates, rooms, adults and child ages
+from rates. ${OCCUPANCY_NOTE}
+
+${BODY_NOTE}
+`,
+  skill: `Usage: fortrip skill [planning]
+
+Prints the guide for AI agents (Markdown); planning covers flexible dates,
+budgets, split stays and several destinations.
+`,
+};
+
 const HELP = `fortrip ${VERSION} — search, price and book Fortrip hotels
 
 Usage: fortrip <command> [options]
+       fortrip <command> --help
 
 Commands:
   login [--no-browser]        Sign in through the browser (device code)
@@ -30,23 +124,18 @@ Commands:
   book                        Create an order and get a payment link
   skill [planning]            Print the guide for AI agents (Markdown)
 
-search:  --query <text> | --city-code <n> | --near <lat,lng,km>
-         --check-in YYYY-MM-DD --check-out YYYY-MM-DD
-         [--star-min n] [--star-max n] [--facility <name>]... [--price-min n]
-         [--price-max n] [--sort recommended|price-asc|price-desc|star-desc|distance]
-         [--page n] [--page-size n] [--currency CNY|USD]
-rates:   --hotel <id>... --check-in --check-out [--rooms 1] [--adults 2]
-         [--child-age n]... [--nationality CN] [--board BB]...
-         [--free-cancellation] [--include-unbookable] [--max-rooms n]
-         [--currency CNY|USD]
-book:    --hotel <id> --room-id <id> --rate-plan <code> --check-in --check-out
-         [--rooms 1] [--adults 2] [--child-age n]...
-         --guest "First Last[:roomNo]"... --contact-name <name>
-         --contact-phone <phone> [--contact-email <email>]
-         [--special-requests <english text>]
+search:
+${FLAGS.search}
+rates:
+${FLAGS.rates}
+book:
+${FLAGS.book}
 
 search, rates and book also take --body '<json>' (or --body @file.json) with
 the raw request body; flags override its fields.
+
+--adults and --child-age are per room: every room has the same occupancy
+(2 rooms for 4 adults is --rooms 2 --adults 2).
 
 search and rates ask for prices in --currency (CNY by default, or USD),
 converted at Stripe's rate or a fixed fallback rate; the response's currency
@@ -54,7 +143,8 @@ and fx fields say which. book still charges the currency it returns (usually
 USD).
 
 Output is JSON on stdout; errors are JSON on stderr.
-Exit codes: 0 ok, 1 error, 2 invalid arguments, 3 not logged in, 4 rate limited.
+Exit codes: 0 ok, 1 error (retry once when stderr has "retryable": true),
+2 invalid arguments, 3 not logged in, 4 rate limited.
 
 Environment:
   FORTRIP_TOKEN    Use this token instead of the saved login (CI, sandboxes)
@@ -69,6 +159,10 @@ async function run(argv: string[]): Promise<unknown> {
   const [command, ...rest] = argv;
   if (!command || command === "help" || command === "--help" || command === "-h") {
     process.stdout.write(HELP);
+    return undefined;
+  }
+  if (USAGE[command] && wantsHelp(rest)) {
+    process.stdout.write(USAGE[command]);
     return undefined;
   }
   if (command === "--version" || command === "-v") {
@@ -142,6 +236,15 @@ async function call(
   body?: unknown,
 ): Promise<unknown> {
   return unwrap(await authorizedRequest(apiUrl, path, { method, body }));
+}
+
+/** `--help` or `-h` anywhere before `--`. */
+function wantsHelp(args: string[]): boolean {
+  for (const arg of args) {
+    if (arg === "--") return false;
+    if (arg === "--help" || arg === "-h") return true;
+  }
+  return false;
 }
 
 /** Older servers answer site-relative links; an agent needs full URLs. */
