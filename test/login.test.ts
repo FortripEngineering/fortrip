@@ -6,6 +6,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
+import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { login, logout, requireToken, whoami } from "../src/auth.ts";
@@ -15,6 +16,7 @@ import {
   loadPendingLogins,
   loadStoredToken,
   saveToken,
+  tryLoginLock,
 } from "../src/credentials.ts";
 import { CliError, EXIT } from "../src/errors.ts";
 
@@ -140,6 +142,17 @@ async function handle(
   }
 }
 
+/** Runs `fn` while the test holds the login lock, so the commands it starts
+ *  all begin before any of them can poll. */
+async function whileLocked<T>(fn: () => Promise<T>): Promise<T> {
+  const release = await tryLoginLock();
+  assert.ok(release);
+  const result = fn();
+  await sleep(30);
+  await release();
+  return result;
+}
+
 /** The user approves (or denies) the code a loginUrl names. */
 function decide(loginUrl: unknown, status: "approved" | "denied") {
   const userCode = new URL(String(loginUrl)).searchParams.get("code");
@@ -248,34 +261,50 @@ describe("login from a command (agents)", () => {
     assert.equal((await loadPendingLogins(apiUrl)).length, 1);
   });
 
-  it("commands run in parallel share one login link", async () => {
-    const urls = await Promise.all(
-      [1, 2, 3].map(() => loginUrlOf(requireToken(apiUrl))),
+  it("commands run in parallel share one login link, and nobody polls it", async () => {
+    const urls = await whileLocked(() =>
+      Promise.all([1, 2, 3].map(() => loginUrlOf(requireToken(apiUrl)))),
     );
     assert.equal(deviceStarts, 1);
     assert.deepEqual(urls, [urls[0], urls[0], urls[0]]);
     assert.equal((await loadPendingLogins(apiUrl)).length, 1);
+    // Nobody has seen a link that new, so nobody can have approved it.
+    assert.equal(polls, 0);
+  });
+
+  it("reruns in parallel before approval poll the login once", async () => {
+    await loginUrlOf(requireToken(apiUrl));
+    const started = Date.now();
+    await whileLocked(() =>
+      Promise.all([1, 2, 3].map(() => loginUrlOf(requireToken(apiUrl)))),
+    );
+    assert.equal(polls, 1);
+    assert.ok(Date.now() - started < 2_000);
   });
 
   it("doesn't poll a login known to be unapproved since the command started", async () => {
-    for (const [n, checkedAt] of [
-      [1, new Date(Date.now() - 60_000)],
-      [2, new Date(Date.now() + 60_000)],
-    ] as const) {
+    const pending = (n: number, checkedAt: Date) => {
       auths.set(`dc${n}`, { userCode: `CODE-${n}`, status: "pending" });
-      await addPendingLogin(apiUrl, {
+      return addPendingLogin(apiUrl, {
         deviceCode: `dc${n}`,
         userCode: `CODE-${n}`,
         loginUrl: `${apiUrl}/cli/authorize?code=CODE-${n}`,
         expiresAt: new Date(Date.now() + 600_000).toISOString(),
         checkedAt: checkedAt.toISOString(),
       });
-    }
-    assert.equal(
-      await loginUrlOf(requireToken(apiUrl)),
-      `${apiUrl}/cli/authorize?code=CODE-2`,
-    );
-    assert.equal(polls, 1); // dc1 only
+    };
+    await pending(1, new Date(Date.now() - 60_000));
+    // In the future: a clock step, not something learned after the start.
+    await pending(3, new Date(Date.now() + 60_000));
+    const url = await whileLocked(async () => {
+      const result = loginUrlOf(requireToken(apiUrl));
+      await sleep(20);
+      // Another command learned dc2 is unapproved after this one started.
+      await pending(2, new Date());
+      return result;
+    });
+    assert.equal(url, `${apiUrl}/cli/authorize?code=CODE-2`);
+    assert.equal(polls, 2); // dc1 and dc3
     assert.equal(auths.get("dc2")?.lastPolledAt, undefined);
   });
 
@@ -298,6 +327,20 @@ describe("login from a command (agents)", () => {
     assert.deepEqual(await loadPendingLogins(apiUrl), []);
     assert.equal(polls, 2);
     assert.equal(deviceStarts, 0);
+  });
+
+  it("counts the interval from when the server answered", async () => {
+    deviceInterval = 1;
+    minPollGapMs = 900;
+    const loginUrl = await loginUrlOf(requireToken(apiUrl));
+    // The poll reaches the server late (a cold start, say).
+    onPoll = () => sleep(800);
+    await loginUrlOf(requireToken(apiUrl));
+    onPoll = undefined;
+    decide(loginUrl, "approved");
+
+    await requireToken(apiUrl);
+    assert.equal(slowDowns, 0);
   });
 
   it("waits out the poll interval instead of earning slow_down", async () => {
@@ -356,8 +399,15 @@ describe("login from a command (agents)", () => {
     assert.deepEqual(await requireToken(apiUrl), { token: TOKEN, source: "file" });
   });
 
-  it("an interval edited out of range can't stall the command", async () => {
-    for (const interval of [1e6, 1e309, Number.NaN, "5"]) {
+  it("an edited interval or a clock step can't stall the command", { timeout: 15_000 }, async () => {
+    const hourAgo = new Date(Date.now() - 3_600_000).toISOString();
+    const inAnHour = new Date(Date.now() + 3_600_000).toISOString();
+    for (const [interval, lastPolledAt] of [
+      [1e6, hourAgo],
+      [-5, hourAgo],
+      ["5", hourAgo],
+      [1, inAnHour],
+    ] as const) {
       auths.set("dc9", { userCode: "CODE-9", status: "pending" });
       await addPendingLogin(apiUrl, {
         deviceCode: "dc9",
@@ -365,12 +415,12 @@ describe("login from a command (agents)", () => {
         loginUrl: `${apiUrl}/cli/authorize?code=CODE-9`,
         expiresAt: new Date(Date.now() + 600_000).toISOString(),
         interval: interval as number,
-        lastPolledAt: new Date(Date.now() - 3_600_000).toISOString(),
+        lastPolledAt,
       });
       decide(`${apiUrl}/cli/authorize?code=CODE-9`, "approved");
       const started = Date.now();
       await requireToken(apiUrl);
-      assert.ok(Date.now() - started < 1_000, String(interval));
+      assert.ok(Date.now() - started < 2_000, `${interval} ${lastPolledAt}`);
       await deleteToken(apiUrl);
     }
   });

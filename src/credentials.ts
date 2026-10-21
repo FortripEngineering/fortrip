@@ -8,7 +8,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -142,36 +142,50 @@ export async function tryLoginLock(
 
 /**
  * Creates the lock file `path` naming this process, or returns null while
- * another holds it. A lock whose process is gone, or whose age is past
- * `staleMs` either way (a clock step can date it in the future), was
- * abandoned and is removed for the next try. Release removes the lock only
- * while it is still this one.
+ * another holds it. A lock whose age is past `staleMs` either way (a clock
+ * step can date it in the future), or whose process on this host is gone,
+ * was abandoned and is removed for the next try. Release removes the lock
+ * only while it is still this one, and never throws: a lock it leaves
+ * behind is abandoned.
  */
 async function tryLock(
   path: string,
   staleMs: number,
 ): Promise<(() => Promise<void>) | null> {
-  const owner = `${process.pid} ${randomBytes(8).toString("hex")}`;
+  const owner = `${process.pid} ${randomBytes(8).toString("hex")} ${hostname()}`;
   try {
     await writeFile(path, owner, { flag: "wx", mode: 0o600 });
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    if (!isHeld(error)) throw error;
     if (await isAbandoned(path, staleMs)) await rm(path, { force: true });
     return null;
   }
   return async () => {
-    if ((await readFile(path, "utf8").catch(() => null)) === owner) {
-      await rm(path, { force: true });
-    }
+    try {
+      if ((await readFile(path, "utf8")) === owner) await rm(path, { force: true });
+    } catch {}
   };
+}
+
+/** Windows also refuses to create a file another process is deleting. */
+function isHeld(error: unknown): boolean {
+  const { code } = error as NodeJS.ErrnoException;
+  return (
+    code === "EEXIST" ||
+    (process.platform === "win32" &&
+      (code === "EPERM" || code === "EACCES" || code === "EBUSY"))
+  );
 }
 
 async function isAbandoned(path: string, staleMs: number): Promise<boolean> {
   const info = await lstat(path).catch(() => null);
   if (!info) return false;
   if (Math.abs(Date.now() - info.mtimeMs) > staleMs) return true;
-  const pid = Number((await readFile(path, "utf8").catch(() => "")).split(" ")[0]);
-  return Number.isSafeInteger(pid) && pid > 0 && !isRunning(pid);
+  const [pid, , ...host] = (await readFile(path, "utf8").catch(() => "")).split(" ");
+  // A pid means nothing in another host's (or container's) process table.
+  if (host.join(" ") !== hostname()) return false;
+  const holder = Number(pid);
+  return Number.isSafeInteger(holder) && holder > 0 && !isRunning(holder);
 }
 
 function isRunning(pid: number): boolean {

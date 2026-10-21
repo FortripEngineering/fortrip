@@ -18,6 +18,10 @@ import { CliError, EXIT } from "./errors.ts";
 
 /** RFC 8628's default poll interval, for logins saved without one. */
 const DEFAULT_INTERVAL_SECONDS = 5;
+/** How long a command waits for another to finish signing in. A holder
+ *  normally needs one interval plus a slow_down; this bounds a holder stuck
+ *  on an unreachable server, which each waiter would otherwise repeat. */
+const LOGIN_WAIT_MS = 30_000;
 
 interface DeviceStart {
   deviceCode: string;
@@ -63,10 +67,20 @@ export async function requireToken(
  * would earn `slow_down`).
  */
 async function finishOrStartLogin(apiUrl: string, started: string): Promise<string> {
+  const giveUpAt = Date.now() + LOGIN_WAIT_MS;
   let release: (() => Promise<void>) | null;
   while (!(release = await tryLoginLock())) {
     const saved = await loadStoredToken(apiUrl);
     if (saved) return saved;
+    if (Date.now() > giveUpAt) {
+      const pending = (await loadPendingLogins(apiUrl)).at(-1);
+      if (pending) throw loginRequired(apiUrl, pending);
+      throw new CliError(
+        `Another fortrip command is still signing in to ${apiUrl}.`,
+        EXIT.error,
+        { retryable: true },
+      );
+    }
     await sleep(250);
   }
   try {
@@ -98,7 +112,8 @@ async function finishOrStartLogin(apiUrl: string, started: string): Promise<stri
 /**
  * Polls each pending login and saves the token of the first one approved:
  * the user may have approved any link they were shown. A login known to be
- * unapproved since after this command started is skipped. Waits out each
+ * unapproved since after this command started is skipped (a time in the
+ * future is a clock step, not knowledge). Waits out each
  * login's interval, and polls once more after a `slow_down`. Returns that
  * token, or one another command saved.
  */
@@ -108,29 +123,34 @@ async function pollPendingLogins(
 ): Promise<string | null> {
   const saved = await loadStoredToken(apiUrl);
   if (saved) return saved;
+  const now = new Date().toISOString();
   for (let login of await loadPendingLogins(apiUrl)) {
-    if (login.checkedAt !== undefined && login.checkedAt > started) continue;
+    const { checkedAt } = login;
+    if (checkedAt !== undefined && checkedAt > started && checkedAt <= now) continue;
     for (let attempt = 0; attempt < 2; attempt++) {
       const wait = nextPollAt(login) - Date.now();
       if (wait > 0) await sleep(wait);
+      // An answer of "pending" covers approvals up to the moment it was
+      // asked, not up to when it arrived.
+      const asked = new Date().toISOString();
       const result = await exchange(apiUrl, login.deviceCode);
       // The server spaces polls by when it handled them; this is no earlier.
-      const now = new Date().toISOString();
+      const lastPolledAt = new Date().toISOString();
       if (result.status === "ok") {
         await saveToken(apiUrl, result.accessToken);
         return result.accessToken;
       }
       if (result.status === "slow_down") {
         const interval = result.interval ?? intervalOf(login) + 5;
-        login = { ...login, lastPolledAt: now, interval };
-        await updatePendingLogin(apiUrl, login.deviceCode, { lastPolledAt: now, interval });
+        login = { ...login, lastPolledAt, interval };
+        await updatePendingLogin(apiUrl, login.deviceCode, { lastPolledAt, interval });
         continue;
       }
       await updatePendingLogin(
         apiUrl,
         login.deviceCode,
         result.status === "authorization_pending"
-          ? { lastPolledAt: now, checkedAt: now }
+          ? { lastPolledAt, checkedAt: asked }
           : null, // denied, expired or already redeemed
       );
       break;

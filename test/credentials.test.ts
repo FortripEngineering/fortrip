@@ -6,11 +6,12 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  rm,
   stat,
   utimes,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { beforeEach, describe, it } from "node:test";
 
@@ -24,6 +25,7 @@ import {
   resolveApiUrl,
   resolveToken,
   saveToken,
+  tryLoginLock,
   updatePendingLogin,
 } from "../src/credentials.ts";
 import { CliError } from "../src/errors.ts";
@@ -156,18 +158,44 @@ describe("credentials", () => {
     await mkdir(dirname(path), { recursive: true });
     const child = spawn(process.execPath, ["-e", ""]);
     await once(child, "exit");
-    await writeFile(`${path}.lock`, `${child.pid} gone`);
+    await writeFile(`${path}.lock`, `${child.pid} gone ${hostname()}`);
     let started = Date.now();
     await saveToken("https://fortrip.ai", "fth_1", env);
     assert.ok(Date.now() - started < 2_000);
 
-    await writeFile(`${path}.lock`, `${process.pid} skewed`);
+    await writeFile(`${path}.lock`, `${process.pid} skewed ${hostname()}`);
     const later = new Date(Date.now() + 60_000);
     await utimes(`${path}.lock`, later, later);
     started = Date.now();
     await saveToken("https://fortrip.ai", "fth_2", env);
     assert.ok(Date.now() - started < 2_000);
     assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_2");
+  });
+
+  it("trusts a lock's pid only on the host that wrote it", async () => {
+    const path = `${credentialsPath(env)}.login-lock`;
+    await mkdir(dirname(path), { recursive: true });
+    const child = spawn(process.execPath, ["-e", ""]);
+    await once(child, "exit");
+
+    await writeFile(path, `${child.pid} other-host-lock other.example`);
+    assert.equal(await tryLoginLock(env), null);
+    assert.equal(await tryLoginLock(env), null);
+
+    await writeFile(path, `${child.pid} this-host-lock ${hostname()}`);
+    assert.equal(await tryLoginLock(env), null); // removes the abandoned lock
+    assert.ok(await tryLoginLock(env));
+  });
+
+  it("releasing leaves a lock someone else took over, and never throws", async () => {
+    const path = `${credentialsPath(env)}.login-lock`;
+    const release = await tryLoginLock(env);
+    assert.ok(release);
+    await writeFile(path, `${process.pid} someone-else ${hostname()}`);
+    await release();
+    assert.equal(await readFile(path, "utf8"), `${process.pid} someone-else ${hostname()}`);
+    await rm(path);
+    await release();
   });
 });
 
