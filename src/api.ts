@@ -89,20 +89,20 @@ export function unwrap(response: ApiResponse): unknown {
       : typeof message === "string"
         ? message
         : `Request failed with status ${status}`;
-  const details: Record<string, unknown> = { status, ...rest };
+  // A 429, or a retryable 503, says how long to wait.
+  const retryAfter = Number(headers.get("retry-after"));
+  const details: Record<string, unknown> = {
+    status,
+    ...rest,
+    ...(Number.isFinite(retryAfter) && retryAfter > 0
+      ? { retryAfterSeconds: retryAfter }
+      : {}),
+  };
 
   if (status === 401) {
     throw new CliError(`${text}. ${LOGIN_HINT}`, EXIT.unauthenticated, details);
   }
-  if (status === 429) {
-    const retryAfter = Number(headers.get("retry-after"));
-    throw new CliError(text, EXIT.rateLimited, {
-      ...details,
-      ...(Number.isFinite(retryAfter) && retryAfter > 0
-        ? { retryAfterSeconds: retryAfter }
-        : {}),
-    });
-  }
+  if (status === 429) throw new CliError(text, EXIT.rateLimited, details);
   if (status === 400) throw new CliError(text, EXIT.usage, details);
   if (status >= 300 && status < 400) {
     throw new CliError(

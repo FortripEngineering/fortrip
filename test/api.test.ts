@@ -157,6 +157,24 @@ describe("transport errors", () => {
     }
   });
 
+  it("a retryable 503 says how long to wait", () => {
+    assert.throws(
+      () =>
+        unwrap(
+          response(
+            503,
+            { success: false, error: "Try again", retryable: true },
+            { "retry-after": "5" },
+          ),
+        ),
+      (error) =>
+        error instanceof CliError &&
+        error.exitCode === EXIT.error &&
+        error.details.retryable === true &&
+        error.details.retryAfterSeconds === 5,
+    );
+  });
+
   it("a 401 doesn't send agents to the blocking login command", () => {
     assert.throws(
       () => unwrap(response(401, { success: false, error: "Unauthorized" })),
