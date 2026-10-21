@@ -161,6 +161,11 @@ and what to show the user before handing over a payment link. The guide ships
 with the package, so a CLI release updates every installed skill. Edit
 `AGENT_GUIDE.md`, not `SKILL.md`.
 
+The repository is also a Claude Code plugin
+([`.claude-plugin/plugin.json`](.claude-plugin/plugin.json)). Claude Code keeps
+users on the `version` it names, so bump that version whenever `SKILL.md`
+changes.
+
 `fortrip skill planning` prints [`guides/planning.md`](guides/planning.md):
 what to ask, how to rank and how to present options for flexible dates,
 budgets, split stays and several destinations. Both guides are printed with
