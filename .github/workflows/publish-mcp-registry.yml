@@ -26,7 +26,10 @@ jobs:
           tar -xzf mcp-publisher_linux_amd64.tar.gz mcp-publisher
       - name: Authenticate with GitHub OIDC
         run: ./mcp-publisher login github-oidc
-      - name: Publish remote MCP metadata
-        run: ./mcp-publisher publish server.json
-      - name: Deprecate previous server name
-        run: ./mcp-publisher status --status deprecated --all-versions --message "Renamed to io.github.FortripEngineering/fortrip; connect to the same https://fortrip.ai/api/mcp endpoint." io.github.FortripEngineering/fortrip-hotels
+      - name: Migrate remote MCP listing to the Fortrip name
+        run: |
+          ./mcp-publisher status --status deleted --all-versions --message "Renamed to io.github.FortripEngineering/fortrip; the MCP endpoint is unchanged." io.github.FortripEngineering/fortrip-hotels
+          if ! ./mcp-publisher publish server.json; then
+            ./mcp-publisher status --status active --all-versions io.github.FortripEngineering/fortrip-hotels
+            exit 1
+          fi
