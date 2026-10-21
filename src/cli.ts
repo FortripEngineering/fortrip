@@ -62,6 +62,9 @@ Environment:
   FORTRIP_CURRENCY Default --currency for search and rates
 `;
 
+/** Links in `book` results and errors. */
+const LINK_KEYS = ["paymentUrl", "statusUrl", "orderUrl"];
+
 async function run(argv: string[]): Promise<unknown> {
   const [command, ...rest] = argv;
   if (!command || command === "help" || command === "--help" || command === "-h") {
@@ -108,13 +111,24 @@ async function run(argv: string[]): Promise<unknown> {
     }
     case "book": {
       const { values } = parse(rest, BOOK_OPTIONS);
-      const data = (await call(
-        apiUrl,
-        "POST",
-        "/api/huizhi/bookings",
-        bookBody(values),
-      )) as Record<string, unknown>;
-      return absolutize(apiUrl, data, ["orderUrl", "statusUrl"]);
+      let data: Record<string, unknown>;
+      try {
+        data = (await call(
+          apiUrl,
+          "POST",
+          "/api/huizhi/bookings",
+          bookBody(values),
+        )) as Record<string, unknown>;
+      } catch (error) {
+        if (!(error instanceof CliError)) throw error;
+        // A 409 for a stay already booked carries orderUrl and statusUrl.
+        throw new CliError(
+          error.message,
+          error.exitCode,
+          absolutize(apiUrl, error.details, LINK_KEYS),
+        );
+      }
+      return paymentPage(absolutize(apiUrl, data, LINK_KEYS));
     }
     default:
       throw usageError(`Unknown command "${command}". Run \`fortrip --help\`.`);
@@ -130,7 +144,7 @@ async function call(
   return unwrap(await authorizedRequest(apiUrl, path, { method, body }));
 }
 
-/** The API returns site-relative order links; an agent needs full URLs. */
+/** Older servers answer site-relative links; an agent needs full URLs. */
 function absolutize(
   apiUrl: string,
   data: Record<string, unknown>,
@@ -144,6 +158,24 @@ function absolutize(
     }
   }
   return out;
+}
+
+/**
+ * Older servers answer a Stripe Checkout `paymentUrl`: 400+ characters
+ * ending in a #fragment the session needs, which models relaying it drop.
+ * The status page shows the terms and continues to Stripe, as the current
+ * server's `paymentUrl` does.
+ */
+function paymentPage(data: Record<string, unknown>): Record<string, unknown> {
+  const { paymentUrl, statusUrl } = data;
+  if (typeof statusUrl !== "string" || typeof paymentUrl !== "string") return data;
+  let host: string;
+  try {
+    host = new URL(paymentUrl).hostname;
+  } catch {
+    return data;
+  }
+  return host === "checkout.stripe.com" ? { ...data, paymentUrl: statusUrl } : data;
 }
 
 async function main(): Promise<ExitCode> {
