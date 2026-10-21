@@ -1,12 +1,11 @@
 import { randomBytes } from "node:crypto";
 import {
   chmod,
+  lstat,
   mkdir,
-  open,
   readFile,
   rename,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -33,19 +32,23 @@ export interface PendingLogin {
   interval?: number;
   /** When a command last polled it, so the next one waits its turn. */
   lastPolledAt?: string;
+  /** When a command last knew it was unapproved: when it was started, or
+   *  when a poll answered `authorization_pending`. */
+  checkedAt?: string;
 }
 
 /** Tokens are keyed by API URL, so a saved token is never sent to another
  *  server (e.g. a `FORTRIP_API_URL` pointed somewhere else). Every unexpired
- *  pending login is kept: commands run in parallel each start one, and the
- *  user may approve whichever link the agent showed. */
+ *  pending login is kept: the user may approve any link they were shown. */
 interface CredentialsFile {
   tokens: Record<string, StoredToken>;
   pending: Record<string, PendingLogin[]>;
 }
 
-/** A lock older than this was left by a process that died holding it. */
-const LOCK_STALE_MS = 10_000;
+/** A credentials lock is held for one read and write. */
+const CREDENTIALS_LOCK_STALE_MS = 10_000;
+/** The login lock is held for a few polls, each up to the request timeout. */
+const LOGIN_LOCK_STALE_MS = 150_000;
 
 export function credentialsPath(env: NodeJS.ProcessEnv = process.env): string {
   const base = env.XDG_CONFIG_HOME || join(homedir(), ".config");
@@ -107,28 +110,75 @@ async function updateCredentials(
 }
 
 async function withLock(path: string, fn: () => Promise<void>): Promise<void> {
-  const dir = dirname(path);
-  await mkdir(dir, { recursive: true, mode: 0o700 });
-  await chmod(dir, 0o700);
-  const lock = `${path}.lock`;
-  for (;;) {
-    try {
-      await (await open(lock, "wx", 0o600)).close();
-      break;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const age = await stat(lock).then(
-        (lockStat) => Date.now() - lockStat.mtimeMs,
-        () => 0,
-      );
-      if (age > LOCK_STALE_MS) await rm(lock, { force: true });
-      else await sleep(10 + Math.random() * 40);
-    }
+  await ensureDir(path);
+  let release: (() => Promise<void>) | null;
+  while (!(release = await tryLock(`${path}.lock`, CREDENTIALS_LOCK_STALE_MS))) {
+    await sleep(10 + Math.random() * 40);
   }
   try {
     await fn();
   } finally {
-    await rm(lock, { force: true });
+    await release();
+  }
+}
+
+async function ensureDir(path: string): Promise<void> {
+  const dir = dirname(path);
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  await chmod(dir, 0o700);
+}
+
+/** Held by the one command at a time that polls pending logins or starts
+ *  one; null while another command holds it. */
+export async function tryLoginLock(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<(() => Promise<void>) | null> {
+  const path = credentialsPath(env);
+  await ensureDir(path);
+  return tryLock(`${path}.login-lock`, LOGIN_LOCK_STALE_MS);
+}
+
+/**
+ * Creates the lock file `path` naming this process, or returns null while
+ * another holds it. A lock whose process is gone, or whose age is past
+ * `staleMs` either way (a clock step can date it in the future), was
+ * abandoned and is removed for the next try. Release removes the lock only
+ * while it is still this one.
+ */
+async function tryLock(
+  path: string,
+  staleMs: number,
+): Promise<(() => Promise<void>) | null> {
+  const owner = `${process.pid} ${randomBytes(8).toString("hex")}`;
+  try {
+    await writeFile(path, owner, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    if (await isAbandoned(path, staleMs)) await rm(path, { force: true });
+    return null;
+  }
+  return async () => {
+    if ((await readFile(path, "utf8").catch(() => null)) === owner) {
+      await rm(path, { force: true });
+    }
+  };
+}
+
+async function isAbandoned(path: string, staleMs: number): Promise<boolean> {
+  const info = await lstat(path).catch(() => null);
+  if (!info) return false;
+  if (Math.abs(Date.now() - info.mtimeMs) > staleMs) return true;
+  const pid = Number((await readFile(path, "utf8").catch(() => "")).split(" ")[0]);
+  return Number.isSafeInteger(pid) && pid > 0 && !isRunning(pid);
+}
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: running, under another user.
+    return (error as NodeJS.ErrnoException).code === "EPERM";
   }
 }
 

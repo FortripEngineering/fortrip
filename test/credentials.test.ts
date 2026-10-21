@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import {
   mkdir,
   mkdtemp,
@@ -147,6 +149,25 @@ describe("credentials", () => {
 
     await saveToken("https://fortrip.ai", "fth_prod", env);
     assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_prod");
+  });
+
+  it("takes over at once a lock whose process has exited, or one dated in the future", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    const child = spawn(process.execPath, ["-e", ""]);
+    await once(child, "exit");
+    await writeFile(`${path}.lock`, `${child.pid} gone`);
+    let started = Date.now();
+    await saveToken("https://fortrip.ai", "fth_1", env);
+    assert.ok(Date.now() - started < 2_000);
+
+    await writeFile(`${path}.lock`, `${process.pid} skewed`);
+    const later = new Date(Date.now() + 60_000);
+    await utimes(`${path}.lock`, later, later);
+    started = Date.now();
+    await saveToken("https://fortrip.ai", "fth_2", env);
+    assert.ok(Date.now() - started < 2_000);
+    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_2");
   });
 });
 

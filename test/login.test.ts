@@ -10,6 +10,8 @@ import { promisify } from "node:util";
 
 import { login, logout, requireToken, whoami } from "../src/auth.ts";
 import {
+  addPendingLogin,
+  deleteToken,
   loadPendingLogins,
   loadStoredToken,
   saveToken,
@@ -33,10 +35,13 @@ let auths: Map<
 >;
 let validTokens: Set<string>;
 let slowDowns: number;
+let polls: number;
 let deviceStartBody: unknown;
 let deviceStarts = 0;
-/** Runs before a poll is answered, e.g. to act as another command. */
+/** Run before a poll or a device start is answered, e.g. to act as
+ *  another command. */
 let onPoll: (() => Promise<void>) | undefined;
+let onDeviceStart: (() => Promise<void>) | undefined;
 /** Runs before a 401 from whoami is sent. */
 let onRejected: (() => Promise<void>) | undefined;
 const TOKEN = `fth_${"x".repeat(43)}`;
@@ -71,6 +76,7 @@ async function handle(
   switch (`${method} ${url}`) {
     case "POST /api/cli/auth/device": {
       deviceStartBody = JSON.parse(raw);
+      await onDeviceStart?.();
       deviceStarts += 1;
       const deviceCode = `dc${deviceStarts}`;
       const userCode = `CODE-${deviceStarts}`;
@@ -88,6 +94,7 @@ async function handle(
       });
     }
     case "POST /api/cli/auth/token": {
+      polls += 1;
       await onPoll?.();
       const scripted = pollScript.shift();
       if (scripted) return send(scripted.status, scripted.body);
@@ -152,8 +159,10 @@ beforeEach(async () => {
   auths = new Map();
   validTokens = new Set([TOKEN]);
   slowDowns = 0;
+  polls = 0;
   pollScript = [];
   onPoll = undefined;
+  onDeviceStart = undefined;
   onRejected = undefined;
   waits.length = 0;
   logs.length = 0;
@@ -239,22 +248,56 @@ describe("login from a command (agents)", () => {
     assert.equal((await loadPendingLogins(apiUrl)).length, 1);
   });
 
-  it("keeps every login parallel commands started, and any approved one signs in", async () => {
+  it("commands run in parallel share one login link", async () => {
     const urls = await Promise.all(
       [1, 2, 3].map(() => loginUrlOf(requireToken(apiUrl))),
     );
-    const pending = await loadPendingLogins(apiUrl);
-    assert.equal(pending.length, deviceStarts);
-    for (const url of urls) {
-      assert.ok(pending.some((login) => login.loginUrl === url));
-    }
+    assert.equal(deviceStarts, 1);
+    assert.deepEqual(urls, [urls[0], urls[0], urls[0]]);
+    assert.equal((await loadPendingLogins(apiUrl)).length, 1);
+  });
 
-    // The agent shows the first link; the user approves that one.
-    decide(urls[0], "approved");
+  it("doesn't poll a login known to be unapproved since the command started", async () => {
+    for (const [n, checkedAt] of [
+      [1, new Date(Date.now() - 60_000)],
+      [2, new Date(Date.now() + 60_000)],
+    ] as const) {
+      auths.set(`dc${n}`, { userCode: `CODE-${n}`, status: "pending" });
+      await addPendingLogin(apiUrl, {
+        deviceCode: `dc${n}`,
+        userCode: `CODE-${n}`,
+        loginUrl: `${apiUrl}/cli/authorize?code=CODE-${n}`,
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+        checkedAt: checkedAt.toISOString(),
+      });
+    }
+    assert.equal(
+      await loginUrlOf(requireToken(apiUrl)),
+      `${apiUrl}/cli/authorize?code=CODE-2`,
+    );
+    assert.equal(polls, 1); // dc1 only
+    assert.equal(auths.get("dc2")?.lastPolledAt, undefined);
+  });
+
+  it("polls every pending login, and any approved one signs in", async () => {
+    // E.g. left by 0.3.0 commands run in parallel.
+    for (const n of [1, 2, 3]) {
+      auths.set(`dc${n}`, { userCode: `CODE-${n}`, status: "pending" });
+      await addPendingLogin(apiUrl, {
+        deviceCode: `dc${n}`,
+        userCode: `CODE-${n}`,
+        loginUrl: `${apiUrl}/cli/authorize?code=CODE-${n}`,
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      });
+    }
+    decide(`${apiUrl}/cli/authorize?code=CODE-2`, "approved");
+
     const { token } = await requireToken(apiUrl);
     assert.ok(validTokens.has(token));
     assert.equal(await loadStoredToken(apiUrl), token);
     assert.deepEqual(await loadPendingLogins(apiUrl), []);
+    assert.equal(polls, 2);
+    assert.equal(deviceStarts, 0);
   });
 
   it("waits out the poll interval instead of earning slow_down", async () => {
@@ -300,14 +343,39 @@ describe("login from a command (agents)", () => {
     assert.equal(slowDowns, 1);
   });
 
-  it("re-reads the saved token before reporting exit 3", async () => {
+  it("uses a token saved while it polled instead of starting a login", async () => {
     await loginUrlOf(requireToken(apiUrl));
-    // Another command finishes its login while this one polls.
+    // `fortrip login` finishes in another terminal while this one polls.
     onPoll = () => saveToken(apiUrl, TOKEN);
+    assert.deepEqual(await requireToken(apiUrl), { token: TOKEN, source: "file" });
+    assert.equal(deviceStarts, 1);
+  });
+
+  it("re-reads the saved token before reporting exit 3", async () => {
+    onDeviceStart = () => saveToken(apiUrl, TOKEN);
     assert.deepEqual(await requireToken(apiUrl), { token: TOKEN, source: "file" });
   });
 
-  it("parallel CLI processes: the first link shown works, and reruns all succeed", async () => {
+  it("an interval edited out of range can't stall the command", async () => {
+    for (const interval of [1e6, 1e309, Number.NaN, "5"]) {
+      auths.set("dc9", { userCode: "CODE-9", status: "pending" });
+      await addPendingLogin(apiUrl, {
+        deviceCode: "dc9",
+        userCode: "CODE-9",
+        loginUrl: `${apiUrl}/cli/authorize?code=CODE-9`,
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+        interval: interval as number,
+        lastPolledAt: new Date(Date.now() - 3_600_000).toISOString(),
+      });
+      decide(`${apiUrl}/cli/authorize?code=CODE-9`, "approved");
+      const started = Date.now();
+      await requireToken(apiUrl);
+      assert.ok(Date.now() - started < 1_000, String(interval));
+      await deleteToken(apiUrl);
+    }
+  });
+
+  it("parallel CLI processes share one link, and reruns poll it once", async () => {
     deviceInterval = 1;
     minPollGapMs = 500;
     const env = {
@@ -326,8 +394,12 @@ describe("login from a command (agents)", () => {
       first.map((result) => result.code),
       [3, 3, 3],
     );
-    decide(JSON.parse(first[0].stderr).loginUrl, "approved");
+    const urls = first.map((result) => JSON.parse(result.stderr).loginUrl);
+    assert.deepEqual(urls, [urls[0], urls[0], urls[0]]);
+    assert.equal(deviceStarts, 1);
+    decide(urls[0], "approved");
 
+    polls = 0;
     const reruns = await Promise.all([cli(["whoami"]), cli(["whoami"]), cli(["whoami"])]);
     assert.deepEqual(
       reruns.map((result) => result.code),
@@ -337,6 +409,8 @@ describe("login from a command (agents)", () => {
     for (const { stdout } of reruns) {
       assert.equal(JSON.parse(stdout).email, "a@b.c");
     }
+    assert.equal(polls, 1);
+    assert.equal(slowDowns, 0);
     assert.equal(validTokens.size, 2); // TOKEN and the one minted
   });
 });
