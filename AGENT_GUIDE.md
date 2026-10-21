@@ -33,13 +33,15 @@ If a command exits with code **3** and stderr has `loginUrl`, show it to the
 user as a link together with `userCode`, e.g. "Sign in to Fortrip: <loginUrl>
 (code BCDF-GHJK) and tell me when you're done." When they confirm, rerun the
 same command; it finishes the login itself. Don't run `fortrip login` — it
-waits for up to 10 minutes. If the rerun gives a new `loginUrl`, the old one
-expired or was denied; show the new one.
+waits for up to 10 minutes. Commands that exit 3 together share one
+`loginUrl`; show it once. If the rerun gives a different `loginUrl`, show
+that one.
 
-A saved sign-in the server no longer accepts is replaced the same way: the
-command exits 3 with a new `loginUrl`. Exit 3 without `loginUrl` means the
-`FORTRIP_TOKEN` the user set was rejected; tell them to replace or unset it,
-and don't rerun until they have.
+A saved sign-in the server no longer accepts (revoked, or unused for 90
+days) is replaced the same way: the command exits 3 with a new `loginUrl`.
+Exit 3 with `tokenSource: "FORTRIP_TOKEN"` means the token the user set in
+`FORTRIP_TOKEN` was rejected; tell them to replace or unset it, and don't
+rerun until they have.
 
 Sign-in happens only in the browser. In CI, the user can set `FORTRIP_TOKEN`
 instead. Never ask the user to paste a token into the chat.
@@ -49,8 +51,8 @@ instead. Never ask the user to paste a token into the chat.
 | Code | Meaning | What to do |
 |---|---|---|
 | 0 | Success; JSON on stdout | Continue |
-| 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, or no response from Fortrip), wait a few seconds and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
-| 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields |
+| 1 | Other error (supplier error, rate no longer bookable, network error or timeout) | Read `error` on stderr; if `retryable` is true (supplier unreachable or timed out, Fortrip briefly unavailable, or no response from Fortrip), wait a few seconds and retry once; re-run `rates` if a rate went stale. `book` errors carry a `reason` (below) |
+| 2 | Invalid arguments | Fix the flags; stderr `issues` lists the bad fields (a stay that is too long gives `requestedNights` and `maxNights` instead) |
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
 
@@ -69,7 +71,9 @@ instead. Never ask the user to paste a token into the chat.
    `--price-min` / `--price-max` are in that currency.
    `--facility` names must match the catalogue exactly (e.g. `Swimming pool`,
    `Parking`), otherwise nothing matches. Prices here (`price.nightlyFrom`,
-   `totalFrom`) are **indicative floors**, not quotes — say so.
+   `totalFrom`) are **indicative floors**, not quotes — say so. A search
+   that matches too many hotels fails with `reason: "refused"`, `matched` and
+   `maxMatches`: narrow it (a city, an area, stars or a price range).
 
 2. **Hotel detail** (optional) — description, policies, facilities, photos:
 
@@ -122,7 +126,9 @@ instead. Never ask the user to paste a token into the chat.
    `--rooms` and `--adults`. Guest names must be in Latin letters as on the
    passport ("First Last"; last word is the last name; `"First Last:2"` puts
    the guest in room 2). Each room needs at least one guest.
-   `--special-requests` must be in English and isn't guaranteed.
+   `--special-requests` must be in English and isn't guaranteed. `book`
+   accepts only these fields: a `--body` with any other field (such as
+   `nationality`) is rejected with exit 2.
 
    `book` is safe to rerun with identical flags: it returns the same order,
    with the same or a refreshed payment link.
@@ -139,7 +145,8 @@ instead. Never ask the user to paste a token into the chat.
    `boardCount`), cancellation (`refundable`, `freeCancelUntil`, the
    `cancellation` ladder), confirmation (`isInstantConfirm`, `confirmByMins`)
    and `payAtHotelFees`. Then the `amount` and `currency`, and end your reply
-   by asking them to confirm.
+   by asking them to confirm. If `amount` or `terms` is `null`, say it
+   couldn't be read rather than guess; the payment page shows the amount.
 2. **Explain the amount.** `rates` showed a converted figure, but the charge
    is `amount` in `currency` (usually USD), and the Stripe page may display
    the user's local currency at Stripe's rate. The `rates` figure used a
@@ -153,7 +160,7 @@ instead. Never ask the user to paste a token into the chat.
    minutes; call `book` again with the same details for a fresh one.
 
 Never ask for, accept or pass on payment card details; payment happens only
-on the payment page.
+on the payment page. A card number in any field is rejected with exit 2.
 
 After paying, the user lands on `statusUrl`, which shows confirmation progress
 without signing in. `orderUrl` is the signed-in order page.
@@ -174,5 +181,5 @@ Act on `reason` in stderr:
   attempts, bookings paused, or a preview deployment). Read `error`.
 
 Older servers send no `reason`: there a 409 with `agentOrderId` is
-`already_booked`, a 409 with `changes` is `price_or_terms_changed`, and a 422
-is `refused`.
+`already_booked`, a 409 with `changes` is `price_or_terms_changed`, any other
+409 is `rate_unavailable`, and a 422 is `refused`.

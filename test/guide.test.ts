@@ -42,7 +42,8 @@ describe("skill", () => {
   });
 
   it("the main guide states the booking contract", async () => {
-    const guide = await readGuide();
+    // Line breaks fall anywhere in Markdown prose.
+    const guide = (await readGuide()).replace(/\s+/g, " ");
     for (const phrase of [
       // Errors by reason.
       "`already_booked`",
@@ -51,7 +52,7 @@ describe("skill", () => {
       "`supplier_unavailable`",
       "`refused`",
       // Meal codes and quantity.
-      "RO room only, BB breakfast, HB breakfast +\n     dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL\n     breakfast + lunch, HBLD lunch + dinner, AI all inclusive",
+      "RO room only, BB breakfast, HB breakfast + dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast + lunch, HBLD lunch + dinner, AI all inclusive",
       "`boardCount`",
       // Occupancy and consent.
       "**per room**",
@@ -61,6 +62,13 @@ describe("skill", () => {
       "Never ask for, accept or pass on payment card details",
       "`--nationality` isn't sent with the booking",
       "safe to rerun with identical flags",
+      "`nationality`) is rejected",
+      // Errors and sign-in edge cases.
+      "`maxMatches`",
+      "`requestedNights`",
+      "any other 409 is `rate_unavailable`",
+      'Exit 3 with `tokenSource: "FORTRIP_TOKEN"`',
+      "unused for 90 days",
       // Sign-in and support.
       "Never ask the user to paste a token",
       "info@fortrip.ai",
@@ -70,8 +78,8 @@ describe("skill", () => {
   });
 
   it("the planning guide asks for confirmation of the terms book returned", async () => {
-    const guide = await readGuide("planning");
-    assert.ok(guide.includes("confirms the terms that `book`\n  returned"));
+    const guide = (await readGuide("planning")).replace(/\s+/g, " ");
+    assert.ok(guide.includes("confirms the terms that `book` returned"));
     assert.ok(guide.includes("`--adults` and `--child-age` are per room"));
   });
 
