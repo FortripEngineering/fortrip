@@ -72,6 +72,7 @@ describe("skill", () => {
       'Exit 3 with `tokenSource: "FORTRIP_TOKEN"`',
       "The saved sign-in is kept until the user approves the new link",
       "allow the command at least 3 minutes",
+      "can carry `warning`",
       // Sign-in and support.
       "Never ask the user to paste a token",
       "info@fortrip.ai",

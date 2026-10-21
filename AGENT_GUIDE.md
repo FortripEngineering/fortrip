@@ -59,6 +59,9 @@ instead. Never ask the user to paste a token into the chat.
 | 3 | Not logged in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
 
+Output on stdout or stderr can carry `warning` (with `recoveryFile` when a
+sign-in couldn't be saved): pass it on to the user.
+
 ## Recommended order
 
 1. **Search** — find candidates and indicative prices:

@@ -71,8 +71,15 @@ alongside CLI 0.3.1, sign-ins that go unused for 90 days stop working, and
 signed-in users can list and revoke their CLI sign-ins in their Fortrip
 account (account menu → **Fortrip CLI**).
 
-`credentials.json` can be shared with 0.3.0: it keeps the newest pending
-login where 0.3.0 reads it.
+If a new sign-in can't be saved (the file is busy or damaged), it is kept
+in a `credentials.recovered-*.json` file next to `credentials.json` (mode
+`0600`), and the command's JSON output names it in `warning` and
+`recoveryFile`. The next successful save merges it back and removes the
+file; `logout` revokes and removes these too.
+
+Sharing `credentials.json` with 0.3.0 works on a best-effort basis: 0.3.0
+finds the newest pending login where it expects it, but it writes the file
+without a lock, so don't sign in with 0.3.0 and 0.3.1 at the same moment.
 
 ## Agent skill
 
