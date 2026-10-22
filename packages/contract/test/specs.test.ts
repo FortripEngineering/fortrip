@@ -357,6 +357,64 @@ describe("COMMANDS", () => {
     assert.deepEqual(command("guide").positionals, ["topic"]);
   });
 
+  // Written out by hand, not read from COMMANDS: the CLI builds each request
+  // body from these pairs, so swapping two (check-in and check-out) would send
+  // a different request while every other test still passed.
+  it("pins every flag to its field", () => {
+    const fieldsByFlag = (name: CommandSpec["name"]) =>
+      Object.fromEntries(
+        command(name).flags.map((flag) => [flag.flag, flag.field]),
+      );
+    assert.deepEqual(fieldsByFlag("search"), {
+      query: "query",
+      "city-code": "cityCode",
+      near: "near",
+      "check-in": "checkIn",
+      "check-out": "checkOut",
+      "star-min": "starMin",
+      "star-max": "starMax",
+      facility: "facilities",
+      "price-min": "priceMin",
+      "price-max": "priceMax",
+      sort: "sortBy",
+      page: "page",
+      "page-size": "pageSize",
+      currency: "currency",
+    });
+    assert.deepEqual(fieldsByFlag("hotel"), {
+      "with-rooms": "includeRooms",
+    });
+    assert.deepEqual(fieldsByFlag("rates"), {
+      hotel: "hotelIds",
+      "check-in": "checkIn",
+      "check-out": "checkOut",
+      rooms: "rooms",
+      adults: "adults",
+      "child-age": "childrenAges",
+      nationality: "nationality",
+      board: "boardCodes",
+      "free-cancellation": "freeCancellation",
+      "include-unbookable": "bookableOnly",
+      "max-rooms": "maxRoomsPerHotel",
+      currency: "currency",
+    });
+    assert.deepEqual(fieldsByFlag("book"), {
+      hotel: "hotelId",
+      "room-id": "roomId",
+      "rate-plan": "ratePlanCode",
+      "check-in": "checkIn",
+      "check-out": "checkOut",
+      rooms: "rooms",
+      adults: "adults",
+      "child-age": "childrenAges",
+      guest: "guests",
+      "contact-name": "contactName",
+      "contact-phone": "contactPhone",
+      "contact-email": "contactEmail",
+      "special-requests": "specialRequests",
+    });
+  });
+
   it("repeats exactly the flags whose field is a list", () => {
     const repeated = COMMANDS.flatMap((spec) =>
       spec.flags.filter((flag) => flag.multiple).map((flag) => `${spec.name} ${flag.flag}`),
