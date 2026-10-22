@@ -19,12 +19,34 @@ export {
   normalizeGuestName,
 } from "./guest-name.ts";
 export {
+  createBookingInput,
+  getHotelInput,
+  getRatesInput,
+  searchHotelsInput,
+  type CreateBookingInput,
+  type CreateBookingParsed,
+  type GetHotelInput,
+  type GetHotelParsed,
+  type GetRatesInput,
+  type GetRatesParsed,
+  type SearchHotelsInput,
+  type SearchHotelsParsed,
+} from "./inputs.ts";
+export {
   BOARD_CODES,
   CURRENCIES,
   LIMITS,
   SEARCH_SORTS,
   SUPPORT_EMAIL,
 } from "./limits.ts";
+export {
+  authConfig,
+  bookingResult,
+  meResult,
+  type AuthConfig,
+  type BookingResult,
+  type MeResult,
+} from "./outputs.ts";
 export { API } from "./paths.ts";
 export { ERROR_REASONS, type ErrorReason } from "./reasons.ts";
 export { CONTRACT_VERSION } from "./version.ts";
