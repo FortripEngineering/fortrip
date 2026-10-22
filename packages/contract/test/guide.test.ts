@@ -320,6 +320,17 @@ describe("the full guides", () => {
       }
     });
 
+    it(`${surface}: every error reason's row states the statuses the contract lists`, () => {
+      for (const [reason, statuses] of Object.entries(ERROR_REASONS)) {
+        const row = main.split("\n").find((line) => line.startsWith(`| \`${reason}\` `));
+        assert.ok(row, reason);
+        assert.ok(
+          row.startsWith(`| \`${reason}\` (${statuses.join(" or ")}) |`),
+          `${reason}: ${row}`,
+        );
+      }
+    });
+
     it(`${surface}: every meal code is explained`, () => {
       for (const code of BOARD_CODES) {
         assert.match(main, new RegExp(`\\b${code} [a-z]`), code);

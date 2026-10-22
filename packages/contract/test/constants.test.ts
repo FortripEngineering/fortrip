@@ -26,10 +26,31 @@ describe("API", () => {
 });
 
 describe("ERROR_REASONS", () => {
-  it("maps each reason to a 4xx/5xx HTTP status", () => {
-    for (const [reason, status] of Object.entries(ERROR_REASONS)) {
-      assert.ok(status >= 400 && status < 600, `${reason}: ${status}`);
+  it("maps each reason to a non-empty list of 4xx/5xx HTTP statuses", () => {
+    for (const [reason, statuses] of Object.entries(ERROR_REASONS)) {
+      assert.ok(statuses.length > 0, reason);
+      for (const status of statuses) {
+        assert.ok(status >= 400 && status < 600, `${reason}: ${status}`);
+      }
     }
+  });
+
+  it("lists every status each reason is sent with", () => {
+    assert.deepEqual(
+      { ...ERROR_REASONS },
+      {
+        already_booked: [409],
+        price_or_terms_changed: [409],
+        rate_unavailable: [422],
+        refused: [422],
+        supplier_unavailable: [503, 504],
+      },
+    );
+  });
+
+  it("lets a status read off a response be looked up", () => {
+    assert.ok(ERROR_REASONS.supplier_unavailable.includes(504));
+    assert.ok(!ERROR_REASONS.already_booked.includes(504));
   });
 });
 
