@@ -26,6 +26,9 @@ importers:
 
   packages/cli:
     devDependencies:
+      '@fortrip/agent-contract':
+        specifier: workspace:*
+        version: link:../contract
       '@types/node':
         specifier: ^22.15.0
         version: 22.20.5
@@ -38,6 +41,9 @@ importers:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/contract:
     devDependencies:

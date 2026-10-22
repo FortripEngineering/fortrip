@@ -2,7 +2,7 @@
 
 Read this when the request is more than one hotel for fixed dates: flexible
 dates, a budget, split stays, several destinations, or "find me the best".
-Commands, login and the booking checklist are in `fortrip skill`; this covers
+Commands, login and the booking checklist are in `fortrip guide`; this covers
 what to ask, how to compare and how to present. As there, `fortrip` is short
 for `npx -y fortrip@latest`.
 

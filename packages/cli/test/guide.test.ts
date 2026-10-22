@@ -8,20 +8,20 @@ import { readGuide } from "../src/guide.ts";
 
 const run = promisify(execFile);
 
-describe("skill", () => {
+describe("guide", () => {
   it("prints AGENT_GUIDE.md pinned to this version", async () => {
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
     const guide = await readGuide();
     assert.match(guide, /^# Fortrip\n/);
     assert.ok(guide.includes(`npx -y fortrip@${version} <command>`));
-    assert.ok(guide.includes(`npx -y fortrip@${version} skill planning`));
+    assert.ok(guide.includes(`npx -y fortrip@${version} guide planning`));
     assert.doesNotMatch(guide, /fortrip@latest/);
 
     const { stdout } = await run(process.execPath, [
       "--import",
       "tsx",
       "src/cli.ts",
-      "skill",
+      "guide",
     ]);
     assert.equal(stdout, guide);
   });
@@ -35,7 +35,7 @@ describe("skill", () => {
       "--import",
       "tsx",
       "src/cli.ts",
-      "skill",
+      "guide",
       "planning",
     ]);
     assert.equal(stdout, guide);
@@ -92,12 +92,14 @@ describe("skill", () => {
     for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
       texts.push((await run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args])).stdout);
     }
-    for (const text of texts) assert.doesNotMatch(text, /huizhi/i);
+    // Assembled, so that this file doesn't name the supplier either.
+    const supplier = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
+    for (const text of texts) assert.doesNotMatch(text, supplier);
   });
 
   it("rejects an unknown guide with exit 2", async () => {
     await assert.rejects(
-      run(process.execPath, ["--import", "tsx", "src/cli.ts", "skill", "nope"]),
+      run(process.execPath, ["--import", "tsx", "src/cli.ts", "guide", "nope"]),
       (error: { code?: number }) => error.code === 2,
     );
   });

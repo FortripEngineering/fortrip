@@ -26,13 +26,13 @@ Requires Node.js 22 or newer. No runtime dependencies.
 | `rates` | Live rooms and rates |
 | `book` | Order + payment link (a Fortrip page that continues to Stripe) |
 
-Run `fortrip --help` for every flag, or `fortrip <command> --help` for one
-command's. `search`, `rates` and `book` also accept `--body '<json>'` or
+Run `fortrip --help` for the commands, or `fortrip <command> --help` for one
+command's flags. `search`, `rates` and `book` also accept `--body '<json>'` or
 `--body @file.json` with the raw request body; flags override its fields.
 
 `--adults` and `--child-age` are per room, and every room has the same
-occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `rates` defaults
-to 1 room for 2 adults; `book` requires `--rooms` and `--adults`.
+occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `rates` and `book`
+both require `--rooms` and `--adults`.
 
 Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 
@@ -91,13 +91,13 @@ The skill lives in this repository's
 [`skills/fortrip-cli`](https://github.com/FortripEngineering/fortrip/tree/main/skills/fortrip-cli); the
 Claude directory plugin in [`plugins/claude`](https://github.com/FortripEngineering/fortrip/tree/main/plugins/claude)
 uses the hosted MCP instead of the CLI. The
-skill only tells the agent to run `npx -y fortrip@latest skill`, which prints
+skill only tells the agent to run `npx -y fortrip@latest guide`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
 with the package, so a CLI release updates every installed skill. Edit
 `AGENT_GUIDE.md`, not the skill.
 
-`fortrip skill planning` prints [`guides/planning.md`](guides/planning.md):
+`fortrip guide planning` prints [`guides/planning.md`](guides/planning.md):
 what to ask, how to rank and how to present options for flexible dates,
 budgets, split stays and several destinations. Both guides are printed with
 `fortrip@latest` replaced by the running version, so an agent keeps using the
@@ -146,7 +146,7 @@ both `package.json` versions, or isn't on `main`. A `build` job runs
 typecheck, tests and the build and packs both tarballs; a `publish` job in the
 `npm-publish` environment publishes those tarballs, the contract first, with
 no install or build of its own. Every installed skill picks up the new guide
-on its next `npx fortrip@latest skill`.
+on its next `npx fortrip@latest guide`.
 
 ## License
 

@@ -18,7 +18,7 @@ user emails info@fortrip.ai with the booking's `orderUrl` (never
 `paymentUrl` or `statusUrl`).
 
 For flexible dates, a budget, split stays, several destinations or "find me
-the best", also run `npx -y fortrip@latest skill planning` before searching.
+the best", also run `npx -y fortrip@latest guide planning` before searching.
 
 ## Setup
 

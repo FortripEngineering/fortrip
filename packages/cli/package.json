@@ -30,9 +30,11 @@
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "@fortrip/agent-contract": "workspace:*",
     "@types/node": "^22.15.0",
     "tsup": "^8.5.1",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "zod": "4.4.3"
   }
 }

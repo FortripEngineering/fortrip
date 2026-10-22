@@ -14,7 +14,7 @@ const GUIDES: Record<string, string> = {
  *  release published mid-conversation can't change the CLI under the agent. */
 export async function readGuide(topic = "main"): Promise<string> {
   const path = GUIDES[topic];
-  if (!path) throw usageError("Usage: fortrip skill [planning]");
+  if (!path) throw usageError("Usage: fortrip guide [planning]");
   const guide = await readFile(new URL(path, import.meta.url), "utf8");
   return guide.replaceAll("fortrip@latest", `fortrip@${VERSION}`);
 }
