@@ -35,11 +35,11 @@ jobs:
           node-version: "24"
           package-manager-cache: false
 
-      - name: Check the tag matches package.json
+      - name: Check the tag matches packages/cli/package.json
         run: |
-          version="$(node -p "require('./package.json').version")"
+          version="$(node -p "require('./packages/cli/package.json').version")"
           if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/cli/package.json version ${version}"
             exit 1
           fi
 
@@ -57,7 +57,8 @@ jobs:
       - run: pnpm build
 
       - name: Pack
-        run: npm pack --ignore-scripts
+        working-directory: packages/cli
+        run: npm pack --ignore-scripts --pack-destination ../..
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
