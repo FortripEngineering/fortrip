@@ -127,6 +127,39 @@ describe("the settled rules (design §3.4)", () => {
   });
 });
 
+describe("consent before the payment link, on every surface", () => {
+  // Conditions decide what each surface shows, so one misplaced {{#if}}
+  // could drop a consent step from one surface without any other error.
+  for (const surface of SURFACES) {
+    const book = renderText("{{tool:book}}", surface);
+
+    it(`${surface} main: book only the picked rate, show the charge and terms, ask, wait`, () => {
+      const text = flat(renderGuide(surface, "main"));
+      for (const phrase of [
+        `Call \`${book}\` only for the rate the user picked`,
+        "end that reply by asking the user to confirm, and wait for a clear yes",
+        "give `paymentUrl` exactly as returned",
+      ]) {
+        assert.ok(text.toLowerCase().includes(phrase.toLowerCase()), phrase);
+      }
+      assert.match(
+        text,
+        /[Ss]how (the user )?the `stay`[^.]*`amount`[^.]*`currency`[^.]*every item in `terms`/,
+      );
+    });
+
+    it(`${surface} planning: the link only after the user confirms what book returned`, () => {
+      const text = flat(renderGuide(surface, "planning"));
+      for (const phrase of [
+        `Call \`${book}\` only for the rate the user picked`,
+        `give its payment link only after the user confirms the amount, currency, stay and terms that \`${book}\` returned`,
+      ]) {
+        assert.ok(text.includes(phrase), phrase);
+      }
+    });
+  }
+});
+
 describe("the MCP instructions", () => {
   const text = flat(renderGuide("mcp", "main"));
 
@@ -141,7 +174,6 @@ describe("the MCP instructions", () => {
       "minimum-price feed, not live rates",
       "2 rooms for 4 adults is `rooms: 2, adults: 2`",
       "`nationality` given to `get_rates` isn't sent with the booking",
-      "wait for their explicit confirmation",
       "anyone holding it can pay",
       "Never ask for, accept or pass on payment card details; payment happens only on the payment page.",
       "Never ask the user to paste a token",

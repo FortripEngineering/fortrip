@@ -9,7 +9,7 @@
 
 {{/if}}
 {{#if mcp}}
-- Before you give `paymentUrl`, show the user the `stay`, `amount`, `currency` and every item in `terms` that `{{tool:book}}` returned, end that reply by asking them to confirm, and wait for their explicit confirmation. Then give `paymentUrl` exactly as returned, to this user only: anyone holding it can pay.
+- Before you give `paymentUrl`, show the user the `stay`, `amount`, `currency` and every item in `terms` that `{{tool:book}}` returned, end that reply by asking the user to confirm, and wait for a clear yes. Then give `paymentUrl` exactly as returned, to this user only: anyone holding it can pay.
 {{/if}}
 - If `amount` or `terms` is null, don't give the link: call `{{tool:book}}` again with the same details, and if either is still null, tell the user to contact {{support}}.
 {{#if claude-skill cli}}
