@@ -1,0 +1,16 @@
+{
+  "name": "fortrip",
+  "owner": {
+    "name": "Fortrip",
+    "email": "info@fortrip.ai"
+  },
+  "metadata": {
+    "description": "Fortrip's Claude plugin: hotel search, live rates and booking payment links."
+  },
+  "plugins": [
+    {
+      "name": "fortrip",
+      "source": "./plugins/claude"
+    }
+  ]
+}

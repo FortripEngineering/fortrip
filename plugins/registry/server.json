@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.FortripEngineering/fortrip",
+  "title": "Fortrip",
+  "description": "Search hotels worldwide, compare live room rates, and create booking payment links.",
+  "version": "1.0.3",
+  "websiteUrl": "https://fortrip.ai",
+  "repository": {
+    "url": "https://github.com/FortripEngineering/fortrip-mcp",
+    "source": "github",
+    "id": "1427897019"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://fortrip.ai/api/mcp"
+    }
+  ]
+}

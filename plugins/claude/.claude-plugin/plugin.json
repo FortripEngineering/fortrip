@@ -1,0 +1,20 @@
+{
+  "name": "fortrip",
+  "displayName": "Fortrip",
+  "version": "1.1.0",
+  "description": "Search hotels worldwide, compare live room rates and cancellation terms, and get booking payment links through Fortrip's hosted connector. Requires a Fortrip account.",
+  "author": {
+    "name": "Fortrip",
+    "email": "info@fortrip.ai",
+    "url": "https://fortrip.ai"
+  },
+  "homepage": "https://fortrip.ai",
+  "repository": "https://github.com/FortripEngineering/fortrip-plugins",
+  "license": "MIT",
+  "keywords": ["hotels", "travel", "booking", "rates"],
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://github.com/FortripEngineering/fortrip-plugins/blob/main/claude/README.md",
+  "supportUrl": "https://fortrip.ai/faq",
+  "privacyPolicyUrl": "https://fortrip.ai/privacy",
+  "termsOfServiceUrl": "https://fortrip.ai/terms"
+}
