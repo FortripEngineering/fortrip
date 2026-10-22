@@ -31,18 +31,24 @@ function issuesOf(schema: z.ZodType, value: unknown): Issue[] | null {
       }));
 }
 
+/** The issues `schema` raises for `value`; fails if it passes or if any issue falls back to zod's "Invalid input". */
+function refusalOf(schema: z.ZodType, value: unknown): Issue[] {
+  const issues = issuesOf(schema, value);
+  assert.ok(issues, `should fail: ${JSON.stringify(value)}`);
+  for (const issue of issues) {
+    assert.notEqual(issue.message, "Invalid input", JSON.stringify(value));
+  }
+  return issues;
+}
+
 /** Every case fails with the given first issue, and no issue falls back to zod's "Invalid input". */
 function assertRefused(
   schema: z.ZodType,
   cases: ReadonlyArray<readonly [unknown, string, string]>,
 ) {
   for (const [value, path, message] of cases) {
-    const issues = issuesOf(schema, value);
-    assert.ok(issues, `should fail: ${JSON.stringify(value)}`);
+    const issues = refusalOf(schema, value);
     assert.deepEqual(issues[0], { path, message }, JSON.stringify(value));
-    for (const issue of issues) {
-      assert.notEqual(issue.message, "Invalid input", JSON.stringify(issue));
-    }
   }
 }
 
@@ -199,11 +205,7 @@ describe("searchHotelsInput", () => {
       { ...valid, facilities: Array.from({ length: 11 }, (_, i) => `f${i}`) },
       { ...valid, hotelIds: [1] },
     ]) {
-      assert.equal(
-        searchHotelsInput.safeParse(input).success,
-        false,
-        JSON.stringify(input),
-      );
+      refusalOf(searchHotelsInput, input);
     }
   });
 
@@ -306,6 +308,16 @@ describe("searchHotelsInput", () => {
       ],
       [
         { ...valid, facilities: ["  "] },
+        "facilities.0",
+        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
+      ],
+      [
+        { ...valid, facilities: Array.from({ length: 11 }, (_, i) => `f${i}`) },
+        "facilities",
+        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
+      ],
+      [
+        { ...valid, facilities: ["x".repeat(65)] },
         "facilities.0",
         "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
       ],
@@ -423,8 +435,8 @@ describe("getRatesInput", () => {
   it("has no occupancy defaults", () => {
     const { rooms: _rooms, ...withoutRooms } = valid;
     const { adults: _adults, ...withoutAdults } = valid;
-    assert.equal(getRatesInput.safeParse(withoutRooms).success, false);
-    assert.equal(getRatesInput.safeParse(withoutAdults).success, false);
+    refusalOf(getRatesInput, withoutRooms);
+    refusalOf(getRatesInput, withoutAdults);
   });
 
   it("rates without rooms fails with the rooms message", () => {
@@ -474,11 +486,7 @@ describe("getRatesInput", () => {
       { ...valid, currency: "usd" },
       { ...valid, currency: "EUR" },
     ]) {
-      assert.equal(
-        getRatesInput.safeParse(input).success,
-        false,
-        JSON.stringify(input),
-      );
+      refusalOf(getRatesInput, input);
     }
   });
 
@@ -501,6 +509,11 @@ describe("getRatesInput", () => {
       ],
       [
         { ...valid, hotelIds: [] },
+        "hotelIds",
+        "hotelIds must list 1 to 15 hotelIds",
+      ],
+      [
+        { ...valid, hotelIds: Array.from({ length: 16 }, (_, i) => i + 1) },
         "hotelIds",
         "hotelIds must list 1 to 15 hotelIds",
       ],
