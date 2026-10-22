@@ -4,114 +4,70 @@ import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 import { promisify } from "node:util";
 
+import { type GuideTopic, renderGuide } from "@fortrip/agent-contract";
+
 import { readGuide } from "../src/guide.ts";
+import { VERSION } from "../src/version.ts";
 
 const run = promisify(execFile);
+const cli = (...args: string[]) =>
+  run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args]);
+
+/** What `fortrip guide` prints: the contract's guide for the CLI, pinned to
+ *  the running version. */
+const expected = (topic: GuideTopic) =>
+  renderGuide("cli", topic).replaceAll("fortrip@latest", `fortrip@${VERSION}`);
 
 describe("guide", () => {
-  it("prints AGENT_GUIDE.md pinned to this version", async () => {
-    const { version } = JSON.parse(await readFile("package.json", "utf8"));
-    const guide = await readGuide();
-    assert.match(guide, /^# Fortrip\n/);
-    assert.ok(guide.includes(`npx -y fortrip@${version} <command>`));
-    assert.ok(guide.includes(`npx -y fortrip@${version} guide planning`));
+  it("prints the contract's main guide pinned to this version", async () => {
+    const guide = expected("main");
+    // The contract's wording is the contract's tests' business; these only
+    // check that the substitution had something to replace.
+    assert.ok(guide.includes(`npx -y fortrip@${VERSION}`));
     assert.doesNotMatch(guide, /fortrip@latest/);
-
-    const { stdout } = await run(process.execPath, [
-      "--import",
-      "tsx",
-      "src/cli.ts",
-      "guide",
-    ]);
-    assert.equal(stdout, guide);
+    assert.equal(readGuide("main"), guide);
+    assert.equal((await cli("guide")).stdout, guide);
   });
 
-  it("prints the planning guide", async () => {
-    const guide = await readGuide("planning");
-    assert.match(guide, /^# Planning a hotel stay\n/);
+  it("prints the contract's planning guide pinned to this version", async () => {
+    const guide = expected("planning");
+    assert.ok(guide.includes(`npx -y fortrip@${VERSION}`));
     assert.doesNotMatch(guide, /fortrip@latest/);
-
-    const { stdout } = await run(process.execPath, [
-      "--import",
-      "tsx",
-      "src/cli.ts",
-      "guide",
-      "planning",
-    ]);
-    assert.equal(stdout, guide);
+    assert.equal(readGuide("planning"), guide);
+    assert.equal((await cli("guide", "planning")).stdout, guide);
   });
 
-  it("the main guide states the booking contract", async () => {
-    // Line breaks fall anywhere in Markdown prose.
-    const guide = (await readGuide()).replace(/\s+/g, " ");
-    for (const phrase of [
-      // Errors by reason.
-      "`already_booked`",
-      "`price_or_terms_changed`",
-      "`rate_unavailable`",
-      "`supplier_unavailable`",
-      "`refused`",
-      // Meal codes and quantity.
-      "RO room only, BB breakfast, HB breakfast + dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast + lunch, HBLD lunch + dinner, AI all inclusive",
-      "`boardCount`, how many guests per room the meal plan covers",
-      "breakfast for 1 of 2",
-      "`retryAfterSeconds`",
-      // Occupancy and consent.
-      "**per room**",
-      "`--rooms 2 --adults 2`",
-      "give `paymentUrl` exactly as returned",
-      "`stay`",
-      "Never ask for, accept or pass on payment card details",
-      "`--nationality` isn't sent with the booking",
-      "run it again with identical flags",
-      "`nationality`) is rejected",
-      // Errors and sign-in edge cases.
-      "`maxMatches`",
-      "at most 15 nights; book a longer stay as separate bookings",
-      "any other 409 is `rate_unavailable`",
-      'Exit 3 with `tokenSource: "FORTRIP_TOKEN"`',
-      "The saved sign-in is kept until the user approves the new link",
-      "allow the command at least 3 minutes",
-      "can carry `warning`",
-      // Sign-in and support.
-      "Never ask the user to paste a token",
-      "info@fortrip.ai",
-    ]) {
-      assert.ok(guide.includes(phrase), phrase);
-    }
-  });
-
-  it("the planning guide asks for confirmation of the terms book returned", async () => {
-    const guide = (await readGuide("planning")).replace(/\s+/g, " ");
-    assert.ok(guide.includes("confirms the terms that `book` returned"));
-    assert.ok(guide.includes("`--adults` and `--child-age` are per room"));
+  it("the package ships no Markdown guides to read", async () => {
+    const { files } = JSON.parse(await readFile("package.json", "utf8"));
+    assert.deepEqual(files, ["dist", "README.md"]);
   });
 
   it("no guide or help text names the supplier", async () => {
-    const texts = [await readGuide(), await readGuide("planning")];
+    const texts = [expected("main"), expected("planning")];
     for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
-      texts.push((await run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args])).stdout);
+      texts.push((await cli(...args)).stdout);
     }
     // Assembled, so that this file doesn't name the supplier either.
     const supplier = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
     for (const text of texts) assert.doesNotMatch(text, supplier);
   });
 
-  it("rejects an unknown guide with exit 2", async () => {
-    await assert.rejects(
-      run(process.execPath, ["--import", "tsx", "src/cli.ts", "guide", "nope"]),
-      (error: { code?: number }) => error.code === 2,
-    );
+  it("rejects an unknown topic with exit 2 and the usage", async () => {
+    for (const args of [["nope"], ["main"], ["planning", "extra"]]) {
+      await assert.rejects(
+        cli("guide", ...args),
+        (error: { code?: number; stdout?: string; stderr?: string }) => {
+          assert.equal(error.code, 2, args.join(" "));
+          assert.equal(error.stdout, "", args.join(" "));
+          assert.match(JSON.parse(error.stderr ?? "").error, /fortrip guide \[planning\]/);
+          return true;
+        },
+      );
+    }
   });
 
   it("--version reports package.json's version", async () => {
     const { version } = JSON.parse(await readFile("package.json", "utf8"));
-    const { stdout } = await run(process.execPath, [
-      "--import",
-      "tsx",
-      "src/cli.ts",
-      "--version",
-    ]);
-    assert.equal(stdout, `${version}\n`);
+    assert.equal((await cli("--version")).stdout, `${version}\n`);
   });
 });

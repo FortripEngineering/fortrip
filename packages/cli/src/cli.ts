@@ -38,7 +38,11 @@ async function run(argv: string[]): Promise<unknown> {
   }
   if (spec.name === "guide") {
     const { positionals } = parseOptions(spec, rest);
-    process.stdout.write(await readGuide(positionals.join(" ") || undefined));
+    const topic = positionals.join(" ");
+    if (topic !== "" && topic !== "planning") {
+      throw usageError("Usage: fortrip guide [planning]");
+    }
+    process.stdout.write(readGuide(topic || "main"));
     return undefined;
   }
   if (spec.name === "mcp") throw usageError("mcp is not available yet");

@@ -92,16 +92,17 @@ The skill lives in this repository's
 Claude directory plugin in [`plugins/claude`](https://github.com/FortripEngineering/fortrip/tree/main/plugins/claude)
 uses the hosted MCP instead of the CLI. The
 skill only tells the agent to run `npx -y fortrip@latest guide`, which prints
-[`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
-and what to show the user before handing over a payment link. The guide ships
-with the package, so a CLI release updates every installed skill. Edit
-`AGENT_GUIDE.md`, not the skill.
+the guide for agents: when to use the CLI, the call order, login, and what to
+show the user before handing over a payment link. The guide is written once in
+[`@fortrip/agent-contract`](../contract/guide) and compiled into the CLI, so a
+CLI release updates every installed skill. Edit the contract's guide, not the
+skill.
 
-`fortrip guide planning` prints [`guides/planning.md`](guides/planning.md):
-what to ask, how to rank and how to present options for flexible dates,
-budgets, split stays and several destinations. Both guides are printed with
-`fortrip@latest` replaced by the running version, so an agent keeps using the
-same CLI for the whole conversation.
+`fortrip guide planning` prints the planning guide: what to ask, how to rank
+and how to present options for flexible dates, budgets, split stays and
+several destinations. Both guides are printed with `fortrip@latest` replaced by
+the running version, so an agent keeps using the same CLI for the whole
+conversation.
 
 ## Support
 

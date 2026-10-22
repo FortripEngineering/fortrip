@@ -15,8 +15,6 @@
   },
   "files": [
     "dist",
-    "guides",
-    "AGENT_GUIDE.md",
     "README.md"
   ],
   "engines": {
