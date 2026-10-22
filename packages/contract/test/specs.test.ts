@@ -479,6 +479,92 @@ describe("COMMANDS", () => {
     }
   });
 
+  it("every non-boolean flag has a placeholder, and a boolean flag has none", () => {
+    for (const spec of COMMANDS) {
+      for (const flag of spec.flags) {
+        const label = `${spec.name} --${flag.flag}`;
+        if (flag.type === "boolean") {
+          assert.equal(flag.placeholder, undefined, label);
+        } else {
+          assert.ok(flag.placeholder?.trim(), label);
+        }
+      }
+    }
+  });
+
+  it("a flag on an enum field lists the enum's values as its placeholder", () => {
+    const listed: string[] = [];
+    for (const spec of COMMANDS) {
+      if (!spec.flags.length) continue;
+      const json = jsonOf(inputOf(spec));
+      for (const flag of spec.flags) {
+        const field = fieldOf(json, flag.field);
+        const item = field?.type === "array" ? field.items : field;
+        const values = item?.enum as string[] | undefined;
+        if (!values) continue;
+        listed.push(`${spec.name} --${flag.flag}`);
+        assert.equal(flag.placeholder, values.join("|"), `${spec.name} --${flag.flag}`);
+      }
+    }
+    assert.deepEqual(listed, [
+      "search --sort",
+      "search --currency",
+      "rates --board",
+      "rates --currency",
+    ]);
+  });
+
+  it("keeps the placeholders the CLI help has always shown", () => {
+    const placeholders = (name: CommandSpec["name"]) =>
+      Object.fromEntries(
+        command(name).flags.map((flag) => [flag.flag, flag.placeholder]),
+      );
+    const dates = { "check-in": "YYYY-MM-DD", "check-out": "YYYY-MM-DD" };
+    assert.deepEqual(placeholders("search"), {
+      query: "<text>",
+      "city-code": "<n>",
+      near: "<lat,lng,km>",
+      ...dates,
+      "star-min": "<n>",
+      "star-max": "<n>",
+      facility: "<name>",
+      "price-min": "<n>",
+      "price-max": "<n>",
+      sort: "recommended|price-asc|price-desc|star-desc|distance",
+      page: "<n>",
+      "page-size": "<n>",
+      currency: "CNY|USD",
+    });
+    assert.deepEqual(placeholders("rates"), {
+      hotel: "<id>",
+      ...dates,
+      rooms: "<n>",
+      adults: "<n>",
+      "child-age": "<age>",
+      nationality: "<CC>",
+      board: "RO|BB|HB|FB|BL|BD|HBBL|HBLD|AI",
+      "free-cancellation": undefined,
+      "include-unbookable": undefined,
+      "max-rooms": "<n>",
+      currency: "CNY|USD",
+    });
+    assert.deepEqual(placeholders("book"), {
+      hotel: "<id>",
+      "room-id": "<id>",
+      "rate-plan": "<code>",
+      ...dates,
+      rooms: "<n>",
+      adults: "<n>",
+      "child-age": "<age>",
+      guest: '"First Last[:roomNo]"',
+      "contact-name": "<name>",
+      "contact-phone": "<phone>",
+      "contact-email": "<email>",
+      "special-requests": "<english text>",
+    });
+    assert.deepEqual(placeholders("hotel"), { "with-rooms": undefined });
+  });
+
   // The CLI sends the HTTP schemas' requests, so its flags read from them
   // (rates differs from the MCP tool in the default rooms per hotel).
   const httpInputs = {
@@ -631,6 +717,19 @@ describe("CLI-only options", () => {
       }
       for (const option of spec.options ?? []) {
         assert.equal(taken.has(option.flag), false, `${spec.name} --${option.flag}`);
+      }
+    }
+  });
+
+  it("every option that takes a value has a placeholder", () => {
+    for (const spec of COMMANDS) {
+      for (const option of [...(spec.options ?? []), ...GLOBAL_FLAGS]) {
+        const label = `${spec.name} --${option.flag}`;
+        if (option.type === "boolean") {
+          assert.equal(option.placeholder, undefined, label);
+        } else {
+          assert.ok(option.placeholder?.trim(), label);
+        }
       }
     }
   });

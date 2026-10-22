@@ -6,7 +6,12 @@ import {
   getRatesInput,
   searchHotelsInput,
 } from "./inputs.ts";
-import { LIMITS } from "./limits.ts";
+import {
+  BOARD_CODES,
+  CURRENCIES,
+  LIMITS,
+  SEARCH_SORTS,
+} from "./limits.ts";
 import type { ToolName } from "./tools.ts";
 
 /*
@@ -35,6 +40,12 @@ export interface FlagSpec {
   type: "string" | "number" | "boolean" | "id";
   /** Given once per item; its field is a list. */
   multiple?: boolean;
+  /**
+   * What the value looks like in help, as it follows the flag name: `<n>`,
+   * `YYYY-MM-DD`, `CNY|USD` (an enum's values), `"First Last[:roomNo]"`.
+   * Every flag that takes a value has one.
+   */
+  placeholder?: string;
   description: string;
 }
 
@@ -45,6 +56,8 @@ export interface OptionSpec {
   /** The one-letter name without its dash. */
   short?: string;
   type: "string" | "boolean";
+  /** As on `FlagSpec`; every option that takes a value has one. */
+  placeholder?: string;
   description: string;
 }
 
@@ -104,33 +117,55 @@ function flagsOf(
 // The CLI sends the HTTP API's requests, so its flags read from the HTTP
 // schemas (rates differs from the MCP tool in `maxRoomsPerHotel`).
 
+const ID = "<id>";
+const COUNT = "<n>";
+const DATE = "YYYY-MM-DD";
+
 const searchFlags = flagsOf(searchHotelsInput, [
   {
     flag: "query",
     short: "q",
     field: "query",
     type: "string",
+    placeholder: "<text>",
     description:
       "Hotel name, brand or city to search for. Provide at least one of `--query`, `--city-code` or `--near`.",
   },
-  { flag: "city-code", field: "cityCode", type: "id" },
+  { flag: "city-code", field: "cityCode", type: "id", placeholder: COUNT },
   {
     flag: "near",
     field: "near",
     type: "string",
+    placeholder: "<lat,lng,km>",
     description: `Search around a point, as \`lat,lng,radiusKm\` (radius up to ${LIMITS.nearRadiusKm}), e.g. \`13.75,100.5,5\`.`,
   },
-  { flag: "check-in", field: "checkIn", type: "string" },
-  { flag: "check-out", field: "checkOut", type: "string" },
-  { flag: "star-min", field: "starMin", type: "number" },
-  { flag: "star-max", field: "starMax", type: "number" },
-  { flag: "facility", field: "facilities", type: "string", multiple: true },
-  { flag: "price-min", field: "priceMin", type: "number" },
-  { flag: "price-max", field: "priceMax", type: "number" },
-  { flag: "sort", field: "sortBy", type: "string" },
-  { flag: "page", field: "page", type: "number" },
-  { flag: "page-size", field: "pageSize", type: "number" },
-  { flag: "currency", field: "currency", type: "string" },
+  { flag: "check-in", field: "checkIn", type: "string", placeholder: DATE },
+  { flag: "check-out", field: "checkOut", type: "string", placeholder: DATE },
+  { flag: "star-min", field: "starMin", type: "number", placeholder: COUNT },
+  { flag: "star-max", field: "starMax", type: "number", placeholder: COUNT },
+  {
+    flag: "facility",
+    field: "facilities",
+    type: "string",
+    multiple: true,
+    placeholder: "<name>",
+  },
+  { flag: "price-min", field: "priceMin", type: "number", placeholder: COUNT },
+  { flag: "price-max", field: "priceMax", type: "number", placeholder: COUNT },
+  {
+    flag: "sort",
+    field: "sortBy",
+    type: "string",
+    placeholder: SEARCH_SORTS.join("|"),
+  },
+  { flag: "page", field: "page", type: "number", placeholder: COUNT },
+  { flag: "page-size", field: "pageSize", type: "number", placeholder: COUNT },
+  {
+    flag: "currency",
+    field: "currency",
+    type: "string",
+    placeholder: CURRENCIES.join("|"),
+  },
 ]);
 
 const hotelFlags = flagsOf(getHotelInput, [
@@ -143,21 +178,40 @@ const ratesFlags = flagsOf(getRatesInput, [
     field: "hotelIds",
     type: "id",
     multiple: true,
+    placeholder: ID,
     description: `Hotels to price, by id from \`search\`: repeat the flag or comma-separate, up to ${LIMITS.ratesHotels}. Each call takes about 15 seconds.`,
   },
-  { flag: "check-in", field: "checkIn", type: "string" },
-  { flag: "check-out", field: "checkOut", type: "string" },
-  { flag: "rooms", field: "rooms", type: "number" },
+  { flag: "check-in", field: "checkIn", type: "string", placeholder: DATE },
+  { flag: "check-out", field: "checkOut", type: "string", placeholder: DATE },
+  { flag: "rooms", field: "rooms", type: "number", placeholder: COUNT },
   {
     flag: "adults",
     field: "adults",
     type: "number",
+    placeholder: COUNT,
     description:
       "Adults per room, not in total (2 rooms for 4 adults = `--rooms 2 --adults 2`)",
   },
-  { flag: "child-age", field: "childrenAges", type: "number", multiple: true },
-  { flag: "nationality", field: "nationality", type: "string" },
-  { flag: "board", field: "boardCodes", type: "string", multiple: true },
+  {
+    flag: "child-age",
+    field: "childrenAges",
+    type: "number",
+    multiple: true,
+    placeholder: "<age>",
+  },
+  {
+    flag: "nationality",
+    field: "nationality",
+    type: "string",
+    placeholder: "<CC>",
+  },
+  {
+    flag: "board",
+    field: "boardCodes",
+    type: "string",
+    multiple: true,
+    placeholder: BOARD_CODES.join("|"),
+  },
   { flag: "free-cancellation", field: "freeCancellation", type: "boolean" },
   {
     flag: "include-unbookable",
@@ -170,31 +224,40 @@ const ratesFlags = flagsOf(getRatesInput, [
     flag: "max-rooms",
     field: "maxRoomsPerHotel",
     type: "number",
+    placeholder: COUNT,
     description: "Return the N cheapest rooms per hotel. Default 10.",
   },
-  { flag: "currency", field: "currency", type: "string" },
+  {
+    flag: "currency",
+    field: "currency",
+    type: "string",
+    placeholder: CURRENCIES.join("|"),
+  },
 ]);
 
 const bookFlags = flagsOf(createBookingInput, [
-  { flag: "hotel", field: "hotelId", type: "id" },
+  { flag: "hotel", field: "hotelId", type: "id", placeholder: ID },
   {
     flag: "room-id",
     field: "roomId",
     type: "string",
+    placeholder: ID,
     description: "`roomId` from `rates`",
   },
   {
     flag: "rate-plan",
     field: "ratePlanCode",
     type: "string",
+    placeholder: "<code>",
     description: "`ratePlanCode` from `rates`",
   },
-  { flag: "check-in", field: "checkIn", type: "string" },
-  { flag: "check-out", field: "checkOut", type: "string" },
+  { flag: "check-in", field: "checkIn", type: "string", placeholder: DATE },
+  { flag: "check-out", field: "checkOut", type: "string", placeholder: DATE },
   {
     flag: "rooms",
     field: "rooms",
     type: "number",
+    placeholder: COUNT,
     description:
       "Number of rooms, as in `rates`; every room has the same occupancy",
   },
@@ -202,6 +265,7 @@ const bookFlags = flagsOf(createBookingInput, [
     flag: "adults",
     field: "adults",
     type: "number",
+    placeholder: COUNT,
     description:
       "Adults per room, not in total, as in `rates` (2 rooms for 4 adults = `--rooms 2 --adults 2`)",
   },
@@ -210,6 +274,7 @@ const bookFlags = flagsOf(createBookingInput, [
     field: "childrenAges",
     type: "number",
     multiple: true,
+    placeholder: "<age>",
     description:
       "Age of each child in one room (0-17), per room, as in `rates`",
   },
@@ -218,19 +283,41 @@ const bookFlags = flagsOf(createBookingInput, [
     field: "guests",
     type: "string",
     multiple: true,
+    placeholder: '"First Last[:roomNo]"',
     description:
       'A guest, as "First Last" (room 1) or "First Last:roomNo", e.g. "Mary Ann Lee:2": the last word is the last name, the rest the first name. Repeat for each guest. At least one guest per room, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).',
   },
-  { flag: "contact-name", field: "contactName", type: "string" },
-  { flag: "contact-phone", field: "contactPhone", type: "string" },
-  { flag: "contact-email", field: "contactEmail", type: "string" },
-  { flag: "special-requests", field: "specialRequests", type: "string" },
+  {
+    flag: "contact-name",
+    field: "contactName",
+    type: "string",
+    placeholder: "<name>",
+  },
+  {
+    flag: "contact-phone",
+    field: "contactPhone",
+    type: "string",
+    placeholder: "<phone>",
+  },
+  {
+    flag: "contact-email",
+    field: "contactEmail",
+    type: "string",
+    placeholder: "<email>",
+  },
+  {
+    flag: "special-requests",
+    field: "specialRequests",
+    type: "string",
+    placeholder: "<english text>",
+  },
 ]);
 
 /** The request body, which the flags then override field by field. */
 const BODY_OPTION: OptionSpec = {
   flag: "body",
   type: "string",
+  placeholder: "<json|@file.json>",
   description:
     "The raw request body as a JSON object, or `@file.json` to read it from a file. Flags override its fields.",
 };
