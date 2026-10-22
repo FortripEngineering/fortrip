@@ -11,6 +11,5 @@
     "noEmit": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
-  },
-  "include": ["src", "test", "tsup.config.ts"]
+  }
 }
