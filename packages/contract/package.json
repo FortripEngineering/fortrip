@@ -1,0 +1,44 @@
+{
+  "name": "@fortrip/agent-contract",
+  "version": "1.0.0-rc.1",
+  "license": "MIT",
+  "description": "The contract of Fortrip's agent API (/api/agent/v1): limits, paths, input schemas and field rules.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FortripEngineering/fortrip.git",
+    "directory": "packages/contract"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "peerDependencies": {
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "zod": "^4.4.3"
+  }
+}
