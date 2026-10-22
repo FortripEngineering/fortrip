@@ -5,7 +5,7 @@ paths, error reasons and field rules that the Fortrip CLI (`fortrip`), the
 hosted MCP server and the store listings all share, so they cannot drift
 apart.
 
-It has one peer dependency, `zod` (4.4 or later), and runs anywhere
+It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
 ES2023 does. The package version follows the API: `1.x` serves
 `/api/agent/v1`.
 
@@ -16,10 +16,24 @@ API.search; // "/api/agent/v1/hotels/search"
 LIMITS.rooms; // 8
 ```
 
+It exports:
+
+- `API`, `LIMITS`, `BOARD_CODES`, `CURRENCIES`, `SEARCH_SORTS` and
+  `ERROR_REASONS`: paths, limits and error reasons;
+- `searchHotelsInput`, `getHotelInput`, `getRatesInput` and
+  `createBookingInput`, the zod schemas of the requests, and `bookingResult`,
+  `meResult` and `authConfig`, those of responses;
+- `COMMANDS` and `GLOBAL_FLAGS`, the CLI's commands and flags, and `TOOLS`,
+  the MCP tools;
+- `renderGuide(surface, topic)`, the agent guide as Markdown for `"mcp"`,
+  `"claude-skill"` or `"cli"`;
+- field rules such as `containsCardNumber`, the guest-name rule and the date
+  helpers, and `CONTRACT_VERSION`.
+
 Browser code that only needs the guest-name rule (`GUEST_NAME_PATTERN`,
 `GUEST_NAME_TITLE`, `GUEST_NAME_MESSAGE`, `guestNameRe`, `normalizeGuestName`)
 can import it from `@fortrip/agent-contract/guest-name`. That module imports
-nothing, so it does not pull in `zod` or the schemas the root entry builds at
-load. The root entry exports the same names.
+no package, so it does not pull in `zod` or the schemas the root entry builds
+at load. The root entry exports the same names.
 
 MIT licensed. Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.

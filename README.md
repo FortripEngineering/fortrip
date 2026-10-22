@@ -1,19 +1,37 @@
 # Fortrip
 
 Fortrip's public agent surface in one repository: the `fortrip` command-line
-tool for hotel search and booking, the contract that every agent surface
-shares, and the store listings that point agents at Fortrip.
+tool for hotel search, live rates and booking, the contract that every agent
+surface shares, and the store listings that point agents at Fortrip. Hotels
+only for now.
 
-The Claude and OpenAI plugins both use the hosted MCP server,
-`https://fortrip.ai/api/mcp`, which fortrip.ai serves. The `fortrip-cli` skill
-is for agents that can run shell commands but don't have Fortrip's MCP tools.
+Everything here talks to Fortrip's agent API, `https://fortrip.ai/api/agent/v1`,
+or to the hosted MCP server, `https://fortrip.ai/api/mcp`, as a Fortrip user
+who has signed in with OAuth in the browser.
+
+## Using Fortrip
+
+- **From a shell, or an agent with one:** `npx -y fortrip <command>`. Start
+  with `npx -y fortrip login`; the [CLI's README](packages/cli/README.md) has
+  the commands, sign-in and exit codes.
+- **In an MCP client:** connect the hosted server `https://fortrip.ai/api/mcp`
+  if the client supports remote servers with OAuth, or run the local bridge,
+  `npx -y fortrip mcp`. The [CLI's README](packages/cli/README.md#mcp-server)
+  has the config for Claude Desktop, Cursor, Codex and Claude Code. The Claude
+  and OpenAI plugins use the hosted server.
+- **As a skill, for agents that can run shell commands but don't have
+  Fortrip's MCP tools:**
+
+  ```bash
+  npx skills add FortripEngineering/fortrip --skill fortrip-cli
+  ```
 
 ## Layout
 
 | Path | What it is | How it's published |
 |---|---|---|
 | [`packages/contract`](packages/contract) | The contract of the agent API (`/api/agent/v1`): limits, paths, input schemas, field rules, the specs of the MCP tools and CLI commands, and the agent guide, written once and rendered for the MCP server, the Claude skill and the CLI | npm: `@fortrip/agent-contract`, from a `v*` tag on `main`, together with `fortrip` |
-| [`packages/cli`](packages/cli) | The `fortrip` CLI and its agent guide (`fortrip guide`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
+| [`packages/cli`](packages/cli) | The `fortrip` CLI: hotel search, live rates and booking from a shell, the local MCP bridge (`fortrip mcp`) and the agent guide (`fortrip guide`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
 | [`plugins/claude`](plugins/claude) | Claude plugin (hosted MCP server + static skill, generated) | Submitted in the [developer portal](https://claude.ai/directory/manage); `.claude-plugin/marketplace.json` at the root lets Claude Code add this repo as a marketplace |
 | [`plugins/openai`](plugins/openai) | ChatGPT / Codex plugin | Zip uploaded in the OpenAI portal |
 | [`plugins/registry`](plugins/registry) | [MCP Registry](https://registry.modelcontextprotocol.io) entry | The **Publish Fortrip to MCP Registry** workflow |
@@ -32,8 +50,10 @@ pnpm generate --check # fails with a diff when a generated file is stale
 pnpm build && pnpm validate   # checks the store listings
 ```
 
-`pnpm typecheck` and `pnpm build` run for every package too. CI also runs
-`claude plugin validate --strict` on `.`, `plugins/claude` and `skills`.
+`pnpm typecheck` and `pnpm build` run for every package too. CI runs
+typecheck, tests and the build on Node.js 22 and 24, and on 24 also
+`pnpm generate --check`, `pnpm validate` and `claude plugin validate --strict`
+on `.`, `plugins/claude` and `skills`.
 
 ## Generated files
 
@@ -112,12 +132,51 @@ Upload the zip in the OpenAI portal. The portal verifies the domain through
 
 ### MCP Registry
 
-`plugins/registry/server.json` lists the hosted server as
-`io.github.FortripEngineering/fortrip`. To publish a change, bump `version`,
-merge to `main`, and run the **Publish Fortrip to MCP Registry** workflow
-(`.github/workflows/publish-mcp-registry.yml`); it runs only from `main` and
-waits for approval. The Registry binds the server URL to one name, so a rename
-means deleting the old entry before publishing the new one.
+`plugins/registry/server.json` lists Fortrip as
+`io.github.FortripEngineering/fortrip`, with two ways to connect: the hosted
+server (`remotes`) and the npm package `fortrip`, run as `fortrip mcp`
+(`packages`; the `mcpName` in `packages/cli/package.json` must equal the
+entry's name). The entry is published by its own workflow, **Publish Fortrip to
+MCP Registry** (`.github/workflows/publish-mcp-registry.yml`), which runs only
+from `main` and waits for a human to approve the `mcp-registry` environment.
+To publish a change, bump `version` (a version can't go down), set
+`packages[].version` to the CLI version on npm, merge to `main` and run the
+workflow. After a CLI release, run it once npm has the new version.
+
+The Registry binds the server URL to one name, so a rename means deleting the
+old entry before publishing the new one.
+
+## Releasing
+
+`fortrip` and `@fortrip/agent-contract` are released together, at the same
+version.
+
+1. In a PR, set `version` to the new `X.Y.Z` in both `packages/cli/package.json`
+   and `packages/contract/package.json` (`npm version X.Y.Z --no-git-tag-version`
+   in each package's directory), set `packages[].version` in
+   `plugins/registry/server.json` to it too, and run `pnpm generate` and commit
+   what it changes. Merge the PR into `main` once CI passes.
+2. Tag the merge commit on `main` and push the tag:
+
+   ```bash
+   git checkout main && git pull
+   git tag vX.Y.Z && git push origin vX.Y.Z
+   ```
+
+3. A human approves the `npm-publish` environment. The workflow
+   [`publish.yml`](.github/workflows/publish.yml) then publishes both packages
+   to npm through trusted publishing (npm's OIDC sign-in from GitHub Actions,
+   so no npm token is stored in GitHub), which gives them provenance.
+4. Once npm has the new version, run the MCP Registry workflow (above).
+
+The workflow refuses a tag that isn't `vX.Y.Z` or `vX.Y.Z-rc.N`, that differs
+from the `version` in either `package.json`, or that isn't on `main`. Its
+`build` job runs typecheck, tests and the build and packs both tarballs; its
+`publish` job, in the `npm-publish` environment, publishes those tarballs
+(`@fortrip/agent-contract` first) without installing or building anything. A
+release candidate, tagged `vX.Y.Z-rc.N`, is published under the `next`
+dist-tag, so `npm install` doesn't pick it up. Rerunning the publish job after
+a partial publish skips what is already on npm.
 
 ## License
 
