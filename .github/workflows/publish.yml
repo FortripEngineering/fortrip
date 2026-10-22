@@ -101,7 +101,8 @@ jobs:
 
       # The tarballs the build job tested, as is. The contract goes first, so a
       # CLI that depends on it can resolve it. A release candidate gets the
-      # "next" dist-tag.
+      # "next" dist-tag. A package whose version is already on npm is skipped,
+      # so re-running the job after a partial publish finishes the release.
       - name: Publish
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -117,5 +118,37 @@ jobs:
               exit 1
             fi
           done
-          npm publish --ignore-scripts --tag "${dist_tag}" "${contract}"
-          npm publish --ignore-scripts --tag "${dist_tag}" "${cli}"
+
+          # Succeeds when name@version is on npm and fails when it is not. A
+          # 404 means "not published"; any other npm error fails the job. Only
+          # errors are logged, so an npm warning can't pass for the version.
+          is_published() {
+            local out status=0
+            out="$(npm view --loglevel=error "$1@${version}" version 2>&1)" || status=$?
+            if [ "${status}" -eq 0 ] && [ "${out}" = "${version}" ]; then
+              return 0
+            fi
+            if [ "${status}" -ne 0 ] && [[ "${out}" == *"code E404"* ]]; then
+              return 1
+            fi
+            echo "::error::npm view $1@${version} did not answer published or not published: ${out}"
+            exit 1
+          }
+
+          # Decide both before publishing either, so a failed lookup never
+          # leaves a release half done.
+          to_publish=()
+          if is_published "@fortrip/agent-contract"; then
+            echo "::notice::@fortrip/agent-contract@${version} is already on npm; skipping it"
+          else
+            to_publish+=("${contract}")
+          fi
+          if is_published "fortrip"; then
+            echo "::notice::fortrip@${version} is already on npm; skipping it"
+          else
+            to_publish+=("${cli}")
+          fi
+
+          for tarball in "${to_publish[@]}"; do
+            npm publish --ignore-scripts --tag "${dist_tag}" "${tarball}"
+          done
