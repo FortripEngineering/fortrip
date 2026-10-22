@@ -25,6 +25,7 @@ export {
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
+export { renderGuide, type GuideSurface, type GuideTopic } from "./guide.ts";
 export {
   createBookingInput,
   getHotelInput,

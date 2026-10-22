@@ -26,9 +26,10 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
+    "embed-guide": "node --import tsx scripts/embed-guide.ts",
+    "build": "pnpm embed-guide && tsup",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "pnpm embed-guide && node --import tsx --test test/*.test.ts",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "peerDependencies": {
