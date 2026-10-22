@@ -315,10 +315,10 @@ describe("help", () => {
 });
 
 describe("other commands", () => {
-  it("mcp is not available yet and exits 2", async () => {
-    const { code, stderr } = await cli(["mcp"]);
+  it("mcp takes no arguments and exits 2", async () => {
+    const { code, stderr } = await cli(["mcp", "extra"]);
     assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /not available yet/);
+    assert.match(JSON.parse(stderr).error, /mcp takes no arguments/);
   });
 
   it("skill is gone: guide replaced it", async () => {

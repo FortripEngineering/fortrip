@@ -1,15 +1,38 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import type { Session } from "../../src/credentials.ts";
 
 type Reply = { status: number; body: unknown };
 
+/** What a request to the fake MCP endpoint carried. */
+export interface McpRequest {
+  /** The bearer token, without `Bearer `. */
+  token: string;
+  sessionId?: string;
+  protocolVersion?: string;
+  /** The JSON-RPC message the POST carried. */
+  message: Record<string, unknown>;
+}
+
+/** What the fake MCP server answers `initialize` and `tools/list` with. */
+export const MCP_SESSION_ID = "fake-session-1";
+export const MCP_TOOLS = [
+  { name: "search_hotels", description: "Search", inputSchema: { type: "object" } },
+  { name: "get_planning_guide", description: "Guide", inputSchema: { type: "object" } },
+];
+
 /**
  * A fake of what the CLI signs in with and calls, for tests: the Fortrip
  * API's public `/api/agent/v1/auth/config` and `/api/agent/v1/me`, and the
  * OAuth server the config names (RFC 8628 device authorization, the token
  * endpoint for device codes and refresh tokens, RFC 7009 revocation).
+ *
+ * `POST /api/mcp` is the hosted MCP server (Streamable HTTP): it takes the
+ * OAuth access tokens the fake issued, answers `initialize` with a session id
+ * that later requests must carry, `tools/list` as JSON, and `tools/call` as
+ * an event stream with a notification and a server request before the
+ * result. A `tools/call` of the tool `drop` ends its stream without a result.
  *
  * Device logins follow the real server: a poll sooner than `minPollGapMs`
  * after the last gets `slow_down`, and an approved code is redeemed once.
@@ -30,7 +53,7 @@ export interface FakeApi {
     rotate: boolean;
     /** Every device poll answers `expired_token`. */
     expireAll: boolean;
-    /** `/me` answers 401 whatever the token. */
+    /** `/me` and `/api/mcp` answer 401 whatever the token. */
     rejectAll: boolean;
   };
   /** Answers for the next device polls, refreshes, revocations, config and
@@ -41,6 +64,8 @@ export interface FakeApi {
     revoke: Reply[];
     config: Reply[];
     me: Reply[];
+    /** Answers for the next MCP POSTs, whatever the token. */
+    mcp: Reply[];
   };
   /** Run before the matching request is answered, e.g. to act as another
    *  command. */
@@ -71,6 +96,8 @@ export interface FakeApi {
   revoked: string[];
   /** The access token of every `/me` request. */
   meTokens: string[];
+  /** Every POST to `/api/mcp`, in order. */
+  mcpRequests: McpRequest[];
   /** Every token the fake has issued, to check none is printed. */
   issued: string[];
   approve(loginUrl: string): void;
@@ -119,6 +146,7 @@ export async function startFakeApi(): Promise<FakeApi> {
     refreshedWith: [],
     revoked: [],
     meTokens: [],
+    mcpRequests: [],
     issued: [],
     approve: (loginUrl) => decide(loginUrl, "approved"),
     deny: (loginUrl) => decide(loginUrl, "denied"),
@@ -140,7 +168,7 @@ export async function startFakeApi(): Promise<FakeApi> {
         expireAll: false,
         rejectAll: false,
       };
-      api.scripts = { poll: [], refresh: [], revoke: [], config: [], me: [] };
+      api.scripts = { poll: [], refresh: [], revoke: [], config: [], me: [], mcp: [] };
       api.hooks = {};
       api.configOverrides = {};
       api.auths = new Map();
@@ -151,6 +179,7 @@ export async function startFakeApi(): Promise<FakeApi> {
       api.refreshedWith = [];
       api.revoked = [];
       api.meTokens = [];
+      api.mcpRequests = [];
       api.issued = [];
     },
     close: async () => {},
@@ -287,12 +316,93 @@ export async function startFakeApi(): Promise<FakeApi> {
     }
   }
 
+  /** One POST to `/api/mcp`. */
+  function handleMcp(req: IncomingMessage, res: ServerResponse, raw: string): void {
+    const header = (name: string) => {
+      const value = req.headers[name];
+      return typeof value === "string" ? value : undefined;
+    };
+    const token = (header("authorization") ?? "").replace(/^Bearer /, "");
+    const message = JSON.parse(raw) as {
+      id?: unknown;
+      method?: unknown;
+      params?: Record<string, unknown>;
+    };
+    api.mcpRequests.push({
+      token,
+      sessionId: header("mcp-session-id"),
+      protocolVersion: header("mcp-protocol-version"),
+      message,
+    });
+    const json = (status: number, body: unknown, headers: Record<string, string> = {}) => {
+      res.writeHead(status, { "content-type": "application/json", ...headers });
+      res.end(JSON.stringify(body));
+    };
+    const scripted = api.scripts.mcp.shift();
+    if (scripted) return json(scripted.status, scripted.body);
+    if (!api.accessTokens.has(token) || api.options.rejectAll) {
+      return json(401, { error: "invalid_token" }, { "www-authenticate": 'Bearer error="invalid_token"' });
+    }
+    // Notifications, and a client's answers to the server's requests.
+    if (message.id === undefined || typeof message.method !== "string") {
+      res.writeHead(202);
+      return void res.end();
+    }
+    const { id, method, params = {} } = message;
+    if (method !== "initialize" && header("mcp-session-id") !== MCP_SESSION_ID) {
+      return json(400, {
+        jsonrpc: "2.0",
+        error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+        id: null,
+      });
+    }
+    const result = (value: unknown) => ({ jsonrpc: "2.0", id, result: value });
+    switch (method) {
+      case "initialize":
+        return json(
+          200,
+          result({
+            protocolVersion: params.protocolVersion,
+            capabilities: { tools: {} },
+            serverInfo: { name: "fake-fortrip", version: "0.0.0" },
+          }),
+          { "mcp-session-id": MCP_SESSION_ID },
+        );
+      case "tools/list":
+        return json(200, result({ tools: MCP_TOOLS }));
+      case "tools/call": {
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        const event = (value: unknown) =>
+          res.write(`event: message\ndata: ${JSON.stringify(value)}\n\n`);
+        event({ jsonrpc: "2.0", method: "notifications/message", params: { level: "info", data: "searching" } });
+        event({ jsonrpc: "2.0", id: "srv-1", method: "ping" });
+        if (params.name === "drop") return void setImmediate(() => res.destroy());
+        event(result({ content: [{ type: "text", text: "ok" }] }));
+        return void res.end();
+      }
+      default:
+        return json(200, {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32601, message: `Method not found: ${method}` },
+        });
+    }
+  }
+
   const server: Server = createServer((req, res) => {
     let raw = "";
     req.on("data", (chunk) => {
       raw += chunk;
     });
     req.on("end", () => {
+      if (req.url === "/api/mcp") {
+        // It offers no event stream apart from a POST's.
+        if (req.method !== "POST") {
+          res.writeHead(405);
+          return void res.end();
+        }
+        return handleMcp(req, res, raw);
+      }
       void handle(req.method ?? "", req.url ?? "", req.headers.authorization ?? "", raw).then(
         ({ status, body }) => {
           res.writeHead(status, { "content-type": "application/json" });

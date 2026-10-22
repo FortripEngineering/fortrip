@@ -45,7 +45,6 @@ async function run(argv: string[]): Promise<unknown> {
     process.stdout.write(readGuide(topic || "main"));
     return undefined;
   }
-  if (spec.name === "mcp") throw usageError("mcp is not available yet");
 
   const apiUrl = resolveApiUrl();
   const log = (line: string) => process.stderr.write(`${line}\n`);
@@ -63,6 +62,12 @@ async function run(argv: string[]): Promise<unknown> {
     case "whoami":
       parseOptions(spec, rest);
       return whoami(apiUrl);
+    case "mcp": {
+      parseOptions(spec, rest);
+      // Loaded only here: the other commands needn't pay for the MCP SDK.
+      const { runMcpBridge } = await import("./mcp-bridge.ts");
+      return runMcpBridge(apiUrl);
+    }
     default: {
       const { body, path } = parseCommand(spec, rest, process.env);
       return call(apiUrl, body ? "POST" : "GET", path, body);

@@ -12,7 +12,7 @@ npx fortrip login          # sign in through the browser
 npx fortrip search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
 ```
 
-Requires Node.js 22 or newer. No runtime dependencies.
+Requires Node.js 22 or newer.
 
 ## Commands
 

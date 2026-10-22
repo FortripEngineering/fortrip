@@ -6,10 +6,26 @@
   "version": "1.0.3",
   "websiteUrl": "https://fortrip.ai",
   "repository": {
-    "url": "https://github.com/FortripEngineering/fortrip-mcp",
+    "url": "https://github.com/FortripEngineering/fortrip",
     "source": "github",
-    "id": "1427897019"
+    "id": "1415393587"
   },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "fortrip",
+      "version": "0.3.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
