@@ -31,6 +31,9 @@ import { BOARD_CODES, CURRENCIES, LIMITS, SEARCH_SORTS } from "./limits.ts";
 /** Longest facility name the search accepts, in characters. */
 const FACILITY_NAME_MAX = 64;
 
+/** Largest hotel id the lookup takes: 2^31 - 1, a signed 32-bit integer. */
+const MAX_HOTEL_ID = 2_147_483_647;
+
 /** Rooms per hotel a rates call returns when it doesn't say. */
 const DEFAULT_MAX_ROOMS_PER_HOTEL = 10;
 
@@ -43,7 +46,7 @@ const stayDescriptions = {
 const displayCurrency = oneOf("currency", CURRENCIES)
   .default("CNY")
   .describe(
-    "Currency to show prices in, converted from the supplier's at Stripe's exchange rate.",
+    "Currency to show prices in. Prices are converted from the supplier's at Stripe's exchange rate; the response's `fx` says how.",
   );
 
 function bounded(name: string, min: number, max: number) {
@@ -190,13 +193,21 @@ export const searchHotelsInput = strictInput({
   }
 });
 
+const hotelIdError = "hotelId must be a positive whole number";
+
 /**
  * `GET /api/agent/v1/hotels/{id}` and the MCP `get_hotel` arguments. Not
- * strict: it has always dropped a key it doesn't know.
+ * strict: it has always dropped a key it doesn't know. `hotelId` is coerced,
+ * so the numeric string a URL path gives parses as the number.
  */
 export const getHotelInput = z.object(
   {
-    hotelId: positiveId("hotelId").describe("hotelId from search_hotels"),
+    hotelId: z.coerce
+      .number({ error: hotelIdError })
+      .int({ error: hotelIdError })
+      .positive({ error: hotelIdError })
+      .max(MAX_HOTEL_ID, { error: hotelIdError })
+      .describe("hotelId from search_hotels"),
     includeRooms: flag("includeRooms")
       .optional()
       .describe("Also return the catalogue room list (adds a few KB)"),
@@ -232,7 +243,7 @@ export const getRatesInput = strictInput({
     })
     .optional()
     .describe(
-      "Guest nationality, ISO 3166-1 alpha-2. Some rates are restricted by nationality; booking doesn't send it, so such a rate may change or be refused at booking",
+      "Guest nationality, ISO 3166-1 alpha-2 in upper case, e.g. `CN`. Some rates are restricted by nationality; booking doesn't send it, so such a rate may change or be refused at booking",
     ),
   currency: displayCurrency,
   // One hotel can return thousands of rate plans; these keep a response
@@ -325,8 +336,8 @@ export const createBookingInput = strictInput({
   ratePlanCode: nonEmpty("ratePlanCode").describe(
     "ratePlanCode from get_rates",
   ),
-  checkIn: isoDate("checkIn").describe("yyyy-MM-dd"),
-  checkOut: isoDate("checkOut").describe("yyyy-MM-dd"),
+  checkIn: isoDate("checkIn").describe(stayDescriptions.checkIn),
+  checkOut: isoDate("checkOut").describe(stayDescriptions.checkOut),
   rooms: wholeNumber("rooms", 1, LIMITS.rooms).describe(
     "Number of rooms, as in get_rates; every room has the same occupancy",
   ),
@@ -349,13 +360,13 @@ export const createBookingInput = strictInput({
           .int({ error: roomNoError })
           .min(1, { error: roomNoError })
           .max(LIMITS.rooms, { error: roomNoError })
-          .describe("1-based room number"),
+          .describe("Room the guest stays in, starting at 1."),
       }),
       { error: guestsError },
     )
     .min(1, { error: guestsError })
     .describe(
-      "At least one guest per room, Latin letters only as on the passport",
+      "At least one guest per room, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
     ),
   contactName: cardFreeText("contactName", 1, LIMITS.contactName).describe(
     "Contact person for the booking.",
@@ -379,7 +390,7 @@ export const createBookingInput = strictInput({
     .describe("Contact email."),
   specialRequests: cardFreeText("specialRequests", 0, LIMITS.specialRequests)
     .optional()
-    .describe("English only; not guaranteed"),
+    .describe("Requests for the hotel, in English. Not guaranteed."),
 }).superRefine((input, ctx) => {
   // Here, not at the supplier client: a reversed or same-day stay would
   // otherwise spend a rate-limit token and read "at most 15 nights".

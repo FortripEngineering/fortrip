@@ -15,10 +15,8 @@ import {
 import { LIMITS } from "../src/limits.ts";
 
 // The production bundle never runs zod's `config(en())` (zod is
-// `sideEffects: false`), and zod 4.6 only installs English on a ZodType's first
-// construction when none is set: a locale that answers nothing keeps every
-// message here our own, whichever zod version is installed.
-z.config({ localeError: () => undefined });
+// `sideEffects: false`): every message asserted here must be our own.
+z.config({ localeError: undefined });
 
 type Issue = { path: string; message: string };
 
@@ -106,6 +104,28 @@ describe("every input field has a non-empty description", () => {
     assert.ok(
       booking.properties?.guests?.items?.properties?.firstName?.description,
     );
+  });
+});
+
+describe("the date fields say what they are and their format", () => {
+  it("checkIn and checkOut do, in every schema that has them", () => {
+    for (const schema of [
+      searchHotelsInput,
+      getRatesInput,
+      createBookingInput,
+    ]) {
+      const { properties } = z.toJSONSchema(schema, {
+        io: "input",
+      }) as JsonSchema;
+      assert.match(
+        properties?.checkIn?.description ?? "",
+        /^Check-in date, yyyy-MM-dd/,
+      );
+      assert.match(
+        properties?.checkOut?.description ?? "",
+        /^Check-out date, yyyy-MM-dd.*1 to 15 nights/,
+      );
+    }
   });
 });
 
@@ -316,17 +336,49 @@ describe("searchHotelsInput", () => {
 });
 
 describe("getHotelInput", () => {
+  const message = "hotelId must be a positive whole number";
+
   it("takes a hotelId and an optional includeRooms", () => {
     assert.deepEqual(getHotelInput.parse({ hotelId: 16525 }), {
       hotelId: 16525,
     });
     assert.deepEqual(
       getHotelInput.parse({ hotelId: 16525, includeRooms: true }),
-      {
-        hotelId: 16525,
-        includeRooms: true,
-      },
+      { hotelId: 16525, includeRooms: true },
     );
+  });
+
+  it("takes the numeric string a URL path gives", () => {
+    assert.deepEqual(getHotelInput.parse({ hotelId: "123" }), { hotelId: 123 });
+    assert.deepEqual(
+      getHotelInput.parse({ hotelId: "16525", includeRooms: true }),
+      { hotelId: 16525, includeRooms: true },
+    );
+  });
+
+  it("accepts ids from 1 to 2147483647 and refuses outside them", () => {
+    for (const hotelId of [1, "1", 2_147_483_647, "2147483647"]) {
+      assert.equal(getHotelInput.safeParse({ hotelId }).success, true);
+    }
+    for (const hotelId of [
+      0,
+      "0",
+      -5,
+      "-5",
+      2_147_483_648,
+      "2147483648",
+      1.5,
+      "1.5",
+      "abc",
+      "",
+      null,
+    ]) {
+      assert.deepEqual(
+        issuesOf(getHotelInput, { hotelId }),
+        [{ path: "hotelId", message }],
+        JSON.stringify(hotelId),
+      );
+    }
   });
 
   it("is not strict: keys it doesn't know are dropped, not refused", () => {
@@ -337,8 +389,10 @@ describe("getHotelInput", () => {
 
   it("names what is wrong, with its own message", () => {
     assertRefused(getHotelInput, [
-      [{ hotelId: 0 }, "hotelId", "hotelId must be a positive whole number"],
-      [{}, "hotelId", "hotelId must be a positive whole number"],
+      [{ hotelId: 0 }, "hotelId", message],
+      [{ hotelId: "0" }, "hotelId", message],
+      [{ hotelId: "2147483648" }, "hotelId", message],
+      [{}, "hotelId", message],
       [
         { hotelId: 1, includeRooms: "yes" },
         "includeRooms",
