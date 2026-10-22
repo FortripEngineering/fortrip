@@ -8,9 +8,9 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { promisify } from "node:util";
 
-import { loadStoredToken, saveToken } from "../src/credentials.ts";
-import { startFakeApi } from "./helpers/fake-api.ts";
+import { loadSession, saveSession } from "../src/credentials.ts";
 import { cli } from "./helpers/cli.ts";
+import { startFakeApi } from "./helpers/fake-api.ts";
 
 const exec = promisify(execFile);
 /** STRESS_ROUNDS=90 for a longer run. */
@@ -20,10 +20,10 @@ async function configDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "fortrip-stress-"));
 }
 
-function saveTokens(xdg: string, prefix: string, count: number) {
+function saveSessions(xdg: string, prefix: string, count: number) {
   return exec(
     process.execPath,
-    ["--import", "tsx", "test/helpers/save-tokens.ts", prefix, String(count)],
+    ["--import", "tsx", "test/helpers/save-sessions.ts", prefix, String(count)],
     { env: { ...process.env, XDG_CONFIG_HOME: xdg } },
   );
 }
@@ -42,9 +42,9 @@ function pidNamespace(): string {
   }
 }
 
-describe("I4 stress: processes past an abandoned lock", () => {
+describe("R4 stress: processes past an abandoned lock", () => {
   const rounds = ROUNDS ?? 20;
-  it(`${rounds} rounds of 10 processes saving 3 tokens each lose none`, { timeout: 600_000 }, async () => {
+  it(`${rounds} rounds of 10 processes saving 3 sessions each lose none`, { timeout: 600_000 }, async () => {
     for (let round = 0; round < rounds; round++) {
       const xdg = await configDir();
       await mkdir(join(xdg, "fortrip"), { recursive: true });
@@ -53,74 +53,45 @@ describe("I4 stress: processes past an abandoned lock", () => {
         join(xdg, "fortrip", "credentials.json.lock"),
         JSON.stringify({ pid: await exitedPid(), host: hostname(), pidns: pidNamespace(), id: "x" }),
       );
-      await Promise.all(Array.from({ length: 10 }, (_, p) => saveTokens(xdg, `p${p}`, 3)));
+      await Promise.all(Array.from({ length: 10 }, (_, p) => saveSessions(xdg, `p${p}`, 3)));
 
       const file = JSON.parse(await readFile(join(xdg, "fortrip", "credentials.json"), "utf8"));
-      assert.equal(Object.keys(file.tokens).length, 30, `round ${round}`);
+      assert.equal(file.version, 2, `round ${round}`);
+      assert.equal(Object.keys(file.sessions).length, 30, `round ${round}`);
     }
   });
 });
 
-describe("I2 stress: 0.3.0 writing while this version writes", () => {
-  const rounds = ROUNDS ?? 6;
-  it(`${rounds} rounds: no token either version saved is lost, nobody crashes`, { timeout: 600_000 }, async () => {
+describe("R2 stress: processes that find the token expired together", () => {
+  const rounds = ROUNDS ? Math.ceil(ROUNDS / 3) : 5;
+  it(`${rounds} rounds of 6 processes spend the rotating refresh token once`, { timeout: 600_000 }, async () => {
     const api = await startFakeApi();
-    // Every login 0.3.0 polls is dead, so each 0.3.0 run writes the file.
-    api.options.expireAll = true;
+    // Each process that found the token expired fetches the sign-in config.
+    let refreshers = 0;
     try {
       for (let round = 0; round < rounds; round++) {
-        const xdg = await configDir();
+        api.reset();
         const env = {
           ...process.env,
           FORTRIP_API_URL: api.url,
           FORTRIP_TOKEN: "",
-          XDG_CONFIG_HOME: xdg,
+          XDG_CONFIG_HOME: await configDir(),
         };
-        await saveToken("https://keep.example", "fth_keep", env);
-        // A big file keeps 0.3.0's truncate-then-write window open longer,
-        // so readers land in it.
-        const path = join(xdg, "fortrip", "credentials.json");
-        const file = JSON.parse(await readFile(path, "utf8"));
-        for (let n = 0; n < 20_000; n++) {
-          file.tokens[`https://filler-${n}.example`] = { accessToken: `fth_${n}`, createdAt: "x" };
-        }
-        await writeFile(path, JSON.stringify(file));
+        await saveSession(api.url, api.session({ expiresAt: Date.now() - 1_000 }), env);
 
-        const old: number[] = [];
-        const [, current, saves] = await Promise.all([
-          (async () => {
-            for (let n = 0; n < 8; n++) old.push((await cli("0.3.0", ["whoami"], env)).code);
-          })(),
-          Promise.all(Array.from({ length: 5 }, () => cli("current", ["whoami"], env))),
-          Promise.all(Array.from({ length: 3 }, (_, p) => saveTokens(xdg, `r${round}p${p}`, 20))),
-        ]);
-
-        assert.deepEqual(old, Array(8).fill(3), `round ${round}: 0.3.0 exits`);
+        const results = await Promise.all(Array.from({ length: 6 }, () => cli(["whoami"], env)));
         assert.deepEqual(
-          current.map((result) => result.code),
-          [3, 3, 3, 3, 3],
-          current.map((result) => result.stderr).join("\n"),
+          results.map((result) => result.code),
+          Array(6).fill(0),
+          `round ${round}: ${results.map((result) => result.stderr).join("\n")}`,
         );
-        assert.equal(saves.length, 3);
-        // What this version saved meanwhile is there too: it checks again
-        // after saving and saves again if 0.3.0 overwrote it, and what it
-        // still couldn't save comes back with the next write.
-        await saveToken("https://after.example", "fth_after", env);
-        const saved = JSON.parse(await readFile(join(xdg, "fortrip", "credentials.json"), "utf8"));
-        for (let p = 0; p < 3; p++) {
-          for (let n = 0; n < 20; n++) {
-            assert.equal(
-              saved.tokens[`https://r${round}p${p}-${n}.example`]?.accessToken,
-              `fth_r${round}p${p}_${n}`,
-              `round ${round}`,
-            );
-          }
-        }
-        // Both versions only ever rewrite what they read, so a token that
-        // was there before the round is still there unless something took
-        // a half-written file for the whole file.
-        assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep", `round ${round}`);
+        assert.equal(api.counts.refreshes, 1, `round ${round}`);
+        const saved = await loadSession(api.url, env);
+        assert.ok(saved && api.refreshTokens.has(saved.refreshToken), `round ${round}`);
+        refreshers += api.counts.config;
       }
+      // Processes did race: more than one per round set out to refresh.
+      assert.ok(refreshers > rounds, `${refreshers} refreshers in ${rounds} rounds`);
     } finally {
       await api.close();
     }

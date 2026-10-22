@@ -1,17 +1,18 @@
-import { hostname } from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { type ApiResponse, request, unwrap } from "./api.ts";
+import { API, type AuthConfig, authConfig } from "@fortrip/agent-contract";
+
+import { type ApiResponse, postForm, request, unwrap } from "./api.ts";
 import { openBrowser } from "./browser.ts";
 import {
   addPendingLogin,
-  deleteToken,
+  deleteSession,
   loadPendingLogins,
-  loadRecoveredTokens,
-  loadStoredToken,
+  loadRecoveredSessions,
+  loadSession,
   type PendingLogin,
-  resolveToken,
-  saveToken,
+  type Session,
+  saveSession,
   tryLoginLock,
   updatePendingLogin,
 } from "./credentials.ts";
@@ -19,18 +20,30 @@ import { CliError, EXIT, notices } from "./errors.ts";
 
 /** RFC 8628's default poll interval, for logins saved without one. */
 const DEFAULT_INTERVAL_SECONDS = 5;
-/** How long a command waits for another to finish signing in. A holder
+/** How long a command waits for another that holds the login lock. A holder
  *  normally needs one interval plus a slow_down; this bounds a holder stuck
  *  on an unreachable server, which each waiter would otherwise repeat. */
 const LOGIN_WAIT_MS = 30_000;
 /** A pending login with less time left than this gets a fresh one to show. */
 const SHOWABLE_FOR_MS = 120_000;
+/** An access token with less time left than this is refreshed before use. */
+const REFRESH_BEFORE_MS = 60_000;
+const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+/** The token endpoint's answers to a device-code poll that aren't a token
+ *  (RFC 8628 §3.5); the last four end the login. */
+const POLL_ANSWERS = [
+  "authorization_pending",
+  "slow_down",
+  "access_denied",
+  "expired_token",
+  "invalid_grant",
+  "invalid_client",
+] as const;
 
 interface DeviceStart {
   deviceCode: string;
   userCode: string;
-  verificationUri: string;
-  verificationUriComplete: string;
+  loginUrl: string;
   interval: number;
   expiresIn: number;
 }
@@ -44,10 +57,10 @@ export interface LoginOptions {
 }
 
 type Exchange =
-  | { status: "ok"; accessToken: string }
-  | { status: "authorization_pending" }
-  | { status: "slow_down"; interval?: number }
-  | { status: "access_denied" | "expired_token" };
+  | { status: "ok"; session: Session }
+  | { status: (typeof POLL_ANSWERS)[number] };
+
+type OAuthAnswer = { status: number; body: Record<string, unknown> };
 
 /** Options tests use to avoid real waiting. */
 export interface SignInOptions {
@@ -56,27 +69,43 @@ export interface SignInOptions {
 }
 
 /**
- * The token the commands send. Without one, a pending device login the user
- * has approved is finished; otherwise exit 3 with `loginUrl`, so an agent
- * that can't sit in `login` can hand the link to the user and rerun.
+ * The token the commands send: `FORTRIP_TOKEN` as it is, else the saved
+ * session's, refreshed first when it has less than a minute left. Without a
+ * session, a pending device login the user has approved is finished;
+ * otherwise exit 3 with `loginUrl`, so an agent that can't sit in `login`
+ * can hand the link to the user and rerun.
  */
 export async function requireToken(
   apiUrl: string,
   options: SignInOptions = {},
 ): Promise<{ token: string; source: "env" | "file" }> {
+  const { token, source } = await currentToken(apiUrl, options);
+  return { token, source };
+}
+
+/** `fresh`: the token was issued during this call, so a refresh wouldn't
+ *  make the server think better of it. */
+async function currentToken(
+  apiUrl: string,
+  options: SignInOptions,
+): Promise<{ token: string; source: "env" | "file"; fresh: boolean }> {
+  const fromEnv = process.env.FORTRIP_TOKEN?.trim();
+  if (fromEnv) return { token: fromEnv, source: "env", fresh: false };
   const started = new Date().toISOString();
-  const resolved = await resolveToken(apiUrl);
-  if (resolved) return resolved;
-  return {
-    token: await finishOrStartLogin(apiUrl, { started, ...options }),
-    source: "file",
-  };
+  const session = await loadSession(apiUrl);
+  if (session && session.expiresAt - Date.now() >= REFRESH_BEFORE_MS) {
+    return { token: session.accessToken, source: "file", fresh: false };
+  }
+  const token = session
+    ? await refreshSession(apiUrl, session.accessToken)
+    : await finishOrStartLogin(apiUrl, { started, ...options });
+  return { token, source: "file", fresh: true };
 }
 
 interface SignIn extends SignInOptions {
   /** When the command started, as an ISO string. */
   started: string;
-  /** A saved token the server just turned down: not an answer here. */
+  /** A saved access token the server just turned down: not an answer here. */
   rejected?: string;
 }
 
@@ -87,47 +116,70 @@ interface SignIn extends SignInOptions {
  * would earn `slow_down`).
  */
 async function finishOrStartLogin(apiUrl: string, signIn: SignIn): Promise<string> {
-  const giveUpAt = Date.now() + (signIn.loginWaitMs ?? LOGIN_WAIT_MS);
-  let release: (() => Promise<void>) | null;
-  while (!(release = await tryLoginLock())) {
-    const saved = await savedToken(apiUrl, signIn);
-    if (saved) return saved;
-    if (Date.now() > giveUpAt) {
+  const config = await loadAuthConfig(apiUrl);
+  const lock = await takeLoginLock(
+    signIn.loginWaitMs ?? LOGIN_WAIT_MS,
+    () => savedToken(apiUrl, signIn),
+    async () => {
       const pending = (await loadPendingLogins(apiUrl)).at(-1);
-      if (pending && isShowable(pending)) throw loginRequired(apiUrl, pending, signIn);
-      throw new CliError(
-        `Another fortrip command is still signing in to ${apiUrl}.`,
-        EXIT.error,
-        { retryable: true },
-      );
-    }
-    await sleep(250);
-  }
+      return pending && isShowable(pending)
+        ? loginRequired(apiUrl, pending, signIn)
+        : busy(apiUrl);
+    },
+  );
+  if (typeof lock === "string") return lock;
   try {
-    const approved = await pollPendingLogins(apiUrl, signIn);
+    const approved = await pollPendingLogins(apiUrl, config, signIn);
     if (approved) return approved;
     let pending = (await loadPendingLogins(apiUrl)).at(-1);
     // Keep polling an older login, but show one the user has time to open.
     if (!pending || !isShowable(pending)) {
-      const start = await startDeviceLogin(apiUrl);
+      const start = await startDeviceLogin(config);
       const now = new Date();
       pending = {
         deviceCode: start.deviceCode,
         userCode: start.userCode,
-        loginUrl: start.verificationUriComplete,
+        loginUrl: start.loginUrl,
         expiresAt: new Date(now.getTime() + start.expiresIn * 1_000).toISOString(),
         interval: start.interval,
         checkedAt: now.toISOString(),
       };
       await addPendingLogin(apiUrl, pending);
     }
-    // `fortrip login` may have saved a token meanwhile.
+    // `fortrip login` may have saved a session meanwhile.
     const saved = await savedToken(apiUrl, signIn);
     if (saved) return saved;
     throw loginRequired(apiUrl, pending, signIn);
   } finally {
-    await release();
+    await lock();
   }
+}
+
+/**
+ * Takes the login lock, waiting while another command holds it. While it
+ * waits, `found` can end the wait with what that command saved; after
+ * `waitMs` it throws what `giveUp` returns.
+ */
+async function takeLoginLock<T>(
+  waitMs: number,
+  found: () => Promise<T | null>,
+  giveUp: () => Promise<CliError> | CliError,
+): Promise<(() => Promise<void>) | T> {
+  const giveUpAt = Date.now() + waitMs;
+  for (;;) {
+    const release = await tryLoginLock();
+    if (release) return release;
+    const result = await found();
+    if (result !== null) return result;
+    if (Date.now() > giveUpAt) throw await giveUp();
+    await sleep(250);
+  }
+}
+
+function busy(apiUrl: string): CliError {
+  return new CliError(`Another fortrip command is still signing in to ${apiUrl}.`, EXIT.error, {
+    retryable: true,
+  });
 }
 
 /** A login link is worth showing while it has a couple of minutes left. */
@@ -136,20 +188,21 @@ function isShowable(login: PendingLogin): boolean {
 }
 
 async function savedToken(apiUrl: string, { rejected }: SignIn): Promise<string | null> {
-  const saved = await loadStoredToken(apiUrl);
+  const saved = (await loadSession(apiUrl))?.accessToken ?? null;
   return saved !== rejected ? saved : null;
 }
 
 /**
- * Polls each pending login and saves the token of the first one approved:
+ * Polls each pending login and saves the session of the first one approved:
  * the user may have approved any link they were shown. A login known to be
  * unapproved since after this command started is skipped (a time in the
  * future is a clock step, not knowledge). Waits out each login's interval,
- * and polls once more after a `slow_down`. Returns that token, or one
- * another command saved.
+ * and polls once more after a `slow_down`. Returns that session's access
+ * token, or one another command saved.
  */
 async function pollPendingLogins(
   apiUrl: string,
+  config: AuthConfig,
   signIn: SignIn,
 ): Promise<string | null> {
   const saved = await savedToken(apiUrl, signIn);
@@ -166,24 +219,19 @@ async function pollPendingLogins(
       // An answer of "pending" covers approvals up to the moment it was
       // asked, not up to when it arrived.
       const asked = new Date().toISOString();
-      const result = await exchange(apiUrl, login.deviceCode);
+      const result = await exchange(config, login.deviceCode);
       // The server spaces polls by when it handled them; this is no earlier.
       const lastPolledAt = new Date().toISOString();
       if (result.status === "ok") {
         try {
-          await saveToken(apiUrl, result.accessToken);
+          await saveSession(apiUrl, result.session);
         } catch (error) {
-          // The login is redeemed: use the token rather than lose it, and
-          // say where it was kept in the command's JSON output.
-          notices.warning = (error as Error).message;
-          if (error instanceof CliError && error.details.recoveryFile) {
-            notices.recoveryFile = error.details.recoveryFile;
-          }
+          noteUnsaved(error);
         }
-        return result.accessToken;
+        return result.session.accessToken;
       }
       if (result.status === "slow_down") {
-        const interval = result.interval ?? intervalOf(login) + 5;
+        const interval = intervalOf(login) + 5;
         login = { ...login, lastPolledAt, interval };
         await updatePendingLogin(apiUrl, login.deviceCode, { lastPolledAt, interval });
         continue;
@@ -218,19 +266,97 @@ function nextPollAt(login: PendingLogin): number {
 }
 
 /**
- * A request with the user's token. When the server turns down the saved
- * token, the command signs in again (finishing an approved login, or exiting
- * 3 with `loginUrl`), and a new token replaces the saved one. The saved
- * token is kept until then: a 401 can also come from a passing problem on
- * the server's side, and the token may work on the next run.
+ * Refreshes the saved session whose access token is `stale`, and returns
+ * the access token to use. It runs under the login lock and re-reads the
+ * file first: when another command has refreshed (or signed in) meanwhile,
+ * that session is used, so a refresh token the server rotates is never
+ * spent twice (R2). A server that returns no new refresh token leaves the
+ * old one in use.
+ *
+ * A refresh the server refuses (`invalid_grant`) ends the session: the
+ * command signs in again, exiting 3 with `loginUrl` like any other, and the
+ * old session stays saved until a new one replaces it (R1). A network error
+ * or a 5xx is retryable and never starts a sign-in.
+ */
+export async function refreshSession(apiUrl: string, stale: string): Promise<string> {
+  const started = new Date().toISOString();
+  const config = await loadAuthConfig(apiUrl);
+  const lock = await takeLoginLock(
+    LOGIN_WAIT_MS,
+    async () => {
+      const session = await loadSession(apiUrl);
+      return session && session.accessToken !== stale ? session.accessToken : null;
+    },
+    () => busy(apiUrl),
+  );
+  if (typeof lock === "string") return lock;
+  let token: string | null;
+  try {
+    token = await refreshLocked(apiUrl, config, stale);
+  } finally {
+    await lock();
+  }
+  return token ?? finishOrStartLogin(apiUrl, { started, rejected: stale });
+}
+
+/** The refresh itself, under the login lock; null when the session is over. */
+async function refreshLocked(
+  apiUrl: string,
+  config: AuthConfig,
+  stale: string,
+): Promise<string | null> {
+  const session = await loadSession(apiUrl);
+  if (!session) return null;
+  if (session.accessToken !== stale) return session.accessToken;
+  // The server issued no refresh token with this session.
+  if (!session.refreshToken) return null;
+  const answer = await postForm(config.tokenEndpoint, {
+    grant_type: "refresh_token",
+    refresh_token: session.refreshToken,
+    client_id: session.clientId,
+  });
+  const next = sessionFrom(answer, session.clientId, session.refreshToken);
+  if (!next) {
+    if (answer.body.error === "invalid_grant" || answer.body.error === "invalid_client") {
+      return null;
+    }
+    throw oauthFailure(`Refreshing the sign-in to ${apiUrl}`, answer);
+  }
+  let saved: Session | null = next;
+  try {
+    // A sign-in or logout meanwhile wins over this refresh.
+    saved = await saveSession(apiUrl, next, process.env, stale);
+  } catch (error) {
+    noteUnsaved(error);
+  }
+  return (saved ?? next).accessToken;
+}
+
+/** A session the server issued but the file didn't take: the command uses
+ *  it, and its JSON output says where it was kept. */
+function noteUnsaved(error: unknown): void {
+  notices.warning = (error as Error).message;
+  if (error instanceof CliError && error.details.recoveryFile) {
+    notices.recoveryFile = error.details.recoveryFile;
+  }
+}
+
+/**
+ * A request with the user's token. A 401 gets one refresh and a retry; if
+ * the server still turns the token down, the command signs in again
+ * (finishing an approved login, or exiting 3 with `loginUrl`). The saved
+ * session is kept until a new one replaces it: a 401 can also come from a
+ * passing problem on the server's side (R1). No other answer, a 503
+ * included, starts a sign-in.
  */
 export async function authorizedRequest(
   apiUrl: string,
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<ApiResponse> {
-  const auth = await requireToken(apiUrl);
-  const response = await request(apiUrl, path, { ...init, token: auth.token });
+  const auth = await currentToken(apiUrl, {});
+  let token = auth.token;
+  let response = await request(apiUrl, path, { ...init, token });
   if (response.status !== 401) return response;
   if (auth.source === "env") {
     throw new CliError(
@@ -239,15 +365,15 @@ export async function authorizedRequest(
       { status: 401, tokenSource: "FORTRIP_TOKEN" },
     );
   }
-  const token = await finishOrStartLogin(apiUrl, {
+  if (!auth.fresh) {
+    token = await refreshSession(apiUrl, token);
+    response = await request(apiUrl, path, { ...init, token });
+    if (response.status !== 401) return response;
+  }
+  token = await finishOrStartLogin(apiUrl, {
     started: new Date().toISOString(),
-    rejected: auth.token,
+    rejected: token,
   });
-  // The new token replaces the old one, which may still work if the 401 was
-  // a passing problem: revoke it, best effort.
-  await request(apiUrl, "/api/cli/auth/revoke", { method: "POST", token: auth.token }).catch(
-    () => undefined,
-  );
   return request(apiUrl, path, { ...init, token });
 }
 
@@ -260,74 +386,129 @@ export async function login({
 }: LoginOptions): Promise<unknown> {
   // A credentials file that can't be updated fails here, not after the
   // user has approved.
-  await loadStoredToken(apiUrl);
-  const start = await startDeviceLogin(apiUrl);
+  await loadSession(apiUrl);
+  const config = await loadAuthConfig(apiUrl);
+  const start = await startDeviceLogin(config);
 
   log(`Confirm this code in your browser: ${start.userCode}`);
-  log(`If the browser doesn't open, visit: ${start.verificationUriComplete}`);
-  if (shouldOpen) openBrowser(start.verificationUriComplete);
+  log(`If the browser doesn't open, visit: ${start.loginUrl}`);
+  if (shouldOpen) openBrowser(start.loginUrl);
   log("Waiting for approval…");
 
+  const expired = () =>
+    new CliError("The login code expired. Run `login` again.", EXIT.error);
   let interval = start.interval;
   const deadline = Date.now() + start.expiresIn * 1_000;
   while (Date.now() < deadline) {
     await wait(interval * 1_000);
-    const result = await exchange(apiUrl, start.deviceCode);
+    const result = await exchange(config, start.deviceCode);
     switch (result.status) {
       case "ok":
-        await saveToken(apiUrl, result.accessToken);
+        await saveSession(apiUrl, result.session);
         log("Logged in.");
-        return whoami(apiUrl, result.accessToken);
+        return whoami(apiUrl, result.session.accessToken);
       case "authorization_pending":
         continue;
       case "slow_down":
-        interval = result.interval ?? interval + 5;
+        interval += 5;
         continue;
       case "access_denied":
         throw new CliError("Login was denied in the browser.", EXIT.error);
-      case "expired_token":
+      case "invalid_client":
         throw new CliError(
-          "The login code expired. Run `login` again.",
+          `The sign-in server doesn't accept the client ${apiUrl}'s sign-in config names (invalid_client).`,
           EXIT.error,
         );
+      case "expired_token":
+      case "invalid_grant":
+        throw expired();
     }
   }
-  throw new CliError("The login code expired. Run `login` again.", EXIT.error);
+  throw expired();
 }
 
-async function startDeviceLogin(apiUrl: string): Promise<DeviceStart> {
-  return unwrap(
-    await request(apiUrl, "/api/cli/auth/device", {
-      method: "POST",
-      body: { label: deviceLabel(), platform: process.platform },
-    }),
-  ) as DeviceStart;
+/** Where and how to sign in to `apiUrl`: its public sign-in config. */
+async function loadAuthConfig(apiUrl: string): Promise<AuthConfig> {
+  const parsed = authConfig.safeParse(unwrap(await request(apiUrl, API.authConfig)));
+  if (!parsed.success) {
+    throw new CliError(`${apiUrl} sent a sign-in config this CLI can't read.`, EXIT.error);
+  }
+  return parsed.data;
 }
 
-/** One poll of the token endpoint; unexpected errors throw via `unwrap`. */
-async function exchange(apiUrl: string, deviceCode: string): Promise<Exchange> {
-  const poll = await request(apiUrl, "/api/cli/auth/token", {
-    method: "POST",
-    body: { deviceCode },
+async function startDeviceLogin(config: AuthConfig): Promise<DeviceStart> {
+  const answer = await postForm(config.deviceAuthorizationEndpoint, {
+    client_id: config.clientId,
+    scope: config.scopes,
   });
-  if (poll.status === 200 && poll.body.success === true) {
-    const { accessToken } = poll.body.data as { accessToken: string };
-    return { status: "ok", accessToken };
+  const { device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval } =
+    answer.body;
+  if (
+    !isOk(answer.status) ||
+    typeof device_code !== "string" ||
+    typeof user_code !== "string" ||
+    typeof verification_uri !== "string" ||
+    typeof expires_in !== "number"
+  ) {
+    throw oauthFailure("Starting a sign-in", answer);
   }
-  switch (poll.body.error) {
-    case "authorization_pending":
-    case "access_denied":
-    case "expired_token":
-      return { status: poll.body.error };
-    case "slow_down":
-      return {
-        status: "slow_down",
-        interval: typeof poll.body.interval === "number" ? poll.body.interval : undefined,
-      };
-    default:
-      unwrap(poll);
-      throw new CliError(`Unexpected login response ${poll.status}`, EXIT.error);
-  }
+  return {
+    deviceCode: device_code,
+    userCode: user_code,
+    loginUrl:
+      typeof verification_uri_complete === "string" ? verification_uri_complete : verification_uri,
+    interval: typeof interval === "number" ? interval : DEFAULT_INTERVAL_SECONDS,
+    expiresIn: expires_in,
+  };
+}
+
+/** One poll of the token endpoint; unexpected answers throw. */
+async function exchange(config: AuthConfig, deviceCode: string): Promise<Exchange> {
+  const answer = await postForm(config.tokenEndpoint, {
+    grant_type: DEVICE_CODE_GRANT,
+    device_code: deviceCode,
+    client_id: config.clientId,
+  });
+  const session = sessionFrom(answer, config.clientId);
+  if (session) return { status: "ok", session };
+  const { error } = answer.body;
+  const known = POLL_ANSWERS.find((code) => code === error);
+  if (known) return { status: known };
+  throw oauthFailure("Signing in", answer);
+}
+
+/** The session a token answer carries, or null if it isn't one. A refresh
+ *  answered without a new refresh token keeps `refreshToken`. */
+function sessionFrom(
+  { status, body }: OAuthAnswer,
+  clientId: string,
+  refreshToken = "",
+): Session | null {
+  const { access_token, refresh_token, expires_in } = body;
+  if (!isOk(status) || typeof access_token !== "string" || access_token === "") return null;
+  return {
+    accessToken: access_token,
+    refreshToken: typeof refresh_token === "string" && refresh_token ? refresh_token : refreshToken,
+    expiresAt:
+      Date.now() + (typeof expires_in === "number" && expires_in > 0 ? expires_in * 1_000 : 0),
+    clientId,
+  };
+}
+
+function isOk(status: number): boolean {
+  return status >= 200 && status < 300;
+}
+
+/** An OAuth server's error answer; a 5xx or a 429 is worth a retry. Only
+ *  the error code and description are said, never the request's tokens. */
+function oauthFailure(what: string, { status, body }: OAuthAnswer): CliError {
+  const code = typeof body.error === "string" ? body.error : `HTTP ${status}`;
+  const description =
+    typeof body.error_description === "string" ? `: ${body.error_description}` : "";
+  return new CliError(`${what} failed (${code}${description}).`, EXIT.error, {
+    status,
+    ...(status >= 500 || status === 429 ? { retryable: true } : {}),
+  });
 }
 
 function loginRequired(
@@ -351,45 +532,58 @@ function loginRequired(
   );
 }
 
-/** Revokes the saved token for this API URL on the server, then forgets it,
- *  with any kept in recovery files. */
+/**
+ * Revokes the refresh token of every session saved for this API URL (also
+ * those kept in recovery files), then forgets them. It holds the login lock
+ * and re-reads, so a session another command refreshes meanwhile is the one
+ * revoked. A revocation that fails keeps everything, so logout can be rerun.
+ */
 export async function logout(apiUrl: string): Promise<unknown> {
-  const token = await loadStoredToken(apiUrl);
-  const recovered = await loadRecoveredTokens(apiUrl);
-  if (!token && !recovered.length) {
+  if (!(await loadSession(apiUrl))) {
     throw new CliError(`Not logged in to ${apiUrl}.`, EXIT.unauthenticated);
   }
-  if (token) {
-    const response = await request(apiUrl, "/api/cli/auth/revoke", {
-      method: "POST",
-      token,
-    });
-    // 401: already revoked or unknown — forgetting it locally is still right.
-    if (response.status !== 401) unwrap(response);
-  }
-  for (const kept of recovered) {
-    await request(apiUrl, "/api/cli/auth/revoke", { method: "POST", token: kept }).catch(
-      () => undefined,
+  const config = await loadAuthConfig(apiUrl);
+  const release = await takeLoginLock<never>(LOGIN_WAIT_MS, async () => null, () => busy(apiUrl));
+  try {
+    const sessions = [await loadSession(apiUrl), ...(await loadRecoveredSessions(apiUrl))].filter(
+      (session) => session !== null,
     );
+    const revoked = new Set<string>();
+    for (const session of sessions) {
+      if (revoked.has(session.refreshToken)) continue;
+      await revoke(config, session);
+      revoked.add(session.refreshToken);
+    }
+    // Also merges the recovery files back and removes them.
+    await deleteSession(
+      apiUrl,
+      process.env,
+      sessions.map((session) => session.accessToken),
+    );
+  } finally {
+    await release();
   }
-  // Also merges the recovery files back and removes them.
-  await deleteToken(apiUrl, process.env, [...(token ? [token] : []), ...recovered]);
   return { loggedOut: true, apiUrl };
 }
 
-export async function whoami(apiUrl: string, token?: string): Promise<unknown> {
-  const path = "/api/cli/auth/whoami";
-  const data = unwrap(
-    token
-      ? await request(apiUrl, path, { token })
-      : await authorizedRequest(apiUrl, path),
-  ) as Record<string, unknown>;
-  return { ...data, apiUrl };
+/** RFC 7009. A 400 or 401 says the server doesn't know the token (already
+ *  revoked, or expired): forgetting it locally is still right. */
+async function revoke(config: AuthConfig, session: Session): Promise<void> {
+  const answer = await postForm(config.revocationEndpoint, {
+    token: session.refreshToken,
+    token_type_hint: "refresh_token",
+    client_id: session.clientId,
+  });
+  if (!isOk(answer.status) && answer.status !== 400 && answer.status !== 401) {
+    throw oauthFailure("Signing out", answer);
+  }
 }
 
-/** The host name shown on the approval page, cut to what the API accepts. */
-function deviceLabel(): string {
-  return hostname()
-    .replace(/[^\w .@-]/g, "")
-    .slice(0, 64);
+export async function whoami(apiUrl: string, token?: string): Promise<unknown> {
+  const data = unwrap(
+    token
+      ? await request(apiUrl, API.me, { token })
+      : await authorizedRequest(apiUrl, API.me),
+  ) as Record<string, unknown>;
+  return { ...data, apiUrl };
 }
