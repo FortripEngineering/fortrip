@@ -169,9 +169,7 @@ const files = [];
 const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
 const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repo, encoding: "utf8" })
   .split("\0")
-  // packages/cli still names the supplier until the CLI moves to
-  // /api/agent/v1; drop this exclusion in the task that rewrites it.
-  .filter((f) => f && !f.startsWith("packages/cli/") && fs.existsSync(path.join(repo, f)));
+  .filter((f) => f && fs.existsSync(path.join(repo, f)));
 const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
 check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
 // Anthropic Software Directory Policy §2F: the Claude plugin must not have
