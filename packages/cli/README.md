@@ -84,12 +84,13 @@ without a lock, so don't sign in with 0.3.0 and 0.3.1 at the same moment.
 ## Agent skill
 
 ```bash
-npx skills add FortripEngineering/fortrip-plugins --skill fortrip-cli
+npx skills add FortripEngineering/fortrip --skill fortrip-cli
 ```
 
-The skill lives in
-[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins); the
-Claude directory plugin there uses the hosted MCP instead of the CLI. The
+The skill lives in this repository's
+[`skills/fortrip-cli`](https://github.com/FortripEngineering/fortrip/tree/main/skills/fortrip-cli); the
+Claude directory plugin in [`plugins/claude`](https://github.com/FortripEngineering/fortrip/tree/main/plugins/claude)
+uses the hosted MCP instead of the CLI. The
 skill only tells the agent to run `npx -y fortrip@latest skill`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
