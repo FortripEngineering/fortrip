@@ -499,7 +499,8 @@ export async function loadSession(
 }
 
 /**
- * Saves a session and returns the one saved for this API URL afterwards.
+ * Saves a session. Returns the session saved for this API URL afterwards,
+ * and the one this save replaced (null if none, or if nothing was saved).
  * A sign-in replaces any session and forgets this API URL's pending logins.
  * A refresh passes `replacing`, the access token it refreshed: the session
  * is saved only if that is still the saved one (a sign-in or a logout
@@ -517,18 +518,18 @@ export async function saveSession(
   session: Session,
   env: NodeJS.ProcessEnv = process.env,
   replacing?: string,
-): Promise<Session | null> {
+): Promise<{ saved: Session | null; replaced: Session | null }> {
   const path = credentialsPath(env);
   try {
     return await updateCredentials(env, (credentials) => {
-      const saved = credentials.sessions[apiUrl];
+      const previous = credentials.sessions[apiUrl] ?? null;
       if (replacing === undefined) {
         delete credentials.logins[apiUrl];
-      } else if (saved?.accessToken !== replacing) {
-        return saved ?? null;
+      } else if (previous?.accessToken !== replacing) {
+        return { saved: previous, replaced: null };
       }
       credentials.sessions[apiUrl] = session;
-      return session;
+      return { saved: session, replaced: previous };
     });
   } catch (error) {
     const kept = join(

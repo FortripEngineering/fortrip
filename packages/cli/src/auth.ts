@@ -28,6 +28,9 @@ const LOGIN_WAIT_MS = 30_000;
 const SHOWABLE_FOR_MS = 120_000;
 /** An access token with less time left than this is refreshed before use. */
 const REFRESH_BEFORE_MS = 60_000;
+/** Revoking the session a sign-in replaced is a courtesy to the server:
+ *  it doesn't keep the command waiting longer than this. */
+const REVOKE_REPLACED_TIMEOUT_MS = 5_000;
 const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 /** The token endpoint's answers to a device-code poll that aren't a token
  *  (RFC 8628 §3.5); the last four end the login. */
@@ -224,7 +227,8 @@ async function pollPendingLogins(
       const lastPolledAt = new Date().toISOString();
       if (result.status === "ok") {
         try {
-          await saveSession(apiUrl, result.session);
+          const { replaced } = await saveSession(apiUrl, result.session);
+          await revokeReplaced(config, replaced, result.session);
         } catch (error) {
           noteUnsaved(error);
         }
@@ -325,7 +329,7 @@ async function refreshLocked(
   let saved: Session | null = next;
   try {
     // A sign-in or logout meanwhile wins over this refresh.
-    saved = await saveSession(apiUrl, next, process.env, stale);
+    ({ saved } = await saveSession(apiUrl, next, process.env, stale));
   } catch (error) {
     noteUnsaved(error);
   }
@@ -403,10 +407,12 @@ export async function login({
     await wait(interval * 1_000);
     const result = await exchange(config, start.deviceCode);
     switch (result.status) {
-      case "ok":
-        await saveSession(apiUrl, result.session);
+      case "ok": {
+        const { replaced } = await saveSession(apiUrl, result.session);
+        await revokeReplaced(config, replaced, result.session);
         log("Logged in.");
         return whoami(apiUrl, result.session.accessToken);
+      }
       case "authorization_pending":
         continue;
       case "slow_down":
@@ -568,15 +574,36 @@ export async function logout(apiUrl: string): Promise<unknown> {
 
 /** RFC 7009. A 400 or 401 says the server doesn't know the token (already
  *  revoked, or expired): forgetting it locally is still right. */
-async function revoke(config: AuthConfig, session: Session): Promise<void> {
-  const answer = await postForm(config.revocationEndpoint, {
-    token: session.refreshToken,
-    token_type_hint: "refresh_token",
-    client_id: session.clientId,
-  });
+async function revoke(
+  config: AuthConfig,
+  session: Session,
+  timeoutMs?: number,
+): Promise<void> {
+  const answer = await postForm(
+    config.revocationEndpoint,
+    {
+      token: session.refreshToken,
+      token_type_hint: "refresh_token",
+      client_id: session.clientId,
+    },
+    timeoutMs,
+  );
   if (!isOk(answer.status) && answer.status !== 400 && answer.status !== 401) {
     throw oauthFailure("Signing out", answer);
   }
+}
+
+/** A sign-in replaced a saved session (the server no longer took it, or
+ *  `fortrip login` ran again): revoke its refresh token, best effort. A
+ *  failure changes nothing for the command, and the new session's token is
+ *  never the one revoked. */
+async function revokeReplaced(
+  config: AuthConfig,
+  replaced: Session | null,
+  current: Session,
+): Promise<void> {
+  if (!replaced?.refreshToken || replaced.refreshToken === current.refreshToken) return;
+  await revoke(config, replaced, REVOKE_REPLACED_TIMEOUT_MS).catch(() => undefined);
 }
 
 export async function whoami(apiUrl: string, token?: string): Promise<unknown> {

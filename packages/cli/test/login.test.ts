@@ -812,6 +812,71 @@ describe("logout and whoami", () => {
   });
 });
 
+describe("a re-login revokes the session it replaced", () => {
+  it("an agent command's re-login revokes the replaced refresh token, never the new one", async () => {
+    const old = api.session();
+    await saveSession(apiUrl, old);
+    // Fortrip no longer accepts the session, and it can't be refreshed.
+    api.accessTokens.delete(old.accessToken);
+    api.refreshTokens.delete(old.refreshToken);
+    api.approve(String((await failure(whoami(apiUrl))).details.loginUrl));
+    assert.deepEqual(api.revoked, []);
+
+    assert.deepEqual(await whoami(apiUrl), { ...ME, apiUrl });
+    const saved = await loadSession(apiUrl);
+    assert.ok(saved);
+    assert.deepEqual(api.revoked, [old.refreshToken]);
+    assert.ok(api.refreshTokens.has(saved.refreshToken));
+  });
+
+  it("`fortrip login` over a saved session revokes the old refresh token", async () => {
+    const old = api.session();
+    await saveSession(apiUrl, old);
+    approveEveryLogin();
+    await runLogin();
+    const saved = await loadSession(apiUrl);
+    assert.ok(saved);
+    assert.notEqual(saved.refreshToken, old.refreshToken);
+    assert.deepEqual(api.revoked, [old.refreshToken]);
+    assert.equal(api.refreshTokens.has(old.refreshToken), false);
+    assert.ok(api.refreshTokens.has(saved.refreshToken));
+  });
+
+  it("a revocation that fails doesn't change the command's outcome", async () => {
+    approveEveryLogin();
+    for (const fail of [
+      () => {
+        api.scripts.revoke = [{ status: 503, body: { error: "temporarily_unavailable" } }];
+      },
+      () => {
+        api.configOverrides.revocationEndpoint = "http://127.0.0.1:1/oauth/token/revoke";
+      },
+    ]) {
+      const old = api.session();
+      await saveSession(apiUrl, old);
+      fail();
+      assert.deepEqual(await runLogin(), { ...ME, apiUrl });
+      const saved = await loadSession(apiUrl);
+      assert.ok(saved);
+      assert.notEqual(saved.accessToken, old.accessToken);
+      assert.ok(api.refreshTokens.has(saved.refreshToken));
+    }
+  });
+
+  it("a first sign-in, or a refresh, revokes nothing", async () => {
+    api.approve(String((await failure(requireToken(apiUrl))).details.loginUrl));
+    await requireToken(apiUrl);
+    await deleteSession(apiUrl);
+    approveEveryLogin();
+    await runLogin();
+    const saved = await loadSession(apiUrl);
+    assert.ok(saved);
+    await refreshSession(apiUrl, saved.accessToken);
+    assert.equal(api.counts.refreshes, 1);
+    assert.deepEqual(api.revoked, []);
+  });
+});
+
 describe("credentials file problems", () => {
   it("login fails on a credentials file it can't read before the user approves anything", async () => {
     const path = credentialsPath();

@@ -96,13 +96,13 @@ describe("credentials", () => {
     // Another command signed in meanwhile: the refreshed session isn't saved.
     assert.deepEqual(
       await saveSession("https://fortrip.ai", session("refreshed"), env, "access_other"),
-      session("old"),
+      { saved: session("old"), replaced: null },
     );
     assert.deepEqual(await loadSession("https://fortrip.ai", env), session("old"));
 
     assert.deepEqual(
       await saveSession("https://fortrip.ai", session("refreshed"), env, "access_old"),
-      session("refreshed"),
+      { saved: session("refreshed"), replaced: session("old") },
     );
     assert.deepEqual(await loadSession("https://fortrip.ai", env), session("refreshed"));
     // The user may still approve a link they were shown.
@@ -110,11 +110,21 @@ describe("credentials", () => {
 
     // Logged out meanwhile: nothing comes back.
     await deleteSession("https://fortrip.ai", env);
-    assert.equal(
+    assert.deepEqual(
       await saveSession("https://fortrip.ai", session("late"), env, "access_refreshed"),
-      null,
+      { saved: null, replaced: null },
     );
     assert.equal(await loadSession("https://fortrip.ai", env), null);
+
+    // A sign-in says which session it replaced.
+    assert.deepEqual(await saveSession("https://fortrip.ai", session("first"), env), {
+      saved: session("first"),
+      replaced: null,
+    });
+    assert.deepEqual(await saveSession("https://fortrip.ai", session("second"), env), {
+      saved: session("second"),
+      replaced: session("first"),
+    });
   });
 
   it("keeps every pending login added in parallel", async () => {

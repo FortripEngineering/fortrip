@@ -76,6 +76,7 @@ export async function request(
 export async function postForm(
   url: string,
   form: Record<string, string>,
+  timeoutMs = OAUTH_TIMEOUT_MS,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const { origin } = new URL(url);
   let response: Response;
@@ -89,16 +90,16 @@ export async function postForm(
       },
       body: new URLSearchParams(form).toString(),
       redirect: "manual",
-      signal: AbortSignal.timeout(OAUTH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
-    throw transportError(origin, error, undefined, OAUTH_TIMEOUT_MS);
+    throw transportError(origin, error, undefined, timeoutMs);
   }
   let text: string;
   try {
     text = await response.text();
   } catch (error) {
-    throw transportError(origin, error, response.status, OAUTH_TIMEOUT_MS);
+    throw transportError(origin, error, response.status, timeoutMs);
   }
   let parsed: unknown = null;
   try {
