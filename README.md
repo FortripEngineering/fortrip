@@ -12,8 +12,8 @@ is for agents that can run shell commands but don't have Fortrip's MCP tools.
 
 | Path | What it is | How it's published |
 |---|---|---|
-| [`packages/contract`](packages/contract) | The contract of the agent API (`/api/agent/v1`): limits, paths, input schemas, field rules, the specs of the MCP tools and CLI commands, and the agent guide, written once and rendered for the MCP server, the Claude skill and the CLI | npm: `@fortrip/agent-contract` |
-| [`packages/cli`](packages/cli) | The `fortrip` CLI and its agent guide (`fortrip skill`) | npm: `fortrip`, from a `v*` tag on `main` |
+| [`packages/contract`](packages/contract) | The contract of the agent API (`/api/agent/v1`): limits, paths, input schemas, field rules, the specs of the MCP tools and CLI commands, and the agent guide, written once and rendered for the MCP server, the Claude skill and the CLI | npm: `@fortrip/agent-contract`, from a `v*` tag on `main`, together with `fortrip` |
+| [`packages/cli`](packages/cli) | The `fortrip` CLI and its agent guide (`fortrip skill`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
 | [`plugins/claude`](plugins/claude) | Claude plugin (hosted MCP server + static skill, generated) | Submitted in the [developer portal](https://claude.ai/directory/manage); `.claude-plugin/marketplace.json` at the root lets Claude Code add this repo as a marketplace |
 | [`plugins/openai`](plugins/openai) | ChatGPT / Codex plugin | Zip uploaded in the OpenAI portal |
 | [`plugins/registry`](plugins/registry) | [MCP Registry](https://registry.modelcontextprotocol.io) entry | The **Publish Fortrip to MCP Registry** workflow |

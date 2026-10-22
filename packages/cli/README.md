@@ -123,26 +123,30 @@ Point at a local Fortrip app with `FORTRIP_API_URL=http://localhost:3000`.
 
 ## Releasing
 
-Pushing a `v*` tag publishes to npm through
-[`.github/workflows/publish.yml`](.github/workflows/publish.yml), which signs
-in with npm trusted publishing (no npm token in GitHub). Pull requests and
-pushes to `main` run typecheck, tests and the build through
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Pushing a `vX.Y.Z` or `vX.Y.Z-rc.N` tag publishes `fortrip` and
+`@fortrip/agent-contract` to npm together, at the same version, through
+[`.github/workflows/publish.yml`](../../.github/workflows/publish.yml), which
+signs in with npm trusted publishing (no npm token in GitHub). A release
+candidate (`-rc.N`) is published under the `next` dist-tag, so `npm install`
+doesn't pick it up. Pull requests and pushes to `main` run typecheck, tests and
+the build through [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
 
-1. Bump the version in a PR and merge it into `main`:
-   `npm version minor --no-git-tag-version` (or `patch`).
+1. Bump both packages to the same version in a PR and merge it into `main`:
+   `npm version minor --no-git-tag-version` (or `patch`) in `packages/cli`
+   and in `packages/contract`.
 2. Tag the merged commit on `main` and push the tag:
 
    ```bash
    git checkout main && git pull
-   git tag v0.2.0 && git push origin v0.2.0
+   git tag v1.0.0 && git push origin v1.0.0
    ```
 
-The workflow refuses a tag that doesn't match `package.json` or isn't on
-`main`. A `build` job runs typecheck, tests and the build and packs the
-tarball; a `publish` job in the `npm-publish` environment publishes that
-tarball, with no install or build of its own. Every installed skill picks up
-the new guide on its next `npx fortrip@latest skill`.
+The workflow refuses a tag that isn't `vX.Y.Z` or `vX.Y.Z-rc.N`, doesn't match
+both `package.json` versions, or isn't on `main`. A `build` job runs
+typecheck, tests and the build and packs both tarballs; a `publish` job in the
+`npm-publish` environment publishes those tarballs, the contract first, with
+no install or build of its own. Every installed skill picks up the new guide
+on its next `npx fortrip@latest skill`.
 
 ## License
 
