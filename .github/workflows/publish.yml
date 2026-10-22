@@ -1,9 +1,12 @@
-# Publishes to npm when a v* tag is pushed. Authenticates with npm trusted
-# publishing (OIDC): no npm token is stored in GitHub. npmjs.com must list
-# this file's name, publish.yml, as the package's trusted publisher.
+# Publishes @fortrip/agent-contract and fortrip to npm, in lockstep, when a
+# vX.Y.Z or vX.Y.Z-rc.N tag is pushed: both packages' versions must equal the
+# tag. A release candidate (-rc.N) is published under the "next" dist-tag, so
+# it never becomes what `npm install` resolves. Authenticates with npm trusted
+# publishing (OIDC): no npm token is stored in GitHub. npmjs.com must list this
+# file's name, publish.yml, as the trusted publisher of both packages.
 #
-# The build job checks, tests and packs the tarball without any publish
-# permission; the publish job only uploads that tarball, so the OIDC token
+# The build job checks, tests and packs the tarballs without any publish
+# permission; the publish job only uploads those tarballs, so the OIDC token
 # never shares a job with dependency install scripts or the build.
 name: Publish to npm
 
@@ -35,13 +38,19 @@ jobs:
           node-version: "24"
           package-manager-cache: false
 
-      - name: Check the tag matches packages/cli/package.json
+      - name: Check the tag matches both packages' versions
         run: |
-          version="$(node -p "require('./packages/cli/package.json').version")"
-          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/cli/package.json version ${version}"
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} is not vX.Y.Z or vX.Y.Z-rc.N"
             exit 1
           fi
+          for package in contract cli; do
+            version="$(node -p "require('./packages/${package}/package.json').version")"
+            if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match packages/${package}/package.json version ${version}"
+              exit 1
+            fi
+          done
 
       - name: Check the tagged commit is on main
         run: |
@@ -56,7 +65,11 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-      - name: Pack
+      - name: Pack the contract
+        working-directory: packages/contract
+        run: npm pack --ignore-scripts --pack-destination ../..
+
+      - name: Pack the CLI
         working-directory: packages/cli
         run: npm pack --ignore-scripts --pack-destination ../..
 
@@ -86,5 +99,56 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      # The tarball the build job tested, as is.
-      - run: npm publish --ignore-scripts ./fortrip-*.tgz
+      # The tarballs the build job tested, as is. The contract goes first, so a
+      # CLI that depends on it can resolve it. A release candidate gets the
+      # "next" dist-tag. A package whose version is already on npm is skipped,
+      # so re-running the job after a partial publish finishes the release.
+      - name: Publish
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          case "${version}" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          contract="./fortrip-agent-contract-${version}.tgz"
+          cli="./fortrip-${version}.tgz"
+          for tarball in "${contract}" "${cli}"; do
+            if [ ! -f "${tarball}" ]; then
+              echo "::error::${tarball} is missing from the build's artifact"
+              exit 1
+            fi
+          done
+
+          # Succeeds when name@version is on npm and fails when it is not. A
+          # 404 means "not published"; any other npm error fails the job. Only
+          # errors are logged, so an npm warning can't pass for the version.
+          is_published() {
+            local out status=0
+            out="$(npm view --loglevel=error "$1@${version}" version 2>&1)" || status=$?
+            if [ "${status}" -eq 0 ] && [ "${out}" = "${version}" ]; then
+              return 0
+            fi
+            if [ "${status}" -ne 0 ] && [[ "${out}" == *"code E404"* ]]; then
+              return 1
+            fi
+            echo "::error::npm view $1@${version} did not answer published or not published: ${out}"
+            exit 1
+          }
+
+          # Decide both before publishing either, so a failed lookup never
+          # leaves a release half done.
+          to_publish=()
+          if is_published "@fortrip/agent-contract"; then
+            echo "::notice::@fortrip/agent-contract@${version} is already on npm; skipping it"
+          else
+            to_publish+=("${contract}")
+          fi
+          if is_published "fortrip"; then
+            echo "::notice::fortrip@${version} is already on npm; skipping it"
+          else
+            to_publish+=("${cli}")
+          fi
+
+          for tarball in "${to_publish[@]}"; do
+            npm publish --ignore-scripts --tag "${dist_tag}" "${tarball}"
+          done

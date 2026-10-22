@@ -38,6 +38,7 @@ jobs:
 
   listings:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -53,6 +54,14 @@ jobs:
           package-manager-cache: false
 
       - run: pnpm install --frozen-lockfile
+
+      # The skills are rendered from the contract's source: generate --check
+      # fails, with a diff, when a committed skill or the embedded guide is
+      # stale. It runs before the build, which rewrites the embedded guide.
+      - run: pnpm generate --check
+
+      # validate.mjs reads the contract's build.
+      - run: pnpm build
 
       # scripts/validate.mjs covers the OpenAI package, the MCP Registry entry
       # and repo-wide rules; Claude Code's own validator covers the Claude

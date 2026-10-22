@@ -3,6 +3,7 @@
   "version": "0.3.1",
   "license": "MIT",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
+  "mcpName": "io.github.FortripEngineering/fortrip",
   "type": "module",
   "repository": {
     "type": "git",
