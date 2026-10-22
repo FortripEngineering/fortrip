@@ -1,4 +1,11 @@
 export { containsCardNumber, CARD_NUMBER_MESSAGE } from "./card-number.ts";
+export {
+  COMMANDS,
+  GLOBAL_FLAGS,
+  type CommandSpec,
+  type FlagSpec,
+  type OptionSpec,
+} from "./commands.ts";
 export { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
 export {
   childrenAges,
@@ -49,4 +56,12 @@ export {
 } from "./outputs.ts";
 export { API } from "./paths.ts";
 export { ERROR_REASONS, type ErrorReason } from "./reasons.ts";
+export {
+  BOOKING_NEXT_STEP,
+  MCP_BOOKING_RESULT,
+  MCP_RATES_INPUT,
+  TOOLS,
+  type ToolName,
+  type ToolSpec,
+} from "./tools.ts";
 export { CONTRACT_VERSION } from "./version.ts";
