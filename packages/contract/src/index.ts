@@ -13,6 +13,8 @@ export {
 } from "./fields.ts";
 export {
   GUEST_NAME_MESSAGE,
+  GUEST_NAME_PATTERN,
+  GUEST_NAME_TITLE,
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
