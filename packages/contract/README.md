@@ -16,4 +16,10 @@ API.search; // "/api/agent/v1/hotels/search"
 LIMITS.rooms; // 8
 ```
 
+Browser code that only needs the guest-name rule (`GUEST_NAME_PATTERN`,
+`GUEST_NAME_TITLE`, `GUEST_NAME_MESSAGE`, `guestNameRe`, `normalizeGuestName`)
+can import it from `@fortrip/agent-contract/guest-name`. That module imports
+nothing, so it does not pull in `zod` or the schemas the root entry builds at
+load. The root entry exports the same names.
+
 MIT licensed. Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.
