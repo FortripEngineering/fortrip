@@ -7,6 +7,7 @@ import { openBrowser } from "./browser.ts";
 import {
   addPendingLogin,
   deleteSession,
+  ensureCredentialsDir,
   loadPendingLogins,
   loadRecoveredSessions,
   loadSession,
@@ -71,6 +72,22 @@ export interface SignInOptions {
   loginWaitMs?: number;
 }
 
+/** A character that can't go in an HTTP header value: a control character,
+ *  or one past Latin-1. */
+const UNSENDABLE_TOKEN = /[\x00-\x1f\x7f]|[^\x00-\xff]/;
+
+/** The answer to a `FORTRIP_TOKEN` that has one: the same exit code as for
+ *  one the server turns down. It names the variable and never says what it
+ *  held: the error `fetch` throws for such a value quotes it, and that would
+ *  reach stderr and, in the bridge, the MCP client. */
+function unsendableToken(): CliError {
+  return new CliError(
+    "FORTRIP_TOKEN contains a line break or another character that can't be sent in a request header. Set it to the token alone, or unset it.",
+    EXIT.unauthenticated,
+    { tokenSource: "FORTRIP_TOKEN" },
+  );
+}
+
 /**
  * The token the commands send: `FORTRIP_TOKEN` as it is, else the saved
  * session's, refreshed first when it has less than a minute left. Without a
@@ -93,7 +110,10 @@ async function currentToken(
   options: SignInOptions,
 ): Promise<{ token: string; source: "env" | "file"; fresh: boolean }> {
   const fromEnv = process.env.FORTRIP_TOKEN?.trim();
-  if (fromEnv) return { token: fromEnv, source: "env", fresh: false };
+  if (fromEnv) {
+    if (UNSENDABLE_TOKEN.test(fromEnv)) throw unsendableToken();
+    return { token: fromEnv, source: "env", fresh: false };
+  }
   const started = new Date().toISOString();
   const session = await loadSession(apiUrl);
   if (session && session.expiresAt - Date.now() >= REFRESH_BEFORE_MS) {
@@ -388,8 +408,9 @@ export async function login({
   log,
   wait = sleep,
 }: LoginOptions): Promise<unknown> {
-  // A credentials file that can't be updated fails here, not after the
-  // user has approved.
+  // A directory that can't be written, or a credentials file that can't be
+  // read, fails here, not after the user has approved.
+  await ensureCredentialsDir();
   await loadSession(apiUrl);
   const config = await loadAuthConfig(apiUrl);
   const start = await startDeviceLogin(config);

@@ -313,10 +313,34 @@ async function withLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** Codes that say a directory can't be written, as opposed to a file that
+ *  is busy. */
+const UNWRITABLE = ["EACCES", "EPERM", "EROFS"];
+
+/** Creates the directory of the credentials file. When it can't be written
+ *  (a read-only home, as in an agent sandbox) the error says what to do. It
+ *  exits 1, "any other error" (the agent reads `error`): the arguments are
+ *  fine, so not 2, and there is no link to open, so not 3. */
 async function ensureDir(path: string): Promise<void> {
   const dir = dirname(path);
-  await mkdir(dir, { recursive: true, mode: 0o700 });
-  await chmod(dir, 0o700);
+  try {
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    await chmod(dir, 0o700);
+  } catch (error) {
+    const { code } = error as NodeJS.ErrnoException;
+    if (!code || !UNWRITABLE.includes(code)) throw error;
+    throw new CliError(
+      `Can't write to ${dir}, where fortrip keeps your sign-in. Set XDG_CONFIG_HOME to a directory that can be written, or set FORTRIP_TOKEN instead of signing in.`,
+      EXIT.error,
+      { code, configDir: dir },
+    );
+  }
+}
+
+/** For `login`: fail now, not after the user has approved, if a sign-in
+ *  couldn't be saved. */
+export async function ensureCredentialsDir(env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  await ensureDir(credentialsPath(env));
 }
 
 /** Held by the one command at a time that talks to the sign-in server:

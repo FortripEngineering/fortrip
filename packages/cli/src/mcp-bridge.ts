@@ -46,6 +46,8 @@ async function signedIn<T>(run: () => Promise<T>): Promise<T> {
     return await run();
   } catch (error) {
     if (error instanceof CliError && error.exitCode === EXIT.unauthenticated) {
+      // A FORTRIP_TOKEN that can't be sent: its message is the whole answer.
+      if (error.details.tokenSource === "FORTRIP_TOKEN") throw new SignInRequired(error.message);
       const { loginUrl, userCode, expiresInSeconds } = error.details;
       throw new SignInRequired(
         `Not signed in to Fortrip, or the saved sign-in no longer works. ${signInAdvice(
@@ -158,9 +160,13 @@ const CONNECTION_LOST: RpcError = {
  * go unanswered, as for any stdio server.
  *
  * stdout carries only JSON-RPC, so a problem the user has to fix (not signed
- * in, a token the server won't take) is the error response to the request
- * that hit it, and the server stays up: signing in needs no restart. All
- * diagnostics go to stderr.
+ * in, a token the server won't take) is the error response (-32001, whose
+ * message names `LOGIN_COMMAND` and the sign-in link) to the request that
+ * hit it, and the bridge stays up. A sign-in that stops working mid-session
+ * fails only that request. Signed out from the start, that request is
+ * `initialize`; clients treat a failed `initialize` as a failed connection and
+ * close it, which ends the bridge, so the user signs in and then restarts or
+ * reconnects the server. All diagnostics go to stderr.
  */
 export async function runMcpBridge(
   apiUrl: string,

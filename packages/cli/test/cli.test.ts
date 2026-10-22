@@ -176,6 +176,40 @@ describe("requests", () => {
   });
 });
 
+describe("FORTRIP_TOKEN", () => {
+  // The distinctive part of each value: it must not appear in any output.
+  const SECRET = "SECRETPART";
+
+  it("with a line break or other control character is refused before anything is sent, and never echoed", async () => {
+    for (const bad of [
+      `abc\n${SECRET}`,
+      `abc\r\n${SECRET}`,
+      `abc\u0007${SECRET}`,
+      `abc\u007f${SECRET}`,
+      `abc${SECRET}\u4ee4\u724c`,
+    ]) {
+      const { code, stdout, stderr } = await cli(["whoami"], { FORTRIP_TOKEN: bad });
+      assert.equal(code, 3, JSON.stringify(bad));
+      const error = JSON.parse(stderr);
+      assert.match(error.error, /FORTRIP_TOKEN/);
+      assert.match(error.error, /line break/);
+      // The same answer as a token the server turns down: no link to open.
+      assert.equal(error.exitCode, 3);
+      assert.equal(error.tokenSource, "FORTRIP_TOKEN");
+      assert.equal(error.loginUrl, undefined);
+      assert.equal(error.retryable, undefined);
+      assert.ok(!stdout.includes(SECRET) && !stderr.includes(SECRET), JSON.stringify(bad));
+    }
+    assert.equal(requests.length, 0);
+  });
+
+  it("is still trimmed of surrounding whitespace", async () => {
+    const { code } = await cli(["whoami"], { FORTRIP_TOKEN: `  ${TOKEN}\n` });
+    assert.equal(code, 0);
+    assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
+  });
+});
+
 describe("book prints what the server returned", () => {
   const STRIPE = `https://checkout.stripe.com/c/pay/cs_test_1#${"f".repeat(300)}`;
 

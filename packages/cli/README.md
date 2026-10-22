@@ -57,10 +57,21 @@ signed-in account.
 
 The sign-in is saved in `~/.config/fortrip/credentials.json` (`$XDG_CONFIG_HOME`
 is honoured), mode `0600`, per API URL, so a token is only sent to the server
-that issued it. If a new sign-in can't be saved (the file is busy or damaged),
-the command still works and the sign-in is kept in a `credentials.recovered-*.json`
-file next to it; the command's JSON output names it in `warning` and
-`recoveryFile`, and the next successful save merges it back.
+that issued it.
+
+If a new or renewed sign-in can't be saved (the file stays busy or turns out to
+be damaged), `search`, `hotel`, `rates`, `book` and `whoami` still work for that
+run, with the new token. The sign-in is kept in a `credentials.recovered-*.json`
+file next to the credentials file, and the command's JSON output carries a
+`warning` and, when the sign-in could be kept, that file in `recoveryFile`.
+Later commands use it, and the next successful save merges it back. `login`
+doesn't carry on in that case: it exits 1, with `recoveryFile` in the error, and
+the sign-in is kept in that file all the same.
+
+If the directory itself can't be written (a read-only home, as in some agent
+sandboxes), `login` exits 1 before it asks you to approve anything, and any
+other command that needs to save a sign-in exits 1 too. The error says to set
+`XDG_CONFIG_HOME` to a directory that can be written, or to set `FORTRIP_TOKEN`.
 
 ## Commands
 
@@ -113,9 +124,17 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 `fortrip mcp` runs an MCP server on stdio for clients that start local
 servers. It forwards to Fortrip's hosted MCP server, `https://fortrip.ai/api/mcp`,
-with your saved sign-in. Sign in once with `npx -y fortrip login`. If you
-haven't, the first tool call fails with a message that names the link to
-approve; the server keeps running, so signing in needs no restart.
+with your saved sign-in. Sign in once with `npx -y fortrip login` before you
+add the server to a client.
+
+If the client starts the server before you have, the server fails to connect:
+its first request, `initialize`, is answered with a JSON-RPC error (`-32001`)
+whose message says to run `npx -y fortrip login` in a terminal, or to open the
+sign-in link it names and approve it. Clients typically close the connection
+after a failed `initialize`, so sign in (or approve that link), then restart the
+server or reconnect it (`/mcp` in Claude Code). If a sign-in stops working
+later, only the request that hit it fails with the same kind of error, and the
+server keeps running.
 
 Claude Desktop (Settings, Developer, Edit Config; on macOS
 `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows
@@ -157,7 +176,7 @@ browser when the client asks. In Claude Code, that is
 
 | Variable | Meaning |
 |---|---|
-| `FORTRIP_TOKEN` | An access token, used instead of the saved sign-in. It lasts at most 24 hours, so it suits one sandbox session or one CI run, not standing CI. It isn't tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If Fortrip doesn't accept it, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"` and no `loginUrl`. |
+| `FORTRIP_TOKEN` | An access token, used instead of the saved sign-in. It lasts at most 24 hours, so it suits one sandbox session or one CI run, not standing CI. It isn't tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If Fortrip doesn't accept it, or it contains a line break or another character that can't be sent in a header, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"` and no `loginUrl`; the error never repeats the token. |
 | `FORTRIP_API_URL` | The base URL (default `https://fortrip.ai`). Plain `http` is only accepted for `localhost`. |
 | `FORTRIP_CURRENCY` | The default `--currency` for `search` and `rates` (`CNY` or `USD`; the API uses `CNY` when nothing sets one). It only changes how prices are shown: `book` charges the currency it returns. |
 

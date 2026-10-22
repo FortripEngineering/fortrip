@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import fsp, { mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
+import fsp, { chmod, mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { after, before, beforeEach, describe, it, mock } from "node:test";
+import { after, afterEach, before, beforeEach, describe, it, mock, type TestContext } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { login, logout, refreshSession, requireToken, whoami } from "../src/auth.ts";
@@ -150,6 +150,25 @@ describe("login", () => {
     const error = await failure(runLogin());
     assert.equal(error.exitCode, EXIT.error);
     assert.match(error.message, /expired/);
+  });
+
+  it("a sign-in that can't be saved exits 1 with recoveryFile in the error, and the next command uses it", async () => {
+    approveEveryLogin();
+    failRenames();
+    let error: CliError;
+    try {
+      error = await failure(runLogin());
+    } finally {
+      restoreRenames();
+    }
+
+    assert.equal(error.exitCode, EXIT.error);
+    assert.match(error.message, /kept in/);
+    const kept = String(error.details.recoveryFile);
+    assert.match(kept, /credentials\.recovered-/);
+    const { token } = await requireToken(apiUrl);
+    assert.equal(JSON.parse(await readFile(kept, "utf8")).sessions[apiUrl].accessToken, token);
+    assert.equal(api.counts.deviceStarts, 1);
   });
 });
 
@@ -885,5 +904,82 @@ describe("credentials file problems", () => {
     const error = await failure(runLogin());
     assert.match(error.message, /Move it away/);
     assert.equal(api.counts.deviceStarts, 0);
+  });
+});
+
+describe("a config directory that can't be written", () => {
+  const readOnly: string[] = [];
+  afterEach(async () => {
+    for (const dir of readOnly.splice(0)) await chmod(dir, 0o700);
+  });
+
+  /** A config home that can't hold the `fortrip` directory, as in a sandbox
+   *  that blocks writes to `~/.config`. Skips the test where permissions
+   *  don't restrict the process (root, Windows). */
+  async function unwritableHome(t: TestContext): Promise<string | null> {
+    const home = await mkdtemp(join(tmpdir(), "fortrip-readonly-"));
+    readOnly.push(home);
+    await chmod(home, 0o500);
+    const restricted = await mkdir(join(home, "probe")).then(
+      () => false,
+      () => true,
+    );
+    if (!restricted) t.skip("this process can write to a read-only directory");
+    return restricted ? home : null;
+  }
+
+  /** The advice, and no raw OS error. */
+  function assertGuidance(message: string) {
+    assert.match(message, /XDG_CONFIG_HOME/);
+    assert.match(message, /FORTRIP_TOKEN/);
+    assert.doesNotMatch(message, /EACCES|EPERM|EROFS|mkdir/);
+  }
+
+  it("login fails before it starts the device flow, so nobody approves a sign-in that can't be saved", async (t) => {
+    const home = await unwritableHome(t);
+    if (!home) return;
+    process.env.XDG_CONFIG_HOME = home;
+
+    const error = await failure(runLogin());
+
+    assert.equal(error.exitCode, EXIT.error);
+    assertGuidance(error.message);
+    assert.equal(error.details.retryable, undefined);
+    assert.equal(api.counts.config, 0);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(logs, []);
+  });
+
+  it("a command that needs to save a sign-in exits 1 with JSON that says what to do, and starts no sign-in", async (t) => {
+    const home = await unwritableHome(t);
+    if (!home) return;
+
+    for (const args of [["whoami"], ["search", "--query", "x"]]) {
+      const result = await cli(args, { ...cliEnv(), XDG_CONFIG_HOME: home });
+      assert.equal(result.code, 1, args[0]);
+      const error = JSON.parse(result.stderr);
+      assert.equal(error.exitCode, 1);
+      assertGuidance(error.error);
+      assert.equal(error.loginUrl, undefined);
+      assert.equal(error.retryable, undefined);
+      // JSON only: no stack trace.
+      assert.doesNotMatch(result.stderr, /\n\s+at /);
+      assert.equal(result.stdout, "");
+    }
+    assert.equal(api.counts.deviceStarts, 0);
+  });
+
+  it("FORTRIP_TOKEN works there, as the advice says", async (t) => {
+    const home = await unwritableHome(t);
+    if (!home) return;
+
+    const result = await cli(["whoami"], {
+      ...cliEnv(),
+      XDG_CONFIG_HOME: home,
+      FORTRIP_TOKEN: api.session().accessToken,
+    });
+
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).email, "a@b.c");
   });
 });

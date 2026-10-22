@@ -326,6 +326,23 @@ describe("fortrip mcp bridge", () => {
     );
   });
 
+  it("a FORTRIP_TOKEN with a line break is refused by name, without being echoed", async () => {
+    process.env.FORTRIP_TOKEN = "abc\nSECRETPART";
+    await signIn();
+    const bridge = startBridge();
+
+    const reply = await bridge.request(initialize());
+
+    assert.equal(reply.error?.code, -32001);
+    assert.match(reply.error?.message ?? "", /FORTRIP_TOKEN/);
+    assert.match(reply.error?.message ?? "", /line break/);
+    assert.ok(!JSON.stringify(reply).includes("SECRETPART"));
+    assert.ok(!bridge.lines.join("\n").includes("SECRETPART"));
+    // Nothing was sent, and nothing was refreshed.
+    assert.deepEqual(api.mcpRequests, []);
+    assert.equal(api.counts.refreshes, 0);
+  });
+
   it("a 503 is an error for that request, not a sign-in", async () => {
     await signIn();
     const bridge = startBridge();
@@ -430,9 +447,9 @@ describe("fortrip mcp", () => {
   });
 
   /** `fortrip mcp` in its own process, run against the fake. */
-  function spawnBridge() {
+  function spawnBridge(env: NodeJS.ProcessEnv = {}) {
     const child = spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "mcp"], {
-      env: { ...process.env, FORTRIP_API_URL: apiUrl, FORTRIP_TOKEN: "" },
+      env: { ...process.env, FORTRIP_API_URL: apiUrl, FORTRIP_TOKEN: "", ...env },
     });
     children.push(child);
     let stdout = "";
@@ -494,5 +511,19 @@ describe("fortrip mcp", () => {
     // stdout held the one reply; the diagnosis went to stderr.
     assert.equal(bridge.messages().length, 1);
     assert.match(bridge.stderr(), /fortrip mcp/);
+  });
+
+  it("a FORTRIP_TOKEN with a line break is named in the error and appears in neither stdout nor stderr", async () => {
+    const bridge = spawnBridge({ FORTRIP_TOKEN: "abc\nSECRETPART" });
+
+    const reply = await bridge.request(initialize());
+    bridge.child.stdin.end();
+
+    assert.equal(reply.error?.code, -32001);
+    assert.match(reply.error?.message ?? "", /FORTRIP_TOKEN/);
+    assert.deepEqual(await bridge.exit, { code: 0, signal: null });
+    assert.ok(!JSON.stringify(bridge.messages()).includes("SECRETPART"));
+    assert.ok(!bridge.stderr().includes("SECRETPART"));
+    assert.deepEqual(api.mcpRequests, []);
   });
 });

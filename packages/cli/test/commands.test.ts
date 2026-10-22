@@ -5,10 +5,16 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import {
+  addIsoDateDays,
   API,
   COMMANDS,
   type CommandSpec,
+  createBookingInput,
   type FlagSpec,
+  getHotelInput,
+  getRatesInput,
+  SEARCH_SORTS,
+  searchHotelsInput,
   TOOLS,
 } from "@fortrip/agent-contract";
 import { z } from "zod";
@@ -514,5 +520,97 @@ describe("parseOptions", () => {
     ] as const) {
       assert.throws(() => parseOptions(command(name), [...argv]), isUsage, `${name} ${argv}`);
     }
+  });
+});
+
+describe("a full command line builds the request the contract accepts", () => {
+  // Search refuses a check-in in the past, so the dates follow the clock.
+  const today = new Date().toISOString().slice(0, 10);
+  const STAY = ["--check-in", addIsoDateDays(today, 30), "--check-out", addIsoDateDays(today, 32)];
+
+  /** Every flag of the command is in `argv`, so a flag added to the contract
+   *  without a case here fails this test. */
+  function assertFull(spec: CommandSpec, argv: string[]) {
+    for (const flag of spec.flags) {
+      assert.ok(argv.includes(`--${flag.flag}`), `${spec.name}: no case for --${flag.flag}`);
+    }
+  }
+
+  /** The body is exactly what the schema accepts, and says what was typed. */
+  function assertAccepted(
+    schema: { safeParse(input: unknown): { success: boolean; data?: unknown; error?: unknown } },
+    sent: Record<string, unknown>,
+  ) {
+    const parsed = schema.safeParse(sent);
+    assert.ok(parsed.success, JSON.stringify(parsed.error));
+    for (const [field, value] of Object.entries(sent)) {
+      assert.deepEqual((parsed.data as Record<string, unknown>)[field], value, field);
+    }
+  }
+
+  it("search", () => {
+    const spec = command("search");
+    const argv = [
+      ...["--query", "Bangkok", "--city-code", "1234", "--near", "13.75,100.5,5"],
+      ...STAY,
+      ...["--star-min", "3", "--star-max", "5", "--facility", "Parking", "--facility", "Swimming pool"],
+      ...["--price-min", "50", "--price-max", "500", "--sort", SEARCH_SORTS[0] as string],
+      ...["--page", "2", "--page-size", "10", "--currency", "usd"],
+    ];
+    assertFull(spec, argv);
+    assertAccepted(searchHotelsInput, body("search", argv));
+  });
+
+  it("hotel", () => {
+    const spec = command("hotel");
+    const argv = ["266000", "--with-rooms"];
+    assertFull(spec, argv);
+    // The GET carries the id in its path and the flag in its query.
+    for (const [args, includeRooms] of [
+      [argv, true],
+      [["266000"], false],
+    ] as const) {
+      const { path, body: sent } = parseCommand(spec, [...args], {});
+      assert.equal(sent, undefined);
+      const url = new URL(path, "https://fortrip.test");
+      assert.equal(path, API.hotel(266000, includeRooms));
+      const parsed = getHotelInput.safeParse({
+        hotelId: url.pathname.split("/").pop(),
+        ...(url.searchParams.get("include") === "rooms" ? { includeRooms: true } : {}),
+      });
+      assert.ok(parsed.success, JSON.stringify(parsed.error));
+      assert.equal(parsed.data.hotelId, 266000);
+      assert.equal(parsed.data.includeRooms ?? false, includeRooms);
+    }
+  });
+
+  it("rates", () => {
+    const spec = command("rates");
+    const argv = [
+      ...["--hotel", "266000,266001", "--hotel", "3"],
+      ...STAY,
+      ...["--rooms", "2", "--adults", "2", "--child-age", "4,6", "--child-age", "9"],
+      ...["--nationality", "cn", "--board", "bb,hb", "--board", "fb", "--free-cancellation"],
+      ...["--include-unbookable", "--max-rooms", "3", "--currency", "usd"],
+    ];
+    assertFull(spec, argv);
+    const sent = body("rates", argv);
+    assertAccepted(getRatesInput, sent);
+    // The inverted flag reaches the schema as false, not as its default.
+    assert.equal(sent.bookableOnly, false);
+  });
+
+  it("book", () => {
+    const spec = command("book");
+    const argv = [
+      ...["--hotel", "266000", "--room-id", "9191658", "--rate-plan", "rp_1"],
+      ...STAY,
+      ...["--rooms", "2", "--adults", "2", "--child-age", "7"],
+      ...["--guest", "John Smith", "--guest", "Mary Ann Lee:2"],
+      ...["--contact-name", "John Smith", "--contact-phone", "+8613800000000"],
+      ...["--contact-email", "john@example.com", "--special-requests", "Late arrival"],
+    ];
+    assertFull(spec, argv);
+    assertAccepted(createBookingInput, body("book", argv));
   });
 });
