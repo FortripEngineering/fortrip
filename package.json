@@ -4,14 +4,17 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "generate": "pnpm -r --if-present generate",
+    "typecheck": "tsc --noEmit && pnpm -r typecheck",
+    "test": "pnpm -r test && node --import tsx --test scripts/*.test.ts",
+    "generate": "tsx scripts/generate.ts",
     "validate": "node scripts/validate.mjs"
   },
   "packageManager": "pnpm@11.21.0",
   "devDependencies": {
+    "@types/node": "^22.15.0",
     "ajv": "8.20.0",
-    "ajv-formats": "3.0.1"
+    "ajv-formats": "3.0.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }

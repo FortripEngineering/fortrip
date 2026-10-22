@@ -2,7 +2,9 @@
 // plugin package and the MCP Registry entry against the schemas their
 // `$schema` names, OpenAI's submission limits, the MCP URL every listing
 // points at, the skills' front matter, and repo-wide content rules.
-// Run with `pnpm validate`; CI also runs `claude plugin validate --strict`.
+// Run with `pnpm validate` after `pnpm build` (it reads the built contract);
+// CI also runs `pnpm generate --check` and `claude plugin validate --strict`.
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,24 +24,31 @@ function check(label, ok, detail = "") {
 }
 
 const MCP_URL = "https://fortrip.ai/api/mcp";
-// The hosted MCP server's tools, for the OpenAI review test cases.
-const TOOLS = new Set([
-  "search_hotels",
-  "get_hotel",
-  "get_rates",
-  "create_booking",
-  "get_planning_guide",
-]);
+// The hosted MCP server's tools, for the OpenAI review test cases: the
+// contract's, from its build.
+let TOOLS = new Set();
+try {
+  const contract = await import(new URL("../packages/contract/dist/index.js", import.meta.url).href);
+  TOOLS = new Set(contract.TOOLS.map((tool) => tool.name));
+} catch (error) {
+  check("packages/contract is built (run `pnpm build`)", false, String(error.message ?? error));
+}
 
 // Schemas: each file against the schema its `$schema` names.
 for (const file of ["plugins/openai/plugin.json", "plugins/openai/mcp.json", "plugins/registry/server.json"]) {
   const data = load(file);
-  const response = await fetch(data.$schema);
-  if (!response.ok) {
-    check(`${file}: fetch ${data.$schema}`, false, `HTTP ${response.status}`);
+  let schema;
+  try {
+    const response = await fetch(data.$schema, { signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) {
+      check(`${file}: fetch ${data.$schema}`, false, `HTTP ${response.status}`);
+      continue;
+    }
+    schema = await response.json();
+  } catch (error) {
+    check(`${file}: fetch ${data.$schema}`, false, String(error));
     continue;
   }
-  const schema = await response.json();
   const ajv = schema.$schema?.includes("2020-12")
     ? new Ajv2020({ allErrors: true, strict: false })
     : new Ajv({ allErrors: true, strict: false });
@@ -154,9 +163,17 @@ const files = [];
     else if (/\.(md|json|ya?ml)$/.test(entry.name) && entry.name !== "package-lock.json") files.push(file);
   }
 })("");
-// The hotel supplier is never named in public listings.
-const supplier = files.filter((f) => /huizhi|汇智/i.test(read(f)));
-check('no listing names the supplier ("Huizhi")', supplier.length === 0, supplier.join(", "));
+// The hotel supplier is never named in anything the repository publishes:
+// every tracked file (and any new one git doesn't ignore), whatever its type.
+// The pattern is built from fragments so that this file doesn't name it either.
+const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
+const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repo, encoding: "utf8" })
+  .split("\0")
+  // packages/cli still names the supplier until the CLI moves to
+  // /api/agent/v1; drop this exclusion in the task that rewrites it.
+  .filter((f) => f && !f.startsWith("packages/cli/") && fs.existsSync(path.join(repo, f)));
+const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
+check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
 // Anthropic Software Directory Policy §2F: the Claude plugin must not have
 // Claude fetch instructions at run time (the CLI prints its own guide).
 const fetching = files.filter((f) => f.startsWith(`plugins${path.sep}claude${path.sep}`) && /\bnpx\b|fortrip@latest|get_planning_guide/.test(read(f)));

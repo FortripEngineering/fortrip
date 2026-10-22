@@ -8,12 +8,21 @@ importers:
 
   .:
     devDependencies:
+      '@types/node':
+        specifier: ^22.15.0
+        version: 22.20.5
       ajv:
         specifier: 8.20.0
         version: 8.20.0
       ajv-formats:
         specifier: 3.0.1
         version: 3.0.1(ajv@8.20.0)
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.15
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
 
   packages/cli:
     devDependencies:
