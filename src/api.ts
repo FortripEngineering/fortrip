@@ -1,9 +1,11 @@
 import { CliError, EXIT } from "./errors.ts";
 import { VERSION } from "./version.ts";
 
-export const LOGIN_HINT = "Run `npx fortrip login` first.";
+export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
-const REQUEST_TIMEOUT_MS = 120_000;
+/** Longer than the API's longest route (`book`, 120 s), so the CLI doesn't
+ *  give up, and an agent retry, just as the server is answering. */
+export const REQUEST_TIMEOUT_MS = 150_000;
 
 export interface ApiResponse {
   status: number;
@@ -38,12 +40,14 @@ export async function request(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    throw new CliError(
-      `Could not reach ${apiUrl}: ${(error as Error).message}`,
-      EXIT.error,
-    );
+    throw transportError(apiUrl, error);
   }
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    throw transportError(apiUrl, error, response.status);
+  }
   let parsed: unknown = null;
   try {
     parsed = text ? JSON.parse(text) : {};
@@ -51,13 +55,25 @@ export async function request(
     parsed = null;
   }
   const isObject = parsed !== null && typeof parsed === "object";
-  return {
-    status: response.status,
-    body: isObject
-      ? (parsed as Record<string, unknown>)
-      : { error: `Unexpected ${response.status} response`, raw: text.slice(0, 200) },
-    headers: response.headers,
-  };
+  const result: Record<string, unknown> = isObject
+    ? (parsed as Record<string, unknown>)
+    : { error: `Unexpected ${response.status} response`, raw: text.slice(0, 200) };
+  // A 5xx without the API's JSON (a proxy's error page, or nothing) is a
+  // platform hiccup.
+  if (response.status >= 500 && !(isObject && text)) result.retryable = true;
+  return { status: response.status, body: result, headers: response.headers };
+}
+
+/** No answer, or the connection dropped: worth one retry. */
+function transportError(apiUrl: string, error: unknown, status?: number): CliError {
+  const message =
+    (error as Error)?.name === "TimeoutError"
+      ? `No response from ${apiUrl} within ${REQUEST_TIMEOUT_MS / 1_000} s`
+      : `Could not reach ${apiUrl}: ${(error as Error)?.message ?? String(error)}`;
+  return new CliError(message, EXIT.error, {
+    ...(status !== undefined ? { status } : {}),
+    retryable: true,
+  });
 }
 
 /** The `data` of a successful `{ success: true, data }` response, or a
@@ -73,20 +89,20 @@ export function unwrap(response: ApiResponse): unknown {
       : typeof message === "string"
         ? message
         : `Request failed with status ${status}`;
-  const details: Record<string, unknown> = { status, ...rest };
+  // A 429, or a retryable 503, says how long to wait.
+  const retryAfter = Number(headers.get("retry-after"));
+  const details: Record<string, unknown> = {
+    status,
+    ...rest,
+    ...(Number.isFinite(retryAfter) && retryAfter > 0
+      ? { retryAfterSeconds: retryAfter }
+      : {}),
+  };
 
   if (status === 401) {
     throw new CliError(`${text}. ${LOGIN_HINT}`, EXIT.unauthenticated, details);
   }
-  if (status === 429) {
-    const retryAfter = Number(headers.get("retry-after"));
-    throw new CliError(text, EXIT.rateLimited, {
-      ...details,
-      ...(Number.isFinite(retryAfter) && retryAfter > 0
-        ? { retryAfterSeconds: retryAfter }
-        : {}),
-    });
-  }
+  if (status === 429) throw new CliError(text, EXIT.rateLimited, details);
   if (status === 400) throw new CliError(text, EXIT.usage, details);
   if (status >= 300 && status < 400) {
     throw new CliError(

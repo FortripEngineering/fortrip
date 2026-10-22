@@ -24,48 +24,72 @@ Requires Node.js 22 or newer. No runtime dependencies.
 | `search` | Hotels with indicative prices |
 | `hotel <hotelId> [--with-rooms]` | Static hotel detail |
 | `rates` | Live rooms and rates |
-| `book` | Order + Stripe payment link |
+| `book` | Order + payment link (a Fortrip page that continues to Stripe) |
 
-Run `fortrip --help` for every flag. `search`, `rates` and `book` also accept
-`--body '<json>'` or `--body @file.json` with the raw request body; flags
-override its fields.
+Run `fortrip --help` for every flag, or `fortrip <command> --help` for one
+command's. `search`, `rates` and `book` also accept `--body '<json>'` or
+`--body @file.json` with the raw request body; flags override its fields.
+
+`--adults` and `--child-age` are per room, and every room has the same
+occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `rates` defaults
+to 1 room for 2 adults; `book` requires `--rooms` and `--adults`.
 
 Output is JSON on stdout. Errors are JSON on stderr, with fixed exit codes:
 
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | Other error |
+| 1 | Other error (`retryable: true` on stderr: worth one retry) |
 | 2 | Invalid arguments (local or HTTP 400) |
-| 3 | Not logged in / token revoked (HTTP 401) |
+| 3 | Not logged in, or the sign-in wasn't accepted (HTTP 401) |
 | 4 | Rate limited (HTTP 429; `retryAfterSeconds` on stderr) |
 
 ## Credentials
 
 - `login` saves the token to `~/.config/fortrip/credentials.json`
-  (`$XDG_CONFIG_HOME` is honoured), mode `0600`. Tokens are stored per API URL,
-  so a token is only ever sent to the server that issued it.
+  (`$XDG_CONFIG_HOME` is honoured), mode `0600`. Saved tokens are stored per
+  API URL, so a saved token is only sent to the server that issued it.
 - Without a token, any other command starts a device login and exits 3 with
   `loginUrl` on stderr instead of waiting. Once that link is approved in the
   browser, rerunning the command saves the token and carries on. This is how
-  AI agents sign in, since they can't sit in `login`.
-- `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes).
+  AI agents sign in, since they can't sit in `login`. Commands run in
+  parallel share one login link. If the server doesn't accept the saved
+  token, the command keeps it and starts a new login the same way; once that
+  link is approved, the new token replaces the saved one.
+- `FORTRIP_TOKEN` overrides the saved login (CI, remote sandboxes). It is not
+  tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If the
+  server doesn't accept it, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"`
+  and no `loginUrl`.
 - `FORTRIP_API_URL` overrides the base URL (default `https://fortrip.ai`).
   Plain `http` is only accepted for `localhost`.
 - `FORTRIP_CURRENCY` sets the default `--currency` for `search` and `rates`
   (`CNY` or `USD`; the API defaults to `CNY`). Display only: `book`
   charges the currency it returns.
 
-Tokens don't expire; `logout` revokes them.
+`logout` revokes the saved token. With the Fortrip server update released
+alongside CLI 0.3.1, sign-ins that go unused for 90 days stop working, and
+signed-in users can list and revoke their CLI sign-ins in their Fortrip
+account (account menu → **Fortrip CLI**).
+
+If a new sign-in can't be saved (the file is busy or damaged), it is kept
+in a `credentials.recovered-*.json` file next to `credentials.json` (mode
+`0600`), and the command's JSON output names it in `warning` and
+`recoveryFile`. The next successful save merges it back and removes the
+file; `logout` revokes and removes these too.
+
+Sharing `credentials.json` with 0.3.0 works on a best-effort basis: 0.3.0
+finds the newest pending login where it expects it, but it writes the file
+without a lock, so don't sign in with 0.3.0 and 0.3.1 at the same moment.
 
 ## Agent skill
 
 ```bash
-npx skills add FortripEngineering/fortrip-plugins
+npx skills add FortripEngineering/fortrip-plugins --skill fortrip-cli
 ```
 
-The skill and the Claude plugin live in
-[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins). The
+The skill lives in
+[fortrip-plugins](https://github.com/FortripEngineering/fortrip-plugins); the
+Claude directory plugin there uses the hosted MCP instead of the CLI. The
 skill only tells the agent to run `npx -y fortrip@latest skill`, which prints
 [`AGENT_GUIDE.md`](AGENT_GUIDE.md): when to use the CLI, the call order, login,
 and what to show the user before handing over a payment link. The guide ships
@@ -100,7 +124,9 @@ Point at a local Fortrip app with `FORTRIP_API_URL=http://localhost:3000`.
 
 Pushing a `v*` tag publishes to npm through
 [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which signs
-in with npm trusted publishing (no npm token in GitHub).
+in with npm trusted publishing (no npm token in GitHub). Pull requests and
+pushes to `main` run typecheck, tests and the build through
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 1. Bump the version in a PR and merge it into `main`:
    `npm version minor --no-git-tag-version` (or `patch`).
@@ -112,8 +138,10 @@ in with npm trusted publishing (no npm token in GitHub).
    ```
 
 The workflow refuses a tag that doesn't match `package.json` or isn't on
-`main`, then runs typecheck, tests and the build before publishing. Every
-installed skill picks up the new guide on its next `npx fortrip@latest skill`.
+`main`. A `build` job runs typecheck, tests and the build and packs the
+tarball; a `publish` job in the `npm-publish` environment publishes that
+tarball, with no install or build of its own. Every installed skill picks up
+the new guide on its next `npx fortrip@latest skill`.
 
 ## License
 

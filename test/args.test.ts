@@ -75,6 +75,30 @@ describe("search", () => {
   it("unknown flags are usage errors", () => {
     assert.throws(() => parse(["--nope"], SEARCH_OPTIONS), isUsage);
   });
+
+  it("a single-value flag given twice is a usage error", () => {
+    for (const argv of [
+      ["--query", "Bangkok", "--query", "Phuket"],
+      ["-q", "Bangkok", "--query", "Phuket"],
+      ["--city-code", "1", "--city-code=2"],
+    ]) {
+      assert.throws(() => parse(argv, SEARCH_OPTIONS), isUsage);
+    }
+    assert.deepEqual(
+      parse(["--facility", "Parking", "--facility", "Gym"], SEARCH_OPTIONS).values
+        .facility,
+      ["Parking", "Gym"],
+    );
+  });
+
+  it("--city-code takes digits only", () => {
+    for (const code of ["0x10", "1e3", "12.0", "-1", ""]) {
+      const { values } = parse([`--city-code=${code}`], SEARCH_OPTIONS);
+      assert.throws(() => searchBody(values, {}), isUsage, code);
+    }
+    const { values } = parse(["--city-code", "0012"], SEARCH_OPTIONS);
+    assert.equal(searchBody(values, {}).cityCode, 12);
+  });
 });
 
 describe("rates", () => {
@@ -109,6 +133,13 @@ describe("rates", () => {
       freeCancellation: true,
       bookableOnly: false,
     });
+  });
+
+  it("hotel ids are digits only", () => {
+    for (const ids of ["0x10", "266000,1e3", "266000,", "9007199254740993"]) {
+      const { values } = parse(["--hotel", ids], RATES_OPTIONS);
+      assert.throws(() => ratesBody(values, {}), isUsage, ids);
+    }
   });
 
   it("keeps rooms and adults from --body instead of the defaults", () => {
@@ -191,6 +222,10 @@ describe("book", () => {
         "2026-11-10",
         "--check-out",
         "2026-11-12",
+        "--rooms",
+        "1",
+        "--adults",
+        "2",
         "--guest",
         "John Smith",
         "--contact-name",
@@ -212,5 +247,28 @@ describe("book", () => {
       contactName: "John Smith",
       contactPhone: "+8613800000000",
     });
+  });
+
+  it("requires --rooms and --adults, from flags or --body", () => {
+    for (const argv of [
+      [],
+      ["--rooms", "2"],
+      ["--adults", "2"],
+      ["--body", '{"rooms":2}'],
+    ]) {
+      assert.throws(() => bookBody(parse(argv, BOOK_OPTIONS).values), isUsage);
+    }
+    const body = bookBody(
+      parse(["--body", '{"rooms":2,"adults":3}', "--adults", "2"], BOOK_OPTIONS).values,
+    );
+    assert.equal(body.rooms, 2);
+    assert.equal(body.adults, 2);
+  });
+
+  it("--hotel takes digits only, and once", () => {
+    const { values } = parse(["--hotel", "0x10", "--rooms", "1", "--adults", "2"], BOOK_OPTIONS);
+    assert.throws(() => bookBody(values), isUsage);
+    assert.throws(() => parse(["--hotel", "1", "--hotel", "2"], BOOK_OPTIONS), isUsage);
+    assert.throws(() => parse(["--rooms", "1", "--rooms", "2"], BOOK_OPTIONS), isUsage);
   });
 });

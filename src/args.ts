@@ -9,16 +9,33 @@ type Values = Record<string, string | boolean | string[] | undefined>;
 const BODY_OPTION = { body: { type: "string" } } as const;
 const CURRENCY_OPTION = { currency: { type: "string" } } as const;
 
-/** Wraps `util.parseArgs` so unknown flags and missing values exit 2. */
+/** Wraps `util.parseArgs` so unknown flags, missing values and a
+ *  single-value flag given twice (which value would win?) exit 2. */
 export function parse<const O extends ParseArgsOptionsConfig>(
   argv: string[],
   options: O,
 ) {
+  let parsed;
   try {
-    return parseArgs({ args: argv, options, allowPositionals: true, strict: true });
+    parsed = parseArgs({
+      args: argv,
+      options,
+      allowPositionals: true,
+      strict: true,
+      tokens: true,
+    });
   } catch (error) {
     throw usageError((error as Error).message);
   }
+  const seen = new Set<string>();
+  for (const token of parsed.tokens) {
+    if (token.kind !== "option" || options[token.name]?.multiple) continue;
+    if (seen.has(token.name)) {
+      throw usageError(`--${token.name} was given more than once`);
+    }
+    seen.add(token.name);
+  }
+  return parsed;
 }
 
 /** `--body '<json>'` or `--body @file.json`: the raw request body, which
@@ -57,6 +74,24 @@ function nums(flag: string, values: string[] | undefined): number[] | undefined 
   return values
     .flatMap((value) => value.split(","))
     .map((value) => num(flag, value.trim()) as number);
+}
+
+/** Ids are digits only: `Number` would also read "0x10" as 16 or "1e3" as
+ *  1000. */
+function id(flag: string, value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value.trim());
+  if (!/^\d+$/.test(value.trim()) || !Number.isSafeInteger(parsed)) {
+    throw usageError(`--${flag} must be a numeric id, got "${value}"`);
+  }
+  return parsed;
+}
+
+function ids(flag: string, values: string[] | undefined): number[] | undefined {
+  if (!values?.length) return undefined;
+  return values
+    .flatMap((value) => value.split(","))
+    .map((value) => id(flag, value) as number);
 }
 
 function str(value: unknown): string | undefined {
@@ -124,7 +159,7 @@ export function searchBody(
   }
   return merge(base, {
     query: str(values.query),
-    cityCode: num("city-code", str(values["city-code"])),
+    cityCode: id("city-code", str(values["city-code"])),
     near,
     checkIn: str(values["check-in"]),
     checkOut: str(values["check-out"]),
@@ -160,12 +195,22 @@ const STAY_OPTIONS = {
   "child-age": { type: "string", multiple: true },
 } as const;
 
-function stayFields(values: Values, base: Body): Body {
+/** `--adults` and `--child-age` are per room; every room has the same
+ *  occupancy. `defaults` fill in what neither flags nor `--body` set. */
+function stayFields(
+  values: Values,
+  base: Body,
+  defaults: { rooms?: number; adults?: number } = {},
+): Body {
   return {
     checkIn: str(values["check-in"]),
     checkOut: str(values["check-out"]),
-    rooms: num("rooms", str(values.rooms)) ?? (base.rooms === undefined ? 1 : undefined),
-    adults: num("adults", str(values.adults)) ?? (base.adults === undefined ? 2 : undefined),
+    rooms:
+      num("rooms", str(values.rooms)) ??
+      (base.rooms === undefined ? defaults.rooms : undefined),
+    adults:
+      num("adults", str(values.adults)) ??
+      (base.adults === undefined ? defaults.adults : undefined),
     childrenAges: nums("child-age", list(values["child-age"])),
   };
 }
@@ -188,8 +233,8 @@ export function ratesBody(
 ): Body {
   const base = baseBody(values);
   return merge(base, {
-    hotelIds: nums("hotel", list(values.hotel)),
-    ...stayFields(values, base),
+    hotelIds: ids("hotel", list(values.hotel)),
+    ...stayFields(values, base, { rooms: 1, adults: 2 }),
     nationality: str(values.nationality)?.toUpperCase(),
     boardCodes: list(values.board)?.flatMap((code) =>
       code.split(",").map((part) => part.trim().toUpperCase()),
@@ -231,10 +276,12 @@ export function parseGuest(value: string): Body {
   };
 }
 
+/** Unlike `rates`, `book` has no occupancy defaults: a guessed room count
+ *  would book the wrong stay. */
 export function bookBody(values: Values): Body {
   const base = baseBody(values);
-  return merge(base, {
-    hotelId: num("hotel", str(values.hotel)),
+  const body = merge(base, {
+    hotelId: id("hotel", str(values.hotel)),
     roomId: str(values["room-id"]),
     ratePlanCode: str(values["rate-plan"]),
     ...stayFields(values, base),
@@ -244,4 +291,11 @@ export function bookBody(values: Values): Body {
     contactEmail: str(values["contact-email"]),
     specialRequests: str(values["special-requests"]),
   });
+  const missing = ["rooms", "adults"].filter((key) => body[key] === undefined);
+  if (missing.length) {
+    throw usageError(
+      `book needs ${missing.map((key) => `--${key}`).join(" and ")}, the same per-room values used in rates`,
+    );
+  }
+  return body;
 }
