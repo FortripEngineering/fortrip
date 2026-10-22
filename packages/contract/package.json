@@ -13,6 +13,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./guest-name": {
+      "types": "./dist/guest-name.d.ts",
+      "import": "./dist/guest-name.js"
     }
   },
   "files": [
@@ -29,7 +33,7 @@
     "embed-guide": "node --import tsx scripts/embed-guide.ts",
     "build": "pnpm embed-guide && tsup",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm embed-guide && node --import tsx --test test/*.test.ts",
+    "test": "pnpm build && node --import tsx --test test/*.test.ts",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "peerDependencies": {
