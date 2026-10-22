@@ -4,7 +4,7 @@
 
 /**
  * @param {{ name?: string, packages?: { registryType?: string, identifier?: string, version?: string }[] }} server
- * @param {{ name: string, version: string, mcpName?: string }} cli
+ * @param {{ name: string, version: string, mcpName?: string }} cli (the MCP Registry requires `mcpName` on the package it lists)
  * @returns {string[]} one line per problem; empty when the entry matches
  */
 export function registryEntryProblems(server, cli) {
@@ -19,7 +19,7 @@ export function registryEntryProblems(server, cli) {
       `packages[] lists ${cli.name}@${entry.version}, but packages/cli is ${cli.version}`,
     );
   }
-  if (cli.mcpName !== undefined && cli.mcpName !== server.name) {
+  if (cli.mcpName !== server.name) {
     problems.push(
       `packages/cli mcpName is ${cli.mcpName}, but the registry entry is named ${server.name}`,
     );

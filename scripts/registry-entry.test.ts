@@ -24,8 +24,10 @@ describe("the MCP Registry entry against packages/cli", () => {
     assert.deepEqual(registryEntryProblems(server(), cli()), []);
   });
 
-  it("passes for a CLI without an mcpName", () => {
-    assert.deepEqual(registryEntryProblems(server(), cli({ mcpName: undefined })), []);
+  it("fails for a CLI without an mcpName (the MCP Registry requires it)", () => {
+    const problems = registryEntryProblems(server(), cli({ mcpName: undefined }));
+    assert.equal(problems.length, 1);
+    assert.match(problems[0] ?? "", /mcpName is undefined/);
   });
 
   it("fails when the listed package version is not the CLI's", () => {
