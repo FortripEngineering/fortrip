@@ -1,6 +1,6 @@
 {
   "name": "fortrip",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "MIT",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "mcpName": "io.github.FortripEngineering/fortrip",

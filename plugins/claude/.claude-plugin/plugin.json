@@ -1,7 +1,7 @@
 {
   "name": "fortrip",
   "displayName": "Fortrip",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Search hotels worldwide, compare live room rates and cancellation terms, and get booking payment links through Fortrip's hosted connector. Requires a Fortrip account.",
   "author": {
     "name": "Fortrip",
