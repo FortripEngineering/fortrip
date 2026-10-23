@@ -2,6 +2,7 @@ import type { z } from "zod";
 
 import { parseOpen } from "../conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
+import { LIMITS } from "../limits.ts";
 import {
   errorEnvelope,
   type ERROR_DETAILS,
@@ -62,7 +63,7 @@ function tooBroad(d: Details<"search_too_broad">): string[] {
   const top = d.localities.items[0];
   if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with radiusMeters prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
+      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with radiusMeters (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
     );
   }
   return lines;

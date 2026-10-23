@@ -193,6 +193,14 @@ describe("search results", () => {
     assert.match(line, /no indicative price/);
   });
 
+  it("says a next page takes the cursor and, optionally, limit", () => {
+    const text = render(load("search-shanghai-area"));
+    assert.ok(
+      text.endsWith('Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.'),
+      text,
+    );
+  });
+
   it("says when nothing matched and what to try", () => {
     const text = render(load("search-empty"));
     assert.match(text, /No hotels on this page/);
@@ -224,6 +232,16 @@ describe("search results", () => {
     assertClean(text);
   });
 
+  it("keeps going on an unknown destination kind, even when the pool is limited", () => {
+    const fixture = copy(load("search-pool-limited")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    data.destination = { kind: "polygon", scope: "radius", radiusMeters: 5000 };
+    const text = render(fixture);
+    assert.match(text.split("\n")[0]!, /^Destination of kind polygon · 8,412 hotels/);
+    assert.ok(text.includes("cheapest within 9.0 km of the center"), text);
+    assertClean(text);
+  });
+
   it("renders a point and a text-only search", () => {
     const fixture = copy(load("search-empty")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
@@ -250,6 +268,12 @@ describe("search results", () => {
     for (const h of data.data) h.price = null;
     const text = render(fixture);
     assert.match(text, /indicative prices unavailable/);
+    const lines = text.split("\n").filter((l) => /^\d+\. /.test(l));
+    assert.equal(lines.length, 4);
+    for (const line of lines) {
+      assert.match(line, /price unavailable this time/);
+      assert.doesNotMatch(line, /no indicative price/);
+    }
     assertClean(text);
   });
 });
@@ -279,7 +303,7 @@ describe("errors that lead to a next call", () => {
     const text = render(load("error-search-too-broad-bali"));
     assert.ok(
       text.includes(
-        "Denpasar, the area's center, alone has 3,911 matching hotels: the same destination with radiusMeters prices nearly the same hotels",
+        "Denpasar, the area's center, alone has 3,911 matching hotels: the same destination with radiusMeters (up to 80000) prices nearly the same hotels",
       ),
       text,
     );
@@ -509,6 +533,20 @@ describe("offers", () => {
   });
 });
 
+describe("meals", () => {
+  it("does not read unnamed main meals that are not stated as room only", () => {
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const offer = (fixture.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers[1]!;
+    offer.hotel.meals = { ...offer.hotel.meals, included: [], unspecifiedMainMeals: null, label: null };
+    let line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
+    assert.doesNotMatch(line, /room only/);
+    assert.match(line, /no meals named; other main meals not stated/);
+    offer.hotel.meals.included = ["breakfast"];
+    line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
+    assert.match(line, /breakfast; other main meals not stated for 2 guests per room/);
+  });
+});
+
 describe("orders and the consent rule", () => {
   it("ends with ORDER_NEXT_STEP when payment.url is set", () => {
     for (const name of ["order-awaiting-payment", "list-orders"] as const) {
@@ -554,6 +592,30 @@ describe("renderToolResult on malformed data", () => {
         assert.doesNotMatch(text, /\[object/);
       }
     }
+  });
+
+  it("keeps the consent rule when a result with a payment.url does not parse", () => {
+    const order = copy(load("order-awaiting-payment")) as ToolFixture;
+    (order.data as Record<string, any>).createdAt = "2026-11-01 09:05";
+    for (const tool of ["book_hotel", "get_order"] as const) {
+      const text = renderToolResult(tool, order.data);
+      assert.match(text, /not in the expected shape/);
+      assert.ok(text.includes("booking-status?session_id="));
+      assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`), tool);
+    }
+    const list = copy(load("list-orders")) as ToolFixture;
+    (list.data.data as Record<string, any>[])[3]!.createdAt = "yesterday";
+    assert.ok(renderToolResult("list_orders", list.data).endsWith(`\n\n${ORDER_NEXT_STEP}`));
+  });
+
+  it("adds no consent rule to a malformed result without a payment.url", () => {
+    const order = copy(load("order-confirmed")) as ToolFixture;
+    (order.data as Record<string, any>).createdAt = "yesterday";
+    assert.ok(!renderToolResult("get_order", order.data).includes(ORDER_NEXT_STEP));
+    const search = copy(load("search-shanghai-area")) as ToolFixture;
+    (search.data as Record<string, any>).sort = 7;
+    (search.data as Record<string, any>).payment = { url: "https://example.com" };
+    assert.ok(!renderToolResult("search_hotels", search.data).includes(ORDER_NEXT_STEP));
   });
 
   it("keeps ids of a malformed result visible", () => {

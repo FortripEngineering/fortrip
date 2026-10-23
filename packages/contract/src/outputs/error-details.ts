@@ -80,8 +80,9 @@ export const ERROR_DETAILS = {
     matched: count,
     poolLimit: count,
     localities,
-    /** The searched area's center, as a search echoes it; null for text only. */
-    center: center.nullable(),
+    /** The searched area's center, as a search echoes it; null for text only.
+     *  Optional for clients; the server must send it (`SERVER_DETAILS`). */
+    center: center.nullable().optional(),
   }),
   stay_unsupported: openUnion("reason", [
     openObject({ reason: z.literal("mixed_occupancy") }),
@@ -108,6 +109,11 @@ export const ERROR_DETAILS = {
 
 type Details = typeof ERROR_DETAILS;
 
+/** Details whose fields the server must send although clients may miss them. */
+const SERVER_DETAILS: Partial<Record<ErrorCode, z.ZodType>> = {
+  search_too_broad: ERROR_DETAILS.search_too_broad.extend({ center: center.nullable() }),
+};
+
 /** The error body of a known code; `details` typed by the code. */
 export type ErrorBody<C extends ErrorCode> = {
   code: C;
@@ -128,7 +134,9 @@ function envelopeSchema(detailsRequired: boolean) {
     error: openUnion(
       "code",
       (Object.keys(ERROR_CODES) as ErrorCode[]).map((code) => {
-        const details: z.ZodType | null = ERROR_DETAILS[code];
+        const details: z.ZodType | null = detailsRequired
+          ? (SERVER_DETAILS[code] ?? ERROR_DETAILS[code])
+          : ERROR_DETAILS[code];
         return openObject({
           code: z.literal(code),
           message: z.string(),

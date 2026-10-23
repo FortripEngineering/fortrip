@@ -448,6 +448,8 @@ describe("open where the spec says, strict in server tests", () => {
     const textOnly = { ...details, center: null };
     assert.ok(strict.safeParse(envelope("search_too_broad", textOnly)).success);
     parsesBoth(errorEnvelope, envelope("search_too_broad", textOnly));
+    // A client still reads the localities from a server that sends no center.
+    assert.ok(errorEnvelope.safeParse(envelope("search_too_broad", withoutCenter)).success);
   });
 });
 

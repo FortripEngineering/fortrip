@@ -156,9 +156,11 @@ export function localitiesLines(loc: Localities, areaName: string | null): strin
   return lines;
 }
 
-function priceWords(h: HotelSummary): string {
+function priceWords(h: HotelSummary, status: string | null): string {
   const p = h.price;
-  if (p === null) return "no indicative price";
+  if (p === null) {
+    return status === "ok" ? "no indicative price" : "price unavailable this time";
+  }
   let text = `from ${money(p.fromPerRoomNight)}/room-night (${money(p.fromPerRoomStay)} per room for the stay)`;
   if (p.approx) {
     text += ` ≈ ${money(p.approx.fromPerRoomNight)}/room-night (${money(p.approx.fromPerRoomStay)}), exchange rate of ${p.approx.rateDate}`;
@@ -179,7 +181,7 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
       : h.distanceMeters === null
         ? "distance unknown"
         : km(h.distanceMeters),
-    r.pricing.mode === "none" ? "" : priceWords(h),
+    r.pricing.mode === "none" ? "" : priceWords(h, r.pricing.status),
     h.address.line ? h.address.line.text : "address not listed",
     where,
     h.hotelId,
@@ -203,10 +205,14 @@ export function renderSearch(r: SearchResult): string {
 
   const pool = r.coverage.poolRadiusMeters;
   if (pool !== null) {
-    const d = r.destination as PlaceDestination | PointDestination | null;
+    const d = r.destination;
+    const known =
+      d !== null && (d.kind === "place" || d.kind === "point")
+        ? (d as PlaceDestination | PointDestination)
+        : null;
     const around =
-      d?.center.place?.name ??
-      (d?.kind === "place" ? (d as PlaceDestination).place.name : "the center");
+      known?.center.place?.name ??
+      (known?.kind === "place" ? (known as PlaceDestination).place.name : "the center");
     const priced = r.coverage.priced === null ? "" : ` ${num(r.coverage.priced)}`;
     lines.push(
       `Only the nearest${priced} matches were priced: "cheapest" here means cheapest within ${km(pool)} of ${around}.`,
@@ -230,7 +236,7 @@ export function renderSearch(r: SearchResult): string {
     "",
     r.nextCursor === null
       ? "Last page."
-      : `Next page: call again with { cursor: "${r.nextCursor}" } alone.`,
+      : `Next page: call again with only the cursor and, optionally, limit: { cursor: "${r.nextCursor}" }.`,
   );
   return lines.join("\n");
 }

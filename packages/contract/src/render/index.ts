@@ -34,7 +34,8 @@ export function renderToolResult(tool: RenderedTool, data: unknown): string {
     if (!schema) throw new Error(`no output schema for ${tool}`);
     parsed = parseOpen(schema, data);
   } catch {
-    return `This ${tool} result is not in the expected shape; as JSON:\n${raw(data)}`;
+    const text = `This ${tool} result is not in the expected shape; as JSON:\n${raw(data)}`;
+    return ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? `${text}\n\n${ORDER_NEXT_STEP}` : text;
   }
   switch (tool) {
     case "search_hotels":
@@ -53,6 +54,24 @@ export function renderToolResult(tool: RenderedTool, data: unknown): string {
       return withConsent(renderOrderList(list), list.data);
     }
   }
+}
+
+const ORDER_TOOLS = new Set<RenderedTool>(["book_hotel", "get_order", "list_orders"]);
+
+/** Whether a raw value holds a `payment.url` string anywhere inside it. */
+function holdsPaymentUrl(value: unknown, seen = new Set<unknown>()): boolean {
+  if (typeof value !== "object" || value === null || seen.has(value)) return false;
+  seen.add(value);
+  const payment = (value as { payment?: unknown }).payment;
+  if (
+    typeof payment === "object" &&
+    payment !== null &&
+    typeof (payment as { url?: unknown }).url === "string" &&
+    (payment as { url: string }).url !== ""
+  ) {
+    return true;
+  }
+  return Object.values(value).some((v) => holdsPaymentUrl(v, seen));
 }
 
 function withConsent(text: string, orders: Order[]): string {

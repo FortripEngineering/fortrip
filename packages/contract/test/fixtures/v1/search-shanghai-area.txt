@@ -20,4 +20,4 @@ Notes:
 - indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
 - area_absorbed: Shanghai: the whole municipality, starting from the city center.
 
-Next page: call again with { cursor: "c_shanghai_area_page_2" } alone.
+Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.

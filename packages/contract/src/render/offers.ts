@@ -17,11 +17,13 @@ export function mealsText(m: Meals): string {
   if (m.allInclusive) {
     base = "all inclusive";
   } else {
-    const extra = m.unspecifiedMainMeals ?? 0;
+    // `unspecifiedMainMeals: null` means unstated, never none.
+    const extra = m.unspecifiedMainMeals;
     const parts: string[] = [...m.included];
-    if (extra > 0) parts.push(`${plural(extra, "more main meal")} (not named)`);
-    if (parts.length === 0) return "room only";
-    base = parts.join(" + ");
+    if (extra !== null && extra > 0) parts.push(`${plural(extra, "more main meal")} (not named)`);
+    if (parts.length === 0 && extra === 0) return "room only";
+    base = parts.length > 0 ? parts.join(" + ") : "no meals named";
+    if (extra === null) base += "; other main meals not stated";
   }
   return m.guestsCoveredPerRoom === null
     ? `${base}, guests covered not stated`

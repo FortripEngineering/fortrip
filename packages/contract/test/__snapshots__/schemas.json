@@ -3106,8 +3106,7 @@
                 "required": [
                   "matched",
                   "poolLimit",
-                  "localities",
-                  "center"
+                  "localities"
                 ],
                 "additionalProperties": {}
               },

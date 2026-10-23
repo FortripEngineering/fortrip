@@ -12,4 +12,4 @@ Notes:
 - pool_limited: 8,412 hotels match; the 3,000 nearest were priced, up to 9.0 km from Shanghai. Cheaper hotels farther out are not compared.
 - locality_available: Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of a circle.
 
-Next page: call again with { cursor: "c_shanghai_pool_page_2" } alone.
+Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_pool_page_2" }.

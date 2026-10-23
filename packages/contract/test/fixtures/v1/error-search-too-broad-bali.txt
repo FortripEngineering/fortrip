@@ -12,5 +12,5 @@ Localities: pass one back as destination { kind: "locality", placeId }, never th
 - Nusa Lembongan plc_9400008 140
 40 hotels in this search belong to no locality.
 31 more localities; name one with place_name.
-Or: Denpasar, the area's center, alone has 3,911 matching hotels: the same destination with radiusMeters prices nearly the same hotels (the nearest 3,000 around Denpasar).
+Or: Denpasar, the area's center, alone has 3,911 matching hotels: the same destination with radiusMeters (up to 80000) prices nearly the same hotels (the nearest 3,000 around Denpasar).
 Request id: req_bali_0001
