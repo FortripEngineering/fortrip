@@ -2,13 +2,13 @@ import { z } from "zod";
 
 import { CARD_NUMBER_MESSAGE, containsCardNumber } from "./card-number.ts";
 import { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
+import { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
+import { usdMoney } from "./conventions/money.ts";
+import { localDate } from "./conventions/time.ts";
 import {
-  childrenAges,
   flag,
-  isoDate,
   nonEmpty,
   oneOf,
-  positiveId,
   strictInput,
   text,
   wholeNumber,
@@ -18,35 +18,98 @@ import {
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
-import { BOARD_CODES, CURRENCIES, LIMITS, SEARCH_SORTS } from "./limits.ts";
+import { LIMITS } from "./limits.ts";
+import { AMENITY_CODES, SEARCH_SORTS } from "./vocabulary.ts";
 
 /*
- * What an agent may send. Each schema carries its own error messages (see
- * `fields.ts`) and a description on every field, nested ones included: the
- * descriptions reach MCP clients and the docs through the JSON Schema.
- * Failures that need no supplier call are caught here, so they answer 400
- * rather than looking like a transient outage.
+ * What an agent may send to API v1 (spec §7.1, §8, §9.1, §10.1, §10.5). Every
+ * schema is strict (an unknown key is named, never dropped), carries its own
+ * messages (see `fields.ts`) and describes every leaf: the descriptions reach
+ * MCP clients and the docs through the JSON Schema. Whatever needs no catalogue
+ * or supplier to decide is decided here and answers 400. Offers and orders do
+ * not compare their dates with today: the service does, in the hotel's zone.
  */
 
-/** Longest facility name the search accepts, in characters. */
-const FACILITY_NAME_MAX = 64;
+const locale = oneOf("locale", ["en", "zh"] as const).describe(
+  "Language for names and text in the response: en or zh.",
+);
 
-/** Largest hotel id the lookup takes: 2^31 - 1, a signed 32-bit integer. */
-const MAX_HOTEL_ID = 2_147_483_647;
+const displayCurrency = oneOf("displayCurrency", [
+  "USD",
+  "CNY",
+] as const).describe(
+  "Currency to show prices in, USD or CNY. It never changes what is charged: payment is in USD.",
+);
 
-/** Rooms per hotel a rates call returns when it doesn't say. */
-const DEFAULT_MAX_ROOMS_PER_HOTEL = 10;
+/** An opaque cursor from a previous response. */
+const cursor = nonEmpty("cursor");
 
-const stayDescriptions = {
-  checkIn: "Check-in date, yyyy-MM-dd.",
-  checkOut: `Check-out date, yyyy-MM-dd. Stays are 1 to ${LIMITS.nights} nights.`,
-};
+// ---------------------------------------------------------------------------
+// Stay
 
-/** Prices are shown in this currency; it never changes what is charged. */
-const displayCurrency = oneOf("currency", CURRENCIES)
-  .default("CNY")
+const nightsError = (name: string) =>
+  `${name} must be after the check-in date and at most ${LIMITS.nightsFortrip} nights later`;
+
+export const stay = strictInput({
+  checkIn: localDate.describe(
+    "Check-in date in the hotel's calendar, yyyy-MM-dd.",
+  ),
+  checkOut: localDate.describe(
+    `Check-out date in the hotel's calendar, yyyy-MM-dd. Stays are 1 to ${LIMITS.nightsFortrip} nights.`,
+  ),
+  rooms: z
+    .array(
+      strictInput({
+        adults: wholeNumber("adults", 1, LIMITS.adultsPerRoom).describe(
+          "Adults in this room.",
+        ),
+        childrenAges: z
+          .array(wholeNumber("Each child's age", 0, LIMITS.childAgeMax), {
+            error: `childrenAges must list each child's age (0 to ${LIMITS.childAgeMax}) in this room, at most ${LIMITS.childrenPerRoom}`,
+          })
+          .max(LIMITS.childrenPerRoom, {
+            error: `childrenAges must list each child's age (0 to ${LIMITS.childAgeMax}) in this room, at most ${LIMITS.childrenPerRoom}`,
+          })
+          .describe(
+            "Age of each child in this room, 0 to 17. An empty list means no children.",
+          ),
+      }),
+      { error: `rooms must list 1 to ${LIMITS.rooms} rooms` },
+    )
+    .min(1, { error: `rooms must list 1 to ${LIMITS.rooms} rooms` })
+    .max(LIMITS.rooms, {
+      error: `rooms must list 1 to ${LIMITS.rooms} rooms`,
+    })
+    .describe(
+      `The rooms wanted, 1 to ${LIMITS.rooms}, each with its own party.`,
+    ),
+}).superRefine((value, ctx) => {
+  if (!isIsoDate(value.checkIn) || !isIsoDate(value.checkOut)) return;
+  const nights = countIsoDateDays(value.checkIn, value.checkOut);
+  if (nights < 1 || nights > LIMITS.nightsFortrip) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["checkOut"],
+      message: nightsError("checkOut"),
+    });
+  }
+});
+
+export type Stay = z.infer<typeof stay>;
+
+// ---------------------------------------------------------------------------
+// Destination
+
+const countryCode = z
+  .string({ error: "countryCode must be an ISO 3166-1 alpha-2 code" })
+  .regex(/^[A-Z]{2}$/, {
+    error: "countryCode must be 2 uppercase letters (ISO 3166-1 alpha-2)",
+  });
+
+const radiusMeters = wholeNumber("radiusMeters", 1, LIMITS.radiusMetersMax)
+  .optional()
   .describe(
-    "Currency to show prices in. Prices are converted from the supplier's at Stripe's exchange rate; the response's `fx` says how.",
+    `Search radius around the destination in meters, 1 to ${LIMITS.radiusMetersMax}. Left out, the service picks one.`,
   );
 
 function bounded(name: string, min: number, max: number) {
@@ -54,241 +117,304 @@ function bounded(name: string, min: number, max: number) {
   return z.number({ error }).min(min, { error }).max(max, { error });
 }
 
-const queryError = `query must be text of 1 to ${LIMITS.queryLength} characters`;
-const facilitiesError = `facilities must list 1 to ${LIMITS.facilities} catalogue facility names (1 to ${FACILITY_NAME_MAX} characters each)`;
-const radiusError = `near.radiusKm must be more than 0, at most ${LIMITS.nearRadiusKm}`;
+const KINDS = ["place_name", "place", "point", "country", "locality"] as const;
 
-/** `POST /api/agent/v1/hotels/search` and the MCP `search_hotels` arguments. */
-export const searchHotelsInput = strictInput({
-  query: z
-    .string({ error: queryError })
-    .trim()
-    .min(1, { error: queryError })
-    .max(LIMITS.queryLength, { error: queryError })
-    .optional()
-    .describe(
-      "Hotel name, brand or city to search for. Provide at least one of `query`, `cityCode` or `near`.",
-    ),
-  cityCode: positiveId("cityCode")
-    .optional()
-    .describe("Catalogue city code, as returned in `hotels[].cityCode`."),
-  near: strictInput({
-    lat: bounded("near.lat", -90, 90).describe("Latitude."),
-    lng: bounded("near.lng", -180, 180).describe("Longitude."),
-    radiusKm: z
-      .number({ error: radiusError })
-      .positive({ error: radiusError })
-      .max(LIMITS.nearRadiusKm, { error: radiusError })
-      .describe("Radius in kilometres."),
-  })
-    .optional()
-    .describe("Search around a point."),
-  starMin: bounded("starMin", 0, 5)
-    .optional()
-    .describe("Lowest star rating to include."),
-  starMax: bounded("starMax", 0, 5)
-    .optional()
-    .describe("Highest star rating to include."),
-  facilities: z
-    .array(
-      z
-        .string({ error: facilitiesError })
-        .trim()
-        .min(1, { error: facilitiesError })
-        .max(FACILITY_NAME_MAX, { error: facilitiesError }),
-      { error: facilitiesError },
-    )
-    .min(1, { error: facilitiesError })
-    .max(LIMITS.facilities, { error: facilitiesError })
-    .transform((names) => [...new Set(names)])
-    .optional()
-    .describe(
-      "Facilities every hotel must have. Names must match the catalogue exactly (case-insensitive), e.g. `Swimming pool`, `Parking`.",
-    ),
-  checkIn: isoDate("checkIn").describe(stayDescriptions.checkIn),
-  checkOut: isoDate("checkOut").describe(stayDescriptions.checkOut),
-  currency: displayCurrency,
-  priceMin: z
-    .number({ error: "priceMin must be a number, 0 or more" })
-    .nonnegative({ error: "priceMin must be a number, 0 or more" })
-    .optional()
-    .describe(
-      "Lowest average nightly price, in `currency`. Applied to indicative prices.",
-    ),
-  priceMax: z
-    .number({ error: "priceMax must be a number above 0" })
-    .positive({ error: "priceMax must be a number above 0" })
-    .optional()
-    .describe("Highest average nightly price, in `currency`."),
-  sortBy: oneOf("sortBy", SEARCH_SORTS)
-    .default("recommended")
-    .describe(
-      "Result order. `recommended` sorts by distance with `near`, by relevance with `query`, otherwise by catalogue weight. `distance` requires `near`.",
-    ),
-  page: wholeNumber("page", 1, LIMITS.page).default(1).describe("Page number."),
-  pageSize: wholeNumber("pageSize", 1, LIMITS.pageSize)
-    .default(20)
-    .describe("Hotels per page."),
-}).superRefine((input, ctx) => {
-  if (!input.query && input.cityCode === undefined && !input.near) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["query"],
-      message: "Provide query, cityCode or near",
-    });
-  }
-  if (input.sortBy === "distance" && !input.near) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["sortBy"],
-      message: "distance sort requires near",
-    });
-  }
-  if (
-    input.starMin !== undefined &&
-    input.starMax !== undefined &&
-    input.starMin > input.starMax
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["starMax"],
-      message: "starMax must be >= starMin",
-    });
-  }
-  if (
-    input.priceMin !== undefined &&
-    input.priceMax !== undefined &&
-    input.priceMin > input.priceMax
-  ) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["priceMax"],
-      message: "priceMax must be >= priceMin",
-    });
-  }
-  if (!isIsoDate(input.checkIn) || !isIsoDate(input.checkOut)) return;
-  // The supplier prices past dates; a UTC-yesterday floor still admits
-  // travellers whose local date is ahead of UTC.
-  const earliest = addIsoDateDays(new Date().toISOString().slice(0, 10), -1);
-  if (input.checkIn < earliest) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkIn"],
-      message: "checkIn must not be in the past",
-    });
-  }
-  const nights = countIsoDateDays(input.checkIn, input.checkOut);
-  if (nights < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: "checkOut must be after checkIn",
-    });
-  } else if (nights > LIMITS.nights) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: `search supports at most ${LIMITS.nights} nights`,
-    });
-  }
-});
-
-const hotelIdError = "hotelId must be a positive whole number";
-
-/**
- * `GET /api/agent/v1/hotels/{id}` and the MCP `get_hotel` arguments. Not
- * strict: it has always dropped a key it doesn't know. `hotelId` is coerced,
- * so the numeric string a URL path gives parses as the number.
- */
-export const getHotelInput = z.object(
+export const destination = z.discriminatedUnion(
+  "kind",
+  [
+    strictInput({
+      kind: z
+        .literal("place_name", { error: "kind must be place_name" })
+        .describe("A place named in words, with its country."),
+      name: text("name", 1, LIMITS.textLength).describe(
+        "The place name, in any language, e.g. Tokyo or 东京.",
+      ),
+      countryCode: countryCode.describe(
+        "ISO 3166-1 alpha-2 country the place is in, e.g. JP.",
+      ),
+      radiusMeters,
+    }),
+    strictInput({
+      kind: z
+        .literal("place", { error: "kind must be place" })
+        .describe("A place id from an earlier response."),
+      placeId: placeId.describe("placeId from an earlier response."),
+      radiusMeters,
+    }),
+    strictInput({
+      kind: z
+        .literal("point", { error: "kind must be point" })
+        .describe("A point on the map."),
+      location: strictInput({
+        lat: bounded("lat", -90, 90).describe("Latitude, WGS84."),
+        lng: bounded("lng", -180, 180).describe("Longitude, WGS84."),
+      }).describe("The point, WGS84."),
+      radiusMeters,
+    }),
+    strictInput({
+      kind: z
+        .literal("country", { error: "kind must be country" })
+        .describe("A whole country."),
+      countryCode: countryCode.describe("ISO 3166-1 alpha-2 country, e.g. JP."),
+    }),
+    strictInput({
+      kind: z
+        .literal("locality", { error: "kind must be locality" })
+        .describe("A locality (hub) listed in an earlier search response."),
+      placeId: placeId.describe("placeId of the locality."),
+      radiusMeters,
+    }),
+  ],
   {
-    hotelId: z.coerce
-      .number({ error: hotelIdError })
-      .int({ error: hotelIdError })
-      .positive({ error: hotelIdError })
-      .max(MAX_HOTEL_ID, { error: hotelIdError })
-      .describe("hotelId from search_hotels"),
-    includeRooms: flag("includeRooms")
-      .optional()
-      .describe("Also return the catalogue room list (adds a few KB)"),
+    error: `destination.kind must be one of: ${KINDS.join(", ")}`,
   },
-  { error: "Expected a JSON object" },
 );
 
-const hotelIdsError = `hotelIds must list 1 to ${LIMITS.ratesHotels} hotelIds`;
-const boardCodesError = `boardCodes must list meal codes from: ${BOARD_CODES.join(", ")}`;
+export type Destination = z.infer<typeof destination>;
 
-/** `POST /api/agent/v1/hotels/rates` and the MCP `get_hotel_rates` arguments. */
-export const getRatesInput = strictInput({
-  hotelIds: z
-    .array(positiveId("Each hotelId"), { error: hotelIdsError })
-    .min(1, { error: hotelIdsError })
-    .max(LIMITS.ratesHotels, { error: hotelIdsError })
-    .describe("Hotels to price. Each call takes about 15 seconds."),
-  checkIn: isoDate("checkIn").describe(stayDescriptions.checkIn),
-  checkOut: isoDate("checkOut").describe(stayDescriptions.checkOut),
-  rooms: wholeNumber("rooms", 1, LIMITS.rooms).describe(
-    "Number of rooms; every room has the same occupancy",
-  ),
-  adults: wholeNumber("adults (per room)", 1, LIMITS.adultsPerRoom).describe(
-    "Adults per room, not in total (2 rooms for 4 adults = rooms 2, adults 2)",
-  ),
-  childrenAges: childrenAges(LIMITS.childrenPerRoom)
-    .optional()
-    .describe("Age of each child in one room (0-17), per room"),
-  nationality: z
-    .string({ error: "nationality must be a 2-letter ISO 3166-1 code" })
-    .regex(/^[A-Z]{2}$/, {
-      error: "nationality must be a 2-letter ISO 3166-1 code, upper case",
+// ---------------------------------------------------------------------------
+// Search
+
+const textQuery = z
+  .string({
+    error: `text must be text of 1 to ${LIMITS.textLength} characters`,
+  })
+  .trim()
+  .min(1, {
+    error: `text must be text of 1 to ${LIMITS.textLength} characters`,
+  })
+  .max(LIMITS.textLength, {
+    error: `text must be text of 1 to ${LIMITS.textLength} characters`,
+  });
+
+const starsError = "must be from 1 to 5 in steps of 0.5";
+
+function starBound(name: string) {
+  return z
+    .number({ error: `${name} ${starsError}` })
+    .min(1, { error: `${name} ${starsError}` })
+    .max(5, { error: `${name} ${starsError}` })
+    .refine((value) => Number.isInteger(value * 2), {
+      error: `${name} ${starsError}`,
+    });
+}
+
+const amenitiesError = `amenities must list 1 to ${LIMITS.amenityFilters} codes from: ${AMENITY_CODES.join(", ")}`;
+
+const searchFilters = strictInput({
+  stars: strictInput({
+    min: starBound("stars.min")
+      .optional()
+      .describe("Lowest star rating, 1 to 5 in steps of 0.5."),
+    max: starBound("stars.max")
+      .optional()
+      .describe("Highest star rating, 1 to 5 in steps of 0.5."),
+  })
+    .superRefine((value, ctx) => {
+      if (
+        value.min !== undefined &&
+        value.max !== undefined &&
+        value.min > value.max
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["max"],
+          message: "stars.max must be at least stars.min",
+        });
+      }
     })
     .optional()
     .describe(
-      "Guest nationality, ISO 3166-1 alpha-2 in upper case, e.g. `CN`. Some rates are restricted by nationality; booking doesn't send it, so such a rate may change or be refused at booking",
+      "Star rating range. Unrated hotels are left out whenever it is set.",
     ),
-  currency: displayCurrency,
-  // One hotel can return thousands of rate plans; these keep a response
-  // small enough for an agent's context.
-  bookableOnly: flag("bookableOnly")
-    .default(true)
-    .describe("Keep only rates that are bookable on every night."),
-  boardCodes: z
-    .array(oneOf("Each boardCode", BOARD_CODES), { error: boardCodesError })
-    .min(1, { error: boardCodesError })
+  amenities: z
+    .array(oneOf("Each amenity", AMENITY_CODES), { error: amenitiesError })
+    .min(1, { error: amenitiesError })
+    .max(LIMITS.amenityFilters, { error: amenitiesError })
     .optional()
     .describe(
-      "Keep only these meal plans: `RO` room only, `BB` breakfast, `HB` half board, `FB` full board, `AI` all inclusive, and so on.",
+      "Amenities every hotel must list. Only some codes can filter; asking for one that cannot is answered with the list that can.",
     ),
-  freeCancellation: flag("freeCancellation")
+  price: strictInput({
+    maxPerRoomNight: usdMoney.describe(
+      "Highest price per room per night, in USD.",
+    ),
+  })
     .optional()
-    .describe(
-      "Keep only rates that can still be cancelled free of charge right now.",
-    ),
-  maxRoomsPerHotel: wholeNumber("maxRoomsPerHotel", 1, LIMITS.maxRoomsPerHotel)
-    .default(DEFAULT_MAX_ROOMS_PER_HOTEL)
-    .describe(
-      "Return the N cheapest rooms per hotel. The MCP tool defaults to 5, the CLI to 10.",
-    ),
-}).superRefine((input, ctx) => {
-  if (!isIsoDate(input.checkIn) || !isIsoDate(input.checkOut)) return;
-  const nights = countIsoDateDays(input.checkIn, input.checkOut);
-  if (nights < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: "checkOut must be after checkIn",
-    });
-  } else if (nights > LIMITS.nights) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: `rates support at most ${LIMITS.nights} nights`,
-    });
-  }
+    .describe("Price limit. Needs indicative pricing, so a stay."),
+})
+  .optional()
+  .describe("Filters every hotel in the answer must pass.");
+
+/** A next page carries these and nothing else. */
+const NEXT_PAGE_KEYS = new Set(["cursor", "limit"]);
+
+/**
+ * The search request, with the clock that decides "not before today at UTC-12"
+ * (C5: the earliest calendar date on Earth) injectable for tests.
+ */
+export function createSearchHotelsInput(now: () => number = Date.now) {
+  return strictInput({
+    destination: destination
+      .optional()
+      .describe("Where to search. A first page needs this or `text`."),
+    text: textQuery
+      .optional()
+      .describe(
+        `Hotel name, brand or area to match, 1 to ${LIMITS.textLength} characters. A first page needs this or \`destination\`.`,
+      ),
+    stay: stay
+      .optional()
+      .describe(
+        "Dates and party. Needed for indicative prices. Search uses only the dates when the rooms differ.",
+      ),
+    pricing: oneOf("pricing", ["indicative", "none"] as const)
+      .optional()
+      .describe(
+        "`indicative` adds an approximate price per hotel and needs a stay; `none` skips prices. Default: indicative with a stay, otherwise none.",
+      ),
+    filters: searchFilters,
+    sort: oneOf("sort", SEARCH_SORTS)
+      .optional()
+      .describe(
+        "Result order. `distance` needs a destination, `relevance` needs `text`, `price_asc` and `price_desc` need indicative pricing. Default: relevance with `text`, otherwise distance.",
+      ),
+    limit: wholeNumber("limit", 1, LIMITS.pageSizeMax)
+      .optional()
+      .describe(
+        `Hotels per page, 1 to ${LIMITS.pageSizeMax}. Default ${LIMITS.pageSizeDefault}.`,
+      ),
+    cursor: cursor
+      .optional()
+      .describe(
+        "`nextCursor` from the previous response. A next page is the cursor and, optionally, `limit`; nothing else.",
+      ),
+    locale: locale.optional(),
+    displayCurrency: displayCurrency.optional(),
+  }).superRefine((input, ctx) => {
+    const issue = (path: (string | number)[], message: string) =>
+      ctx.addIssue({ code: "custom", path, message });
+
+    if (input.cursor !== undefined) {
+      for (const [key, value] of Object.entries(input)) {
+        if (value !== undefined && !NEXT_PAGE_KEYS.has(key)) {
+          issue(
+            [key],
+            `${key} cannot be sent with cursor: a next page is the cursor and limit only`,
+          );
+        }
+      }
+      return;
+    }
+
+    if (input.destination === undefined && input.text === undefined) {
+      issue(["destination"], "Provide a destination or text");
+    }
+    if (input.sort === "distance" && input.destination === undefined) {
+      issue(["sort"], "sort distance needs a destination");
+    }
+    if (input.sort === "relevance" && input.text === undefined) {
+      issue(["sort"], "sort relevance needs text");
+    }
+
+    const indicative =
+      (input.pricing ?? (input.stay ? "indicative" : "none")) === "indicative";
+    if (input.pricing === "indicative" && input.stay === undefined) {
+      issue(["stay"], "pricing indicative needs a stay");
+    }
+    if (!indicative) {
+      const reason =
+        input.pricing === "none" ? 'pricing is "none"' : "there is no stay";
+      if (input.sort === "price_asc" || input.sort === "price_desc") {
+        issue(
+          ["sort"],
+          `${input.sort} needs indicative pricing, but ${reason}`,
+        );
+      }
+      if (input.filters?.price !== undefined) {
+        issue(
+          ["filters", "price"],
+          `filters.price needs indicative pricing, but ${reason}`,
+        );
+      }
+    }
+
+    const checkIn = input.stay?.checkIn;
+    if (checkIn !== undefined && isIsoDate(checkIn)) {
+      // The earliest calendar date on Earth is the date at UTC-12.
+      const earliest = new Date(now() - 12 * 3_600_000)
+        .toISOString()
+        .slice(0, 10);
+      if (checkIn < earliest) {
+        issue(["stay", "checkIn"], "stay.checkIn must not be in the past");
+      }
+    }
+  });
+}
+
+/** `POST /v1/hotels/search` and the MCP `search_hotels` arguments. */
+export const searchHotelsInput = createSearchHotelsInput();
+
+export type SearchHotelsInput = z.input<typeof searchHotelsInput>;
+
+// ---------------------------------------------------------------------------
+// Hotel detail
+
+/** `GET /v1/hotels/{hotelId}` and the MCP `get_hotel` arguments. */
+export const getHotelInput = strictInput({
+  hotelId: hotelId.describe("hotelId from a search response."),
+  include: oneOf("include", ["rooms"] as const)
+    .optional()
+    .describe("`rooms` adds the room list."),
+  locale: locale.optional(),
 });
 
-/** Free text that must not carry a payment card number: payment happens
- *  only on the payment page, so a card typed here would only be stored and
- *  sent to the hotel. `minDigits` is the shortest card looked for. */
+export type GetHotelInput = z.input<typeof getHotelInput>;
+
+// ---------------------------------------------------------------------------
+// Offers
+
+const hotelIdsError = `hotelIds must list 1 to ${LIMITS.offersHotels} distinct hotelIds`;
+
+/** `POST /v1/hotels/offers` and the MCP `get_hotel_offers` arguments. */
+export const hotelOffersInput = strictInput({
+  hotelIds: z
+    .array(hotelId, { error: hotelIdsError })
+    .min(1, { error: hotelIdsError })
+    .max(LIMITS.offersHotels, { error: hotelIdsError })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: hotelIdsError,
+    })
+    .describe(`Hotels to price, 1 to ${LIMITS.offersHotels}, no repeats.`),
+  stay: stay.describe(
+    "Dates and party. One party per call: every room must be the same.",
+  ),
+  filters: strictInput({
+    requireBreakfast: flag("requireBreakfast")
+      .optional()
+      .describe("Keep only offers that include breakfast."),
+    requireFreeCancellation: flag("requireFreeCancellation")
+      .optional()
+      .describe("Keep only offers that can still be cancelled free of charge."),
+  })
+    .optional()
+    .describe("Filters every offer must pass."),
+  limitPerHotel: wholeNumber("limitPerHotel", 1, LIMITS.offersPerHotelMax)
+    .default(LIMITS.offersPerHotelDefault)
+    .describe(
+      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Default ${LIMITS.offersPerHotelDefault}.`,
+    ),
+  locale: locale.optional(),
+  displayCurrency: displayCurrency.optional(),
+});
+
+export type HotelOffersInput = z.input<typeof hotelOffersInput>;
+
+// ---------------------------------------------------------------------------
+// Orders
+
+/** Free text that must not carry a payment card number: payment happens only
+ *  on the payment page. `minDigits` is the shortest card looked for. */
 function cardFreeText(
   name: string,
   min: number,
@@ -302,9 +428,8 @@ function cardFreeText(
   );
 }
 
-/** A guest's first or last name, held to the booking action's own rule
- *  (Latin letters as on the passport, after the same normalising) so a
- *  refusal is a 400 that says why rather than the action's 422. */
+/** A guest's first or last name: Latin letters as on the passport, after the
+ *  same normalizing the order applies. */
 function guestName(name: string) {
   return cardFreeText(name, 1, LIMITS.guestName)
     .refine((value) => normalizeGuestName(value) !== "", {
@@ -319,104 +444,129 @@ function guestName(name: string) {
     );
 }
 
-const guestsError = "guests must list at least one guest per room";
-const roomNoError = `roomNo must be a whole number from 1 to ${LIMITS.rooms}`;
-const contactEmailError = "contactEmail must be an email address";
+/** A contact's first or last name: any script, at most `max` characters once
+ *  normalized, so the joined name fits the order core's limit. */
+function contactName(name: string, max: number) {
+  return z
+    .string({ error: `${name} must be text of 1 to ${max} characters` })
+    .refine((value) => !containsCardNumber(value), {
+      error: CARD_NUMBER_MESSAGE,
+      abort: true,
+    })
+    .refine(
+      (value) => {
+        const length = normalizeGuestName(value).length;
+        return length >= 1 && length <= max;
+      },
+      { error: `${name} must be text of 1 to ${max} characters` },
+    );
+}
 
-/**
- * `POST /api/agent/v1/hotels/bookings` and the MCP `book_hotel`
- * arguments. The booking action validates guest names (Latin letters) and
- * the room assignment again. Occupancy is per room, every room the same.
- * Unknown keys are refused, not dropped: a misspelled `children` would
- * otherwise book the default `childrenAges: []`, a different party.
- */
-export const createBookingInput = strictInput({
-  hotelId: positiveId("hotelId").describe("Hotel id."),
-  roomId: nonEmpty("roomId").describe("roomId from get_hotel_rates"),
-  ratePlanCode: nonEmpty("ratePlanCode").describe(
-    "ratePlanCode from get_hotel_rates",
-  ),
-  checkIn: isoDate("checkIn").describe(stayDescriptions.checkIn),
-  checkOut: isoDate("checkOut").describe(stayDescriptions.checkOut),
-  rooms: wholeNumber("rooms", 1, LIMITS.rooms).describe(
-    "Number of rooms, as in get_hotel_rates; every room has the same occupancy",
-  ),
-  adults: wholeNumber("adults (per room)", 1, LIMITS.adultsPerRoom).describe(
-    "Adults per room, not in total, as in get_hotel_rates (2 rooms for 4 adults = rooms 2, adults 2)",
-  ),
-  childrenAges: childrenAges(LIMITS.childrenPerRoom)
-    .default([])
-    .describe(
-      "Age of each child in one room (0-17), per room, as in get_hotel_rates",
+const emailError = "email must be an email address";
+const guestsError = "guests must list at least one guest per room";
+const maxGuestsPerRoom = LIMITS.adultsPerRoom + LIMITS.childrenPerRoom;
+
+/** `POST /v1/orders` and the MCP `book_hotel` arguments. */
+export const createOrderInput = strictInput({
+  contact: strictInput({
+    firstName: contactName("firstName", LIMITS.contactFirstName).describe(
+      `Contact person's first name, at most ${LIMITS.contactFirstName} characters.`,
     ),
-  guests: z
+    lastName: contactName("lastName", LIMITS.contactLastName).describe(
+      `Contact person's last name, at most ${LIMITS.contactLastName} characters.`,
+    ),
+    email: z
+      .string({ error: emailError })
+      .trim()
+      .pipe(z.email({ error: emailError }))
+      .describe("Contact email; the confirmation is sent here."),
+    // Only cards of 16+ digits: a phone number has at most 15 (E.164).
+    phone: cardFreeText(
+      "phone",
+      LIMITS.contactPhoneMin,
+      LIMITS.contactPhoneMax,
+      16,
+    ).describe("Contact phone number, with country code."),
+  }).describe("Who the hotel and the confirmation reach."),
+  items: z
     .array(
       strictInput({
-        firstName: guestName("firstName").describe("First name."),
-        lastName: guestName("lastName").describe("Last name."),
-        // A numeric string ("1") booked before; the action takes either.
-        roomNo: z.coerce
-          .number({ error: roomNoError })
-          .int({ error: roomNoError })
-          .min(1, { error: roomNoError })
-          .max(LIMITS.rooms, { error: roomNoError })
-          .describe("Room the guest stays in, starting at 1."),
+        offerId: offerId.describe("offerId from an offers response."),
+        hotel: strictInput({
+          rooms: z
+            .array(
+              strictInput({
+                guests: z
+                  .array(
+                    strictInput({
+                      firstName: guestName("firstName").describe(
+                        "Guest's first name, in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
+                      ),
+                      lastName: guestName("lastName").describe(
+                        "Guest's last name, in Latin letters as on the passport.",
+                      ),
+                    }),
+                    { error: guestsError },
+                  )
+                  .min(1, { error: guestsError })
+                  .max(maxGuestsPerRoom, {
+                    error: `guests must list at most ${maxGuestsPerRoom} guests per room`,
+                  })
+                  .describe(
+                    "Guests staying in this room: at least one, no more than the room sleeps.",
+                  ),
+              }),
+              { error: `rooms must list 1 to ${LIMITS.rooms} rooms` },
+            )
+            .min(1, { error: `rooms must list 1 to ${LIMITS.rooms} rooms` })
+            .max(LIMITS.rooms, {
+              error: `rooms must list 1 to ${LIMITS.rooms} rooms`,
+            })
+            .describe("One entry per room of the offer, in order."),
+          specialRequests: cardFreeText(
+            "specialRequests",
+            0,
+            LIMITS.specialRequests,
+          )
+            .optional()
+            .describe("Requests for the hotel, in English. Not guaranteed."),
+        }).describe("What the hotel needs to know."),
       }),
-      { error: guestsError },
+      { error: "items must list exactly one offer" },
     )
-    .min(1, { error: guestsError })
-    .describe(
-      "At least one guest per room, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
-    ),
-  contactName: cardFreeText("contactName", 1, LIMITS.contactName).describe(
-    "Contact person for the booking.",
-  ),
-  // Only cards of 16+ digits: a phone number has at most 15 (E.164), so
-  // its digits aren't mistaken for a card.
-  contactPhone: cardFreeText(
-    "contactPhone",
-    LIMITS.contactPhoneMin,
-    LIMITS.contactPhoneMax,
-    16,
-  ).describe("Contact phone number."),
-  // Blank means none, as it did before: the booking sends no email then.
-  contactEmail: z
-    .string({ error: contactEmailError })
-    .trim()
-    .refine((value) => value === "" || z.email().safeParse(value).success, {
-      error: contactEmailError,
-    })
-    .optional()
-    .describe("Contact email."),
-  specialRequests: cardFreeText("specialRequests", 0, LIMITS.specialRequests)
-    .optional()
-    .describe("Requests for the hotel, in English. Not guaranteed."),
-}).superRefine((input, ctx) => {
-  // Here, not at the supplier client: a reversed or same-day stay would
-  // otherwise spend a rate-limit token and read "at most 15 nights".
-  if (!isIsoDate(input.checkIn) || !isIsoDate(input.checkOut)) return;
-  const nights = countIsoDateDays(input.checkIn, input.checkOut);
-  if (nights < 1) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: "checkOut must be after checkIn",
-    });
-  } else if (nights > LIMITS.nights) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["checkOut"],
-      message: `A booking covers at most ${LIMITS.nights} nights; book a longer stay as separate bookings`,
-    });
-  }
+    .min(1, { error: "items must list exactly one offer" })
+    .max(1, { error: "items must list exactly one offer" })
+    .describe("The offer to book. Exactly one in v1."),
 });
 
-/** What a caller sends (defaults optional), and what a handler gets once parsed. */
-export type SearchHotelsInput = z.input<typeof searchHotelsInput>;
-export type SearchHotelsParsed = z.output<typeof searchHotelsInput>;
-export type GetHotelInput = z.input<typeof getHotelInput>;
-export type GetHotelParsed = z.output<typeof getHotelInput>;
-export type GetRatesInput = z.input<typeof getRatesInput>;
-export type GetRatesParsed = z.output<typeof getRatesInput>;
-export type CreateBookingInput = z.input<typeof createBookingInput>;
-export type CreateBookingParsed = z.output<typeof createBookingInput>;
+export type CreateOrderInput = z.input<typeof createOrderInput>;
+
+/** `GET /v1/orders/{orderId}` and the MCP `get_order` arguments. */
+export const getOrderInput = strictInput({
+  orderId: orderId.describe("orderId from create order or list orders."),
+  locale: locale.optional(),
+});
+
+export type GetOrderInput = z.input<typeof getOrderInput>;
+
+const listLimitError = `limit must be a whole number from 1 to ${LIMITS.pageSizeMax}`;
+
+/** `GET /v1/orders` and the MCP `list_orders` arguments. A query string gives
+ *  `limit` as text, so it is coerced. */
+export const listOrdersInput = strictInput({
+  cursor: cursor
+    .optional()
+    .describe("`nextCursor` from the previous page of orders."),
+  limit: z.coerce
+    .number({ error: listLimitError })
+    .int({ error: listLimitError })
+    .min(1, { error: listLimitError })
+    .max(LIMITS.pageSizeMax, { error: listLimitError })
+    .optional()
+    .describe(
+      `Orders per page, 1 to ${LIMITS.pageSizeMax}. Default ${LIMITS.pageSizeDefault}.`,
+    ),
+  locale: locale.optional(),
+});
+
+export type ListOrdersInput = z.input<typeof listOrdersInput>;

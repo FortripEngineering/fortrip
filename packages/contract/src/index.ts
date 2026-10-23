@@ -8,6 +8,7 @@ export {
   type CommandSpec,
   type FlagSpec,
   type OptionSpec,
+  type PositionalSpec,
 } from "./commands.ts";
 export { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
 export { formatMoney, money, usdMoney, type Money } from "./conventions/money.ts";
@@ -40,45 +41,115 @@ export {
 } from "./guest-name.ts";
 export { renderGuide, type GuideSurface, type GuideTopic } from "./guide.ts";
 export {
-  createBookingInput,
+  createOrderInput,
+  createSearchHotelsInput,
+  destination,
   getHotelInput,
-  getRatesInput,
+  getOrderInput,
+  hotelOffersInput,
+  listOrdersInput,
   searchHotelsInput,
-  type CreateBookingInput,
-  type CreateBookingParsed,
+  stay,
+  type CreateOrderInput,
+  type Destination,
   type GetHotelInput,
-  type GetHotelParsed,
-  type GetRatesInput,
-  type GetRatesParsed,
+  type GetOrderInput,
+  type HotelOffersInput,
+  type ListOrdersInput,
   type SearchHotelsInput,
-  type SearchHotelsParsed,
+  type Stay,
 } from "./inputs.ts";
-export {
-  BOARD_CODES,
-  CURRENCIES,
-  DISPLAY_CURRENCIES,
-  LIMITS,
-  LIMITS_V1,
-  SEARCH_SORTS,
-  SUPPORT_EMAIL,
-} from "./limits.ts";
+export { DISPLAY_CURRENCIES, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
 export {
   authConfig,
-  bookingResult,
   meResult,
   type AuthConfig,
-  type BookingResult,
   type MeResult,
-} from "./outputs.ts";
-export { API, API_V1, MCP_PATH, PUBLIC_ORIGINS } from "./paths.ts";
-export { ERROR_CODES, type ErrorCode } from "./errors.ts";
-export { ERROR_REASONS, type ErrorReason } from "./reasons.ts";
+} from "./outputs/account.ts";
 export {
-  BOOKING_NEXT_STEP,
-  MCP_BOOKING_RESULT,
-  MCP_RATES_INPUT,
+  latLng,
+  localizedText,
+  knownLocaleText,
+  names,
+  stayEcho,
+} from "./outputs/common.ts";
+export {
+  ERROR_DETAILS,
+  errorEnvelope,
+  strictErrorEnvelope,
+  type ErrorBody,
+  type ErrorEnvelope,
+  type KnownErrorBody,
+} from "./outputs/error-details.ts";
+export {
+  hotel,
+  POLICY_TOPICS,
+  roomFacts,
+  type Hotel,
+  type PolicyTopic,
+} from "./outputs/hotel.ts";
+export {
+  cancellation,
+  confirmation,
+  hotelOffersResult,
+  meals,
+  offer,
+  omitted,
+  payAtProperty,
+  UNAVAILABLE_REASONS,
+  type HotelOffersResult,
+  type Offer,
+  type Omitted,
+} from "./outputs/offer.ts";
+export {
+  offerChange,
+  order,
+  orderList,
+  orderReference,
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  type OfferChange,
+  type Order,
+  type OrderList,
+  type OrderStatus,
+  type PaymentStatus,
+} from "./outputs/order.ts";
+export {
+  center,
+  CENTER_BASES,
+  place,
+  PLACE_KINDS,
+  placeRef,
+  type Center,
+  type Place,
+  type PlaceRef,
+} from "./outputs/place.ts";
+export {
+  hotelSummary,
+  indicativePrice,
+  localities,
+  SEARCH_NOTE_CODES,
+  searchResult,
+  type HotelSummary,
+  type IndicativePrice,
+  type SearchNoteCode,
+  type SearchResult,
+} from "./outputs/search.ts";
+export { API, MCP_PATH, PUBLIC_ORIGINS } from "./paths.ts";
+export { ERROR_CODES, type ErrorCode } from "./errors.ts";
+export {
+  MCP_OUTPUT,
+  ORDER_NEXT_STEP,
   TOOLS,
   type ToolName,
   type ToolSpec,
 } from "./tools.ts";
+export {
+  AMENITY_CODES,
+  FILTERABLE_AMENITIES,
+  SEARCH_SORTS,
+  type AmenityCode,
+  type FilterableAmenity,
+} from "./vocabulary.ts";
+export { UNKNOWN_IS_NOT_NO_EXEMPTIONS } from "./conventions/unknown-is-not-no.ts";
 export { CONTRACT_VERSION } from "./version.ts";

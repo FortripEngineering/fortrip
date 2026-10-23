@@ -9,7 +9,7 @@ import {
   jsonSchemaOf,
   PUBLISHED_SCHEMAS,
   type JsonSchema,
-} from "./output-schemas-v1.ts";
+} from "./output-schemas.ts";
 
 /*
  * Spec §6, "Unknown is not no": every array or boolean in a response is
@@ -29,10 +29,16 @@ import {
 
 /** Where each §6 exemption applies. Empty: the field never needs one. */
 const EXEMPT_PATHS: Record<string, readonly string[]> = {
-  data: ["searchResult.data", "orderList.data"],
+  data: ["searchResult.data", "orderList.data", "MCP_OUTPUT.list_orders.data"],
   notes: ["searchResult.notes"],
   offers: ["hotelOffersResult.hotels.offers"],
-  items: ["order.items", "orderList.data.items"],
+  items: [
+    "order.items",
+    "orderList.data.items",
+    "MCP_OUTPUT.book_hotel.items",
+    "MCP_OUTPUT.get_order.items",
+    "MCP_OUTPUT.list_orders.data.items",
+  ],
   issues: ["errorEnvelope.error.details.issues"],
   changes: ["errorEnvelope.error.details.changes"],
   hotels: ["hotelOffersResult.hotels"],
@@ -52,12 +58,18 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "hotelOffersResult.stay.rooms",
     "order.items.hotel.rooms",
     "orderList.data.items.hotel.rooms",
+    "MCP_OUTPUT.book_hotel.items.hotel.rooms",
+    "MCP_OUTPUT.get_order.items.hotel.rooms",
+    "MCP_OUTPUT.list_orders.data.items.hotel.rooms",
   ],
   childrenAges: [
     "searchResult.stay.rooms.childrenAges",
     "hotelOffersResult.stay.rooms.childrenAges",
     "order.items.hotel.rooms.childrenAges",
     "orderList.data.items.hotel.rooms.childrenAges",
+    "MCP_OUTPUT.book_hotel.items.hotel.rooms.childrenAges",
+    "MCP_OUTPUT.get_order.items.hotel.rooms.childrenAges",
+    "MCP_OUTPUT.list_orders.data.items.hotel.rooms.childrenAges",
   ],
   retryable: ["errorEnvelope.error.retryable"],
   mandatory: [
@@ -67,15 +79,24 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "errorEnvelope.error.details.offer.price.payAtProperty.items.mandatory",
     "errorEnvelope.error.details.changes.previous.items.mandatory",
     "errorEnvelope.error.details.changes.current.items.mandatory",
+    "MCP_OUTPUT.book_hotel.items.hotel.payAtProperty.items.mandatory",
+    "MCP_OUTPUT.get_order.items.hotel.payAtProperty.items.mandatory",
+    "MCP_OUTPUT.list_orders.data.items.hotel.payAtProperty.items.mandatory",
   ],
   worse: ["errorEnvelope.error.details.changes.worse"],
   requiresSignIn: [
     "order.payment.requiresSignIn",
     "orderList.data.payment.requiresSignIn",
+    "MCP_OUTPUT.book_hotel.payment.requiresSignIn",
+    "MCP_OUTPUT.get_order.payment.requiresSignIn",
+    "MCP_OUTPUT.list_orders.data.payment.requiresSignIn",
   ],
   localCurrencyAtCheckout: [
     "order.payment.localCurrencyAtCheckout",
     "orderList.data.payment.localCurrencyAtCheckout",
+    "MCP_OUTPUT.book_hotel.payment.localCurrencyAtCheckout",
+    "MCP_OUTPUT.get_order.payment.localCurrencyAtCheckout",
+    "MCP_OUTPUT.list_orders.data.payment.localCurrencyAtCheckout",
   ],
   bookable: ["hotel.bookable"],
   cityLike: [], // nullable wherever it appears

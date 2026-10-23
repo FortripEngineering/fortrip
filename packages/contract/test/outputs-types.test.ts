@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { KnownBranch } from "../src/conventions/open.ts";
-import type { ErrorEnvelope, KnownErrorBody } from "../src/outputs-v1/error-details.ts";
-import type { OfferChange, Order } from "../src/outputs-v1/order.ts";
-import type { SearchResult } from "../src/outputs-v1/search.ts";
+import type { ErrorEnvelope, KnownErrorBody } from "../src/outputs/error-details.ts";
+import type { OfferChange, Order } from "../src/outputs/order.ts";
+import type { SearchResult } from "../src/outputs/search.ts";
 
 /*
  * Type-level checks, enforced by `tsc` (the package's `typecheck`): the types

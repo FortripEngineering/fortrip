@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
-import { API_V1, MCP_PATH, PUBLIC_ORIGINS } from "../src/paths.ts";
+import { API, MCP_PATH, PUBLIC_ORIGINS } from "../src/paths.ts";
 import {
   DISPLAY_CURRENCIES,
-  LIMITS_V1,
+  LIMITS,
   SUPPORT_EMAIL,
 } from "../src/limits.ts";
 
@@ -50,9 +50,9 @@ describe("ERROR_CODES", () => {
   });
 });
 
-describe("LIMITS_V1 and friends", () => {
+describe("LIMITS and friends", () => {
   it("carries the v1 numbers", () => {
-    assert.deepEqual(LIMITS_V1, {
+    assert.deepEqual(LIMITS, {
       rooms: 8,
       adultsPerRoom: 8,
       childrenPerRoom: 4,
@@ -91,32 +91,32 @@ describe("v1 paths", () => {
       mcp: "https://mcp.fortrip.ai",
     });
     assert.equal(MCP_PATH, "/");
-    assert.equal(API_V1.me, "/v1/me");
-    assert.equal(API_V1.authConfig, "/v1/auth/config");
-    assert.equal(API_V1.hotelSearch, "/v1/hotels/search");
-    assert.equal(API_V1.hotelOffers, "/v1/hotels/offers");
-    assert.equal(API_V1.orders, "/v1/orders");
+    assert.equal(API.me, "/v1/me");
+    assert.equal(API.authConfig, "/v1/auth/config");
+    assert.equal(API.hotelSearch, "/v1/hotels/search");
+    assert.equal(API.hotelOffers, "/v1/hotels/offers");
+    assert.equal(API.orders, "/v1/orders");
   });
 
   it("builds a hotel's and an order's path with optional query", () => {
-    assert.equal(API_V1.hotel("htl_x"), "/v1/hotels/htl_x");
+    assert.equal(API.hotel("htl_x"), "/v1/hotels/htl_x");
     assert.equal(
-      API_V1.hotel("htl_x", { rooms: true, locale: "zh" }),
+      API.hotel("htl_x", { rooms: true, locale: "zh" }),
       "/v1/hotels/htl_x?include=rooms&locale=zh",
     );
-    assert.equal(API_V1.hotel("htl_x", { rooms: true }), "/v1/hotels/htl_x?include=rooms");
-    assert.equal(API_V1.hotel("htl_x", { locale: "en" }), "/v1/hotels/htl_x?locale=en");
-    assert.equal(API_V1.order("ord_x"), "/v1/orders/ord_x");
-    assert.equal(API_V1.order("ord_x", { locale: "zh" }), "/v1/orders/ord_x?locale=zh");
+    assert.equal(API.hotel("htl_x", { rooms: true }), "/v1/hotels/htl_x?include=rooms");
+    assert.equal(API.hotel("htl_x", { locale: "en" }), "/v1/hotels/htl_x?locale=en");
+    assert.equal(API.order("ord_x"), "/v1/orders/ord_x");
+    assert.equal(API.order("ord_x", { locale: "zh" }), "/v1/orders/ord_x?locale=zh");
   });
 
   it("never exposes a /api/ path", () => {
     const values = [
       ...Object.values(PUBLIC_ORIGINS),
       MCP_PATH,
-      ...Object.values(API_V1).filter((v) => typeof v === "string"),
-      API_V1.hotel("htl_x", { rooms: true, locale: "zh" }),
-      API_V1.order("ord_x", { locale: "en" }),
+      ...Object.values(API).filter((v) => typeof v === "string"),
+      API.hotel("htl_x", { rooms: true, locale: "zh" }),
+      API.order("ord_x", { locale: "en" }),
     ];
     for (const v of values) assert.ok(!v.includes("/api/"), v);
   });

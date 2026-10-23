@@ -12,7 +12,7 @@ import {
   OUTPUT_SCHEMAS,
   PUBLISHED_SCHEMAS,
   type JsonSchema,
-} from "./output-schemas-v1.ts";
+} from "./output-schemas.ts";
 
 /*
  * Spec §6, Evolution: every published output schema is open. Objects allow

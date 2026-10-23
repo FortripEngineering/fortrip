@@ -10,7 +10,7 @@ import {
 } from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
-import { AMENITY_CODES } from "../inputs-v1.ts";
+import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
 import { ORDER_STATUSES, offerChange, orderReference } from "./order.ts";
 import { place, placeRef } from "./place.ts";

@@ -1,7 +1,7 @@
 {{#if claude-skill cli}}
 ## Workflow
 
-1. **Search** with `{{tool:hotels search}}` for candidate hotels and indicative prices. It needs `{{arg:checkIn}}` and `{{arg:checkOut}}`.
+1. **Search** with `{{tool:hotels search}}` for candidate hotels and indicative prices. It needs `{{arg:stay.checkIn}}` and `{{arg:stay.checkOut}}`.
 {{#if cli}}
 
    ```bash
@@ -18,11 +18,11 @@
    ```
 
 {{/if}}
-3. **Rates** with `{{tool:hotels rates}}` for a few shortlisted hotels, using the dates and occupancy the user will book. It takes about 15 seconds. A hotel is available only once this returns a live option for it.
+3. **Rates** with `{{tool:hotels offers}}` for a few shortlisted hotels, using the dates and occupancy the user will book. It takes about 15 seconds. A hotel is available only once this returns a live option for it.
 {{#if cli}}
 
    ```bash
-   {{tool:hotels rates}} --hotel 266000 --hotel 266001 --check-in 2026-11-10 \
+   {{tool:hotels offers}} --hotel 266000 --hotel 266001 --check-in 2026-11-10 \
      --check-out 2026-11-12 --rooms 1 --adults 2 [--child-age 6] \
      [--nationality CN] [--board BB] [--free-cancellation] [--currency USD]
    ```
@@ -44,9 +44,9 @@
 ## Search
 
 {{/if}}
-- Search prices come from a minimum-price feed, not live rates: quote `{{tool:hotels rates}}` prices, and never call a search result available or bookable.{{#if claude-skill cli}} When you show search prices, say they are indicative minimums, not quotes.{{/if}}
+- Search prices come from a minimum-price feed, not live rates: quote `{{tool:hotels offers}}` prices, and never call a search result available or bookable.{{#if claude-skill cli}} When you show search prices, say they are indicative minimums, not quotes.{{/if}}
 - A search that matches too many hotels fails with `matched` and `maxMatches`: narrow it{{#if claude-skill cli}} (a city, an area, stars or a price range){{/if}}.
 {{#if claude-skill cli}}
-- Use `{{arg:near}}` for "near X"{{#if cli}} (`lat,lng,radiusKm`){{/if}}, and `{{arg:cityCode}}` when you know the city's code.
-- Facility names in `{{arg:facilities}}` must match the catalogue exactly (`Swimming pool`, `Parking`); near-synonyms match nothing.
+- Use `{{arg:destination.location}}` for "near X"{{#if cli}} (`lat,lng,radiusKm`){{/if}}, and `placeId` when you know the city's code.
+- Facility names in `{{arg:filters.amenities}}` must match the catalogue exactly (`Swimming pool`, `Parking`); near-synonyms match nothing.
 {{/if}}

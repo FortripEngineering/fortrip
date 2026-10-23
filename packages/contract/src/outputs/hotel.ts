@@ -4,7 +4,7 @@ import { hotelId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject } from "../conventions/open.ts";
 import { localTime } from "../conventions/time.ts";
-import { AMENITY_CODES } from "../inputs-v1.ts";
+import { AMENITY_CODES } from "../vocabulary.ts";
 import { knownLocaleText, latLng, localizedText, names } from "./common.ts";
 import { hotelSummary } from "./search.ts";
 
