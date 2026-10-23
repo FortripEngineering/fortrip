@@ -99,11 +99,11 @@ describe("the settled rules (design §3.4)", () => {
     }
   }
 
-  it("price units: price.total is the whole stay for all rooms, in USD, and is charged", () => {
+  it("price units: price.total is the whole stay for all rooms, charged in USD for offers and their orders", () => {
     for (const surface of SURFACES) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /`price\.total` is the whole stay for all rooms, in USD, and is what is charged/,
+        /`price\.total` is the whole stay for all rooms and is what is charged, in USD for offers and the orders made from them/,
         surface,
       );
     }
@@ -117,12 +117,28 @@ describe("the settled rules (design §3.4)", () => {
     }
   });
 
-  it("search too broad: pass a locality back by id, never by name", () => {
+  it("search too broad: ask which locality unless one is named, pass it back by id, never by name", () => {
     for (const surface of SURFACES) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /`search_too_broad`[^.]*localities[^.]*never by (its )?name/,
+        /`search_too_broad`[^.]*localities[^.]*ask the user which[^.]*unless[^.]*already name[^.]*never by (its )?name/,
         surface,
+      );
+      assert.match(
+        flat(renderGuide(surface, "planning")),
+        /too broad to price, show its localities and ask the user which they prefer, unless the request already names one of them/,
+        surface,
+      );
+    }
+  });
+
+  it('"4 stars" leaves out 4.5 unless the user means exactly 4, in main and planning', () => {
+    for (const { surface, topic, label } of RENDERINGS) {
+      if (surface === "mcp" && topic === "main") continue;
+      assert.match(
+        flat(renderGuide(surface, topic)),
+        /"4 stars" as [^.]*leaves out 4\.5: unless the user means exactly 4, use [^.]* or ask/,
+        label,
       );
     }
   });
@@ -161,6 +177,8 @@ describe("the settled rules (design §3.4)", () => {
     for (const surface of SURFACES) {
       const text = flat(renderGuide(surface, "main"));
       assert.match(text, /`destination_ambiguous`[^.]*ask the user[^.]*never pick one yourself/, surface);
+      // D9: the API never guesses a country, so neither does the agent.
+      assert.match(text, /`countryCode` \(ask the user if unclear\)|The country is required: ask the user when it isn't clear/, surface);
     }
   });
 
@@ -383,7 +401,7 @@ describe("the full guides", () => {
         /[Tt]ypos return nothing/,
         /distinctive words/,
         // Stars (§7.7).
-        /"4 stars" is [^.]*leaves out 4\.5/,
+        /"4 stars" as [^.]*leaves out 4\.5/,
         // Amenities (§7.7).
         /"not listed" is not "absent"/,
         // Indicative versus offer prices (§7.9).
@@ -399,6 +417,7 @@ describe("the full guides", () => {
         // Purchases the protocol blocks (§10.1).
         /`order_exists`.{0,600}?another party.{0,300}?cancelled.{0,300}?website checkout.{0,300}?failed/,
         /`offer_already_ordered`/,
+        /`order_removed`.{0,120}?get offers again and order the new offer/,
         /`order_in_progress`/,
         /`offer_expired`/,
         /`ordering_paused`/,

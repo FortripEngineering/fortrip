@@ -287,6 +287,7 @@ describe("errors that lead to a next call", () => {
       "Jimbaran plc_9400003 728",
       '{ kind: "locality", placeId: "<id>" }',
       "the same text, filters, stay and sort",
+      "show the user these localities and ask which they prefer, unless their request already names one of them",
       "31 more localities; name one with place_name",
     ]) {
       assert.ok(text.includes(part), `${part}\n---\n${text}`);

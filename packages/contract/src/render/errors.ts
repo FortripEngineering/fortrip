@@ -55,7 +55,7 @@ function changeLine(c: OfferChange): string {
 
 function tooBroad(d: Details<"search_too_broad">): string[] {
   const lines = [
-    'Next: search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.',
+    'Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.',
     ...localitiesLines(d.localities, null),
   ];
   // A locality over the pool is priced from its nearest hotels only; when it

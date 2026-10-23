@@ -5,7 +5,7 @@
 Fortrip: hotel search, live offers and orders with a payment link.{{#if claude-skill cli}} Not for flights, activities, or changing or cancelling an existing order.{{/if}}
 
 {{#if mcp}}
-Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:hotels book}}`; after the user pays, `{{tool:orders get}}`. `{{tool:orders list}}` lists the user's orders. `{{tool:guide}}` returns Fortrip's guidance for flexible dates, budgets, split stays or several destinations.
+Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:hotels book}}`; after the user pays, `{{tool:orders get}}`; `{{tool:orders list}}` lists their orders. `{{tool:guide}}` returns Fortrip's guidance for flexible dates, budgets or several destinations.
 {{/if}}
 {{#if claude-skill}}
 The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip connector added on claude.ai can show under its own name). They're written `fortrip:<tool>` below:

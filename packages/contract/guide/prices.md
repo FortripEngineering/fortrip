@@ -6,7 +6,7 @@
 {{#if mcp}}
 - Search prices are indicative, not bookable: quote `{{tool:hotels offers}}` prices.
 {{/if}}
-- {{#if claude-skill cli}}In an offer or order, {{/if}}`price.total` is the whole stay for all rooms, in USD, and is what is charged.{{#if claude-skill cli}} `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms.{{/if}} Stripe's payment page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing){{#if claude-skill cli}}: say so plainly, and that the USD total is the price{{/if}}. `approx`{{#if claude-skill cli}}, in `{{arg:displayCurrency}}`, with its `rateDate`,{{/if}} is an estimate, never the charge.
+- {{#if claude-skill cli}}In an offer or order, {{/if}}`price.total` is the whole stay for all rooms and is what is charged, in USD for offers and the orders made from them.{{#if claude-skill cli}} `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms.{{/if}} Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing){{#if claude-skill cli}}: say so plainly, and that the USD total is the price{{/if}}. `approx`{{#if claude-skill cli}}, in `{{arg:displayCurrency}}`, with its `rateDate`,{{/if}} is an estimate, never the charge.
 {{#if claude-skill cli}}
 - `{{arg:displayCurrency}}`{{#if cli}} (or `FORTRIP_DISPLAY_CURRENCY`){{/if}} is `USD` or `CNY`: `CNY` adds `approx` in yuan to suit a user who thinks in it. It never changes the charge.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.

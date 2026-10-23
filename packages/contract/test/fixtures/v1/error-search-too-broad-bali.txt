@@ -1,6 +1,6 @@
 Error search_too_broad (HTTP 422): 9,850 hotels match: more than the 3,000 a price sort or price filter can price. Narrow the search to a locality.
 Not retryable.
-Next: search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.
+Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.
 Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").
 - Denpasar plc_9400001 3,911 (incl. Kuta plc_9400011, 1,205 hotels overall; Seminyak plc_9400012, 802 hotels overall; Sanur plc_9400013, 410 hotels overall)
 - Ubud plc_9400002 1,762 (incl. Tegallalang plc_9400021, 88 hotels overall; Mas plc_9400022, 41 hotels overall)

@@ -8,7 +8,7 @@ Keep track of: dates (or the flexible window), nights, destination(s) with their
 
 Offers and orders take one party per call, every room the same, so if the party doesn't split evenly across the rooms, ask how it splits. Rooms for different parties are priced and ordered separately, each order with its own payment link.
 
-Ask only for what changes which hotels qualify or how they rank. "4 stars" is ambiguous: as a filter, minimum and maximum 4 leave out 4.5-star hotels, so ask or search from 4 up. If children come along, ask each child's age; `{{tool:hotels offers}}` needs it. Don't ask for trip type or style: infer it from the conversation or leave it general. When a place name is ambiguous, ask which place the user means.
+Ask only for what changes which hotels qualify or how they rank. "4 stars" as {{#if mcp claude-skill}}`{ min: 4, max: 4 }`{{/if}}{{#if cli}}`--stars-min 4 --stars-max 4`{{/if}} leaves out 4.5: unless the user means exactly 4, use {{#if mcp claude-skill}}`{ min: 4 }`{{/if}}{{#if cli}}`--stars-min 4`{{/if}} or ask. If children come along, ask each child's age; `{{tool:hotels offers}}` needs it. Don't ask for trip type or style: infer it from the conversation or leave it general. When a place name is ambiguous, ask which place the user means.
 
 ## Evidence
 
@@ -31,5 +31,5 @@ For a split stay or several destinations, price each leg with its own `{{tool:ho
 ## Stop and say so
 
 - `{{tool:hotels offers}}` covers up to {{limit:offersHotels}} hotels per call and takes about 15 seconds, and its offers expire after about 30 minutes. If the request needs more hotels or date combinations than a few calls can cover, narrow it with the user, or present the result as a comparison of the hotels you priced, not the best overall.
-- When an area is too broad to price, its localities are the parts of it: ask which the user prefers instead of picking one.
+- When a search is too broad to price, show its localities and ask the user which they prefer, unless the request already names one of them; never pick one yourself.
 - Urgency is not consent. Call `{{tool:hotels book}}` only for the offer the user picked, and give its payment link only after the user confirms the total, currency, stay and terms of the order `{{tool:hotels book}}` returned.

@@ -16,7 +16,7 @@ Sign-in happens only in the browser. Never ask the user to paste a token.
 If none of these tools are available, Fortrip isn't connected: tell the user to add the Fortrip connector or plugin and sign in.
 {{/if}}
 {{#if mcp claude-skill}}
-If a tool says the user isn't signed in, ask them to reconnect Fortrip and sign in again.
+If a tool says the user isn't signed in, ask them to reconnect Fortrip.
 {{/if}}
 {{#if cli}}
 
