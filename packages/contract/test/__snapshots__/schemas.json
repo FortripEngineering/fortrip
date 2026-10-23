@@ -2995,12 +2995,119 @@
                       "more"
                     ],
                     "additionalProperties": {}
+                  },
+                  "center": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "location": {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng"
+                            ],
+                            "additionalProperties": {}
+                          },
+                          "place": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "placeId": {
+                                    "type": "string",
+                                    "pattern": "^plc_\\d{1,12}$"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "names": {
+                                    "type": "object",
+                                    "properties": {
+                                      "en": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "zh": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "en",
+                                      "zh"
+                                    ],
+                                    "additionalProperties": {}
+                                  }
+                                },
+                                "required": [
+                                  "placeId",
+                                  "name",
+                                  "names"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "basis": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "seat",
+                                  "capital",
+                                  "busiest_settlement",
+                                  "hub",
+                                  "point"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "location",
+                          "place",
+                          "basis"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
                   "matched",
                   "poolLimit",
-                  "localities"
+                  "localities",
+                  "center"
                 ],
                 "additionalProperties": {}
               },

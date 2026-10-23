@@ -1,0 +1,73 @@
+{
+  "status": 422,
+  "envelope": {
+    "error": {
+      "code": "search_too_broad",
+      "message": "41,230 hotels match the text: more than the 3,000 a price sort or price filter can price. Add a destination or narrow to a locality.",
+      "retryable": false,
+      "details": {
+        "matched": 41230,
+        "poolLimit": 3000,
+        "localities": {
+          "items": [
+            {
+              "place": {
+                "placeId": "plc_9600001",
+                "name": "Chengdu",
+                "names": {
+                  "en": "Chengdu",
+                  "zh": "成都"
+                }
+              },
+              "count": 3412,
+              "total": 3412,
+              "includes": [
+                {
+                  "place": {
+                    "placeId": "plc_9600011",
+                    "name": "Wenjiang",
+                    "names": {
+                      "en": "Wenjiang",
+                      "zh": "温江"
+                    }
+                  },
+                  "members": 640
+                }
+              ]
+            },
+            {
+              "place": {
+                "placeId": "plc_9600002",
+                "name": "Chongqing",
+                "names": {
+                  "en": "Chongqing",
+                  "zh": "重庆"
+                }
+              },
+              "count": 2980,
+              "total": 2980,
+              "includes": []
+            },
+            {
+              "place": {
+                "placeId": "plc_9600003",
+                "name": "Xi'an",
+                "names": {
+                  "en": "Xi'an",
+                  "zh": "西安"
+                }
+              },
+              "count": 2511,
+              "total": 2511,
+              "includes": []
+            }
+          ],
+          "unassigned": 0,
+          "more": 2204
+        },
+        "center": null
+      },
+      "requestId": "req_text_0001"
+    }
+  }
+}

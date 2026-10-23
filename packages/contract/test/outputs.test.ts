@@ -292,7 +292,12 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
     hub: { placeId: "plc_1151253", name: "Phuket", names: { en: "Phuket", zh: "普吉" } },
     hubTotal: 2752,
   },
-  search_too_broad: { matched: 3044, poolLimit: 3000, localities: searchFixture.coverage.localities },
+  search_too_broad: {
+    matched: 3044,
+    poolLimit: 3000,
+    localities: searchFixture.coverage.localities,
+    center: searchFixture.destination.center,
+  },
   stay_unsupported: { reason: "max_nights", max: 15 },
   stay_in_past: { checkIn: "2026-10-23", timeZone: null },
   offer_unavailable: { offerId: OFF, reason: "sold_out" },
@@ -433,6 +438,16 @@ describe("open where the spec says, strict in server tests", () => {
     }
     assert.ok(errorEnvelope.safeParse(envelope("internal", { x: 1 })).success);
     assert.equal(strict.safeParse(envelope("teapot", undefined)).success, false);
+  });
+
+  it("search_too_broad carries the area's center: required, null for text-only searches", () => {
+    const strict = strictErrorEnvelope();
+    const details = ERROR_FIXTURES.search_too_broad as Record<string, unknown>;
+    const { center: _center, ...withoutCenter } = details;
+    assert.equal(strict.safeParse(envelope("search_too_broad", withoutCenter)).success, false);
+    const textOnly = { ...details, center: null };
+    assert.ok(strict.safeParse(envelope("search_too_broad", textOnly)).success);
+    parsesBoth(errorEnvelope, envelope("search_too_broad", textOnly));
   });
 });
 

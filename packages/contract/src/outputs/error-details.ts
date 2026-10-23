@@ -13,7 +13,7 @@ import { ERROR_CODES, type ErrorCode } from "../errors.ts";
 import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
 import { ORDER_STATUSES, offerChange, orderReference } from "./order.ts";
-import { place, placeRef } from "./place.ts";
+import { center, place, placeRef } from "./place.ts";
 import { localities } from "./search.ts";
 
 /*
@@ -76,7 +76,13 @@ export const ERROR_DETAILS = {
       hubTotal: count.nullable(),
     }),
   ]),
-  search_too_broad: openObject({ matched: count, poolLimit: count, localities }),
+  search_too_broad: openObject({
+    matched: count,
+    poolLimit: count,
+    localities,
+    /** The searched area's center, as a search echoes it; null for text only. */
+    center: center.nullable(),
+  }),
   stay_unsupported: openUnion("reason", [
     openObject({ reason: z.literal("mixed_occupancy") }),
     openObject({ reason: z.literal("max_nights"), max: count }),

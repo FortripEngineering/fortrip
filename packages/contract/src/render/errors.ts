@@ -57,10 +57,12 @@ function tooBroad(d: Details<"search_too_broad">): string[] {
     'Next: search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.',
     ...localitiesLines(d.localities, null),
   ];
+  // A locality over the pool is priced from its nearest hotels only; when it
+  // is the area's center, a radius around the center prices nearly the same.
   const top = d.localities.items[0];
-  if (top && top.total > d.poolLimit) {
+  if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      `${top.place.name} alone has ${num(top.total)} matching hotels, so a locality search on it prices its nearest ${num(d.poolLimit)}. If ${top.place.name} is the searched area's center, the same destination with radiusMeters prices nearly the same hotels.`,
+      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with radiusMeters prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
     );
   }
   return lines;

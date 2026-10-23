@@ -1,0 +1,9 @@
+Error search_too_broad (HTTP 422): 41,230 hotels match the text: more than the 3,000 a price sort or price filter can price. Add a destination or narrow to a locality.
+Not retryable.
+Next: search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.
+Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").
+- Chengdu plc_9600001 3,412 (incl. Wenjiang plc_9600011, 640 hotels overall)
+- Chongqing plc_9600002 2,980
+- Xi'an plc_9600003 2,511
+2,204 more localities; name one with place_name.
+Request id: req_text_0001

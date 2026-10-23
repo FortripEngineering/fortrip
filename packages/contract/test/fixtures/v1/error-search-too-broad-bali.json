@@ -186,6 +186,21 @@
           ],
           "unassigned": 40,
           "more": 31
+        },
+        "center": {
+          "location": {
+            "lat": -8.65,
+            "lng": 115.21667
+          },
+          "place": {
+            "placeId": "plc_9400001",
+            "name": "Denpasar",
+            "names": {
+              "en": "Denpasar",
+              "zh": "登巴萨"
+            }
+          },
+          "basis": "seat"
         }
       },
       "requestId": "req_bali_0001"

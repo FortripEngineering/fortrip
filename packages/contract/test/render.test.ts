@@ -25,6 +25,7 @@ const GOLDENS = [
   "search-pool-limited",
   "search-empty",
   "error-search-too-broad-bali",
+  "error-search-too-broad-text-only",
   "error-destination-ambiguous-suzhou",
   "error-not-a-locality-patong",
   "hotel-long-description",
@@ -268,15 +269,44 @@ describe("errors that lead to a next call", () => {
     }
   });
 
-  it("search_too_broad offers radiusMeters when the top locality is over 3,000", () => {
-    const fixture = load("error-search-too-broad-bali");
-    assert.match(render(fixture), /radiusMeters/);
-    const small = copy(fixture) as ErrorFixture;
-    const items = (small.envelope.error.details as { localities: { items: { count: number; total: number }[] } })
-      .localities.items;
-    items[0]!.count = 2900;
-    items[0]!.total = 2900;
+  type TooBroad = {
+    localities: { items: { count: number; total: number }[] };
+    center: { place: { placeId: string } | null } | null;
+  };
+  const tooBroad = (f: ErrorFixture) => f.envelope.error.details as TooBroad;
+
+  it("search_too_broad offers the same area with radiusMeters when the top locality is its center and over the pool", () => {
+    const text = render(load("error-search-too-broad-bali"));
+    assert.ok(
+      text.includes(
+        "Denpasar, the area's center, alone has 3,911 matching hotels: the same destination with radiusMeters prices nearly the same hotels",
+      ),
+      text,
+    );
+    assert.doesNotMatch(text, /\bIf\b/);
+  });
+
+  it("search_too_broad offers no radiusMeters when the top locality is within the pool", () => {
+    const small = copy(load("error-search-too-broad-bali")) as ErrorFixture;
+    tooBroad(small).localities.items[0]!.count = 3000;
+    tooBroad(small).localities.items[0]!.total = 3000;
     assert.doesNotMatch(render(small), /radiusMeters/);
+  });
+
+  it("search_too_broad offers no radiusMeters when the top locality is not the area's center", () => {
+    const other = copy(load("error-search-too-broad-bali")) as ErrorFixture;
+    tooBroad(other).center!.place!.placeId = "plc_9400002";
+    assert.doesNotMatch(render(other), /radiusMeters/);
+    tooBroad(other).center!.place = null;
+    assert.doesNotMatch(render(other), /radiusMeters/);
+  });
+
+  it("search_too_broad offers no radiusMeters for a text-only search (center null)", () => {
+    const fixture = load("error-search-too-broad-text-only");
+    assert.equal(tooBroad(fixture as ErrorFixture).center, null);
+    const text = render(fixture);
+    assert.ok(text.includes("Chengdu plc_9600001 3,412"), text);
+    assert.doesNotMatch(text, /radiusMeters/);
   });
 
   it("destination_ambiguous lists candidates and the place request", () => {
