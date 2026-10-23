@@ -25,6 +25,13 @@ function globalFlag(name: string): string[] {
 const HELP_FLAGS = globalFlag("help");
 const VERSION_FLAGS = globalFlag("version");
 
+/** 1.x commands that 2.0 renamed, not only moved into a group, and what each
+ *  became. One that kept its name in a group (`search`, now `hotels search`)
+ *  is found without an entry. */
+const RENAMED = new Map<string, Pick<CommandSpec, "group" | "name">>([
+  ["hotel", { group: "hotels", name: "get" }],
+]);
+
 /** The command `argv` names and the arguments after its name, or the group
  *  whose help it asks for. A group's commands are typed after it
  *  (`hotels search`); a command without a group on its own (`login`). */
@@ -52,11 +59,13 @@ function findCommand(
     (candidate) => candidate.group === null && candidate.name === word,
   );
   if (spec) return { spec, rest: afterWord };
-  // A group's command typed without its group: `search` for `hotels search`.
-  const grouped = COMMANDS.filter(
-    (candidate) => candidate.group !== null && candidate.name === word,
-  );
-  const meant = grouped.map((candidate) => `\`${commandInvocation(candidate)}\``);
+  // A group's command typed without its group (`search` for
+  // `hotels search`), or under its 1.x name (`hotel` for `hotels get`).
+  const renamed = RENAMED.get(word ?? "");
+  const meant = [
+    ...COMMANDS.filter((candidate) => candidate.group !== null && candidate.name === word),
+    ...(renamed ? [renamed] : []),
+  ].map((candidate) => `\`${commandInvocation(candidate)}\``);
   throw usageError(
     meant.length
       ? `Unknown command "${word}". Did you mean ${meant.join(" or ")}?`

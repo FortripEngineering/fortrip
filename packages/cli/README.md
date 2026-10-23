@@ -31,6 +31,21 @@ Upgrading from 0.3: 1.0 signs in with OAuth, so a 0.3 sign-in is not reused;
 run `fortrip login` once. A `FORTRIP_TOKEN` from 0.3 is no longer accepted.
 `fortrip mcp` replaces the separate `fortrip-mcp` package.
 
+## Upgrading from 1.x
+
+2.0 puts the hotel commands under `fortrip hotels`, with the same flags and
+arguments:
+
+| 1.x | 2.0 |
+|---|---|
+| `search` | `hotels search` |
+| `hotel <hotelId>` | `hotels get <hotelId>` |
+| `rates` | `hotels rates` |
+| `book` | `hotels book` |
+
+Two MCP tools are renamed: `get_rates` is now `get_hotel_rates` and
+`create_booking` is now `book_hotel`. Sign-in and `fortrip mcp` are unchanged.
+
 ## Sign in
 
 ```bash

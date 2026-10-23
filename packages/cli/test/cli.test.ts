@@ -387,6 +387,18 @@ describe("help", () => {
     assert.equal(code, 2);
   });
 
+  it("--help names the commands FORTRIP_CURRENCY is the default for as they are typed", async () => {
+    const typed = COMMANDS.filter((spec) => spec.flags.some((flag) => flag.field === "currency")).map(
+      (spec) => commandInvocation(spec).replace(/^fortrip /, ""),
+    );
+    assert.deepEqual(typed, ["hotels search", "hotels rates"]);
+    const { stdout } = await cli(["--help"]);
+    assert.match(
+      stdout,
+      new RegExp(`^  FORTRIP_CURRENCY Default --currency for ${typed.join(" and ")}$`, "m"),
+    );
+  });
+
   it("no help names the old paths or per-room defaults", async () => {
     for (const args of [["--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
       const { stdout } = await cli(args);
@@ -397,19 +409,34 @@ describe("help", () => {
 });
 
 describe("commands are typed after their group", () => {
-  it("the 1.0 hotel commands are gone: exit 2, pointing at the group", async () => {
-    for (const name of ["search", "rates", "book"]) {
-      const { code, stdout, stderr } = await cli([name, "--query", "x"]);
-      assert.equal(code, 2, name);
-      assert.equal(stdout, "", name);
-      const { error } = JSON.parse(stderr);
-      assert.match(error, new RegExp(`^Unknown command "${name}"`), name);
-      assert.ok(error.includes(`fortrip hotels ${name}`), error);
+  it("the 1.x hotel commands are gone: exit 2, naming the 2.0 command", async () => {
+    const renamed = {
+      search: "fortrip hotels search",
+      hotel: "fortrip hotels get",
+      rates: "fortrip hotels rates",
+      book: "fortrip hotels book",
+    };
+    const invocations = new Set(COMMANDS.map(commandInvocation));
+    for (const [old, now] of Object.entries(renamed)) {
+      assert.ok(invocations.has(now), now);
+      const { code, stdout, stderr } = await cli([old, "266000"]);
+      assert.equal(code, 2, old);
+      assert.equal(stdout, "", old);
+      assert.equal(JSON.parse(stderr).error, `Unknown command "${old}". Did you mean \`${now}\`?`);
     }
-    const { code, stderr } = await cli(["hotel", "266000"]);
-    assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /^Unknown command "hotel"\. Run `fortrip --help`\.$/);
     assert.equal(requests.length, 0);
+  });
+
+  it("any other unknown command points at the help", async () => {
+    for (const name of ["nope", "hotelz", "constructor", "toString"]) {
+      const { code, stderr } = await cli([name]);
+      assert.equal(code, 2, name);
+      assert.equal(
+        JSON.parse(stderr).error,
+        `Unknown command "${name}". Run \`fortrip --help\`.`,
+        name,
+      );
+    }
   });
 
   it("an unknown command in a group is exit 2, pointing at the group's help", async () => {
