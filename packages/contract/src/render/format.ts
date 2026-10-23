@@ -114,7 +114,7 @@ export function roomFacts(r: RoomFacts): string[] {
     ? r.areaSqm.min === r.areaSqm.max
       ? `${r.areaSqm.min} m²`
       : `${r.areaSqm.min}–${r.areaSqm.max} m²`
-    : "area not listed";
+    : "size not stated";
   return [
     r.beds ? `beds: ${r.beds.text}` : "beds not listed",
     area,

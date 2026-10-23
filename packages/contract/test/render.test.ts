@@ -522,7 +522,6 @@ describe("offers", () => {
   it("writes out unknown meals, cancellation, fees and confirmation", () => {
     const text = render(load("offers-two-hotels-one-unavailable"));
     for (const part of [
-      "meals unknown",
       "cancellation terms unknown",
       "fees at the property not fully disclosed",
       "confirmation mode unknown",
@@ -531,6 +530,55 @@ describe("offers", () => {
     ]) {
       assert.ok(text.includes(part), `${part}\n---\n${text}`);
     }
+  });
+});
+
+describe("unknowns carry their own negation inline", () => {
+  const MEALS_UNKNOWN =
+    "meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking";
+  const offerLines = (text: string) => text.split("\n").filter((l) => /^\d+\. off_/.test(l));
+
+  it("meals.known false on an offer line and on an order item", () => {
+    const offers = render(load("offers-two-hotels-one-unavailable"));
+    const line = offerLines(offers).find((l) => l.includes("off_BundNonRefundable000"))!;
+    assert.ok(line.includes(MEALS_UNKNOWN), line);
+    assert.doesNotMatch(offers, /meals unknown/);
+    const orders = render(load("list-orders"));
+    const terms = orders.split("\n").find((l) => l.startsWith("Terms:") && l.includes("not stated by the supplier"));
+    assert.ok(terms?.includes(MEALS_UNKNOWN), orders);
+  });
+
+  it("a fee's collection: 'at the property' only when stated, never assumed", () => {
+    const text = render(load("offers-two-hotels-one-unavailable"));
+    const line = offerLines(text).find((l) => l.includes("off_BundNonRefundable000"))!;
+    assert.ok(line.includes("City tax CNY 15.00, basis unknown, mandatory, at the property"), line);
+    assert.ok(
+      line.includes(
+        "unnamed fee amount not stated, basis unknown, optional, collection not stated (could be prepaid or at the property)",
+      ),
+      line,
+    );
+    assert.doesNotMatch(line, /pay at the property:/);
+  });
+
+  it("offers cut by limitPerHotel are said to exist", () => {
+    const text = render(load("offers-two-hotels-one-unavailable"));
+    assert.ok(
+      text.includes(
+        "2 more offers not shown (limitPerHotel); a filtered request (requireBreakfast / requireFreeCancellation) or a higher limitPerHotel may show them — don't conclude they don't exist",
+      ),
+      text,
+    );
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    (fixture.data.hotels as { omitted: { byLimit: number } }[])[0]!.omitted.byLimit = 0;
+    assert.doesNotMatch(render(fixture), /limitPerHotel/);
+  });
+
+  it("an offer's room size that is not stated says so", () => {
+    const text = render(load("offers-two-hotels-one-unavailable"));
+    const lines = offerLines(text);
+    assert.match(lines.find((l) => l.includes("off_BundNonRefundable000"))!, /size not stated/);
+    assert.match(lines.find((l) => l.includes("off_BundKingBreakfast000"))!, /35 m²/);
   });
 });
 

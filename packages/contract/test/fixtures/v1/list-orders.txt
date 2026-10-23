@@ -3,7 +3,7 @@ Orders, newest first: 4 on this page.
 Order ord_OtherStore0000000000 · reference FT-R8ZK4C · awaiting payment · created 2026-11-02 10:00 UTC · updated 2026-11-02 10:00 UTC
 Hotel: Canal House Lisbon · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 1 adult · time zone Europe/Lisbon
 Room: Classic Double · beds not listed
-Terms: meals unknown · cancellation terms unknown · fees at the property not fully disclosed
+Terms: meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · cancellation terms unknown · fees at the property not fully disclosed
 Hotel confirmation number: none yet
 Total: EUR 410.00 · payment unpaid · charged in EUR
 Payment link (expires 2026-11-02 10:30 UTC; the user signs in to Fortrip to pay): https://fortrip.ai/stays/book/sb_9f3k2Lx
@@ -30,7 +30,7 @@ Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
 Order ord_LakeConfirmed0000000 · reference FT-H3W9PA · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
 Hotel: Lakeside Garden Resort (湖畔花园度假酒店) · htl_LakesideGarden000000 · 2026-11-20 → 2026-11-23 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
 Room: Deluxe King Room · beds not listed
-Terms: room only · partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · pay at the property: Resort fee CNY 80.00, per night, mandatory
+Terms: room only · partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · fees not in the total: Resort fee CNY 80.00, per night, mandatory, at the property
 Hotel confirmation number: LGR-449120
 Total: USD 366.00 · payment paid · charged in USD (the user's card may pay in its local currency at checkout) · card charged EUR 339.80
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000

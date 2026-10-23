@@ -9,9 +9,17 @@ type PayAtProperty = Offer["price"]["payAtProperty"];
 type Confirmation = Offer["confirmation"];
 type Room = Offer["hotel"]["room"];
 
+/*
+ * Each unknown carries its own negation in place: the v1 output eval found
+ * models turning an unknown into the fact around it ("room only", "paid on
+ * arrival", "no such room") unless the text beside the data says otherwise.
+ */
+const MEALS_UNKNOWN =
+  "meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking";
+
 /** What the rate includes to eat, without the rate's own label. */
 export function mealsText(m: Meals): string {
-  if (!m.known) return "meals unknown";
+  if (!m.known) return MEALS_UNKNOWN;
   if (m.included === null) return "meals not stated";
   let base: string;
   if (m.allInclusive) {
@@ -70,15 +78,15 @@ export function feesText(p: PayAtProperty): string {
       label(BASES, i.basis),
       i.mandatory ? "mandatory" : "optional",
       i.collectedAt === "property"
-        ? ""
+        ? "at the property"
         : i.collectedAt === "unknown"
-          ? "where it is paid unknown"
+          ? "collection not stated (could be prepaid or at the property)"
           : `collected: ${i.collectedAt}`,
     ]
       .filter(Boolean)
       .join(", "),
   );
-  const listed = `pay at the property: ${items.join("; ")}`;
+  const listed = `fees not in the total: ${items.join("; ")}`;
   if (p.disclosure === "complete") {
     return items.length ? listed : "nothing to pay at the property";
   }
@@ -128,8 +136,15 @@ const OMITTED: Record<string, string> = {
   byFilters: "removed by the filters",
   dominated: "beaten by another offer for the same room",
   unreadable: "unreadable",
-  byLimit: "over limitPerHotel",
 };
+
+/** Offers cut by `limitPerHotel` exist: say so where they are missing. */
+function limitText(o: Record<string, unknown>): string {
+  const n = o.byLimit;
+  return typeof n === "number" && n > 0
+    ? `${plural(n, "more offer")} not shown (limitPerHotel); a filtered request (requireBreakfast / requireFreeCancellation) or a higher limitPerHotel may show them — don't conclude they don't exist`
+    : "";
+}
 
 function omittedText(o: Record<string, unknown>): string {
   return Object.entries(OMITTED)
@@ -159,11 +174,15 @@ export function renderOffers(r: HotelOffersResult): string {
     h.offers.forEach((o, i) => lines.push(`${i + 1}. ${offerLine(o)}`));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(`Not shown: ${omitted}.`);
+    const limited = limitText(h.omitted);
+    if (limited) lines.push(`${limited}.`);
   }
   if (r.unavailable.length > 0) {
     lines.push("", "Unavailable:");
     for (const u of r.unavailable) {
-      const omitted = u.omitted ? omittedText(u.omitted) : "";
+      const omitted = u.omitted
+        ? [omittedText(u.omitted), limitText(u.omitted)].filter(Boolean).join("; ")
+        : "";
       lines.push(`- ${u.hotelId}: ${label(UNAVAILABLE, u.reason)}${omitted ? ` (${omitted})` : ""}`);
     }
   }
