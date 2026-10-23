@@ -55,6 +55,9 @@ export interface FakeApi {
     expireAll: boolean;
     /** `/me` and `/api/mcp` answer 401 whatever the token. */
     rejectAll: boolean;
+    /** The protocol version `initialize` answers with, instead of the
+     *  client's. */
+    protocolVersion?: string;
   };
   /** Answers for the next device polls, refreshes, revocations, config and
    *  `/me` requests, before the fake's own logic. */
@@ -167,6 +170,7 @@ export async function startFakeApi(): Promise<FakeApi> {
         rotate: true,
         expireAll: false,
         rejectAll: false,
+        protocolVersion: undefined,
       };
       api.scripts = { poll: [], refresh: [], revoke: [], config: [], me: [], mcp: [] };
       api.hooks = {};
@@ -362,7 +366,7 @@ export async function startFakeApi(): Promise<FakeApi> {
         return json(
           200,
           result({
-            protocolVersion: params.protocolVersion,
+            protocolVersion: api.options.protocolVersion ?? params.protocolVersion,
             capabilities: { tools: {} },
             serverInfo: { name: "fake-fortrip", version: "0.0.0" },
           }),

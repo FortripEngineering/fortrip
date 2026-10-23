@@ -9,7 +9,15 @@ import { PassThrough } from "node:stream";
 import { after, afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { CONTRACT_VERSION, renderGuide, TOOLS } from "@fortrip/agent-contract";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import {
+  InMemoryTransport,
+  type JSONRPCMessage,
+  McpServer,
+  type StandardSchemaWithJSON,
+  type ToolCallback,
+} from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 import { loadSession, saveSession } from "../src/credentials.ts";
@@ -51,6 +59,64 @@ const callTool = (id: number, name = "search_hotels"): Message => ({
   method: "tools/call",
   params: { name, arguments: {} },
 });
+
+/**
+ * The hosted MCP server as its route registers it (`serverInfo`,
+ * `instructions`, then each contract tool with its title, description,
+ * annotations and schemas), with handlers that are never called.
+ */
+function hostedServer(): McpServer {
+  const server = new McpServer(
+    { name: "fortrip", version: CONTRACT_VERSION },
+    { instructions: renderGuide("mcp", "main") },
+  );
+  const handler = () => ({ content: [] });
+  for (const spec of TOOLS) {
+    const config = {
+      title: spec.title,
+      description: spec.description,
+      annotations: spec.annotations,
+      outputSchema: spec.output ?? undefined,
+    };
+    if (spec.input === null) {
+      server.registerTool(spec.name, config, handler);
+    } else {
+      server.registerTool(
+        spec.name,
+        { ...config, inputSchema: spec.input },
+        handler as ToolCallback<StandardSchemaWithJSON>,
+      );
+    }
+  }
+  return server;
+}
+
+/** What a fresh `hostedServer()` answers each of `requests` with, in order. */
+async function hostedAnswers(...requests: Message[]): Promise<Message[]> {
+  const [client, server] = InMemoryTransport.createLinkedPair();
+  const answers: Message[] = [];
+  client.onmessage = (message) => void answers.push(message as Message);
+  await hostedServer().connect(server);
+  for (const request of requests) {
+    const count = answers.length + 1;
+    await client.send(request as JSONRPCMessage);
+    await until(() => (answers.length === count ? true : undefined));
+  }
+  await client.close();
+  return answers;
+}
+
+/** The tools an SDK client lists from a fresh `hostedServer()`, as JSON
+ *  carries them (no keys whose value is `undefined`). */
+async function hostedTools(): Promise<unknown> {
+  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+  await hostedServer().connect(serverSide);
+  const client = new Client({ name: "test-client", version: "0.0.0" });
+  await client.connect(clientSide);
+  const { tools } = await client.listTools();
+  await client.close();
+  return JSON.parse(JSON.stringify(tools));
+}
 
 /** Polls until `read` has a value. */
 async function until<T>(read: () => T | undefined): Promise<T> {
@@ -292,37 +358,24 @@ describe("fortrip mcp bridge", () => {
     assert.equal(reply.error?.data?.loginUrl, loginUrl);
   });
 
-  it("without a session the first request is answered with the sign-in link", async () => {
-    const bridge = startBridge();
-
-    const reply = await bridge.request(initialize());
-
-    const loginUrl = `${apiUrl}/device?user_code=CODE-1`;
-    assert.equal(reply.error?.code, -32001);
-    assert.match(reply.error?.message ?? "", /npx -y fortrip login/);
-    assert.ok(reply.error?.message.includes(loginUrl));
-    assert.equal(reply.error?.data?.loginUrl, loginUrl);
-    assert.equal(reply.error?.data?.userCode, "CODE-1");
-    assert.deepEqual(api.mcpRequests, []);
-
-    // Once the user approves the link, the next request signs in by itself.
-    api.approve(loginUrl);
-    assert.ok((await bridge.request(initialize(2))).result);
-  });
-
-  it("a FORTRIP_TOKEN the server turns down is named, and never refreshed", async () => {
+  it("a FORTRIP_TOKEN the server turns down is named at the first tool call, and never refreshed", async () => {
     process.env.FORTRIP_TOKEN = "not-a-token";
     await signIn();
     const bridge = startBridge();
 
-    const reply = await bridge.request(initialize());
+    assert.deepEqual(await bridge.request(initialize()), (await hostedAnswers(initialize()))[0]);
+    const reply = await bridge.request(callTool(2));
 
     assert.equal(reply.error?.code, -32001);
     assert.match(reply.error?.message ?? "", /FORTRIP_TOKEN/);
     assert.equal(api.counts.refreshes, 0);
+    // Tried at `initialize`, and again at the tool call.
     assert.deepEqual(
-      api.mcpRequests.map((request) => request.token),
-      ["not-a-token"],
+      api.mcpRequests.map((request) => [request.message.method, request.token]),
+      [
+        ["initialize", "not-a-token"],
+        ["initialize", "not-a-token"],
+      ],
     );
   });
 
@@ -331,7 +384,8 @@ describe("fortrip mcp bridge", () => {
     await signIn();
     const bridge = startBridge();
 
-    const reply = await bridge.request(initialize());
+    assert.ok((await bridge.request(initialize())).result);
+    const reply = await bridge.request(callTool(2));
 
     assert.equal(reply.error?.code, -32001);
     assert.match(reply.error?.message ?? "", /FORTRIP_TOKEN/);
@@ -439,6 +493,174 @@ describe("fortrip mcp bridge", () => {
   });
 });
 
+describe("fortrip mcp bridge, signed out", () => {
+  const loginUrl = () => `${apiUrl}/device?user_code=CODE-1`;
+
+  it("answers initialize as the hosted server would, without calling it", async () => {
+    const bridge = startBridge();
+    // A version the SDK supports is kept; any other gets its latest.
+    const unknownVersion = initialize(2);
+    (unknownVersion.params as { protocolVersion: string }).protocolVersion = "1999-01-01";
+
+    const first = await bridge.request(initialize());
+    const second = await bridge.request(unknownVersion);
+
+    assert.deepEqual([first, second], await hostedAnswers(initialize(), unknownVersion));
+    assert.deepEqual(first.result, {
+      protocolVersion: "2025-06-18",
+      capabilities: { tools: { listChanged: true } },
+      serverInfo: { name: "fortrip", version: CONTRACT_VERSION },
+      instructions: renderGuide("mcp", "main"),
+    });
+    assert.deepEqual(api.mcpRequests, []);
+    assert.equal(api.counts.deviceStarts, 0);
+  });
+
+  it("lists the contract's tools as the SDK renders them", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+
+    const reply = await bridge.request(listTools(2));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: { tools: await hostedTools() } });
+    const tools = (reply.result as { tools: Record<string, any>[] }).tools;
+    assert.deepEqual(
+      tools.map((tool) => tool.name),
+      TOOLS.map((spec) => spec.name),
+    );
+    const byName = new Map(tools.map((tool) => [tool.name, tool]));
+    // The MCP variants: get_hotel_rates' own default, book_hotel's nextStep.
+    assert.equal(byName.get("get_hotel_rates")?.inputSchema.properties.maxRoomsPerHotel.default, 5);
+    assert.ok(byName.get("book_hotel")?.outputSchema.properties.nextStep);
+    assert.deepEqual(api.mcpRequests, []);
+  });
+
+  it("answers ping, and a method the hosted server lacks as the SDK does", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    const ping: Message = { jsonrpc: "2.0", id: 2, method: "ping" };
+    const unknown: Message = { jsonrpc: "2.0", id: 3, method: "resources/list" };
+
+    const replies = [await bridge.request(ping), await bridge.request(unknown)];
+
+    assert.deepEqual(replies[0], { jsonrpc: "2.0", id: 2, result: {} });
+    assert.equal(replies[1]?.error?.code, -32601);
+    assert.deepEqual(replies, (await hostedAnswers(initialize(), ping, unknown)).slice(1));
+    assert.deepEqual(api.mcpRequests, []);
+  });
+
+  it("answers a tool call with the sign-in link, and keeps serving", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.equal(reply.error?.code, -32001);
+    assert.match(reply.error?.message ?? "", /npx -y fortrip login/);
+    assert.ok(reply.error?.message.includes(loginUrl()));
+    assert.equal(reply.error?.data?.loginUrl, loginUrl());
+    assert.equal(reply.error?.data?.userCode, "CODE-1");
+    assert.deepEqual(api.mcpRequests, []);
+    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: await hostedTools() });
+  });
+
+  it("once the link is approved, the next tool call initializes the hosted server once and goes there", async () => {
+    api.options.protocolVersion = "2025-03-26";
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    assert.equal((await bridge.request(callTool(2))).error?.code, -32001);
+
+    api.approve(loginUrl());
+    const reply = await bridge.request(callTool(3));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 3, result: { content: [{ type: "text", text: "ok" }] } });
+    // The client's initialize, as it sent it; the bridge's initialized; the call.
+    assert.deepEqual(
+      api.mcpRequests.map((request) => request.message),
+      [initialize(), initialized, callTool(3)],
+    );
+    // The session the hosted server opened and the version it answered with
+    // ride on the requests after it.
+    assert.deepEqual(
+      api.mcpRequests.map((request) => [request.sessionId, request.protocolVersion]),
+      [
+        [undefined, undefined],
+        ["fake-session-1", "2025-03-26"],
+        ["fake-session-1", "2025-03-26"],
+      ],
+    );
+    // The client heard the local initialize answer and the call's messages,
+    // not the hosted server's initialize answer.
+    assert.equal(bridge.messages.filter((m) => m.id === 1).length, 1);
+    assert.deepEqual(
+      bridge.messages.slice(2).map((m) => m.method ?? m.id),
+      ["notifications/message", "ping", 3],
+    );
+  });
+
+  it("requests sent during the switch go on in order after one initialize; earlier notifications don't", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    await bridge.request(listTools(2));
+    await signIn();
+    bridge.send({ jsonrpc: "2.0", method: "notifications/roots/list_changed" });
+
+    bridge.send(callTool(3));
+    bridge.send(callTool(4));
+    const replies = [await bridge.reply(3), await bridge.reply(4)];
+
+    for (const reply of replies) {
+      assert.deepEqual(reply.result, { content: [{ type: "text", text: "ok" }] });
+    }
+    assert.deepEqual(
+      api.mcpRequests.map((request) => request.message.method),
+      ["initialize", "notifications/initialized", "tools/call", "tools/call"],
+    );
+    assert.deepEqual(
+      api.mcpRequests.slice(2).map((request) => request.message.id),
+      [3, 4],
+    );
+  });
+
+  it("a saved session the hosted server turns down at initialize is answered locally", async () => {
+    await signIn();
+    api.options.rejectAll = true;
+    const bridge = startBridge();
+
+    const reply = await bridge.request(initialize());
+
+    assert.deepEqual(reply, (await hostedAnswers(initialize()))[0]);
+    // One refresh and one replay, as for any request.
+    assert.equal(api.counts.refreshes, 1);
+    assert.deepEqual(
+      api.mcpRequests.map((request) => request.message.method),
+      ["initialize", "initialize"],
+    );
+
+    // Still turned down at the first tool call; accepted at the next.
+    assert.equal((await bridge.request(callTool(2))).error?.code, -32001);
+    api.options.rejectAll = false;
+    assert.ok((await bridge.request(callTool(3))).result);
+  });
+
+  it("a saved session whose refresh is refused is answered locally, with the link at the tool call", async () => {
+    await saveSession(apiUrl, { ...api.session(), accessToken: "revoked", refreshToken: "spent" });
+    const bridge = startBridge();
+
+    const reply = await bridge.request(initialize());
+
+    assert.deepEqual(reply, (await hostedAnswers(initialize()))[0]);
+    assert.equal(api.counts.refreshes, 1);
+    const call = await bridge.request(callTool(2));
+    assert.equal(call.error?.code, -32001);
+    assert.equal(call.error?.data?.loginUrl, loginUrl());
+  });
+});
+
 describe("fortrip mcp", () => {
   const children: ChildProcess[] = [];
   // A process left running by a failed test would keep the test run alive.
@@ -499,24 +721,42 @@ describe("fortrip mcp", () => {
     assert.ok(!bridge.stderr().includes(token));
   });
 
-  it("answers a signed-out client with the sign-in link, logs to stderr, and exits 0 when stdin ends", async () => {
+  it("serves a signed-out client, answers its tool call with the sign-in link, logs to stderr, and exits 0 when stdin ends", async () => {
     const bridge = spawnBridge();
 
-    const reply = await bridge.request(initialize());
+    assert.ok((await bridge.request(initialize())).result);
+    assert.equal(
+      ((await bridge.request(listTools(2))).result as { tools: unknown[] }).tools.length,
+      TOOLS.length,
+    );
+    const reply = await bridge.request(callTool(3));
     bridge.child.stdin.end();
 
     assert.equal(reply.error?.code, -32001);
     assert.match(reply.error?.message ?? "", /npx -y fortrip login/);
     assert.deepEqual(await bridge.exit, { code: 0, signal: null });
-    // stdout held the one reply; the diagnosis went to stderr.
-    assert.equal(bridge.messages().length, 1);
+    // stdout held the three replies; the diagnosis went to stderr.
+    assert.equal(bridge.messages().length, 3);
     assert.match(bridge.stderr(), /fortrip mcp/);
+  });
+
+  it("signed out, answers what a client writes before closing stdin straight away", async () => {
+    const bridge = spawnBridge();
+
+    bridge.child.stdin.end(`${JSON.stringify(initialize())}\n${JSON.stringify(listTools(2))}\n`);
+
+    assert.deepEqual(await bridge.exit, { code: 0, signal: null });
+    const [init, list] = bridge.messages();
+    assert.deepEqual([init?.id, list?.id], [1, 2]);
+    assert.equal((list?.result as { tools: unknown[] }).tools.length, TOOLS.length);
+    assert.deepEqual(api.mcpRequests, []);
   });
 
   it("a FORTRIP_TOKEN with a line break is named in the error and appears in neither stdout nor stderr", async () => {
     const bridge = spawnBridge({ FORTRIP_TOKEN: "abc\nSECRETPART" });
 
-    const reply = await bridge.request(initialize());
+    assert.ok((await bridge.request(initialize())).result);
+    const reply = await bridge.request(callTool(2));
     bridge.child.stdin.end();
 
     assert.equal(reply.error?.code, -32001);

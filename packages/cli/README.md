@@ -140,17 +140,15 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 `fortrip mcp` runs an MCP server on stdio for clients that start local
 servers. It forwards to Fortrip's hosted MCP server, `https://fortrip.ai/api/mcp`,
-with your saved sign-in. Sign in once with `npx -y fortrip login` before you
-add the server to a client.
+with your saved sign-in.
 
-If the client starts the server before you have, the server fails to connect:
-its first request, `initialize`, is answered with a JSON-RPC error (`-32001`)
-whose message says to run `npx -y fortrip login` in a terminal, or to open the
-sign-in link it names and approve it. Clients typically close the connection
-after a failed `initialize`, so sign in (or approve that link), then restart the
-server or reconnect it (`/mcp` in Claude Code). If a sign-in stops working
-later, only the request that hit it fails with the same kind of error, and the
-server keeps running.
+You can add the server to a client before you sign in: signed out, it still
+starts and lists its tools. The first tool call is then answered with a
+JSON-RPC error (`-32001`) whose message says to run `npx -y fortrip login` in a
+terminal, or to open the sign-in link it names and approve it. Once you have,
+the next tool call works, with no restart. If a sign-in stops working later,
+only the request that hit it fails with the same kind of error, and the server
+keeps running.
 
 Claude Desktop (Settings, Developer, Edit Config; on macOS
 `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows
