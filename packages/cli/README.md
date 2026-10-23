@@ -6,7 +6,7 @@ are both `fortrip`.
 
 ```bash
 npx -y fortrip login
-npx -y fortrip search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
+npx -y fortrip hotels search --query Bangkok --check-in 2026-11-10 --check-out 2026-11-12
 ```
 
 ## Install and run
@@ -23,8 +23,9 @@ or install it once and run `fortrip <command>`:
 npm install --global fortrip
 ```
 
-`fortrip --help` lists the commands, `fortrip <command> --help` one command's
-flags, and `fortrip --version` prints the version.
+`fortrip --help` lists the commands, `fortrip hotels --help` the hotel
+commands, `fortrip <command> --help` one command's flags, and
+`fortrip --version` prints the version.
 
 Upgrading from 0.3: 1.0 signs in with OAuth, so a 0.3 sign-in is not reused;
 run `fortrip login` once. A `FORTRIP_TOKEN` from 0.3 is no longer accepted.
@@ -60,8 +61,8 @@ is honoured), mode `0600`, per API URL, so a token is only sent to the server
 that issued it.
 
 If a new or renewed sign-in can't be saved (the file stays busy or turns out to
-be damaged), `search`, `hotel`, `rates`, `book` and `whoami` still work for that
-run, with the new token. The sign-in is kept in a `credentials.recovered-*.json`
+be damaged), the `hotels` commands and `whoami` still work for that run, with
+the new token. The sign-in is kept in a `credentials.recovered-*.json`
 file next to the credentials file, and the command's JSON output carries a
 `warning` and, when the sign-in could be kept, that file in `recoveryFile`.
 Later commands use it, and the next successful save merges it back. `login`
@@ -77,10 +78,10 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 
 | Command | What it does |
 |---|---|
-| `search` | Find hotels with indicative prices |
-| `hotel <hotelId>` | Static hotel detail: description, policies, facilities and photos |
-| `rates` | Live rooms and rates for up to 15 hotels |
-| `book` | Create an order and get a payment link |
+| `hotels search` | Find hotels with indicative prices |
+| `hotels get <hotelId>` | Static hotel detail: description, policies, facilities and photos |
+| `hotels rates` | Live rooms and rates for up to 15 hotels |
+| `hotels book` | Create an order and get a payment link |
 | `login` | Sign in through the browser (device code) |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
@@ -88,18 +89,18 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
-fortrip rates --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --rooms 1 --adults 2
+fortrip hotels rates --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --rooms 1 --adults 2
 ```
 
-`search`, `rates` and `book` also accept `--body '<json>'` or
-`--body @file.json` with the raw request body; flags override its fields.
+`hotels search`, `hotels rates` and `hotels book` also accept `--body '<json>'`
+or `--body @file.json` with the raw request body; flags override its fields.
 
 `--adults` and `--child-age` are per room, and every room has the same
-occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `rates` and `book`
-both require `--rooms` and `--adults`.
+occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `hotels rates` and
+`hotels book` both require `--rooms` and `--adults`.
 
-`book` creates an unpaid order and prints a payment link for it. Nothing is
-charged until the person pays on the page the link opens.
+`hotels book` creates an unpaid order and prints a payment link for it.
+Nothing is charged until the person pays on the page the link opens.
 
 ## For AI agents
 
@@ -178,12 +179,12 @@ browser when the client asks. In Claude Code, that is
 |---|---|
 | `FORTRIP_TOKEN` | An access token, used instead of the saved sign-in. It lasts at most 24 hours, so it suits one sandbox session or one CI run, not standing CI. It isn't tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If Fortrip doesn't accept it, or it contains a line break or another character that can't be sent in a header, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"` and no `loginUrl`; the error never repeats the token. |
 | `FORTRIP_API_URL` | The base URL (default `https://fortrip.ai`). Plain `http` is only accepted for `localhost`. |
-| `FORTRIP_CURRENCY` | The default `--currency` for `search` and `rates` (`CNY` or `USD`; the API uses `CNY` when nothing sets one). It only changes how prices are shown: `book` charges the currency it returns. |
+| `FORTRIP_CURRENCY` | The default `--currency` for `hotels search` and `hotels rates` (`CNY` or `USD`; the API uses `CNY` when nothing sets one). It only changes how prices are shown: `hotels book` charges the currency it returns. |
 
 ## Output and exit codes
 
-Data commands (`search`, `hotel`, `rates`, `book`, `login`, `logout`,
-`whoami`) print JSON on stdout. `guide` prints Markdown, and `fortrip mcp`
+Data commands (the `hotels` commands, `login`, `logout` and `whoami`) print
+JSON on stdout. `guide` prints Markdown, and `fortrip mcp`
 speaks MCP over stdio. Errors are JSON on stderr, with an `error` message, the
 `exitCode` and any details.
 

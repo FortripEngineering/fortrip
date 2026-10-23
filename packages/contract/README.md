@@ -6,8 +6,8 @@ hosted MCP server and the store listings all share, so they cannot drift
 apart.
 
 It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
-ES2023 does. The package version follows the API: `1.x` serves
-`/api/agent/v1`.
+ES2023 does. Its major version changes when the contract breaks, not with
+the API: `2.x` serves `/api/agent/v1`.
 
 ```ts
 import { API, LIMITS, containsCardNumber } from "@fortrip/agent-contract";
@@ -23,8 +23,10 @@ It exports:
 - `searchHotelsInput`, `getHotelInput`, `getRatesInput` and
   `createBookingInput`, the zod schemas of the requests, and `bookingResult`,
   `meResult` and `authConfig`, those of responses;
-- `COMMANDS` and `GLOBAL_FLAGS`, the CLI's commands and flags, and `TOOLS`,
-  the MCP tools;
+- `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
+  groups they are typed after and its flags, `commandInvocation(spec)`, a
+  command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
+  tools;
 - `renderGuide(surface, topic)`, the agent guide as Markdown for `"mcp"`,
   `"claude-skill"` or `"cli"`;
 - field rules such as `containsCardNumber`, the guest-name rule and the date

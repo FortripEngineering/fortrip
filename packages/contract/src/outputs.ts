@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * What `create_booking` / `POST /api/agent/v1/hotels/bookings` answers with.
+ * What `book_hotel` / `POST /api/agent/v1/hotels/bookings` answers with.
  * Its JSON Schema allows no other keys, so a caller that parses its answer
  * through this schema drops a field the server adds until it is added here,
  * rather than failing a strict client's validation. The MCP tool adds a

@@ -44,7 +44,7 @@ describe("guide", () => {
 
   it("no guide or help text names the supplier", async () => {
     const texts = [expected("main"), expected("planning")];
-    for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
       texts.push((await cli(...args)).stdout);
     }
     // Assembled, so that this file doesn't name the supplier either.

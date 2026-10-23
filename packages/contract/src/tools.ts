@@ -20,8 +20,8 @@ export type ToolName =
   | "get_planning_guide"
   | "search_hotels"
   | "get_hotel"
-  | "get_rates"
-  | "create_booking";
+  | "get_hotel_rates"
+  | "book_hotel";
 
 export interface ToolSpec {
   name: ToolName;
@@ -39,8 +39,8 @@ export interface ToolSpec {
   output: z.ZodType | null;
 }
 
-/** Rooms per hotel an MCP `get_rates` returns when it doesn't say: half the
- *  HTTP default, to keep the answer small in a model's context. */
+/** Rooms per hotel an MCP `get_hotel_rates` returns when it doesn't say: half
+ *  the HTTP default, to keep the answer small in a model's context. */
 const MCP_MAX_ROOMS_PER_HOTEL = 5;
 
 /** `getRatesInput` as the MCP tool takes it: the same, with its own default
@@ -53,17 +53,17 @@ export const MCP_RATES_INPUT = getRatesInput.safeExtend({
     ),
 });
 
-/** Rides on every create_booking answer: some clients never show the model
+/** Rides on every book_hotel answer: some clients never show the model
  *  the server instructions. */
 export const BOOKING_NEXT_STEP =
   "Show the user amount, currency, the stay (hotel, room, dates, rooms, guests per room) and every item in terms (meals, cancellation, confirmation, pay-at-hotel fees), then end your reply by asking them to confirm. Only after they say yes, give them paymentUrl exactly as returned.";
 
-/** create_booking's answer over MCP: the booking result plus `nextStep`. */
+/** book_hotel's answer over MCP: the booking result plus `nextStep`. */
 export const MCP_BOOKING_RESULT = bookingResult.extend({
   nextStep: z.string(),
 });
 
-/** What `boardCode` means, in get_rates and in create_booking's terms. */
+/** What `boardCode` means, in get_hotel_rates and in book_hotel's terms. */
 const MEAL_CODES =
   "RO room only; BB breakfast; HB breakfast + dinner; FB breakfast + lunch + dinner; BL lunch; BD dinner; HBBL breakfast + lunch; HBLD lunch + dinner; AI all inclusive";
 
@@ -86,7 +86,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "search_hotels",
     title: "Search hotels",
     description:
-      "Find hotels by name/brand/city text (query), catalogue cityCode or coordinates (near), with per-night prices for the dates in currency (CNY by default, or USD). Those prices come from the supplier's minimum-price feed, not live rates; get_rates returns the bookable price. facilities must match catalogue names exactly. Refused (422) when more than 30,000 hotels match: narrow the search.",
+      "Find hotels by name/brand/city text (query), catalogue cityCode or coordinates (near), with per-night prices for the dates in currency (CNY by default, or USD). Those prices come from the supplier's minimum-price feed, not live rates; get_hotel_rates returns the bookable price. facilities must match catalogue names exactly. Refused (422) when more than 30,000 hotels match: narrow the search.",
     annotations: {
       readOnlyHint: true,
       idempotentHint: true,
@@ -111,9 +111,9 @@ export const TOOLS: readonly ToolSpec[] = [
     output: null,
   },
   {
-    name: "get_rates",
+    name: "get_hotel_rates",
     title: "Get live rates",
-    description: `Live rooms and rate plans for up to ${LIMITS.ratesHotels} hotels, prices in currency (CNY by default, or USD) at Stripe's exchange rate. rooms, adults and childrenAges are per room: every room has the same occupancy. Each room carries its catalogue facts (static) and the cheapest rate per meal plan × free-cancellation variant, with roomId and ratePlanCode for create_booking. boardCode is the meal plan (${MEAL_CODES}); boardCount is how many guests per room it covers: fewer than adults per room means the meals don't cover everyone (BB with boardCount 1 for 2 adults is breakfast for 1 of 2). Takes about 15 seconds; query a few hotels at a time. Returns the ${MCP_MAX_ROOMS_PER_HOTEL} cheapest rooms per hotel unless maxRoomsPerHotel says otherwise.`,
+    description: `Live rooms and rate plans for up to ${LIMITS.ratesHotels} hotels, prices in currency (CNY by default, or USD) at Stripe's exchange rate. rooms, adults and childrenAges are per room: every room has the same occupancy. Each room carries its catalogue facts (static) and the cheapest rate per meal plan × free-cancellation variant, with roomId and ratePlanCode for book_hotel. boardCode is the meal plan (${MEAL_CODES}); boardCount is how many guests per room it covers: fewer than adults per room means the meals don't cover everyone (BB with boardCount 1 for 2 adults is breakfast for 1 of 2). Takes about 15 seconds; query a few hotels at a time. Returns the ${MCP_MAX_ROOMS_PER_HOTEL} cheapest rooms per hotel unless maxRoomsPerHotel says otherwise.`,
     annotations: {
       readOnlyHint: true,
       idempotentHint: true,
@@ -124,9 +124,9 @@ export const TOOLS: readonly ToolSpec[] = [
     output: null,
   },
   {
-    name: "create_booking",
+    name: "book_hotel",
     title: "Create booking payment link",
-    description: `Create (or resume) a booking for one rate from get_rates, with the same rooms, adults and childrenAges (per room). Returns the amount and currency the user will be charged, the accepted terms (meal plan, cancellation, confirmation, pay-at-hotel fees), the stay as booked, and paymentUrl: a Fortrip page that recaps the booking and continues to payment. Nothing is charged until the user pays there; anyone holding paymentUrl can pay. The same user and stay always returns the same order; a stay that is already paid returns 409. This tool can't change or cancel a booking: for changes, cancellations or refunds the user emails ${SUPPORT_EMAIL} with the booking's orderUrl. Can take up to about two minutes; if the call times out, call it again with the same details — it resumes the same order.`,
+    description: `Create (or resume) a booking for one rate from get_hotel_rates, with the same rooms, adults and childrenAges (per room). Returns the amount and currency the user will be charged, the accepted terms (meal plan, cancellation, confirmation, pay-at-hotel fees), the stay as booked, and paymentUrl: a Fortrip page that recaps the booking and continues to payment. Nothing is charged until the user pays there; anyone holding paymentUrl can pay. The same user and stay always returns the same order; a stay that is already paid returns 409. This tool can't change or cancel a booking: for changes, cancellations or refunds the user emails ${SUPPORT_EMAIL} with the booking's orderUrl. Can take up to about two minutes; if the call times out, call it again with the same details — it resumes the same order.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

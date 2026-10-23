@@ -72,9 +72,22 @@ describe("pnpm generate", () => {
     assert.doesNotMatch(claude, /\bnpx\b|fortrip@latest|get_planning_guide/);
     const cli = read(root, CLI_SKILL);
     assert.match(cli, /npx -y fortrip@latest/);
-    assert.match(cli, /`fortrip search`/);
+    assert.match(cli, /`fortrip hotels search`/);
     // R18: static, nothing for the agent to fetch before it can start.
     assert.doesNotMatch(cli, /fortrip@latest skill/);
+  });
+
+  // The front matter is written in generate.ts, not rendered from the contract.
+  it("names in each skill's description only tools the contract has", async () => {
+    const { TOOLS } = await import("../packages/contract/src/index.ts");
+    const tools = new Set<string>(TOOLS.map((tool) => tool.name));
+    const root = rendered();
+    for (const file of [CLAUDE_SKILL, CLI_SKILL]) {
+      const description = read(root, file).match(/^description: (.+)$/m)?.[1] ?? "";
+      const named = [...description.matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map(([name]) => name);
+      assert.ok(named.length >= 3, `${file}: ${named}`);
+      for (const name of named) assert.ok(tools.has(name), `${file}: ${name}`);
+    }
   });
 
   it("never names the supplier", () => {

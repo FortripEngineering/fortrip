@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import { type ParseArgsOptionsConfig, parseArgs } from "node:util";
 
-import { API, type CommandSpec, type FlagSpec } from "@fortrip/agent-contract";
+import {
+  API,
+  commandInvocation,
+  type CommandSpec,
+  type FlagSpec,
+  type ToolName,
+} from "@fortrip/agent-contract";
 
 import { usageError } from "./errors.ts";
 import { usageLine } from "./help.ts";
@@ -20,11 +26,13 @@ const UPPER_CASE = new Set(["nationality", "boardCodes", "currency"]);
 /** Boolean fields that default to true: their flag turns them off. */
 const TURNS_OFF = new Set(["bookableOnly"]);
 
-/** Where the commands that send a request post. `hotel` is a GET of `API.hotel`. */
-const POSTS: Partial<Record<CommandSpec["name"], string>> = {
-  search: API.search,
-  rates: API.rates,
-  book: API.bookings,
+/** Where the commands that send a request post, by the tool each mirrors
+ *  (a tool name is unique; a command name only within its group).
+ *  `hotels get` is a GET of `API.hotel`. */
+const POSTS: Partial<Record<ToolName, string>> = {
+  search_hotels: API.search,
+  get_hotel_rates: API.rates,
+  book_hotel: API.bookings,
 };
 
 /**
@@ -63,7 +71,7 @@ export function parseOptions(spec: CommandSpec, argv: string[]) {
   }
   if (!spec.positionals && parsed.positionals.length) {
     throw usageError(
-      `${spec.name} takes no arguments, got "${parsed.positionals[0]}"`,
+      `${commandInvocation(spec)} takes no arguments, got "${parsed.positionals[0]}"`,
     );
   }
   return { values: parsed.values as Values, positionals: parsed.positionals };
@@ -79,9 +87,9 @@ export function parseCommand(
   argv: string[],
   env: NodeJS.ProcessEnv,
 ): { body?: Body; path: string } {
-  const post = POSTS[spec.name];
-  if (!post && spec.name !== "hotel") {
-    throw new Error(`${spec.name} sends no request`);
+  const post = spec.tool ? POSTS[spec.tool] : undefined;
+  if (!post && spec.tool !== "get_hotel") {
+    throw new Error(`${commandInvocation(spec)} sends no request`);
   }
   const { values, positionals } = parseOptions(spec, argv);
   const input = baseBody(values.body);
@@ -90,7 +98,7 @@ export function parseCommand(
     if (raw !== undefined) setField(input, flag.field, readFlag(flag, raw));
   }
 
-  if (spec.name === "hotel") {
+  if (spec.tool === "get_hotel") {
     const [hotelId, ...extra] = positionals;
     const parsed = Number(hotelId);
     if (!hotelId || extra.length || !/^\d+$/.test(hotelId) || !Number.isSafeInteger(parsed)) {
@@ -111,7 +119,7 @@ export function parseCommand(
   const missing = occupancy.filter((flag) => input[flag.field] === undefined);
   if (occupancy.length === 2 && missing.length) {
     throw usageError(
-      `${spec.name} needs ${missing.map((flag) => `--${flag.flag}`).join(" and ")}, per room and the same for every room (2 rooms for 4 adults is --rooms 2 --adults 2)`,
+      `${commandInvocation(spec)} needs ${missing.map((flag) => `--${flag.flag}`).join(" and ")}, per room and the same for every room (2 rooms for 4 adults is --rooms 2 --adults 2)`,
     );
   }
   return { body: input, path: post as string };

@@ -1,5 +1,8 @@
 import {
+  COMMAND_GROUPS,
   COMMANDS,
+  type CommandGroupSpec,
+  commandInvocation,
   type CommandSpec,
   type FlagSpec,
   GLOBAL_FLAGS,
@@ -9,8 +12,9 @@ import {
 import { VERSION } from "./version.ts";
 
 /*
- * `fortrip --help` and `fortrip <command> --help`, rendered from the
- * contract's command specs, so the help can't say what the parser doesn't do.
+ * `fortrip --help`, `fortrip <group> --help` and `fortrip <command> --help`,
+ * rendered from the contract's command specs, so the help can't say what the
+ * parser doesn't do.
  */
 
 const WIDTH = 78;
@@ -35,17 +39,22 @@ function wrap(text: string, indent: number): string[] {
   return lines;
 }
 
-/** `hotel <hotelId>`, `guide [topic]`: a command as it is typed. */
-function invocation(spec: CommandSpec): string {
-  const positionals = (spec.positionals ?? []).map((name) =>
+/** `<hotelId>`, `[topic]`: a command's positionals as they are typed. */
+function positionals(spec: CommandSpec): string[] {
+  return (spec.positionals ?? []).map((name) =>
     OPTIONAL_POSITIONALS.has(name) ? `[${name}]` : `<${name}>`,
   );
-  return ["fortrip", spec.name, ...positionals].join(" ");
 }
 
-/** `fortrip hotel <hotelId> [options]`. */
+/** `get <hotelId>`, `guide [topic]`: a command in its group's list, or in
+ *  the CLI's. */
+function label(spec: CommandSpec): string {
+  return [spec.name, ...positionals(spec)].join(" ");
+}
+
+/** `fortrip hotels get <hotelId> [options]`. */
 export function usageLine(spec: CommandSpec): string {
-  return `${invocation(spec)} [options]`;
+  return [commandInvocation(spec), ...positionals(spec), "[options]"].join(" ");
 }
 
 /** `-q, --query <text>`; a flag without a short name is indented to line up. */
@@ -79,25 +88,56 @@ ${optionList(options)}
 `;
 }
 
-function commandList(): string {
-  const labels = COMMANDS.map((spec) => invocation(spec).slice("fortrip ".length));
-  const column = 2 + Math.max(...labels.map((label) => label.length)) + 2;
-  return COMMANDS.map((spec, n) => {
-    const [first = "", ...rest] = wrap(spec.summary, column);
-    const label = `  ${labels[n]}`.padEnd(column);
-    return [label + first.slice(column), ...rest].join("\n");
-  }).join("\n");
+/** What to type and what it does, in two columns. */
+function commandList(rows: readonly (readonly [string, string])[]): string {
+  const column = 2 + Math.max(...rows.map(([name]) => name.length)) + 2;
+  return rows
+    .map(([name, summary]) => {
+      const [first = "", ...rest] = wrap(summary, column);
+      return [`  ${name}`.padEnd(column) + first.slice(column), ...rest].join("\n");
+    })
+    .join("\n");
 }
 
-/** `fortrip --help`. */
+/** `fortrip hotels --help`. */
+export function groupHelp(group: CommandGroupSpec): string {
+  const usage = `fortrip ${group.name} <command>`;
+  const commands = COMMANDS.filter((spec) => spec.group === group.name);
+  return `Usage: ${usage} [options]
+       ${usage} --help
+
+${wrap(group.summary, 0).join("\n")}
+
+Commands:
+${commandList(commands.map((spec) => [label(spec), spec.summary]))}
+
+Options:
+${optionList(HELP_FLAG)}
+`;
+}
+
+/** The commands that take `--currency`: `hotels search and hotels rates`. */
+const CURRENCY_COMMANDS = COMMANDS.filter((spec) =>
+  spec.flags.some((flag) => flag.field === "currency"),
+)
+  .map((spec) => commandInvocation(spec).slice("fortrip ".length))
+  .join(" and ");
+
+/** `fortrip --help`: the groups, then the commands typed on their own. */
 export function overallHelp(): string {
+  const rows = [
+    ...COMMAND_GROUPS.map((group) => [`${group.name} <command>`, group.summary] as const),
+    ...COMMANDS.filter((spec) => spec.group === null).map(
+      (spec) => [label(spec), spec.summary] as const,
+    ),
+  ];
   return `fortrip ${VERSION} — search, price and book Fortrip hotels
 
 Usage: fortrip <command> [options]
        fortrip <command> --help
 
 Commands:
-${commandList()}
+${commandList(rows)}
 
 Options:
 ${optionList(GLOBAL_FLAGS)}
@@ -109,6 +149,6 @@ Exit codes: 0 ok, 1 error (retry once when stderr has "retryable": true),
 Environment:
   FORTRIP_TOKEN    Use this token instead of the saved login (CI, sandboxes)
   FORTRIP_API_URL  API base URL (default https://fortrip.ai)
-  FORTRIP_CURRENCY Default --currency for search and rates
+  FORTRIP_CURRENCY Default --currency for ${CURRENCY_COMMANDS}
 `;
 }

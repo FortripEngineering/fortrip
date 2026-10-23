@@ -15,7 +15,7 @@
       "interface": {
         "displayName": "Fortrip",
         "shortDescription": "Search and book hotels",
-        "longDescription": "Fortrip lets you search hotels by city, name, brand or map area, read a hotel's address, policies and facilities, compare live room rates and cancellation terms, and get a link to book a room.\n\nSearch results show indicative nightly prices; live rates come from get_rates. Prices are shown in CNY or USD. Before giving you a booking link, the assistant shows the amount and currency you will be charged (currently USD), the meal plan, cancellation rules and any fees paid at the hotel, and waits for you to confirm. The link opens a Fortrip page that recaps the booking and continues to Stripe Checkout, which may also show the amount in your local currency; nothing is charged before you pay there.\n\nRequires signing in with a Fortrip account. Stays are 1 to 15 nights, with up to 8 rooms per booking. Adults and children are counted per room, and every room in a booking has the same number of guests. Guest names must use Latin letters as on the passport. Flights, activities and changes or cancellations of existing bookings are not supported.",
+        "longDescription": "Fortrip lets you search hotels by city, name, brand or map area, read a hotel's address, policies and facilities, compare live room rates and cancellation terms, and get a link to book a room.\n\nSearch results show indicative nightly prices; live rates come from get_hotel_rates. Prices are shown in CNY or USD. Before giving you a booking link, the assistant shows the amount and currency you will be charged (currently USD), the meal plan, cancellation rules and any fees paid at the hotel, and waits for you to confirm. The link opens a Fortrip page that recaps the booking and continues to Stripe Checkout, which may also show the amount in your local currency; nothing is charged before you pay there.\n\nRequires signing in with a Fortrip account. Stays are 1 to 15 nights, with up to 8 rooms per booking. Adults and children are counted per room, and every room in a booking has the same number of guests. Guest names must use Latin letters as on the passport. Flights, activities and changes or cancellations of existing bookings are not supported.",
         "developerName": "Fortrip",
         "category": "Travel",
         "capabilities": [
@@ -55,20 +55,20 @@
             {
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live room rates in CNY with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today.",
-              "tools_triggered": "search_hotels, get_rates",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_rates for it with the dates, 1 room, 2 adults, currency CNY and only free-cancellation rates, and lists rooms with their meal plan, free-cancellation deadline and live price in CNY. If the hotel has no free-cancellation rate for those dates, it says so."
+              "tools_triggered": "search_hotels, get_hotel_rates",
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_rates for it with the dates, 1 room, 2 adults, currency CNY and only free-cancellation rates, and lists rooms with their meal plan, free-cancellation deadline and live price in CNY. If the hotel has no free-cancellation rate for those dates, it says so."
             },
             {
               "description": "Compare two check-in dates within a budget",
               "prompt": "I need 3 nights in Shanghai for 2 adults in 1 room, checking in either 30 or 37 days from today, for under 1,200 CNY per night. Which dates and hotels give the best value?",
-              "tools_triggered": "search_hotels, get_rates (get_planning_guide optional)",
-              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with currency CNY and a maximum nightly price of 1,200, then get_rates for a shortlist of the results on each date; it may also call get_planning_guide first. It compares each live rate per night (totalPrice divided by 3 nights, for 1 room) with the 1,200 CNY budget and recommends options within it, each with its dates, live price, meal plan and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_rates returned a rate for it."
+              "tools_triggered": "search_hotels, get_hotel_rates (get_planning_guide optional)",
+              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with currency CNY and a maximum nightly price of 1,200, then get_hotel_rates for a shortlist of the results on each date; it may also call get_planning_guide first. It compares each live rate per night (totalPrice divided by 3 nights, for 1 room) with the 1,200 CNY budget and recommends options within it, each with its dates, live price, meal plan and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_rates returned a rate for it."
             },
             {
               "description": "Create a booking payment link after confirmation",
               "prompt": "Book the cheapest free-cancellation room at Anantara Riverside Bangkok Resort for 1 adult in 1 room, 2 nights starting 60 days from today. Guest: John Smith, phone +1 415 555 0100.",
-              "tools_triggered": "search_hotels, get_rates, create_booking",
-              "expected_behavior": "Finds the hotel, calls get_rates, and calls create_booking with the cheapest free-cancellation rate and the guest details. It shows the stay, the amount with its currency, the meal plan, cancellation rules, confirmation type and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the https://fortrip.ai/booking-status link, which opens a Fortrip page that recaps the booking and continues to Stripe Checkout. Nothing is charged unless the user pays there. If no free-cancellation rate is available, it says so and asks how to proceed instead of booking another rate."
+              "tools_triggered": "search_hotels, get_hotel_rates, book_hotel",
+              "expected_behavior": "Finds the hotel, calls get_hotel_rates, and calls book_hotel with the cheapest free-cancellation rate and the guest details. It shows the stay, the amount with its currency, the meal plan, cancellation rules, confirmation type and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the https://fortrip.ai/booking-status link, which opens a Fortrip page that recaps the booking and continues to Stripe Checkout. Nothing is charged unless the user pays there. If no free-cancellation rate is available, it says so and asks how to proceed instead of booking another rate."
             }
           ],
           "negative": [
@@ -90,14 +90,14 @@
           ]
         },
         "commerce": true,
-        "commerce_description": "Users can book hotel stays. create_booking creates an unpaid order and returns a link to a Fortrip page on fortrip.ai that recaps the booking and its terms; the user completes payment there through Stripe Checkout. The plugin never collects card details and nothing is charged until the user pays on that page."
+        "commerce_description": "Users can book hotel stays. book_hotel creates an unpaid order and returns a link to a Fortrip page on fortrip.ai that recaps the booking and its terms; the user completes payment there through Stripe Checkout. The plugin never collects card details and nothing is charged until the user pays on that page."
       },
       "publication": {
         "release_notes": "Initial release: hotel search, hotel details, live rates and booking payment links.",
         "translations": {
           "zh-CN": {
             "subtitle": "搜索并预订酒店",
-            "description": "Fortrip 可以按城市、酒店名、品牌或地图范围搜索酒店，查看酒店地址、政策和设施，比较实时房价和取消条款，并生成预订链接。\n\n搜索结果中的价格是参考起价，实时价格以 get_rates 为准。价格以人民币或美元显示。给出预订链接前，助手会先展示实际收款的金额和币种（目前为美元）、餐食、取消规则和到店需付的费用，并等你确认。链接打开的是 Fortrip 的订单摘要页，页面汇总预订信息后进入 Stripe 付款，Stripe 付款页可能同时以你所在地的货币显示金额；付款前不会扣费。\n\n需要登录 Fortrip 账号。每次入住 1 到 15 晚，每单最多 8 间房。成人和儿童人数按每间房计算，同一订单的每间房入住人数相同。入住人姓名需使用与护照一致的拉丁字母。不支持机票、活动，也不支持修改或取消已有订单。"
+            "description": "Fortrip 可以按城市、酒店名、品牌或地图范围搜索酒店，查看酒店地址、政策和设施，比较实时房价和取消条款，并生成预订链接。\n\n搜索结果中的价格是参考起价，实时价格以 get_hotel_rates 为准。价格以人民币或美元显示。给出预订链接前，助手会先展示实际收款的金额和币种（目前为美元）、餐食、取消规则和到店需付的费用，并等你确认。链接打开的是 Fortrip 的订单摘要页，页面汇总预订信息后进入 Stripe 付款，Stripe 付款页可能同时以你所在地的货币显示金额；付款前不会扣费。\n\n需要登录 Fortrip 账号。每次入住 1 到 15 晚，每单最多 8 间房。成人和儿童人数按每间房计算，同一订单的每间房入住人数相同。入住人姓名需使用与护照一致的拉丁字母。不支持机票、活动，也不支持修改或取消已有订单。"
           }
         }
       }

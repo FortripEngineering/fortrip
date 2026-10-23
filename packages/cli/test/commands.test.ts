@@ -8,6 +8,7 @@ import {
   addIsoDateDays,
   API,
   COMMANDS,
+  commandInvocation,
   type CommandSpec,
   createBookingInput,
   type FlagSpec,
@@ -26,13 +27,18 @@ function isUsage(error: unknown): boolean {
   return error instanceof CliError && error.exitCode === EXIT.usage;
 }
 
-function command(name: CommandSpec["name"]): CommandSpec {
-  const found = COMMANDS.find((spec) => spec.name === name);
+/** A command as typed after `fortrip`: `hotels search`, `login`. */
+function typed(spec: CommandSpec): string {
+  return commandInvocation(spec).replace(/^fortrip /, "");
+}
+
+function command(name: string): CommandSpec {
+  const found = COMMANDS.find((spec) => typed(spec) === name);
   assert.ok(found, name);
   return found;
 }
 
-function body(name: CommandSpec["name"], argv: string[], env = {}) {
+function body(name: string, argv: string[], env = {}) {
   const parsed = parseCommand(command(name), argv, env);
   assert.ok(parsed.body, `${name} sends a body`);
   return parsed.body;
@@ -49,7 +55,7 @@ function get(value: unknown, field: string): unknown {
  *  defaults to true, so its flag sets it to false. */
 function defaultOf(spec: CommandSpec, flag: FlagSpec): unknown {
   const input = TOOLS.find((tool) => tool.name === spec.tool)?.input;
-  assert.ok(input, `${spec.name} has an input`);
+  assert.ok(input, `${typed(spec)} has an input`);
   const json = z.toJSONSchema(input, { io: "input" }) as {
     properties?: Record<string, { default?: unknown }>;
   };
@@ -110,14 +116,12 @@ function baseArgs(spec: CommandSpec): string[] {
     spec.flags.some((flag) => flag.field === field),
   );
   return [
-    ...(spec.name === "hotel" ? ["5"] : []),
+    ...(spec.tool === "get_hotel" ? ["5"] : []),
     ...(needsOccupancy ? ["--body", '{"rooms":1,"adults":1}'] : []),
   ];
 }
 
-const API_COMMANDS = COMMANDS.filter((spec) =>
-  ["search", "hotel", "rates", "book"].includes(spec.name),
-);
+const API_COMMANDS = COMMANDS.filter((spec) => spec.group === "hotels");
 
 describe("every COMMANDS flag parses into its field", () => {
   for (const spec of API_COMMANDS) {
@@ -125,10 +129,10 @@ describe("every COMMANDS flag parses into its field", () => {
       const names: [string, string][] = [[`--${flag.flag}`, "long"]];
       if (flag.short) names.push([`-${flag.short}`, "short"]);
       for (const [name, kind] of names) {
-        it(`${spec.name} ${name} (${kind}) → ${flag.field}`, () => {
+        it(`${typed(spec)} ${name} (${kind}) → ${flag.field}`, () => {
           const { args, expected } = sample(spec, flag, name);
           const parsed = parseCommand(spec, [...baseArgs(spec), ...args], {});
-          if (spec.name === "hotel") {
+          if (spec.tool === "get_hotel") {
             assert.equal(parsed.body, undefined);
             assert.equal(parsed.path, API.hotel(5, expected === true));
           } else {
@@ -139,9 +143,14 @@ describe("every COMMANDS flag parses into its field", () => {
     }
   }
 
-  it("the table covers every flag of search, hotel, rates and book", () => {
-    assert.equal(API_COMMANDS.length, 4);
-    for (const spec of API_COMMANDS) assert.ok(spec.flags.length > 0, spec.name);
+  it("the table covers every flag of the hotels commands", () => {
+    assert.deepEqual(API_COMMANDS.map(typed), [
+      "hotels search",
+      "hotels get",
+      "hotels rates",
+      "hotels book",
+    ]);
+    for (const spec of API_COMMANDS) assert.ok(spec.flags.length > 0, typed(spec));
   });
 
   it("only hotel ids, child ages and meal codes are comma lists", () => {
@@ -154,53 +163,72 @@ describe("every COMMANDS flag parses into its field", () => {
         assert.ok(lists.has(flag.field) || asGiven.has(flag.field), flag.field);
       }
     }
-    assert.deepEqual(body("search", ["--facility", "Pool, Gym"]).facilities, ["Pool, Gym"]);
+    assert.deepEqual(body("hotels search", ["--facility", "Pool, Gym"]).facilities, ["Pool, Gym"]);
   });
 });
 
 describe("endpoints come from the contract", () => {
-  it("search, rates and book post to their API paths", () => {
-    assert.equal(parseCommand(command("search"), ["-q", "Bangkok"], {}).path, API.search);
+  it("hotels search, rates and book post to their API paths", () => {
+    assert.equal(parseCommand(command("hotels search"), ["-q", "Bangkok"], {}).path, API.search);
     assert.equal(
-      parseCommand(command("rates"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {}).path,
+      parseCommand(command("hotels rates"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {})
+        .path,
       API.rates,
     );
     assert.equal(
-      parseCommand(command("book"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {}).path,
+      parseCommand(command("hotels book"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {})
+        .path,
       API.bookings,
     );
   });
 
-  it("hotel is a GET of API.hotel with or without the rooms", () => {
+  it("hotels get is a GET of API.hotel with or without the rooms", () => {
     for (const [argv, includeRooms] of [
       [["266000"], false],
       [["266000", "--with-rooms"], true],
       [["--with-rooms", "266000"], true],
     ] as const) {
-      const parsed = parseCommand(command("hotel"), [...argv], {});
+      const parsed = parseCommand(command("hotels get"), [...argv], {});
       assert.equal(parsed.path, API.hotel(266000, includeRooms));
       assert.equal(parsed.body, undefined);
     }
   });
 
-  it("hotel needs exactly one numeric id", () => {
+  it("hotels get needs exactly one numeric id", () => {
     for (const argv of [[], ["abc"], ["1", "2"], ["0x10"], ["1e3"], ["-1"], ["9007199254740993"]]) {
-      assert.throws(() => parseCommand(command("hotel"), argv, {}), isUsage, argv.join(" "));
+      assert.throws(() => parseCommand(command("hotels get"), argv, {}), isUsage, argv.join(" "));
     }
-    assert.equal(parseCommand(command("hotel"), ["0012"], {}).path, API.hotel(12));
+    assert.throws(
+      () => parseCommand(command("hotels get"), [], {}),
+      (error) =>
+        isUsage(error) &&
+        (error as Error).message === "Usage: fortrip hotels get <hotelId> [options]",
+    );
+    assert.equal(parseCommand(command("hotels get"), ["0012"], {}).path, API.hotel(12));
   });
 
   it("a command that sends no request has nothing to parse", () => {
-    for (const name of ["login", "logout", "whoami", "guide", "mcp"] as const) {
+    for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
       assert.throws(() => parseCommand(command(name), [], {}), /sends no request/);
     }
   });
+
+  it("a usage error names the command as it is typed", () => {
+    assert.throws(
+      () => body("hotels search", ["Bangkok"]),
+      (error) => isUsage(error) && /^fortrip hotels search takes no arguments/.test((error as Error).message),
+    );
+    assert.throws(
+      () => body("hotels rates", ["--adults", "2"]),
+      (error) => isUsage(error) && /^fortrip hotels rates needs --rooms,/.test((error as Error).message),
+    );
+  });
 });
 
-describe("search", () => {
+describe("hotels search", () => {
   it("maps flags onto the API body", () => {
     assert.deepEqual(
-      body("search", [
+      body("hotels search", [
         "-q",
         "Bangkok",
         "--check-in",
@@ -232,7 +260,7 @@ describe("search", () => {
 
   it("flags override --body fields; omitted flags keep them", () => {
     assert.deepEqual(
-      body("search", ["--body", '{"query":"Tokyo","pageSize":5}', "--query", "Osaka"]),
+      body("hotels search", ["--body", '{"query":"Tokyo","pageSize":5}', "--query", "Osaka"]),
       { query: "Osaka", pageSize: 5 },
     );
   });
@@ -240,11 +268,11 @@ describe("search", () => {
   it("--body @file reads the file", async () => {
     const file = join(await mkdtemp(join(tmpdir(), "fortrip-body-")), "body.json");
     await writeFile(file, '{"query":"Tokyo","page":2}');
-    assert.deepEqual(body("search", ["--body", `@${file}`, "--page", "3"]), {
+    assert.deepEqual(body("hotels search", ["--body", `@${file}`, "--page", "3"]), {
       query: "Tokyo",
       page: 3,
     });
-    assert.throws(() => body("search", ["--body", `@${file}.missing`]), isUsage);
+    assert.throws(() => body("hotels search", ["--body", `@${file}.missing`]), isUsage);
   });
 
   it("rejects bad numbers, a bad --near and non-object bodies", () => {
@@ -258,13 +286,13 @@ describe("search", () => {
       ["--body", "[1,2]"],
       ["--body", "not json"],
     ]) {
-      assert.throws(() => body("search", argv), isUsage, argv.join(" "));
+      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
     }
   });
 
   it("unknown flags and stray arguments are usage errors", () => {
     for (const argv of [["--nope"], ["Bangkok"], ["--with-rooms"]]) {
-      assert.throws(() => body("search", argv), isUsage, argv.join(" "));
+      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
     }
   });
 
@@ -274,9 +302,9 @@ describe("search", () => {
       ["-q", "Bangkok", "--query", "Phuket"],
       ["--city-code", "1", "--city-code=2"],
     ]) {
-      assert.throws(() => body("search", argv), isUsage, argv.join(" "));
+      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
     }
-    assert.deepEqual(body("search", ["--facility", "Parking", "--facility", "Gym"]).facilities, [
+    assert.deepEqual(body("hotels search", ["--facility", "Parking", "--facility", "Gym"]).facilities, [
       "Parking",
       "Gym",
     ]);
@@ -284,18 +312,18 @@ describe("search", () => {
 
   it("--city-code takes digits only", () => {
     for (const code of ["0x10", "1e3", "12.0", "-1", ""]) {
-      assert.throws(() => body("search", [`--city-code=${code}`]), isUsage, code);
+      assert.throws(() => body("hotels search", [`--city-code=${code}`]), isUsage, code);
     }
-    assert.equal(body("search", ["--city-code", "0012"]).cityCode, 12);
+    assert.equal(body("hotels search", ["--city-code", "0012"]).cityCode, 12);
   });
 });
 
-describe("rates", () => {
+describe("hotels rates", () => {
   const STAY = ["--rooms", "1", "--adults", "2"];
 
   it("accepts repeated or comma-separated ids, and reads the rest as given", () => {
     assert.deepEqual(
-      body("rates", [
+      body("hotels rates", [
         "--hotel",
         "266000,266001",
         "--hotel",
@@ -327,12 +355,12 @@ describe("rates", () => {
   });
 
   it("--include-unbookable is the only way bookableOnly is sent", () => {
-    assert.equal("bookableOnly" in body("rates", STAY), false);
+    assert.equal("bookableOnly" in body("hotels rates", STAY), false);
   });
 
   it("hotel ids are digits only", () => {
     for (const ids of ["0x10", "266000,1e3", "266000,", "9007199254740993"]) {
-      assert.throws(() => body("rates", ["--hotel", ids, ...STAY]), isUsage, ids);
+      assert.throws(() => body("hotels rates", ["--hotel", ids, ...STAY]), isUsage, ids);
     }
   });
 
@@ -345,7 +373,7 @@ describe("rates", () => {
       ["--hotel", "1", "--check-in", "2026-11-10"],
     ]) {
       assert.throws(
-        () => body("rates", argv),
+        () => body("hotels rates", argv),
         (error) => isUsage(error) && /--rooms|--adults/.test((error as Error).message),
         argv.join(" "),
       );
@@ -353,16 +381,16 @@ describe("rates", () => {
   });
 
   it("takes rooms and adults from --body, and flags override them", () => {
-    const fromBody = body("rates", ["--body", '{"rooms":2,"adults":3}']);
+    const fromBody = body("hotels rates", ["--body", '{"rooms":2,"adults":3}']);
     assert.equal(fromBody.rooms, 2);
     assert.equal(fromBody.adults, 3);
-    const overridden = body("rates", ["--body", '{"rooms":2,"adults":3}', "--adults", "1"]);
+    const overridden = body("hotels rates", ["--body", '{"rooms":2,"adults":3}', "--adults", "1"]);
     assert.equal(overridden.rooms, 2);
     assert.equal(overridden.adults, 1);
   });
 });
 
-describe("book", () => {
+describe("hotels book", () => {
   it("parses guests: last word is the last name, optional :roomNo", () => {
     assert.deepEqual(parseGuest("John Smith"), {
       firstName: "John",
@@ -381,7 +409,7 @@ describe("book", () => {
 
   it("maps flags onto the bookings body", () => {
     assert.deepEqual(
-      body("book", [
+      body("hotels book", [
         "--hotel",
         "266000",
         "--room-id",
@@ -425,25 +453,25 @@ describe("book", () => {
       ["--adults", "2"],
       ["--body", '{"rooms":2}'],
     ]) {
-      assert.throws(() => body("book", argv), isUsage, argv.join(" "));
+      assert.throws(() => body("hotels book", argv), isUsage, argv.join(" "));
     }
-    const merged = body("book", ["--body", '{"rooms":2,"adults":3}', "--adults", "2"]);
+    const merged = body("hotels book", ["--body", '{"rooms":2,"adults":3}', "--adults", "2"]);
     assert.equal(merged.rooms, 2);
     assert.equal(merged.adults, 2);
   });
 
   it("--hotel takes digits only, and once", () => {
     const stay = ["--rooms", "1", "--adults", "2"];
-    assert.throws(() => body("book", ["--hotel", "0x10", ...stay]), isUsage);
-    assert.throws(() => body("book", ["--hotel", "1", "--hotel", "2", ...stay]), isUsage);
-    assert.throws(() => body("book", ["--rooms", "1", "--rooms", "2", "--adults", "2"]), isUsage);
-    assert.equal(body("book", ["--hotel", "0012", ...stay]).hotelId, 12);
+    assert.throws(() => body("hotels book", ["--hotel", "0x10", ...stay]), isUsage);
+    assert.throws(() => body("hotels book", ["--hotel", "1", "--hotel", "2", ...stay]), isUsage);
+    assert.throws(() => body("hotels book", ["--rooms", "1", "--rooms", "2", "--adults", "2"]), isUsage);
+    assert.equal(body("hotels book", ["--hotel", "0012", ...stay]).hotelId, 12);
   });
 
   it("never takes a currency: it charges the one it returns", () => {
     const stay = ["--rooms", "1", "--adults", "2"];
-    assert.equal("currency" in body("book", stay, { FORTRIP_CURRENCY: "USD" }), false);
-    assert.throws(() => body("book", [...stay, "--currency", "USD"]), isUsage);
+    assert.equal("currency" in body("hotels book", stay, { FORTRIP_CURRENCY: "USD" }), false);
+    assert.throws(() => body("hotels book", [...stay, "--currency", "USD"]), isUsage);
   });
 });
 
@@ -452,30 +480,31 @@ describe("currency", () => {
   const stay = ["--rooms", "1", "--adults", "2"];
 
   it("--currency beats --body, which beats FORTRIP_CURRENCY", () => {
-    assert.equal(body("rates", [...stay, "--currency", "cny"], env).currency, "CNY");
-    assert.equal(body("search", ["--body", '{"currency":"CNY"}'], env).currency, "CNY");
-    assert.equal(body("search", [], env).currency, "USD");
+    assert.equal(body("hotels rates", [...stay, "--currency", "cny"], env).currency, "CNY");
+    assert.equal(body("hotels search", ["--body", '{"currency":"CNY"}'], env).currency, "CNY");
+    assert.equal(body("hotels search", [], env).currency, "USD");
     assert.equal(
-      body("search", ["--body", '{"currency":"CNY"}', "--currency", "usd"]).currency,
+      body("hotels search", ["--body", '{"currency":"CNY"}', "--currency", "usd"]).currency,
       "USD",
     );
   });
 
   it("rejects a blank --currency instead of falling back", () => {
     for (const blank of ["", "  "]) {
-      assert.throws(() => body("rates", [...stay, "--currency", blank], env), isUsage);
-      assert.throws(() => body("search", ["--currency", blank], env), isUsage);
+      assert.throws(() => body("hotels rates", [...stay, "--currency", blank], env), isUsage);
+      assert.throws(() => body("hotels search", ["--currency", blank], env), isUsage);
     }
   });
 
   it("is left to the API default when nothing sets it", () => {
-    assert.equal("currency" in body("rates", stay, {}), false);
-    assert.equal("currency" in body("search", [], { FORTRIP_CURRENCY: " " }), false);
+    assert.equal("currency" in body("hotels rates", stay, {}), false);
+    assert.equal("currency" in body("hotels search", [], { FORTRIP_CURRENCY: " " }), false);
   });
 });
 
 describe("fields", () => {
   const DOTTED: CommandSpec = {
+    group: "hotels",
     name: "search",
     summary: "",
     tool: "search_hotels",
@@ -532,7 +561,7 @@ describe("a full command line builds the request the contract accepts", () => {
    *  without a case here fails this test. */
   function assertFull(spec: CommandSpec, argv: string[]) {
     for (const flag of spec.flags) {
-      assert.ok(argv.includes(`--${flag.flag}`), `${spec.name}: no case for --${flag.flag}`);
+      assert.ok(argv.includes(`--${flag.flag}`), `${typed(spec)}: no case for --${flag.flag}`);
     }
   }
 
@@ -548,8 +577,8 @@ describe("a full command line builds the request the contract accepts", () => {
     }
   }
 
-  it("search", () => {
-    const spec = command("search");
+  it("hotels search", () => {
+    const spec = command("hotels search");
     const argv = [
       ...["--query", "Bangkok", "--city-code", "1234", "--near", "13.75,100.5,5"],
       ...STAY,
@@ -558,11 +587,11 @@ describe("a full command line builds the request the contract accepts", () => {
       ...["--page", "2", "--page-size", "10", "--currency", "usd"],
     ];
     assertFull(spec, argv);
-    assertAccepted(searchHotelsInput, body("search", argv));
+    assertAccepted(searchHotelsInput, body("hotels search", argv));
   });
 
-  it("hotel", () => {
-    const spec = command("hotel");
+  it("hotels get", () => {
+    const spec = command("hotels get");
     const argv = ["266000", "--with-rooms"];
     assertFull(spec, argv);
     // The GET carries the id in its path and the flag in its query.
@@ -584,8 +613,8 @@ describe("a full command line builds the request the contract accepts", () => {
     }
   });
 
-  it("rates", () => {
-    const spec = command("rates");
+  it("hotels rates", () => {
+    const spec = command("hotels rates");
     const argv = [
       ...["--hotel", "266000,266001", "--hotel", "3"],
       ...STAY,
@@ -594,14 +623,14 @@ describe("a full command line builds the request the contract accepts", () => {
       ...["--include-unbookable", "--max-rooms", "3", "--currency", "usd"],
     ];
     assertFull(spec, argv);
-    const sent = body("rates", argv);
+    const sent = body("hotels rates", argv);
     assertAccepted(getRatesInput, sent);
     // The inverted flag reaches the schema as false, not as its default.
     assert.equal(sent.bookableOnly, false);
   });
 
-  it("book", () => {
-    const spec = command("book");
+  it("hotels book", () => {
+    const spec = command("hotels book");
     const argv = [
       ...["--hotel", "266000", "--room-id", "9191658", "--rate-plan", "rp_1"],
       ...STAY,
@@ -611,6 +640,6 @@ describe("a full command line builds the request the contract accepts", () => {
       ...["--contact-email", "john@example.com", "--special-requests", "Late arrival"],
     ];
     assertFull(spec, argv);
-    assertAccepted(createBookingInput, body("book", argv));
+    assertAccepted(createBookingInput, body("hotels book", argv));
   });
 });

@@ -8,7 +8,14 @@ import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { promisify } from "node:util";
 
-import { API, COMMANDS, GLOBAL_FLAGS } from "@fortrip/agent-contract";
+import {
+  API,
+  COMMAND_GROUPS,
+  COMMANDS,
+  commandInvocation,
+  type CommandSpec,
+  GLOBAL_FLAGS,
+} from "@fortrip/agent-contract";
 
 const run = promisify(execFile);
 
@@ -65,9 +72,10 @@ const STAY = ["--check-in", "2026-11-10", "--check-out", "2026-11-12"];
 
 const OCCUPANCY = ["--rooms", "1", "--adults", "2"];
 
-const RATES = ["rates", "--hotel", "266000", ...STAY, ...OCCUPANCY];
+const RATES = ["hotels", "rates", "--hotel", "266000", ...STAY, ...OCCUPANCY];
 
 const bookWith = (occupancy: string[]) => [
+  "hotels",
   "book",
   "--hotel",
   "266000",
@@ -88,8 +96,8 @@ const bookWith = (occupancy: string[]) => [
 const BOOK = bookWith(OCCUPANCY);
 
 describe("requests", () => {
-  it("search posts to /api/agent/v1/hotels/search with the signed-in token", async () => {
-    const { code } = await cli(["search", "-q", "Bangkok", ...STAY, "--currency", "usd"]);
+  it("hotels search posts to /api/agent/v1/hotels/search with the signed-in token", async () => {
+    const { code } = await cli(["hotels", "search", "-q", "Bangkok", ...STAY, "--currency", "usd"]);
     assert.equal(code, 0);
     assert.equal(requests.length, 1);
     assert.equal(requests[0]?.method, "POST");
@@ -104,14 +112,14 @@ describe("requests", () => {
     });
   });
 
-  it("FORTRIP_CURRENCY is the default currency of search", async () => {
-    await cli(["search", "-q", "Bangkok"], { FORTRIP_CURRENCY: "usd" });
+  it("FORTRIP_CURRENCY is the default currency of hotels search", async () => {
+    await cli(["hotels", "search", "-q", "Bangkok"], { FORTRIP_CURRENCY: "usd" });
     assert.deepEqual(requests[0]?.body, { query: "Bangkok", currency: "USD" });
   });
 
-  it("hotel gets /api/agent/v1/hotels/{id}, with ?include=rooms on request", async () => {
-    await cli(["hotel", "266000"]);
-    await cli(["hotel", "266000", "--with-rooms"]);
+  it("hotels get gets /api/agent/v1/hotels/{id}, with ?include=rooms on request", async () => {
+    await cli(["hotels", "get", "266000"]);
+    await cli(["hotels", "get", "266000", "--with-rooms"]);
     assert.deepEqual(
       requests.map(({ method, url, body }) => [method, url, body]),
       [
@@ -121,7 +129,7 @@ describe("requests", () => {
     );
   });
 
-  it("rates posts to /api/agent/v1/hotels/rates", async () => {
+  it("hotels rates posts to /api/agent/v1/hotels/rates", async () => {
     const { code } = await cli(RATES);
     assert.equal(code, 0);
     assert.equal(requests[0]?.method, "POST");
@@ -135,7 +143,7 @@ describe("requests", () => {
     });
   });
 
-  it("book posts to /api/agent/v1/hotels/bookings", async () => {
+  it("hotels book posts to /api/agent/v1/hotels/bookings", async () => {
     const { code } = await cli(BOOK);
     assert.equal(code, 0);
     assert.equal(requests[0]?.method, "POST");
@@ -143,8 +151,9 @@ describe("requests", () => {
     assert.equal((requests[0]?.body as { hotelId: number }).hotelId, 266000);
   });
 
-  it("rates without --rooms exits 2 and sends nothing", async () => {
+  it("hotels rates without --rooms exits 2 and sends nothing", async () => {
     const { code, stderr } = await cli([
+      "hotels",
       "rates",
       "--hotel",
       "266000",
@@ -157,9 +166,9 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("rates without --adults, and book without either, exit 2 and send nothing", async () => {
+  it("hotels rates without --adults, and hotels book without either, exit 2 and send nothing", async () => {
     for (const args of [
-      ["rates", "--hotel", "266000", ...STAY, "--rooms", "1"],
+      ["hotels", "rates", "--hotel", "266000", ...STAY, "--rooms", "1"],
       bookWith([]),
       bookWith(["--rooms", "1"]),
     ]) {
@@ -277,16 +286,45 @@ describe("book prints what the server returned", () => {
 /** Help is wrapped, so compare with whitespace collapsed. */
 const flat = (text: string) => text.replace(/\s+/g, " ");
 
+/** The arguments that run a command: `["hotels", "search"]`. */
+const words = (spec: CommandSpec) => commandInvocation(spec).split(" ").slice(1);
+
 describe("help", () => {
-  it("--help lists every command in COMMANDS, with its summary", async () => {
+  it("--help lists the commands typed on their own and each group, with their summaries", async () => {
     for (const args of [["--help"], ["-h"], ["help"], []]) {
       const { code, stdout } = await cli(args);
       assert.equal(code, 0, args.join(" "));
-      for (const spec of COMMANDS) {
+      for (const spec of COMMANDS.filter((command) => command.group === null)) {
         assert.match(stdout, new RegExp(`^  ${spec.name}\\b`, "m"), spec.name);
         assert.ok(flat(stdout).includes(flat(spec.summary)), spec.name);
       }
+      for (const group of COMMAND_GROUPS) {
+        assert.match(stdout, new RegExp(`^  ${group.name} <command> `, "m"), group.name);
+        assert.ok(flat(stdout).includes(flat(group.summary)), group.name);
+      }
+      // A group's commands are listed by the group's own help.
+      for (const spec of COMMANDS.filter((command) => command.group !== null)) {
+        assert.doesNotMatch(stdout, new RegExp(`^  ${spec.name}\\b`, "m"), spec.name);
+      }
     }
+  });
+
+  it("<group> --help lists the group's commands, with their summaries", async () => {
+    for (const group of COMMAND_GROUPS) {
+      const specs = COMMANDS.filter((spec) => spec.group === group.name);
+      for (const args of [["--help"], ["-h"], ["help"], []]) {
+        const { code, stdout } = await cli([group.name, ...args]);
+        assert.equal(code, 0, `${group.name} ${args.join(" ")}`);
+        assert.match(stdout, new RegExp(`^Usage: fortrip ${group.name} <command> \\[options\\]$`, "m"));
+        assert.match(stdout, new RegExp(`fortrip ${group.name} <command> --help`));
+        assert.ok(flat(stdout).includes(flat(group.summary)), group.name);
+        for (const spec of specs) {
+          assert.match(stdout, new RegExp(`^  ${spec.name}\\b`, "m"), spec.name);
+          assert.ok(flat(stdout).includes(flat(spec.summary)), spec.name);
+        }
+      }
+    }
+    assert.equal(requests.length, 0);
   });
 
   it("--help lists the global flags and points to per-command help", async () => {
@@ -301,50 +339,96 @@ describe("help", () => {
 
   it("<command> --help prints that command's flags, placeholders and descriptions", async () => {
     for (const spec of COMMANDS) {
-      const { code, stdout } = await cli([spec.name, "--help"]);
-      assert.equal(code, 0, spec.name);
-      assert.match(stdout, new RegExp(`^Usage: fortrip ${spec.name}\\b`), spec.name);
+      const label = commandInvocation(spec);
+      const { code, stdout } = await cli([...words(spec), "--help"]);
+      assert.equal(code, 0, label);
+      assert.match(stdout, new RegExp(`^Usage: ${label}\\b`), label);
       const text = flat(stdout);
-      assert.ok(text.includes(flat(spec.summary)), spec.name);
+      assert.ok(text.includes(flat(spec.summary)), label);
       for (const flag of [...spec.flags, ...(spec.options ?? [])]) {
         const name = `${"short" in flag && flag.short ? `-${flag.short}, ` : ""}--${flag.flag}${flag.placeholder ? ` ${flag.placeholder}` : ""}`;
-        assert.ok(text.includes(name), `${spec.name}: ${name}`);
-        assert.ok(text.includes(flat(flag.description)), `${spec.name} --${flag.flag}`);
+        assert.ok(text.includes(name), `${label}: ${name}`);
+        assert.ok(text.includes(flat(flag.description)), `${label} --${flag.flag}`);
       }
     }
   });
 
   it("-h works like --help, and anywhere in the command", async () => {
-    for (const args of [["book", "-h"], ["rates", "--hotel", "1", "--help"], ["hotel", "-h"]]) {
+    for (const args of [
+      ["hotels", "book", "-h"],
+      ["hotels", "rates", "--hotel", "1", "--help"],
+      ["hotels", "get", "-h"],
+    ]) {
       const { code, stdout } = await cli(args);
       assert.equal(code, 0, args.join(" "));
-      assert.match(stdout, new RegExp(`^Usage: fortrip ${args[0]}\\b`));
+      assert.match(stdout, new RegExp(`^Usage: fortrip ${args[0]} ${args[1]}\\b`));
     }
     assert.equal(requests.length, 0);
   });
 
-  it("hotel's usage names its positional, guide's is optional", async () => {
-    assert.match((await cli(["hotel", "--help"])).stdout, /^Usage: fortrip hotel <hotelId> /);
+  it("hotels get's usage names its positional, guide's is optional", async () => {
+    assert.match(
+      (await cli(["hotels", "get", "--help"])).stdout,
+      /^Usage: fortrip hotels get <hotelId> /,
+    );
     assert.match((await cli(["guide", "--help"])).stdout, /^Usage: fortrip guide \[topic\]/);
   });
 
   it("a command named like an object property is just unknown", async () => {
-    const { code, stderr } = await cli(["constructor", "--help"]);
-    assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /Unknown command/);
+    for (const args of [["constructor", "--help"], ["hotels", "constructor", "--help"]]) {
+      const { code, stderr } = await cli(args);
+      assert.equal(code, 2, args.join(" "));
+      assert.match(JSON.parse(stderr).error, /Unknown command/);
+    }
   });
 
   it("--help after -- is an argument, not a request for help", async () => {
-    const { code } = await cli(["hotel", "--", "--help"]);
+    const { code } = await cli(["hotels", "get", "--", "--help"]);
     assert.equal(code, 2);
   });
 
   it("no help names the old paths or per-room defaults", async () => {
-    for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
       const { stdout } = await cli(args);
       assert.doesNotMatch(stdout, /\/api\//);
       assert.doesNotMatch(stdout, /default(s)? to 1 room/);
     }
+  });
+});
+
+describe("commands are typed after their group", () => {
+  it("the 1.0 hotel commands are gone: exit 2, pointing at the group", async () => {
+    for (const name of ["search", "rates", "book"]) {
+      const { code, stdout, stderr } = await cli([name, "--query", "x"]);
+      assert.equal(code, 2, name);
+      assert.equal(stdout, "", name);
+      const { error } = JSON.parse(stderr);
+      assert.match(error, new RegExp(`^Unknown command "${name}"`), name);
+      assert.ok(error.includes(`fortrip hotels ${name}`), error);
+    }
+    const { code, stderr } = await cli(["hotel", "266000"]);
+    assert.equal(code, 2);
+    assert.match(JSON.parse(stderr).error, /^Unknown command "hotel"\. Run `fortrip --help`\.$/);
+    assert.equal(requests.length, 0);
+  });
+
+  it("an unknown command in a group is exit 2, pointing at the group's help", async () => {
+    for (const args of [["hotels", "nope"], ["hotels", "login"], ["hotels", "hotels"]]) {
+      const { code, stderr } = await cli(args);
+      assert.equal(code, 2, args.join(" "));
+      assert.equal(
+        JSON.parse(stderr).error,
+        `Unknown command "${args.join(" ")}". Run \`fortrip hotels --help\`.`,
+      );
+    }
+    assert.equal(requests.length, 0);
+  });
+
+  it("a group's command takes its flags after its name, not before", async () => {
+    const { code, stderr } = await cli(["hotels", "--query", "x", "search"]);
+    assert.equal(code, 2);
+    assert.match(JSON.parse(stderr).error, /Unknown command "hotels --query"/);
+    assert.equal(requests.length, 0);
   });
 });
 

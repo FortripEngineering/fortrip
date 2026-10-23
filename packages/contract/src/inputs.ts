@@ -218,7 +218,7 @@ export const getHotelInput = z.object(
 const hotelIdsError = `hotelIds must list 1 to ${LIMITS.ratesHotels} hotelIds`;
 const boardCodesError = `boardCodes must list meal codes from: ${BOARD_CODES.join(", ")}`;
 
-/** `POST /api/agent/v1/hotels/rates` and the MCP `get_rates` arguments. */
+/** `POST /api/agent/v1/hotels/rates` and the MCP `get_hotel_rates` arguments. */
 export const getRatesInput = strictInput({
   hotelIds: z
     .array(positiveId("Each hotelId"), { error: hotelIdsError })
@@ -324,7 +324,7 @@ const roomNoError = `roomNo must be a whole number from 1 to ${LIMITS.rooms}`;
 const contactEmailError = "contactEmail must be an email address";
 
 /**
- * `POST /api/agent/v1/hotels/bookings` and the MCP `create_booking`
+ * `POST /api/agent/v1/hotels/bookings` and the MCP `book_hotel`
  * arguments. The booking action validates guest names (Latin letters) and
  * the room assignment again. Occupancy is per room, every room the same.
  * Unknown keys are refused, not dropped: a misspelled `children` would
@@ -332,22 +332,22 @@ const contactEmailError = "contactEmail must be an email address";
  */
 export const createBookingInput = strictInput({
   hotelId: positiveId("hotelId").describe("Hotel id."),
-  roomId: nonEmpty("roomId").describe("roomId from get_rates"),
+  roomId: nonEmpty("roomId").describe("roomId from get_hotel_rates"),
   ratePlanCode: nonEmpty("ratePlanCode").describe(
-    "ratePlanCode from get_rates",
+    "ratePlanCode from get_hotel_rates",
   ),
   checkIn: isoDate("checkIn").describe(stayDescriptions.checkIn),
   checkOut: isoDate("checkOut").describe(stayDescriptions.checkOut),
   rooms: wholeNumber("rooms", 1, LIMITS.rooms).describe(
-    "Number of rooms, as in get_rates; every room has the same occupancy",
+    "Number of rooms, as in get_hotel_rates; every room has the same occupancy",
   ),
   adults: wholeNumber("adults (per room)", 1, LIMITS.adultsPerRoom).describe(
-    "Adults per room, not in total, as in get_rates (2 rooms for 4 adults = rooms 2, adults 2)",
+    "Adults per room, not in total, as in get_hotel_rates (2 rooms for 4 adults = rooms 2, adults 2)",
   ),
   childrenAges: childrenAges(LIMITS.childrenPerRoom)
     .default([])
     .describe(
-      "Age of each child in one room (0-17), per room, as in get_rates",
+      "Age of each child in one room (0-17), per room, as in get_hotel_rates",
     ),
   guests: z
     .array(
