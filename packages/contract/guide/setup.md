@@ -1,7 +1,7 @@
 {{#if cli}}
 ## Setup
 
-Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:hotels book}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields.
+Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:hotels book}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command to get its answer as one line of JSON instead of text.
 
 When the user first asks about hotels, run `{{tool:whoami}}` before asking follow-up questions, so the sign-in can happen while they answer.
 
@@ -30,9 +30,9 @@ In CI or a sandbox without a browser, the user can set `FORTRIP_TOKEN` instead. 
 
 | Code | Meaning | What to do |
 |---|---|---|
-| 0 | Success; JSON on stdout | Continue |
-| 1 | Any other error: an error from Fortrip (see Errors), a network error or a timeout | Read `error` on stderr. If `retryable` is true, wait `retryAfterSeconds` (or a few seconds) and retry once |
-| 2 | Invalid arguments | Fix the flags; stderr `issues` lists each bad field with a message |
+| 0 | Success; the answer on stdout | Continue |
+| 1 | Any other error: an error from Fortrip (see Errors), a network error or a timeout | Read the error on stderr. If `retryable` is true, wait `retryAfterSeconds` (or a few seconds) and retry once |
+| 2 | Invalid arguments, or `invalid_request` from Fortrip | Fix the flags; the error lists each bad field with a message |
 | 3 | Not signed in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
 

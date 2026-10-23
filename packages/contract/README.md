@@ -1,34 +1,39 @@
 # @fortrip/agent-contract
 
-The contract of Fortrip's agent API, `/api/agent/v1`: the limits, endpoint
-paths, error reasons and field rules that the Fortrip CLI (`fortrip`), the
+The contract of Fortrip API v1 (`https://api.fortrip.ai/v1`) and its MCP
+server (`https://mcp.fortrip.ai/`): the limits, paths, request and response
+schemas, error codes and field rules that the Fortrip CLI (`fortrip`), the
 hosted MCP server and the store listings all share, so they cannot drift
 apart.
 
 It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
 ES2023 does. Its major version changes when the contract breaks, not with
-the API: `2.x` serves `/api/agent/v1`.
+the API: `3.x` serves Fortrip API v1.
 
 ```ts
-import { API, LIMITS, containsCardNumber } from "@fortrip/agent-contract";
+import { API, LIMITS, PUBLIC_ORIGINS, containsCardNumber } from "@fortrip/agent-contract";
 
-API.search; // "/api/agent/v1/hotels/search"
+PUBLIC_ORIGINS.api + API.hotelSearch; // "https://api.fortrip.ai/v1/hotels/search"
 LIMITS.rooms; // 8
 ```
 
 It exports:
 
-- `API`, `LIMITS`, `BOARD_CODES`, `CURRENCIES`, `SEARCH_SORTS` and
-  `ERROR_REASONS`: paths, limits and error reasons;
-- `searchHotelsInput`, `getHotelInput`, `getRatesInput` and
-  `createBookingInput`, the zod schemas of the requests, and `bookingResult`,
-  `meResult` and `authConfig`, those of responses;
+- `API`, `PUBLIC_ORIGINS`, `MCP_PATH`, `LIMITS`, `ERROR_CODES`,
+  `SEARCH_SORTS` and `FILTERABLE_AMENITIES`: paths, hosts, limits, error codes
+  and vocabularies;
+- `searchHotelsInput`, `getHotelInput`, `hotelOffersInput`,
+  `createOrderInput`, `getOrderInput` and `listOrdersInput`, the zod schemas
+  of the requests, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
+  `orderList` and `errorEnvelope`, the open schemas of the responses, with
+  `parseOpen`, a parser that keeps unknown fields and values;
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
   command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools;
-- `renderGuide(surface, topic)`, the agent guide as Markdown for `"mcp"`,
-  `"claude-skill"` or `"cli"`;
+  tools, with `MCP_OUTPUT` and `ORDER_NEXT_STEP`;
+- `renderToolResult(tool, data)` and `renderError(envelope)`, the compact
+  text of a result or an error, and `renderGuide(surface, topic)`, the agent
+  guide as Markdown for `"mcp"`, `"claude-skill"` or `"cli"`;
 - field rules such as `containsCardNumber`, the guest-name rule and the date
   helpers, and `CONTRACT_VERSION`.
 

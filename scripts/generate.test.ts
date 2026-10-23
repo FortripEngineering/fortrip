@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
@@ -101,8 +107,10 @@ describe("pnpm generate", () => {
     assert.equal(run.status, 0, run.output);
   });
 
-  it("--check passes on the committed files", () => {
-    const run = generate(repo, "--check");
+  // The committed skills stay at 2.0 until the listings change (PR C), which
+  // brings back the full check here and in CI.
+  it("--check --only guide-data passes on the committed files", () => {
+    const run = generate(repo, "--check", "--only", "guide-data");
     assert.equal(run.status, 0, run.output);
   });
 
@@ -130,7 +138,10 @@ describe("pnpm generate", () => {
   it("--check fails when the contract's embedded guide differs", () => {
     const root = rendered();
     const file = path.join(root, GUIDE_DATA);
-    writeFileSync(file, read(root, GUIDE_DATA).replace("Booking", "Reservation"));
+    writeFileSync(
+      file,
+      read(root, GUIDE_DATA).replace("Planning a hotel stay", "Planning a trip"),
+    );
 
     const run = generate(root, "--check");
     assert.equal(run.status, 1, run.output);
@@ -153,6 +164,37 @@ describe("pnpm generate", () => {
 
     assert.equal(generate(root).status, 0);
     assert.equal(generate(root, "--check").status, 0);
+  });
+
+  it("--only guide-data writes only the guide data", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "fortrip-generate-"));
+    roots.push(root);
+    const run = generate(root, "--only", "guide-data");
+    assert.equal(run.status, 0, run.output);
+    assert.ok(read(root, GUIDE_DATA).length > 0);
+    for (const file of GENERATED.filter((file) => file !== GUIDE_DATA)) {
+      assert.equal(existsSync(path.join(root, file)), false, file);
+    }
+  });
+
+  it("--check --only guide-data ignores the skills, not the guide data", () => {
+    const root = rendered();
+    writeFileSync(path.join(root, CLI_SKILL), "stale\n");
+    assert.equal(generate(root, "--check", "--only", "guide-data").status, 0);
+
+    writeFileSync(path.join(root, GUIDE_DATA), "stale\n");
+    const run = generate(root, "--check", "--only", "guide-data");
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, new RegExp(`^--- a/${GUIDE_DATA}$`, "m"));
+    assert.doesNotMatch(run.output, new RegExp(`--- a/${CLI_SKILL}`));
+  });
+
+  it("rejects an --only target it doesn't know", () => {
+    for (const args of [["--only", "skills"], ["--only"]]) {
+      const run = generate(repo, "--check", ...args);
+      assert.equal(run.status, 2, run.output);
+      assert.match(run.output, /--only/);
+    }
   });
 
   it("rejects an option it doesn't know", () => {

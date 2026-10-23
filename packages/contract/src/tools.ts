@@ -58,7 +58,7 @@ const nextStep = z
   .string()
   .optional()
   .describe(
-    "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url.",
+    "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
   );
 
 /** The answers over MCP that can hold a `payment.url`: the HTTP answer plus
@@ -96,7 +96,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "search_hotels",
     title: "Search hotels",
     description:
-      "Find hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point, or a country. A name several places bear answers destination_ambiguous with candidates: ask the user, then search the chosen placeId. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A search too broad to answer is refused with search_too_broad and its localities: pass one back as { kind: \"locality\", placeId }, never by name. The answer states the scope, the counts and notes; a next page is { cursor } alone.",
+      "Find hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point, or a country. A name several places bear answers destination_ambiguous with candidates: ask the user, then search the chosen placeId. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A search too broad to answer is refused with search_too_broad and its localities: pass one back as { kind: \"locality\", placeId }, never by name. The answer states the scope, the counts and notes; a next page is the cursor and, optionally, limit.",
     annotations: READ,
     input: searchHotelsInput,
     output: searchResult,
