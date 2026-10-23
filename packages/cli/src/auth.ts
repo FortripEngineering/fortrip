@@ -593,8 +593,9 @@ export async function logout(apiUrl: string): Promise<unknown> {
   return { loggedOut: true, apiUrl };
 }
 
-/** RFC 7009. A 400 or 401 says the server doesn't know the token (already
- *  revoked, or expired): forgetting it locally is still right. */
+/** RFC 7009: 200 for a revoked or unknown token. A 400 or 401 counts as
+ *  done too: our request is fixed, so it means the token or its OAuth client
+ *  is no longer usable, and refusing would leave logout unable to finish. */
 async function revoke(
   config: AuthConfig,
   session: Session,
