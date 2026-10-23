@@ -87,25 +87,22 @@ export const orderList = openObject({
 
 export type OrderList = z.infer<typeof orderList>;
 
+function change<F extends string, V extends z.ZodType>(field: F, value: V) {
+  return openObject({
+    field: z.literal(field),
+    previous: value,
+    current: value,
+    worse: z.boolean(),
+  });
+}
+
 /** One difference between an offer and the supplier's verify (§10.3). */
-export const offerChange = openUnion(
-  "field",
-  (
-    [
-      ["price", money],
-      ["meals", meals],
-      ["cancellation", cancellation],
-      ["confirmation", confirmation],
-      ["pay_at_property", payAtProperty],
-    ] as const
-  ).map(([field, value]) =>
-    openObject({
-      field: z.literal(field),
-      previous: value,
-      current: value,
-      worse: z.boolean(),
-    }),
-  ),
-);
+export const offerChange = openUnion("field", [
+  change("price", money),
+  change("meals", meals),
+  change("cancellation", cancellation),
+  change("confirmation", confirmation),
+  change("pay_at_property", payAtProperty),
+]);
 
 export type OfferChange = z.infer<typeof offerChange>;

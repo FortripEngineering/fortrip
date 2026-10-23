@@ -6,7 +6,11 @@ import { z } from "zod";
 import { strictOutput } from "../src/conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
 import { authConfig, meResult } from "../src/outputs-v1/account.ts";
-import { ERROR_DETAILS, errorEnvelope } from "../src/outputs-v1/error-details.ts";
+import {
+  ERROR_DETAILS,
+  errorEnvelope,
+  strictErrorEnvelope,
+} from "../src/outputs-v1/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs-v1/hotel.ts";
 import { hotelOffersResult, offer } from "../src/outputs-v1/offer.ts";
 import { offerChange, order, orderList } from "../src/outputs-v1/order.ts";
@@ -365,6 +369,8 @@ describe("v1 response fixtures parse, open and strict", () => {
   it("an error envelope for every code", () => {
     for (const [code, details] of Object.entries(ERROR_FIXTURES)) {
       parsesBoth(errorEnvelope, envelope(code, details));
+      const strict = strictErrorEnvelope().safeParse(envelope(code, details));
+      assert.ok(strict.success, `${code}: ${JSON.stringify(strict.error?.issues)}`);
     }
     parsesBoth(errorEnvelope, envelope("destination_not_found", { reason: "no_match", name: "Atlantis", countryCode: "GR", nameAsText: 0 }));
     parsesBoth(errorEnvelope, envelope("destination_not_found", { reason: "unknown_id", placeId: "plc_9" }));
@@ -409,9 +415,24 @@ describe("open where the spec says, strict in server tests", () => {
     );
   });
 
-  it("rejects details on a code that has none, in the strict copy", () => {
+  it("lets a client read an envelope without details (ruling A)", () => {
+    for (const code of Object.keys(ERROR_FIXTURES)) {
+      assert.ok(errorEnvelope.safeParse(envelope(code, undefined)).success, code);
+    }
+  });
+
+  it("holds the server to §11's details per code, in the strict envelope", () => {
+    const strict = strictErrorEnvelope();
+    for (const [code, details] of Object.entries(ERROR_FIXTURES)) {
+      if (details === undefined) {
+        assert.equal(strict.safeParse(envelope(code, { x: 1 })).success, false, `${code} with details`);
+        assert.equal(strictOutput(errorEnvelope).safeParse(envelope(code, { x: 1 })).success, false, code);
+      } else {
+        assert.equal(strict.safeParse(envelope(code, undefined)).success, false, `${code} without details`);
+      }
+    }
     assert.ok(errorEnvelope.safeParse(envelope("internal", { x: 1 })).success);
-    assert.equal(strictOutput(errorEnvelope).safeParse(envelope("internal", { x: 1 })).success, false);
+    assert.equal(strict.safeParse(envelope("teapot", undefined)).success, false);
   });
 });
 

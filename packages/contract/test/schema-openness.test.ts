@@ -10,6 +10,7 @@ import { openEnum, openObject, openUnion } from "../src/conventions/open.ts";
 import {
   jsonSchemaOf,
   OUTPUT_SCHEMAS,
+  PUBLISHED_SCHEMAS,
   type JsonSchema,
 } from "./output-schemas-v1.ts";
 
@@ -147,10 +148,10 @@ const SNAPSHOT = join(
   "schemas.json",
 );
 
-describe("the published schemas", () => {
+describe("the published response schemas", () => {
   it("equal the snapshot (UPDATE_SNAPSHOTS=1 rewrites it)", () => {
     const current = Object.fromEntries(
-      Object.entries(OUTPUT_SCHEMAS)
+      Object.entries(PUBLISHED_SCHEMAS)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([name, schema]) => [name, jsonSchemaOf(schema)]),
     );

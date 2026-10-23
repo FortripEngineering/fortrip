@@ -42,6 +42,21 @@ export const OUTPUT_SCHEMAS: Readonly<Record<string, z.ZodType>> =
     ),
   );
 
+/**
+ * The response schemas the API publishes, by name: the snapshot and the
+ * unknown-is-not-no walk cover these (their components are inside them).
+ */
+export const PUBLISHED_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
+  searchResult: search.searchResult,
+  hotel: hotel.hotel,
+  hotelOffersResult: offer.hotelOffersResult,
+  order: order.order,
+  orderList: order.orderList,
+  meResult: account.meResult,
+  authConfig: account.authConfig,
+  errorEnvelope: errorDetails.errorEnvelope,
+};
+
 export type JsonSchema = Record<string, unknown>;
 
 /** The published JSON Schema of an output schema. */

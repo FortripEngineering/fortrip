@@ -42,10 +42,10 @@ export function openEnum<const V extends readonly string[]>(
  * (and fails if that branch is malformed); only an unknown value falls back
  * to an object with a string discriminator and any other fields.
  */
-export function openUnion(
-  discriminator: string,
-  branches: readonly z.ZodObject[],
-): z.ZodType {
+export function openUnion<
+  D extends string,
+  const B extends readonly z.ZodObject[],
+>(discriminator: D, branches: B): z.ZodType<OpenUnionOutput<D, B>> {
   const known = new Set<unknown>();
   for (const branch of branches) {
     const field = branch.shape[discriminator] as z.ZodType | undefined;
@@ -62,8 +62,30 @@ export function openUnion(
   });
   const schema = z.union([...branches, fallback]);
   mark(schema, "union");
-  return schema;
+  return schema as unknown as z.ZodType<OpenUnionOutput<D, B>>;
 }
+
+/** The value of an open union's fallback branch: an unknown discriminator. */
+export type OpenFallback<D extends string> = { [K in D]: string } & Record<
+  string,
+  unknown
+>;
+
+/** What an open union parses to: one of its known branches, or the fallback. */
+export type OpenUnionOutput<
+  D extends string,
+  B extends readonly z.ZodObject[],
+> = z.output<B[number]> | OpenFallback<D>;
+
+/**
+ * The known branches of an open union's value, which narrow by `D`. A value
+ * of this type is one the code has checked (or built) to be known.
+ */
+export type KnownBranch<T, D extends string> = T extends { [K in D]: infer V }
+  ? string extends V
+    ? never
+    : T
+  : never;
 
 /** Parses `value`, keeping the unknown fields and values an open schema allows. */
 export function parseOpen<T>(schema: z.ZodType<T>, value: unknown): T {

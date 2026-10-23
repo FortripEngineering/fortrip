@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 import { offerId, orderId, placeId } from "../conventions/ids.ts";
-import { openEnum, openObject, openUnion } from "../conventions/open.ts";
+import {
+  openEnum,
+  openObject,
+  openUnion,
+  strictOutput,
+  type OpenFallback,
+} from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
 import { AMENITY_CODES } from "../inputs-v1.ts";
@@ -17,7 +23,7 @@ import { localities } from "./search.ts";
 
 const count = z.number().int();
 
-export const ERROR_DETAILS: Readonly<Record<ErrorCode, z.ZodType | null>> = {
+export const ERROR_DETAILS = {
   invalid_request: openObject({
     issues: z.array(openObject({ pointer: z.string(), message: z.string() })),
     filterable: z.array(openEnum(AMENITY_CODES)).optional(),
@@ -92,29 +98,60 @@ export const ERROR_DETAILS: Readonly<Record<ErrorCode, z.ZodType | null>> = {
     outcome: openEnum(["not_started", "unknown"]),
   }),
   internal: null,
-};
+} satisfies Readonly<Record<ErrorCode, z.ZodType | null>>;
+
+type Details = typeof ERROR_DETAILS;
+
+/** The error body of a known code; `details` typed by the code. */
+export type ErrorBody<C extends ErrorCode> = {
+  code: C;
+  message: string;
+  param?: string;
+  retryable: boolean;
+  retryAfterSeconds?: number;
+  requestId: string;
+} & (Details[C] extends z.ZodType ? { details?: z.output<Details[C]> } : unknown);
+
+/** Any known code's error body; narrows by `code`. */
+export type KnownErrorBody = { [C in ErrorCode]: ErrorBody<C> }[ErrorCode];
+
+export type ErrorEnvelope = { error: KnownErrorBody | OpenFallback<"code"> };
+
+function envelopeSchema(detailsRequired: boolean) {
+  return openObject({
+    error: openUnion(
+      "code",
+      (Object.keys(ERROR_CODES) as ErrorCode[]).map((code) => {
+        const details: z.ZodType | null = ERROR_DETAILS[code];
+        return openObject({
+          code: z.literal(code),
+          message: z.string(),
+          param: z.string().optional(),
+          retryable: z.boolean(),
+          retryAfterSeconds: z.number().int().optional(),
+          ...(details
+            ? { details: detailsRequired ? details : details.optional() }
+            : {}),
+          requestId: z.string(),
+        });
+      }),
+    ),
+  });
+}
 
 /**
  * `{ error: { code, message, param?, retryable, retryAfterSeconds?, details?,
  * requestId } }`, picked by `code`: a known code parses its own details, an
- * unknown code falls back.
+ * unknown code falls back. `details` is optional here, for clients.
  */
-export const errorEnvelope = openObject({
-  error: openUnion(
-    "code",
-    (Object.keys(ERROR_CODES) as ErrorCode[]).map((code) => {
-      const details = ERROR_DETAILS[code];
-      return openObject({
-        code: z.literal(code),
-        message: z.string(),
-        param: z.string().optional(),
-        retryable: z.boolean(),
-        retryAfterSeconds: z.number().int().optional(),
-        ...(details ? { details } : {}),
-        requestId: z.string(),
-      });
-    }),
-  ),
-});
+export const errorEnvelope = envelopeSchema(false) as unknown as z.ZodType<ErrorEnvelope>;
 
-export type ErrorEnvelope = z.infer<typeof errorEnvelope>;
+/**
+ * Server tests only: the closed envelope, where a code whose §11 row lists
+ * details must carry them and a code whose row shows "–" must not.
+ */
+export function strictErrorEnvelope(): z.ZodType<{ error: KnownErrorBody }> {
+  return strictOutput(envelopeSchema(true)) as unknown as z.ZodType<{
+    error: KnownErrorBody;
+  }>;
+}
