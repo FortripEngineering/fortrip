@@ -13,7 +13,7 @@
   "bin": {
     "fortrip": "dist/cli.js"
   },
-  "files": ["dist", "README.md", "NOTICE"],
+  "files": ["dist", "README.md", "NOTICE", "THIRD-PARTY-NOTICES"],
   "engines": {
     "node": ">=22"
   },

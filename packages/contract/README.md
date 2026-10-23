@@ -39,5 +39,8 @@ no package, so it does not pull in `zod` or the schemas the root entry builds
 at load. The root entry exports the same names.
 
 Apache License 2.0 (versions before 2.0.0: MIT). Copyright 2026 FortripAI, Inc.
-"Fortrip" is a trademark of FortripAI, Inc.; the license grants no right to use
-it. Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.
+"Fortrip" is a trademark of FortripAI, Inc. The license does not grant
+permission to use the trade names, trademarks, service marks or product names
+of FortripAI, Inc., except as required for reasonable and customary use in
+describing the origin of the software and reproducing the content of the NOTICE
+file (section 6). Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.

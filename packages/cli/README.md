@@ -233,5 +233,7 @@ MIT License. This license does not grant access to the hosted Fortrip service,
 hotel inventory, or third-party data.
 
 "Fortrip" and the Fortrip logo are trademarks of FortripAI, Inc. The license
-does not grant permission to use them (section 6), except to describe where the
-software comes from.
+does not grant permission to use the trade names, trademarks, service marks or
+product names of FortripAI, Inc., except as required for reasonable and
+customary use in describing the origin of the software and reproducing the
+content of the NOTICE file (section 6).

@@ -15,12 +15,13 @@ import {
   InMemoryTransport,
   type JSONRPCMessage,
   McpServer,
+  Server,
   type StandardSchemaWithJSON,
   type ToolCallback,
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
-import { loadSession, saveSession } from "../src/credentials.ts";
+import { loadSession, saveSession, tryLoginLock } from "../src/credentials.ts";
 import { runMcpBridge } from "../src/mcp-bridge.ts";
 import { type FakeApi, MCP_TOOLS, startFakeApi } from "./helpers/fake-api.ts";
 
@@ -141,7 +142,7 @@ interface Bridge {
 }
 
 /** An MCP client on the stdio of a bridge run in this process. */
-function startBridge(url = apiUrl): Bridge {
+function startBridge(url = apiUrl, options?: { switchTimeoutMs?: number }): Bridge {
   const stdin = new PassThrough();
   const stdout = new PassThrough();
   const lines: string[] = [];
@@ -160,7 +161,7 @@ function startBridge(url = apiUrl): Bridge {
       } catch {}
     }
   });
-  const done = runMcpBridge(url, { stdin, stdout });
+  const done = runMcpBridge(url, { stdin, stdout }, options);
   const bridge: Bridge = {
     lines,
     messages,
@@ -192,6 +193,9 @@ afterEach(async () => {
     await bridge.close();
     // stdout is the client's: nothing but JSON-RPC may reach it.
     for (const line of bridge.lines) assert.equal(JSON.parse(line).jsonrpc, "2.0", line);
+    // Each request is answered once at most.
+    const answered = bridge.messages.filter((m) => m.id !== undefined && !m.method).map((m) => m.id);
+    assert.equal(new Set(answered).size, answered.length, `answered twice: ${answered.join(", ")}`);
   }
 });
 
@@ -356,6 +360,22 @@ describe("fortrip mcp bridge", () => {
     assert.match(reply.error?.message ?? "", /npx -y fortrip login/);
     assert.ok(reply.error?.message.includes(loginUrl));
     assert.equal(reply.error?.data?.loginUrl, loginUrl);
+  });
+
+  it("a FORTRIP_TOKEN alone, with no saved session, is sent on at initialize", async () => {
+    const token = api.session().accessToken;
+    process.env.FORTRIP_TOKEN = token;
+    const bridge = startBridge();
+
+    assert.deepEqual((await bridge.request(initialize())).result, {
+      protocolVersion: "2025-06-18",
+      capabilities: { tools: {} },
+      serverInfo: { name: "fake-fortrip", version: "0.0.0" },
+    });
+    assert.deepEqual(
+      api.mcpRequests.map((request) => [request.message.method, request.token]),
+      [["initialize", token]],
+    );
   });
 
   it("a FORTRIP_TOKEN the server turns down is named at the first tool call, and never refreshed", async () => {
@@ -592,14 +612,126 @@ describe("fortrip mcp bridge, signed out", () => {
         ["fake-session-1", "2025-03-26"],
       ],
     );
-    // The client heard the local initialize answer and the call's messages,
+    // The client heard the local initialize answer, that the tool list may
+    // have changed (the local answer said it can), and the call's messages;
     // not the hosted server's initialize answer.
     assert.equal(bridge.messages.filter((m) => m.id === 1).length, 1);
     assert.deepEqual(
       bridge.messages.slice(2).map((m) => m.method ?? m.id),
-      ["notifications/message", "ping", 3],
+      ["notifications/tools/list_changed", "notifications/message", "ping", 3],
     );
   });
+
+  it("tells the client the tool list may have changed only if its local initialize said it can", async () => {
+    // A local server that doesn't advertise `tools.listChanged`.
+    mock.method(Server.prototype, "getCapabilities", () => ({ tools: {} }));
+    const bridge = startBridge();
+    const { result } = await bridge.request(initialize());
+    assert.deepEqual((result as { capabilities: unknown }).capabilities, { tools: {} });
+    bridge.send(initialized);
+    await signIn();
+
+    assert.ok((await bridge.request(callTool(2))).result);
+
+    assert.ok(!bridge.messages.some((m) => m.method === "notifications/tools/list_changed"));
+  });
+
+  it("a switch whose answer stream ends without the answer fails that call, and the bridge keeps serving", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    await signIn();
+    api.options.stall = { method: "initialize", how: "drop" };
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.equal(reply.error?.code, -32603);
+    assert.match(reply.error?.message ?? "", /connection/i);
+    assert.equal(reply.error?.data?.retryable, true);
+    assert.deepEqual((await bridge.request({ jsonrpc: "2.0", id: 3, method: "ping" })).result, {});
+    api.options.stall = undefined;
+    assert.ok((await bridge.request(callTool(4))).result);
+  });
+
+  it("an error answer to the switch's initialize answers that call, and the bridge stays local", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    await signIn();
+    const error = { code: -32602, message: "Unsupported protocol version" };
+    api.options.initializeError = error;
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, error });
+    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: await hostedTools() });
+    assert.deepEqual(
+      api.mcpRequests.map((request) => request.message.method),
+      ["initialize"],
+    );
+    api.options.initializeError = undefined;
+    assert.ok((await bridge.request(callTool(4))).result);
+    assert.deepEqual(
+      api.mcpRequests.map((request) => request.message.method),
+      ["initialize", "initialize", "notifications/initialized", "tools/call"],
+    );
+  });
+
+  it("a timed-out switch that settles after the next one started leaves that one its answer", async () => {
+    const bridge = startBridge(apiUrl, { switchTimeoutMs: 1_500 });
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    // A session due for a refresh, while another command holds the login
+    // lock: the switch waits on the lock past its deadline.
+    await saveSession(apiUrl, api.session({ expiresAt: Date.now() }));
+    const release = await tryLoginLock();
+    assert.ok(release);
+
+    assert.equal((await bridge.request(callTool(2))).error?.code, -32603);
+    // The next switch starts while the first still waits on the lock; the
+    // first settles once it is released.
+    bridge.send(callTool(3));
+    await release();
+
+    assert.ok((await bridge.reply(3)).result);
+    assert.equal(api.counts.refreshes, 1);
+  });
+
+  for (const method of ["initialize", "notifications/initialized"]) {
+    it(`a switch whose ${method} isn't answered in time fails the calls waiting on it, and the bridge stays local`, async () => {
+      const bridge = startBridge(apiUrl, { switchTimeoutMs: 200 });
+      await bridge.request(initialize());
+      bridge.send(initialized);
+      await signIn();
+      api.options.stall = { method, how: "hang" };
+
+      bridge.send(callTool(2));
+      bridge.send(callTool(3));
+      bridge.send({ jsonrpc: "2.0", id: 4, method: "ping" });
+      bridge.send(listTools(5));
+      const replies = await Promise.all([2, 3, 4, 5].map((id) => bridge.reply(id)));
+
+      // Both calls waited on the one switch, and get the retryable error.
+      for (const reply of replies.slice(0, 2)) {
+        assert.equal(reply.error?.code, -32603);
+        assert.equal(reply.error?.data?.retryable, true);
+      }
+      // The bridge is still local: ping and tools/list are answered here.
+      assert.deepEqual(replies[2]?.result, {});
+      assert.deepEqual(replies[3]?.result, { tools: await hostedTools() });
+      const tried = api.mcpRequests.map((request) => request.message.method);
+      assert.equal(tried.filter((m) => m === "initialize").length, 1);
+      assert.ok(!tried.includes("tools/call"));
+
+      // The next call tries the switch again.
+      api.options.stall = undefined;
+      assert.ok((await bridge.request(callTool(6))).result);
+      assert.deepEqual(
+        api.mcpRequests.slice(tried.length).map((request) => request.message.method),
+        ["initialize", "notifications/initialized", "tools/call"],
+      );
+    });
+  }
 
   it("requests sent during the switch go on in order after one initialize; earlier notifications don't", async () => {
     const bridge = startBridge();

@@ -162,6 +162,10 @@ const CONNECTION_LOST: RpcError = {
   data: { retryable: true },
 };
 
+/** How long the switch to the hosted server may take: its `initialize` and
+ *  `notifications/initialized`, the sign-in check included. */
+const SWITCH_TIMEOUT_MS = 60_000;
+
 /** Whether there is a sign-in to offer the hosted server: `FORTRIP_TOKEN`
  *  or a saved session. Unlike `requireToken` it never starts a device login.
  *  A credentials file that can't be read counts as none here; the first
@@ -223,7 +227,11 @@ function localServer(): McpServer {
  * (-32001, whose message names `LOGIN_COMMAND` and the sign-in link it
  * starts). Signed in by now (the link approved, or `LOGIN_COMMAND` run), the
  * bridge sends the client's `initialize` on to the hosted server and is
- * remote from that call on: no restart needed.
+ * remote from that call on, no restart needed; it then tells the client the
+ * tool list may have changed, so that it lists the hosted server's. A switch
+ * that takes longer than `switchTimeoutMs` (a minute) fails that call, and
+ * those that came in meanwhile, with a retryable error, and the bridge stays
+ * local.
  *
  * stdout carries only JSON-RPC, so a problem the user has to fix is the
  * error response to the request that hit it, and the bridge stays up. A
@@ -236,6 +244,7 @@ export async function runMcpBridge(
     stdin: process.stdin,
     stdout: process.stdout,
   },
+  { switchTimeoutMs = SWITCH_TIMEOUT_MS }: { switchTimeoutMs?: number } = {},
 ): Promise<void> {
   const stderr = io.stderr ?? process.stderr;
   const stdio = new StdioServerTransport(io.stdin, io.stdout);
@@ -254,6 +263,12 @@ export async function runMcpBridge(
   let remote = false;
   /** The client's `initialize`, sent on to the hosted server at the switch. */
   let clientInitialize: JSONRPCRequest | undefined;
+  /** Whether the local answer to it said the tool list can change. */
+  let listChanged = false;
+  /** Messages from the client so far; those up to `abandonedThrough` came
+   *  in while a switch ran out of time. */
+  let received = 0;
+  let abandonedThrough = 0;
   /** Requests sent on that the server hasn't answered. */
   const pending = new Set<RequestId>();
   let initializeId: RequestId | undefined;
@@ -294,17 +309,25 @@ export async function runMcpBridge(
   };
 
   /** Sends `request` to the hosted server and resolves with its answer,
-   *  which doesn't go on to the client; rejects with what sending threw. */
-  const ask = (request: JSONRPCRequest) =>
-    new Promise<JSONRPCResponse>((resolve, reject) => {
+   *  which doesn't go on to the client; rejects with what sending threw.
+   *  `signal` aborts the request. An aborted request can settle after the
+   *  next one with its id was sent, so it forgets only its own waiter. */
+  const ask = (request: JSONRPCRequest, signal?: AbortSignal) => {
+    let waiter!: (answer: JSONRPCResponse) => void;
+    return new Promise<JSONRPCResponse>((resolve, reject) => {
+      waiter = resolve;
       asked.set(request.id, resolve);
       http
         .send(request, {
+          requestSignal: signal,
           onRequestStreamEnd: () =>
             resolve({ jsonrpc: "2.0", id: request.id, error: CONNECTION_LOST }),
         })
         .catch(reject);
-    }).finally(() => asked.delete(request.id));
+    }).finally(() => {
+      if (asked.get(request.id) === waiter) asked.delete(request.id);
+    });
+  };
 
   /** The client's `initialize`: answered by the hosted server if there is a
    *  sign-in it takes (or with the error reaching it failed with, as any
@@ -329,36 +352,75 @@ export async function runMcpBridge(
   };
 
   /**
-   * A tool call while local. Sending the client's `initialize` on to the
-   * hosted server checks the sign-in as the commands do (finishing a login
-   * the user has approved, else answering the call with the sign-in link).
-   * The hosted server's answer stays here, since the client is initialized
-   * already: the bridge adopts its protocol version, sends
-   * `notifications/initialized`, and is remote from this call on.
+   * The switch's handshake with the hosted server: the client's `initialize`
+   * (whose answer stays here: the client is initialized already), then, once
+   * it is answered, the protocol version adopted and
+   * `notifications/initialized` sent. Sending the `initialize` checks the
+   * sign-in as the commands do: it finishes a login the user has approved,
+   * else fails with the sign-in link. Resolves with the error to answer the
+   * tool call with, or undefined once the bridge can go remote. Past
+   * `switchTimeoutMs` it aborts what it sent, so no answer comes after, and
+   * gives up with CONNECTION_LOST, as do the tool calls that came in
+   * meanwhile.
    */
+  const handshake = async (initialize: JSONRPCRequest): Promise<RpcError | undefined> => {
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(), switchTimeoutMs);
+    const late = new Promise<undefined>((resolve) =>
+      deadline.signal.addEventListener("abort", () => resolve(undefined)),
+    );
+    try {
+      let answer: JSONRPCResponse | undefined;
+      try {
+        answer = await Promise.race([ask(initialize, deadline.signal), late]);
+      } catch (error) {
+        return rpcErrorOf(error);
+      }
+      if (answer && !isJSONRPCResultResponse(answer)) return answer.error;
+      if (answer) {
+        adopt(answer);
+        await http
+          .send(
+            { jsonrpc: "2.0", method: "notifications/initialized" },
+            { requestSignal: deadline.signal },
+          )
+          .catch(() => {});
+      }
+      if (!deadline.signal.aborted) return undefined;
+      abandonedThrough = received;
+      return CONNECTION_LOST;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  /** A tool call while local: the switch, then this call goes on, and the
+   *  client hears that the tool list may have changed if the local answer
+   *  to its `initialize` said it can (the hosted server's list is the one
+   *  that counts from now on). */
   const callTool = async (call: JSONRPCRequest) => {
     if (clientInitialize) {
-      let answer: JSONRPCResponse;
-      try {
-        answer = await ask(clientInitialize);
-      } catch (error) {
-        return toClient({ jsonrpc: "2.0", id: call.id, error: rpcErrorOf(error) });
-      }
-      if (!isJSONRPCResultResponse(answer)) return toClient({ ...answer, id: call.id });
-      adopt(answer);
-      await http.send({ jsonrpc: "2.0", method: "notifications/initialized" }).catch(() => {});
+      const error = await handshake(clientInitialize);
+      if (error) return toClient({ jsonrpc: "2.0", id: call.id, error });
     }
     remote = true;
     void forward(call);
+    if (listChanged) toClient({ jsonrpc: "2.0", method: "notifications/tools/list_changed" });
   };
 
   /** One message from the client. While local, a notification (the client's
    *  `initialized` among them) or an answer goes to the local server only. */
-  const handle = async (message: JSONRPCMessage) => {
+  const handle = async (message: JSONRPCMessage, seq: number) => {
     if (closed) return;
     if (remote) return void forward(message);
     if (isJSONRPCRequest(message) && message.method === "initialize") return initialize(message);
-    if (isJSONRPCRequest(message) && message.method === "tools/call") return callTool(message);
+    if (isJSONRPCRequest(message) && message.method === "tools/call") {
+      // It waited on a switch that ran out of time: no second wait.
+      if (seq <= abandonedThrough) {
+        return toClient({ jsonrpc: "2.0", id: message.id, error: CONNECTION_LOST });
+      }
+      return callTool(message);
+    }
     await local.send(message);
   };
 
@@ -368,9 +430,16 @@ export async function runMcpBridge(
   // handling a message only starts sending it.
   let inbox: Promise<void> = Promise.resolve();
   stdio.onmessage = (message: JSONRPCMessage) => {
-    inbox = inbox.then(() => handle(message)).catch((error: Error) => log(error.message));
+    const seq = ++received;
+    inbox = inbox.then(() => handle(message, seq)).catch((error: Error) => log(error.message));
   };
-  local.onmessage = toClient;
+  local.onmessage = (message: JSONRPCMessage) => {
+    if (isJSONRPCResultResponse(message) && message.id === clientInitialize?.id) {
+      const { capabilities } = message.result as { capabilities?: { tools?: { listChanged?: unknown } } };
+      listChanged = capabilities?.tools?.listChanged === true;
+    }
+    toClient(message);
+  };
   http.onmessage = (message: JSONRPCMessage) => {
     if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
       const waiting = message.id === undefined ? undefined : asked.get(message.id);
