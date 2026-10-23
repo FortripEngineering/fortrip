@@ -1,4 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The contract is read from its source here, by typecheck, tests (tsx)
+    // and the bundle (tsup) alike, so none of them needs it built first.
+    "paths": {
+      "@fortrip/agent-contract": ["../contract/src/index.ts"]
+    }
+  },
   "include": ["src", "test", "tsup.config.ts"]
 }

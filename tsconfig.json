@@ -1,4 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
+  // allowJs: the scripts' tests import the .mjs modules that validate.mjs uses.
+  "compilerOptions": { "allowJs": true },
   "include": ["scripts/*.ts"]
 }

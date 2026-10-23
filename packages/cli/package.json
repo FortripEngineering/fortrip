@@ -1,6 +1,6 @@
 {
   "name": "fortrip",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "license": "MIT",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "mcpName": "io.github.FortripEngineering/fortrip",
@@ -15,8 +15,6 @@
   },
   "files": [
     "dist",
-    "guides",
-    "AGENT_GUIDE.md",
     "README.md"
   ],
   "engines": {
@@ -29,10 +27,16 @@
     "test": "node --import tsx --test test/*.test.ts",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/server": "2.3.1"
+  },
   "devDependencies": {
+    "@fortrip/agent-contract": "workspace:*",
     "@types/node": "^22.15.0",
     "tsup": "^8.5.1",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "zod": "4.4.3"
   }
 }

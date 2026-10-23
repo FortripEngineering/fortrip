@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { registryEntryProblems } from "./registry-entry.mjs";
 
 const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (file) => fs.readFileSync(path.join(repo, file), "utf8");
@@ -61,6 +62,9 @@ for (const file of ["plugins/openai/plugin.json", "plugins/openai/mcp.json", "pl
 const server = load("plugins/registry/server.json");
 check("registry name", server.name === "io.github.FortripEngineering/fortrip", server.name);
 check("registry remote", server.remotes?.some((r) => r.url === MCP_URL), JSON.stringify(server.remotes));
+// The entry lists the package that is released, so a release has to move it.
+const registryProblems = registryEntryProblems(server, load("packages/cli/package.json"));
+check("registry entry matches packages/cli", registryProblems.length === 0, registryProblems.join("; "));
 check("plugins/claude/.mcp.json url", load("plugins/claude/.mcp.json").mcpServers?.fortrip?.url === MCP_URL);
 // `claude plugin validate` doesn't follow a marketplace entry's source.
 for (const entry of load(".claude-plugin/marketplace.json").plugins) {
@@ -169,9 +173,7 @@ const files = [];
 const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
 const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repo, encoding: "utf8" })
   .split("\0")
-  // packages/cli still names the supplier until the CLI moves to
-  // /api/agent/v1; drop this exclusion in the task that rewrites it.
-  .filter((f) => f && !f.startsWith("packages/cli/") && fs.existsSync(path.join(repo, f)));
+  .filter((f) => f && fs.existsSync(path.join(repo, f)));
 const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
 check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
 // Anthropic Software Directory Policy §2F: the Claude plugin must not have

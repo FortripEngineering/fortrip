@@ -1,6 +1,6 @@
 {
   "name": "@fortrip/agent-contract",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0",
   "license": "MIT",
   "description": "The contract of Fortrip's agent API (/api/agent/v1): limits, paths, input schemas and field rules.",
   "type": "module",

@@ -7,6 +7,10 @@ export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
  *  give up, and an agent retry, just as the server is answering. */
 export const REQUEST_TIMEOUT_MS = 150_000;
 
+/** Sign-in requests (to the OAuth server) answer quickly; a shorter limit
+ *  also bounds how long a command holds the login lock for one. */
+export const OAUTH_TIMEOUT_MS = 30_000;
+
 export interface ApiResponse {
   status: number;
   body: Record<string, unknown>;
@@ -64,11 +68,60 @@ export async function request(
   return { status: response.status, body: result, headers: response.headers };
 }
 
+/**
+ * One form-encoded POST to an OAuth endpoint (RFC 6749 §3.2, RFC 8628,
+ * RFC 7009), whose answers are plain JSON; never throws on HTTP status.
+ * The body carries codes and tokens, so a redirect isn't followed.
+ */
+export async function postForm(
+  url: string,
+  form: Record<string, string>,
+  timeoutMs = OAUTH_TIMEOUT_MS,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const { origin } = new URL(url);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": `fortrip-cli/${VERSION}`,
+      },
+      body: new URLSearchParams(form).toString(),
+      redirect: "manual",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    throw transportError(origin, error, undefined, timeoutMs);
+  }
+  let text: string;
+  try {
+    text = await response.text();
+  } catch (error) {
+    throw transportError(origin, error, response.status, timeoutMs);
+  }
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(text);
+  } catch {}
+  const body =
+    parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  return { status: response.status, body };
+}
+
 /** No answer, or the connection dropped: worth one retry. */
-function transportError(apiUrl: string, error: unknown, status?: number): CliError {
+function transportError(
+  apiUrl: string,
+  error: unknown,
+  status?: number,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): CliError {
   const message =
     (error as Error)?.name === "TimeoutError"
-      ? `No response from ${apiUrl} within ${REQUEST_TIMEOUT_MS / 1_000} s`
+      ? `No response from ${apiUrl} within ${timeoutMs / 1_000} s`
       : `Could not reach ${apiUrl}: ${(error as Error)?.message ?? String(error)}`;
   return new CliError(message, EXIT.error, {
     ...(status !== undefined ? { status } : {}),

@@ -65,13 +65,18 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+      # pnpm pack, not npm pack: it writes the contract's version in place of
+      # the CLI's "workspace:*" dev dependency, so the published package.json
+      # has no workspace: protocol. (pnpm pack has no --ignore-scripts flag;
+      # the config setting does the same.) The publish job still uploads the
+      # tarballs with npm.
       - name: Pack the contract
         working-directory: packages/contract
-        run: npm pack --ignore-scripts --pack-destination ../..
+        run: pnpm --config.ignore-scripts=true pack --pack-destination ../..
 
       - name: Pack the CLI
         working-directory: packages/cli
-        run: npm pack --ignore-scripts --pack-destination ../..
+        run: pnpm --config.ignore-scripts=true pack --pack-destination ../..
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

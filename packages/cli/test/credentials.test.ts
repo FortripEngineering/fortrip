@@ -22,14 +22,14 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   addPendingLogin,
   credentialsPath,
-  deleteToken,
+  deleteSession,
   loadPendingLogins,
-  loadStoredToken,
+  loadRecoveredSessions,
+  loadSession,
   type PendingLogin,
   resolveApiUrl,
-  resolveToken,
-  saveToken,
-  loadRecoveredTokens,
+  type Session,
+  saveSession,
   tryLock,
   tryLoginLock,
   updatePendingLogin,
@@ -41,48 +41,44 @@ beforeEach(async () => {
   env = { XDG_CONFIG_HOME: await mkdtemp(join(tmpdir(), "fortrip-cli-")) };
 });
 
+const read = async () => JSON.parse(await readFile(credentialsPath(env), "utf8"));
+
 describe("credentials", () => {
-  it("saves under ~/.config/fortrip with 0600 and keys tokens by API URL", async () => {
-    await saveToken("https://fortrip.ai", "fth_prod", env);
-    await saveToken("http://localhost:3000", "fth_local", env);
+  it("saves sessions under ~/.config/fortrip with 0600, per API URL, in the version 2 format", async () => {
+    await saveSession("https://fortrip.ai", session("prod"), env);
+    await saveSession("http://localhost:3000", session("local"), env);
 
     const path = credentialsPath(env);
     assert.equal(path, join(env.XDG_CONFIG_HOME as string, "fortrip", "credentials.json"));
     assert.equal((await stat(path)).mode & 0o777, 0o600);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_prod");
-    assert.equal(await loadStoredToken("http://localhost:3000", env), "fth_local");
-    assert.equal(await loadStoredToken("https://other.example", env), null);
-    assert.match(await readFile(path, "utf8"), /"createdAt"/);
-  });
-
-  it("FORTRIP_TOKEN wins over the saved login", async () => {
-    await saveToken("https://fortrip.ai", "fth_saved", env);
-    assert.deepEqual(await resolveToken("https://fortrip.ai", env), {
-      token: "fth_saved",
-      source: "file",
-    });
-    env.FORTRIP_TOKEN = "fth_env";
-    assert.deepEqual(await resolveToken("https://fortrip.ai", env), {
-      token: "fth_env",
-      source: "env",
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("prod"));
+    assert.deepEqual(await loadSession("http://localhost:3000", env), session("local"));
+    assert.equal(await loadSession("https://other.example", env), null);
+    assert.deepEqual(await read(), {
+      version: 2,
+      sessions: {
+        "https://fortrip.ai": session("prod"),
+        "http://localhost:3000": session("local"),
+      },
+      pendingLogins: {},
     });
   });
 
-  it("deleting the last token keeps the file, which 0.3.0 may be writing", async () => {
-    await saveToken("https://fortrip.ai", "fth_prod", env);
-    await deleteToken("https://fortrip.ai", env);
-    assert.equal(await resolveToken("https://fortrip.ai", env), null);
-    assert.deepEqual(JSON.parse(await readFile(credentialsPath(env), "utf8")).tokens, {});
+  it("deleting the last session leaves an empty file", async () => {
+    await saveSession("https://fortrip.ai", session("prod"), env);
+    await deleteSession("https://fortrip.ai", env);
+    assert.equal(await loadSession("https://fortrip.ai", env), null);
+    assert.deepEqual((await read()).sessions, {});
   });
 
-  it("keeps pending logins until they expire or a token replaces them", async () => {
+  it("keeps pending logins until they expire or a sign-in replaces them", async () => {
     const pending = login(1);
     await addPendingLogin("https://fortrip.ai", pending, env);
     assert.equal((await stat(credentialsPath(env))).mode & 0o777, 0o600);
     assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), [pending]);
     assert.deepEqual(await loadPendingLogins("http://localhost:3000", env), []);
 
-    await saveToken("https://fortrip.ai", "fth_prod", env);
+    await saveSession("https://fortrip.ai", session("prod"), env);
     assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), []);
 
     await addPendingLogin(
@@ -91,6 +87,44 @@ describe("credentials", () => {
       env,
     );
     assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), []);
+  });
+
+  it("a refresh replaces only the session it refreshed, and keeps pending logins", async () => {
+    await saveSession("https://fortrip.ai", session("old"), env);
+    await addPendingLogin("https://fortrip.ai", login(1), env);
+
+    // Another command signed in meanwhile: the refreshed session isn't saved.
+    assert.deepEqual(
+      await saveSession("https://fortrip.ai", session("refreshed"), env, "access_other"),
+      { saved: session("old"), replaced: null },
+    );
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("old"));
+
+    assert.deepEqual(
+      await saveSession("https://fortrip.ai", session("refreshed"), env, "access_old"),
+      { saved: session("refreshed"), replaced: session("old") },
+    );
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("refreshed"));
+    // The user may still approve a link they were shown.
+    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), [login(1)]);
+
+    // Logged out meanwhile: nothing comes back.
+    await deleteSession("https://fortrip.ai", env);
+    assert.deepEqual(
+      await saveSession("https://fortrip.ai", session("late"), env, "access_refreshed"),
+      { saved: null, replaced: null },
+    );
+    assert.equal(await loadSession("https://fortrip.ai", env), null);
+
+    // A sign-in says which session it replaced.
+    assert.deepEqual(await saveSession("https://fortrip.ai", session("first"), env), {
+      saved: session("first"),
+      replaced: null,
+    });
+    assert.deepEqual(await saveSession("https://fortrip.ai", session("second"), env), {
+      saved: session("second"),
+      replaced: session("first"),
+    });
   });
 
   it("keeps every pending login added in parallel", async () => {
@@ -115,32 +149,34 @@ describe("credentials", () => {
       { ...login(1), lastPolledAt, interval: 10 },
     ]);
 
-    await saveToken("https://fortrip.ai", "fth_prod", env);
+    await saveSession("https://fortrip.ai", session("prod"), env);
     await updatePendingLogin("https://fortrip.ai", "dc1", { lastPolledAt }, env);
     assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), []);
   });
 
-  it("reads the single pending login 0.3.0 saved", async () => {
-    const path = credentialsPath(env);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(
-      path,
-      JSON.stringify({ tokens: {}, pending: { "https://fortrip.ai": login(1) } }),
+  it("drops expired logins from the file when it writes", async () => {
+    await addPendingLogin(
+      "https://fortrip.ai",
+      { ...login(1), expiresAt: new Date(Date.now() + 200).toISOString() },
+      env,
     );
-    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), [login(1)]);
+    await addPendingLogin("http://localhost:3000", login(2), env);
+    await sleep(250);
+    await saveSession("https://other.example", session("other"), env);
+    assert.deepEqual((await read()).pendingLogins, { "http://localhost:3000": [login(2)] });
   });
 
-  it("deleteToken with `only` keeps a token saved meanwhile", async () => {
-    await saveToken("https://fortrip.ai", "fth_new", env);
-    await deleteToken("https://fortrip.ai", env, ["fth_old"]);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-    await deleteToken("https://fortrip.ai", env, ["fth_old", "fth_new"]);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), null);
+  it("deleteSession with `only` keeps a session saved meanwhile", async () => {
+    await saveSession("https://fortrip.ai", session("new"), env);
+    await deleteSession("https://fortrip.ai", env, ["access_old"]);
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("new"));
+    await deleteSession("https://fortrip.ai", env, ["access_old", "access_new"]);
+    assert.equal(await loadSession("https://fortrip.ai", env), null);
   });
 
   it("replaces the file atomically in a 0700 directory and leaves no temp or lock files", async () => {
     await Promise.all([
-      saveToken("https://fortrip.ai", "fth_prod", env),
+      saveSession("https://fortrip.ai", session("prod"), env),
       addPendingLogin("http://localhost:3000", login(1), env),
     ]);
     const dir = dirname(credentialsPath(env));
@@ -148,6 +184,62 @@ describe("credentials", () => {
     assert.deepEqual(await readdir(dir), ["credentials.json"]);
   });
 
+  it("writes other top-level keys back as they were", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, JSON.stringify({ version: 2, sessions: {}, futureKey: { a: 1 } }));
+    await addPendingLogin("https://fortrip.ai", login(1), env);
+    assert.deepEqual((await read()).futureKey, { a: 1 });
+  });
+
+  it("a file from 0.3.x (no version) counts as empty and is replaced on the next write", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(
+      path,
+      JSON.stringify({
+        tokens: { "https://fortrip.ai": { accessToken: "fth_old", createdAt: "x" } },
+        pending: { "https://fortrip.ai": login(1) },
+        pendingLogins: { "https://fortrip.ai": [login(1)] },
+      }),
+    );
+    assert.equal(await loadSession("https://fortrip.ai", env), null);
+    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), []);
+
+    await saveSession("https://fortrip.ai", session("prod"), env);
+    assert.deepEqual(await read(), {
+      version: 2,
+      sessions: { "https://fortrip.ai": session("prod") },
+      pendingLogins: {},
+    });
+  });
+
+  it("never overwrites a file it can't read, and says to move it", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    for (const text of ['{"version": 2, "sessions": {"https://keep', "[]", '{"version": 3}']) {
+      await writeFile(path, text);
+      await assert.rejects(
+        deleteSession("https://fortrip.ai", env),
+        (error) =>
+          error instanceof CliError &&
+          error.details.retryable === undefined &&
+          error.message.includes(path) &&
+          /Move it away/.test(error.message),
+        text,
+      );
+      assert.equal(await readFile(path, "utf8"), text);
+    }
+  });
+
+  it("an empty file counts as empty", async () => {
+    const path = credentialsPath(env);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, "");
+    assert.equal(await loadSession("https://fortrip.ai", env), null);
+    await saveSession("https://fortrip.ai", session("new"), env);
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("new"));
+  });
 });
 
 /** The lock-file contents a process writes (see `newOwner`). */
@@ -169,7 +261,7 @@ async function exitedPid(): Promise<number> {
   return child.pid as number;
 }
 
-describe("I4: one lock holder at a time", () => {
+describe("R4: one lock holder at a time", () => {
   it("takes over a lock older than its limit", async () => {
     const path = credentialsPath(env);
     await mkdir(dirname(path), { recursive: true });
@@ -177,8 +269,8 @@ describe("I4: one lock holder at a time", () => {
     const longAgo = new Date(Date.now() - 60_000);
     await utimes(`${path}.lock`, longAgo, longAgo);
 
-    await saveToken("https://fortrip.ai", "fth_prod", env);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_prod");
+    await saveSession("https://fortrip.ai", session("prod"), env);
+    assert.deepEqual(await loadSession("https://fortrip.ai", env), session("prod"));
   });
 
   it("takes over at once a lock whose process on this host has ended", async () => {
@@ -186,7 +278,7 @@ describe("I4: one lock holder at a time", () => {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(`${path}.lock`, ownerOf(await exitedPid()));
     const started = Date.now();
-    await saveToken("https://fortrip.ai", "fth_1", env);
+    await saveSession("https://fortrip.ai", session("1"), env);
     assert.ok(Date.now() - started < 2_000);
   });
 
@@ -321,7 +413,7 @@ describe("I4: one lock holder at a time", () => {
     const ticking = setInterval(() => mock.timers.tick(5_000), 20);
     try {
       await assert.rejects(
-        deleteToken("https://fortrip.ai", env),
+        deleteSession("https://fortrip.ai", env),
         (error) =>
           error instanceof CliError &&
           error.details.retryable === true &&
@@ -364,200 +456,46 @@ describe("I4: one lock holder at a time", () => {
   });
 });
 
-describe("I2: the file 0.3.0 shares", () => {
-  const read = async () => JSON.parse(await readFile(credentialsPath(env), "utf8"));
-
-  it("keeps the newest pending login where 0.3.0 reads it, every login in pendingLogins, and other keys as they were", async () => {
-    const path = credentialsPath(env);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, JSON.stringify({ tokens: {}, futureKey: { a: 1 } }));
-    await addPendingLogin("https://fortrip.ai", login(1), env);
-    await addPendingLogin("https://fortrip.ai", login(2), env);
-
-    const file = await read();
-    assert.deepEqual(file.pending["https://fortrip.ai"], login(2));
-    assert.deepEqual(file.pendingLogins["https://fortrip.ai"], [login(1), login(2)]);
-    assert.deepEqual(file.futureKey, { a: 1 });
-  });
-
-  it("drops expired logins from the file when it writes", async () => {
-    await addPendingLogin(
-      "https://fortrip.ai",
-      { ...login(1), expiresAt: new Date(Date.now() + 200).toISOString() },
-      env,
-    );
-    await addPendingLogin("http://localhost:3000", login(2), env);
-    await sleep(250);
-    await saveToken("https://other.example", "fth_other", env);
-    const file = await read();
-    assert.equal(file.pending["https://fortrip.ai"], undefined);
-    assert.equal(file.pendingLogins["https://fortrip.ai"], undefined);
-    assert.deepEqual(file.pending["http://localhost:3000"], login(2));
-  });
-
-  it("merges a login 0.3.0 put in `pending` with the list it didn't keep", async () => {
-    await addPendingLogin("https://fortrip.ai", login(1), env);
-    // 0.3.0 starts a login: it rewrites the file from `tokens` and `pending`.
-    const file = await read();
-    await writeFile(
-      credentialsPath(env),
-      JSON.stringify({ tokens: file.tokens, pending: { "https://fortrip.ai": login(2) } }),
-    );
-    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), [login(2)]);
-
-    // With the list still there, both count.
-    await writeFile(
-      credentialsPath(env),
-      JSON.stringify({
-        ...file,
-        pending: { "https://fortrip.ai": login(2) },
-      }),
-    );
-    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), [login(1), login(2)]);
-  });
-
-  it("waits out a file 0.3.0 is writing instead of taking it for empty", async () => {
-    await saveToken("https://keep.example", "fth_keep", env);
-    const path = credentialsPath(env);
-    const before = await readFile(path, "utf8");
-    // 0.3.0 truncates, then writes.
-    await writeFile(path, "");
-    const saving = saveToken("https://fortrip.ai", "fth_new", env);
-    await sleep(150);
-    await writeFile(path, before);
-    await saving;
-    assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep");
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-  });
-
-  it("never overwrites a file it can't parse: retryable while it may be mid-write, else says to move it", async () => {
-    const path = credentialsPath(env);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, "");
-    await assert.rejects(
-      deleteToken("https://fortrip.ai", env),
-      (error) => error instanceof CliError && error.details.retryable === true,
-    );
-    assert.equal(await readFile(path, "utf8"), "");
-    for (const text of ['{"tokens": {"https://keep', "[]"]) {
-      await writeFile(path, text);
-      await assert.rejects(
-        deleteToken("https://fortrip.ai", env),
-        (error) =>
-          error instanceof CliError &&
-          error.details.retryable === undefined &&
-          error.message.includes(path) &&
-          /Move it away/.test(error.message),
-      );
-      assert.equal(await readFile(path, "utf8"), text);
-    }
-  });
-
-  it("an empty file nobody has touched for a while counts as empty", async () => {
-    const path = credentialsPath(env);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, "");
-    const before = new Date(Date.now() - 10_000);
-    await utimes(path, before, before);
-    const started = Date.now();
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), null);
-    assert.ok(Date.now() - started < 500, "no retries for a file left empty");
-    await saveToken("https://fortrip.ai", "fth_new", env);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-  });
-
-  it("saves the token again when 0.3.0 overwrites it just after the save", async () => {
-    await saveToken("https://keep.example", "fth_keep", env);
-    const path = credentialsPath(env);
-    const realRename = fsp.rename;
-    let clobbered = false;
-    // 0.3.0 read the file before this save and writes its own token after.
-    mock.method(fsp, "rename", async (...args: Parameters<typeof realRename>) => {
-      const before = await readFile(path, "utf8");
-      await realRename(...args);
-      if (!clobbered && args[1] === path) {
-        clobbered = true;
-        const file = JSON.parse(before);
-        file.tokens["https://old.example"] = { accessToken: "fth_030", createdAt: "x" };
-        await writeFile(path, JSON.stringify(file));
-      }
-    });
-    syncBuiltinESMExports();
-    try {
-      await saveToken("https://fortrip.ai", "fth_new", env);
-    } finally {
-      mock.restoreAll();
-      syncBuiltinESMExports();
-    }
-    assert.ok(clobbered);
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-    assert.equal(await loadStoredToken("https://old.example", env), "fth_030");
-    assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep");
-  });
-
-  it("makes its change again when 0.3.0 wrote while the new file was being prepared", async () => {
-    await saveToken("https://keep.example", "fth_keep", env);
-    const path = credentialsPath(env);
-    const realWriteFile = fsp.writeFile;
-    let injected = false;
-    // Right after the temp file is written, before it replaces the old one,
-    // 0.3.0 saves a token of its own.
-    mock.method(fsp, "writeFile", async (...args: Parameters<typeof realWriteFile>) => {
-      await realWriteFile(...args);
-      if (!injected && String(args[0]).endsWith(".tmp")) {
-        injected = true;
-        const file = JSON.parse(await readFile(path, "utf8"));
-        file.tokens["https://old.example"] = { accessToken: "fth_030", createdAt: "x" };
-        await realWriteFile(path, JSON.stringify(file));
-      }
-    });
-    syncBuiltinESMExports();
-    try {
-      await saveToken("https://fortrip.ai", "fth_new", env);
-    } finally {
-      mock.restoreAll();
-      syncBuiltinESMExports();
-    }
-    assert.ok(injected);
-    assert.equal(await loadStoredToken("https://old.example", env), "fth_030");
-    assert.equal(await loadStoredToken("https://fortrip.ai", env), "fth_new");
-    assert.equal(await loadStoredToken("https://keep.example", env), "fth_keep");
-  });
-});
-
-describe("I3: recovery files", () => {
+describe("R3: recovery files", () => {
   const recovery = (name: string) =>
     join(env.XDG_CONFIG_HOME as string, "fortrip", `credentials.recovered-${name}.json`);
-  const token = (accessToken: string, createdAt: string) => ({ accessToken, createdAt });
 
-  it("the next successful write merges them back, newest per API URL, and removes them", async () => {
-    await saveToken("https://a.example", "fth_a_saved", env);
-    await saveToken("https://b.example", "fth_b_saved", env);
-    const later = new Date(Date.now() + 60_000).toISOString();
+  it("reads merge them in; the next successful write merges them back, newest per API URL, and removes them", async () => {
+    await saveSession("https://a.example", session("a_saved"), env);
+    await saveSession("https://b.example", session("b_saved"), env);
+    const later = Date.now() + 7_200_000;
     await writeFile(
       recovery("1"),
       JSON.stringify({
-        tokens: {
-          "https://a.example": token("fth_a_kept", later),
-          "https://b.example": token("fth_b_kept", "2000-01-01T00:00:00.000Z"),
-          "https://c.example": token("fth_c_kept", later),
+        version: 2,
+        sessions: {
+          "https://a.example": session("a_kept", later),
+          "https://b.example": session("b_kept", 1_000),
+          "https://c.example": session("c_kept", later),
         },
       }),
     );
     await writeFile(recovery("2"), "not json");
 
-    assert.deepEqual(await loadRecoveredTokens("https://a.example", env), ["fth_a_kept"]);
-    await addPendingLogin("https://d.example", login(1), env);
+    assert.deepEqual(await loadRecoveredSessions("https://a.example", env), [
+      session("a_kept", later),
+    ]);
+    // A command that only reads uses the newest session already.
+    assert.deepEqual(await loadSession("https://a.example", env), session("a_kept", later));
+    assert.deepEqual(await loadSession("https://b.example", env), session("b_saved"));
+    assert.deepEqual(await loadSession("https://c.example", env), session("c_kept", later));
 
-    assert.equal(await loadStoredToken("https://a.example", env), "fth_a_kept");
-    assert.equal(await loadStoredToken("https://b.example", env), "fth_b_saved");
-    assert.equal(await loadStoredToken("https://c.example", env), "fth_c_kept");
+    await addPendingLogin("https://d.example", login(1), env);
+    const file = await read();
+    assert.deepEqual(file.sessions["https://a.example"], session("a_kept", later));
+    assert.deepEqual(file.sessions["https://b.example"], session("b_saved"));
+    assert.deepEqual(file.sessions["https://c.example"], session("c_kept", later));
     await assert.rejects(stat(recovery("1")));
     assert.equal(await readFile(recovery("2"), "utf8"), "not json");
   });
 });
 
-describe("I3: a minted token survives a failed write", () => {
+describe("R3: a minted session survives a failed write", () => {
   afterEach(() => {
     mock.restoreAll();
     syncBuiltinESMExports();
@@ -577,42 +515,53 @@ describe("I3: a minted token survives a failed write", () => {
   it("retries a rename another process blocks for a moment", async () => {
     for (const code of ["EPERM", "EACCES", "EBUSY"]) {
       const calls = failRename(3, code);
-      await saveToken("https://fortrip.ai", `fth_${code}`, env);
+      await saveSession("https://fortrip.ai", session(code), env);
       assert.equal(calls(), 4);
       mock.restoreAll();
       syncBuiltinESMExports();
-      assert.equal(await loadStoredToken("https://fortrip.ai", env), `fth_${code}`);
+      assert.deepEqual(await loadSession("https://fortrip.ai", env), session(code));
     }
   });
 
-  it("keeps the token in a recovery file when the write keeps failing", async () => {
-    await saveToken("https://keep.example", "fth_keep", env);
+  it("keeps the session in a recovery file when the write keeps failing", async () => {
+    await saveSession("https://keep.example", session("keep"), env);
     const before = await readFile(credentialsPath(env), "utf8");
     failRename(Number.POSITIVE_INFINITY);
-    const error = await saveToken("https://fortrip.ai", "fth_minted", env).then(
+    const error = await saveSession("https://fortrip.ai", session("minted"), env).then(
       () => assert.fail("expected an error"),
       (error: unknown) => error,
     );
     assert.ok(error instanceof CliError);
     const kept = String(error.details.recoveryFile);
     assert.match(error.message, /kept in/);
-    assert.equal(
-      JSON.parse(await readFile(kept, "utf8")).tokens["https://fortrip.ai"].accessToken,
-      "fth_minted",
-    );
+    assert.doesNotMatch(error.message, /access_minted|refresh_minted/);
+    assert.deepEqual(JSON.parse(await readFile(kept, "utf8")), {
+      version: 2,
+      sessions: { "https://fortrip.ai": session("minted") },
+    });
     assert.equal((await stat(kept)).mode & 0o777, 0o600);
     assert.equal(await readFile(credentialsPath(env), "utf8"), before);
   });
 });
 
 const IN_TEN_MINUTES = new Date(Date.now() + 600_000).toISOString();
+const IN_AN_HOUR = Date.now() + 3_600_000;
 
 function login(n: number): PendingLogin {
   return {
     deviceCode: `dc${n}`,
     userCode: `CODE-${n}`,
-    loginUrl: `https://fortrip.ai/cli/authorize?code=CODE-${n}`,
+    loginUrl: `https://accounts.example/device?user_code=CODE-${n}`,
     expiresAt: IN_TEN_MINUTES,
+  };
+}
+
+function session(name: string, expiresAt = IN_AN_HOUR): Session {
+  return {
+    accessToken: `access_${name}`,
+    refreshToken: `refresh_${name}`,
+    expiresAt,
+    clientId: "client_cli",
   };
 }
 

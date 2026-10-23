@@ -8,7 +8,6 @@ import {
   readFile,
   rename,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
@@ -20,9 +19,14 @@ import { CliError, EXIT, usageError } from "./errors.ts";
 
 export const DEFAULT_API_URL = "https://fortrip.ai";
 
-interface StoredToken {
+/** A sign-in with one API URL, as the OAuth token endpoint issued it. */
+export interface Session {
   accessToken: string;
-  createdAt: string;
+  refreshToken: string;
+  /** When the access token expires, in milliseconds since the epoch. */
+  expiresAt: number;
+  /** The OAuth client the tokens were issued to; a refresh names it. */
+  clientId: string;
 }
 
 /** A device login started for an agent that can't wait on `login`; the next
@@ -42,17 +46,16 @@ export interface PendingLogin {
 }
 
 /**
- * credentials.json, which 0.3.0 also reads and writes (without a lock, and
- * truncating it before writing):
- * - `tokens`: per API URL, so a saved token is never sent to another server.
- * - `pending`: the newest pending login per API URL, the one 0.3.0 reads.
+ * credentials.json, `version: 2`:
+ * - `sessions`: per API URL, so a token is never sent to another server.
  * - `pendingLogins`: every unexpired pending login per API URL, since the
- *   user may approve any link they were shown. 0.3.0 drops this key when it
- *   writes; the newest login survives in `pending`.
- * Other top-level keys are written back as they were read.
+ *   user may approve any link they were shown.
+ * Other top-level keys are written back as they were read. A file without a
+ * `version` is 0.3.x's, whose tokens this version can't use: it counts as
+ * empty, and the next write replaces it.
  */
 interface Credentials {
-  tokens: Record<string, StoredToken>;
+  sessions: Record<string, Session>;
   logins: Record<string, PendingLogin[]>;
   other: Record<string, unknown>;
 }
@@ -64,14 +67,8 @@ const CREDENTIALS_LOCK_STALE_MS = 10_000;
 const LOGIN_LOCK_STALE_MS = REQUEST_TIMEOUT_MS + 30_000;
 /** The takeover guard is held for one check and removal. */
 const TAKEOVER_STALE_MS = 2_000;
-/** About a second of re-reading a file 0.3.0 is in the middle of writing. */
-const READ_RETRY_MS = [20, 50, 100, 200, 300, 400];
-/** An empty file untouched this long was left behind, not being written. */
-const LEFT_EMPTY_MS = 2_000;
 /** How long to wait for the credentials lock before giving up. */
 const LOCK_WAIT_MS = 30_000;
-/** When to look again whether a saved token is still in the file. */
-const SAVE_CHECK_MS = 200;
 /** About two seconds of retrying a rename another process blocks. */
 const RENAME_RETRY_MS = [20, 50, 100, 200, 300, 400, 500, 500];
 
@@ -112,7 +109,17 @@ function isLogin(value: unknown): value is PendingLogin {
   );
 }
 
-/** Null when `text` isn't a credentials object (e.g. half written). */
+function isSession(value: unknown): value is Session {
+  return (
+    isObject(value) &&
+    typeof value.accessToken === "string" &&
+    typeof value.refreshToken === "string" &&
+    typeof value.expiresAt === "number" &&
+    typeof value.clientId === "string"
+  );
+}
+
+/** Null when `text` isn't a credentials file this version can read. */
 function parse(text: string): Credentials | null {
   let raw: unknown;
   try {
@@ -121,40 +128,27 @@ function parse(text: string): Credentials | null {
     return null;
   }
   if (!isObject(raw)) return null;
-  const { tokens, pending, pendingLogins, ...other } = raw;
-  const logins: Record<string, PendingLogin[]> = {};
-  const add = (apiUrl: string, login: unknown) => {
-    const list = (logins[apiUrl] ??= []);
-    if (isLogin(login) && !list.some((known) => known.deviceCode === login.deviceCode)) {
-      list.push(login);
-    }
-  };
+  const { version, sessions, pendingLogins, ...other } = raw;
+  if (version === undefined) return emptyCredentials();
+  if (version !== 2) return null;
+  const credentials: Credentials = { sessions: {}, logins: {}, other };
+  for (const [apiUrl, session] of Object.entries(isObject(sessions) ? sessions : {})) {
+    if (isSession(session)) credentials.sessions[apiUrl] = session;
+  }
   for (const [apiUrl, list] of Object.entries(isObject(pendingLogins) ? pendingLogins : {})) {
-    for (const login of Array.isArray(list) ? list : []) add(apiUrl, login);
+    credentials.logins[apiUrl] = (Array.isArray(list) ? list : []).filter(isLogin);
   }
-  // 0.3.0 may have replaced the newest login with one it started.
-  for (const [apiUrl, login] of Object.entries(isObject(pending) ? pending : {})) {
-    for (const each of Array.isArray(login) ? login : [login]) add(apiUrl, each);
-  }
-  return {
-    tokens: (isObject(tokens) ? tokens : {}) as Record<string, StoredToken>,
-    logins,
-    other,
-  };
+  return credentials;
 }
 
 /** The file's text. */
-function serialize({ tokens, logins, other }: Credentials): string {
-  const pending: Record<string, PendingLogin> = {};
+function serialize({ sessions, logins, other }: Credentials): string {
   const pendingLogins: Record<string, PendingLogin[]> = {};
   for (const [apiUrl, list] of Object.entries(logins)) {
     const live = list.filter((login) => !isExpired(login));
-    const newest = live.at(-1);
-    if (!newest) continue;
-    pendingLogins[apiUrl] = live;
-    pending[apiUrl] = newest;
+    if (live.length) pendingLogins[apiUrl] = live;
   }
-  return `${JSON.stringify({ ...other, tokens, pending, pendingLogins }, null, 2)}\n`;
+  return `${JSON.stringify({ ...other, version: 2, sessions, pendingLogins }, null, 2)}\n`;
 }
 
 async function readText(path: string): Promise<string | null> {
@@ -167,88 +161,59 @@ async function readText(path: string): Promise<string | null> {
 }
 
 /**
- * The file's text (null: no file) and contents. A file that is there but
- * doesn't parse is most likely being written by 0.3.0, which empties it
- * first: it is read again for about a second. An empty file nobody has
- * touched for two seconds was left behind (a write was killed) and counts
- * as empty; anything else that still doesn't parse is an error naming the
- * file, never taken for an empty file that a write would then replace.
+ * The file's text (null: no file) and contents, with the sessions kept in
+ * recovery files (see `saveSession`) merged in, and those files. Every
+ * writer replaces the file whole, so one that doesn't parse is damaged: an
+ * error names it, and it is never taken for an empty file that a write
+ * would then replace. An empty file has nothing to lose and counts as empty.
  */
 async function readCredentials(
   path: string,
-): Promise<{ text: string | null; credentials: Credentials }> {
-  for (let attempt = 0; ; attempt++) {
-    const text = await readText(path);
-    if (text === null) return { text, credentials: emptyCredentials() };
-    const credentials = parse(text);
-    if (credentials) return { text, credentials };
-    if (text === "" && (await isLeftEmpty(path))) {
-      return { text, credentials: emptyCredentials() };
-    }
-    const delay = READ_RETRY_MS[attempt];
-    if (delay === undefined) {
-      throw text === ""
-        ? new CliError(`${path} is being written by another program; retry.`, EXIT.error, {
-            retryable: true,
-          })
-        : new CliError(
-            `${path} isn't valid JSON. Move it away (for example to ${basename(path)}.broken) and sign in again.`,
-            EXIT.error,
-            { file: path },
-          );
-    }
-    await sleep(delay);
+): Promise<{ text: string | null; credentials: Credentials; recovered: string[] }> {
+  const text = await readText(path);
+  const credentials = text === null || text === "" ? emptyCredentials() : parse(text);
+  if (!credentials) {
+    throw new CliError(
+      `${path} isn't a credentials file this version of fortrip can read. Move it away (for example to ${basename(path)}.broken) and sign in again.`,
+      EXIT.error,
+      { file: path },
+    );
   }
+  const recovered = await readRecovered(path);
+  for (const { sessions } of recovered) mergeSessions(credentials, sessions);
+  return { text, credentials, recovered: recovered.map(({ file }) => file) };
 }
 
 function emptyCredentials(): Credentials {
-  return { tokens: {}, logins: {}, other: {} };
-}
-
-async function isLeftEmpty(path: string): Promise<boolean> {
-  const info = await stat(path).catch(() => null);
-  return info !== null && info.size === 0 && Date.now() - info.mtimeMs > LEFT_EMPTY_MS;
+  return { sessions: {}, logins: {}, other: {} };
 }
 
 /**
  * Read-modify-write under the credentials lock, so commands don't drop each
- * other's changes. 0.3.0 writes without the lock: the file is read again
- * just before the new one replaces it, and if 0.3.0 changed it meanwhile
- * the change is made again to what is there now. The file is never
- * removed, so 0.3.0 can't lose a write to that.
- *
- * Sign-ins kept in recovery files (see `saveToken`) are merged back, and
- * the files removed, whenever the write succeeds.
+ * other's changes. Sessions kept in recovery files are merged back, and the
+ * files removed, whenever the write succeeds.
  */
-async function updateCredentials(
+async function updateCredentials<T>(
   env: NodeJS.ProcessEnv,
-  change: (credentials: Credentials) => void,
-): Promise<void> {
+  change: (credentials: Credentials) => T,
+): Promise<T> {
   const path = credentialsPath(env);
-  await withLock(path, async () => {
-    const recovered = await readRecovered(path);
-    for (let attempt = 0; ; attempt++) {
-      const { text, credentials } = await readCredentials(path);
-      for (const { tokens } of recovered) mergeTokens(credentials, tokens);
-      change(credentials);
-      const next = serialize(credentials);
-      if (next === text || (await replace(path, next, text))) break;
-      if (attempt === 20) {
-        throw new CliError(`${path} keeps changing; retry.`, EXIT.error, {
-          retryable: true,
-        });
-      }
-      await sleep(Math.random() * 20);
-    }
-    for (const { file } of recovered) await rm(file, { force: true });
+  return withLock(path, async () => {
+    const { text, credentials, recovered } = await readCredentials(path);
+    const result = change(credentials);
+    const next = serialize(credentials);
+    if (next !== text) await replace(path, next);
+    for (const file of recovered) await rm(file, { force: true });
+    return result;
   });
 }
 
-/** A recovered token replaces a saved one only if it is newer. */
-function mergeTokens(credentials: Credentials, tokens: Record<string, StoredToken>): void {
-  for (const [apiUrl, token] of Object.entries(tokens)) {
-    const saved = credentials.tokens[apiUrl];
-    if (!saved || saved.createdAt < token.createdAt) credentials.tokens[apiUrl] = token;
+/** A recovered session replaces a saved one only if it expires later, which
+ *  a session issued later does. */
+function mergeSessions(credentials: Credentials, sessions: Record<string, Session>): void {
+  for (const [apiUrl, session] of Object.entries(sessions)) {
+    const saved = credentials.sessions[apiUrl];
+    if (!saved || saved.expiresAt < session.expiresAt) credentials.sessions[apiUrl] = session;
   }
 }
 
@@ -260,7 +225,7 @@ function recoveryPrefix(path: string): string {
  *  don't parse are left alone. */
 async function readRecovered(
   path: string,
-): Promise<{ file: string; tokens: Record<string, StoredToken> }[]> {
+): Promise<{ file: string; sessions: Record<string, Session> }[]> {
   const prefix = recoveryPrefix(path);
   const names = (await readdir(dirname(path)).catch(() => [] as string[]))
     .filter((name) => name.startsWith(prefix) && name.endsWith(".json"))
@@ -269,46 +234,37 @@ async function readRecovered(
   for (const name of names) {
     const file = join(dirname(path), name);
     const parsed = parse((await readText(file).catch(() => null)) ?? "");
-    if (parsed) recovered.push({ file, tokens: parsed.tokens });
+    if (parsed) recovered.push({ file, sessions: parsed.sessions });
   }
   return recovered;
 }
 
-/** Tokens for `apiUrl` kept in recovery files, which `logout` revokes too. */
-export async function loadRecoveredTokens(
+/** Sessions for `apiUrl` kept in recovery files, which `logout` revokes too. */
+export async function loadRecoveredSessions(
   apiUrl: string,
   env: NodeJS.ProcessEnv = process.env,
-): Promise<string[]> {
-  return (await readRecovered(credentialsPath(env))).flatMap(({ tokens }) =>
-    tokens[apiUrl] ? [tokens[apiUrl].accessToken] : [],
+): Promise<Session[]> {
+  return (await readRecovered(credentialsPath(env))).flatMap(({ sessions }) =>
+    sessions[apiUrl] ? [sessions[apiUrl]] : [],
   );
 }
 
 /**
  * Written to a temp file and renamed over the old one, so a reader never
- * sees a half-written file. Returns false, writing nothing, when the file
- * no longer holds `expected` (0.3.0 wrote it meanwhile). Renaming over a
- * file another process has open can fail for a moment (Windows, virus
- * scanners): that is retried for about two seconds.
+ * sees a half-written file. Renaming over a file another process has open
+ * can fail for a moment (Windows, virus scanners): that is retried for
+ * about two seconds.
  */
-async function replace(
-  path: string,
-  text: string,
-  expected: string | null,
-): Promise<boolean> {
+async function replace(path: string, text: string): Promise<void> {
   const temp = `${path}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`;
   try {
     await writeFile(temp, text, { mode: 0o600, flag: "wx" });
     // `mode` is subject to the umask.
     await chmod(temp, 0o600);
-    if ((await readText(path)) !== expected) {
-      await rm(temp, { force: true });
-      return false;
-    }
     for (let attempt = 0; ; attempt++) {
       try {
         await rename(temp, path);
-        return true;
+        return;
       } catch (error) {
         const delay = RENAME_RETRY_MS[attempt];
         if (!isBusy(error) || delay === undefined) throw error;
@@ -335,7 +291,7 @@ function isExpired(login: PendingLogin): boolean {
   return !(Date.parse(login.expiresAt) > Date.now());
 }
 
-async function withLock(path: string, fn: () => Promise<void>): Promise<void> {
+async function withLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
   await ensureDir(path);
   const lock = `${path}.lock`;
   const giveUpAt = Date.now() + LOCK_WAIT_MS;
@@ -351,20 +307,45 @@ async function withLock(path: string, fn: () => Promise<void>): Promise<void> {
     await sleep(10 + Math.random() * 40);
   }
   try {
-    await fn();
+    return await fn();
   } finally {
     await release();
   }
 }
 
+/** Codes that say a directory can't be written, as opposed to a file that
+ *  is busy. */
+const UNWRITABLE = ["EACCES", "EPERM", "EROFS"];
+
+/** Creates the directory of the credentials file. When it can't be written
+ *  (a read-only home, as in an agent sandbox) the error says what to do. It
+ *  exits 1, "any other error" (the agent reads `error`): the arguments are
+ *  fine, so not 2, and there is no link to open, so not 3. */
 async function ensureDir(path: string): Promise<void> {
   const dir = dirname(path);
-  await mkdir(dir, { recursive: true, mode: 0o700 });
-  await chmod(dir, 0o700);
+  try {
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    await chmod(dir, 0o700);
+  } catch (error) {
+    const { code } = error as NodeJS.ErrnoException;
+    if (!code || !UNWRITABLE.includes(code)) throw error;
+    throw new CliError(
+      `Can't write to ${dir}, where fortrip keeps your sign-in. Set XDG_CONFIG_HOME to a directory that can be written, or set FORTRIP_TOKEN instead of signing in.`,
+      EXIT.error,
+      { code, configDir: dir },
+    );
+  }
 }
 
-/** Held by the one command at a time that polls pending logins or starts
- *  one; null while another command holds it. */
+/** For `login`: fail now, not after the user has approved, if a sign-in
+ *  couldn't be saved. */
+export async function ensureCredentialsDir(env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  await ensureDir(credentialsPath(env));
+}
+
+/** Held by the one command at a time that talks to the sign-in server:
+ *  polls pending logins or starts one, refreshes a session, or revokes it
+ *  on logout. Null while another command holds it. */
 export async function tryLoginLock(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<(() => Promise<void>) | null> {
@@ -531,62 +512,55 @@ function isRunning(pid: number): boolean {
   }
 }
 
-export async function loadStoredToken(
+/** The session for this API URL, the newest of the file and any recovery
+ *  file. */
+export async function loadSession(
   apiUrl: string,
   env: NodeJS.ProcessEnv = process.env,
-): Promise<string | null> {
+): Promise<Session | null> {
   const { credentials } = await readCredentials(credentialsPath(env));
-  return credentials.tokens[apiUrl]?.accessToken ?? null;
-}
-
-/** `FORTRIP_TOKEN` (CI, remote sandboxes) wins over the saved login. */
-export async function resolveToken(
-  apiUrl: string,
-  env: NodeJS.ProcessEnv = process.env,
-): Promise<{ token: string; source: "env" | "file" } | null> {
-  const fromEnv = env.FORTRIP_TOKEN?.trim();
-  if (fromEnv) return { token: fromEnv, source: "env" };
-  const stored = await loadStoredToken(apiUrl, env);
-  return stored ? { token: stored, source: "file" } : null;
+  return credentials.sessions[apiUrl] ?? null;
 }
 
 /**
- * Saves a token and forgets this API URL's pending logins. 0.3.0 writes
- * without the lock, so a 0.3.0 command that read the file just before this
- * write can overwrite it: the file is checked again a moment later and the
- * token saved again if it is gone (unless a newer one replaced it).
+ * Saves a session. Returns the session saved for this API URL afterwards,
+ * and the one this save replaced (null if none, or if nothing was saved).
+ * A sign-in replaces any session and forgets this API URL's pending logins.
+ * A refresh passes `replacing`, the access token it refreshed: the session
+ * is saved only if that is still the saved one (a sign-in or a logout
+ * meanwhile wins), and pending logins stay, since the user may still
+ * approve a link they were shown.
  *
- * The server has already redeemed the login, so a failed write must not
- * lose the token: it is then written to a recovery file next to the
- * credentials file, whose path the error names. The next successful write
- * merges it back.
+ * The server has already issued the tokens (a refresh may have spent the
+ * old refresh token), so a failed write must not lose them: the session is
+ * then written to a recovery file next to the credentials file, whose path
+ * the error names. Reads merge it in, and the next successful write merges
+ * it back.
  */
-export async function saveToken(
+export async function saveSession(
   apiUrl: string,
-  accessToken: string,
+  session: Session,
   env: NodeJS.ProcessEnv = process.env,
-): Promise<void> {
+  replacing?: string,
+): Promise<{ saved: Session | null; replaced: Session | null }> {
   const path = credentialsPath(env);
-  const token = { accessToken, createdAt: new Date().toISOString() };
   try {
-    for (let attempt = 0; ; attempt++) {
-      await updateCredentials(env, (credentials) => {
-        credentials.tokens[apiUrl] = token;
+    return await updateCredentials(env, (credentials) => {
+      const previous = credentials.sessions[apiUrl] ?? null;
+      if (replacing === undefined) {
         delete credentials.logins[apiUrl];
-      });
-      await sleep(SAVE_CHECK_MS);
-      const saved = (await readCredentials(path)).credentials.tokens[apiUrl];
-      if (saved && (saved.accessToken === accessToken || saved.createdAt > token.createdAt)) {
-        return;
+      } else if (previous?.accessToken !== replacing) {
+        return { saved: previous, replaced: null };
       }
-      if (attempt === 4) throw new Error("another program keeps overwriting it");
-    }
+      credentials.sessions[apiUrl] = session;
+      return { saved: session, replaced: previous };
+    });
   } catch (error) {
     const kept = join(
       dirname(path),
       `${recoveryPrefix(path)}${Date.now()}-${randomBytes(3).toString("hex")}.json`,
     );
-    const content = `${JSON.stringify({ tokens: { [apiUrl]: token } }, null, 2)}\n`;
+    const content = `${JSON.stringify({ version: 2, sessions: { [apiUrl]: session } }, null, 2)}\n`;
     const saved = await writeFile(kept, content, { mode: 0o600, flag: "wx" }).then(
       () => true,
       () => false,
@@ -601,17 +575,17 @@ export async function saveToken(
   }
 }
 
-/** With `only`, deletes the saved token only if it is one of those, so a
- *  token another command saved meanwhile survives. */
-export async function deleteToken(
+/** With `only` (access tokens), deletes the saved session only if it is one
+ *  of those, so a session another command saved meanwhile survives. */
+export async function deleteSession(
   apiUrl: string,
   env: NodeJS.ProcessEnv = process.env,
   only?: string[],
 ): Promise<void> {
   await updateCredentials(env, (credentials) => {
-    const saved = credentials.tokens[apiUrl]?.accessToken;
+    const saved = credentials.sessions[apiUrl]?.accessToken;
     if (only === undefined || (saved !== undefined && only.includes(saved))) {
-      delete credentials.tokens[apiUrl];
+      delete credentials.sessions[apiUrl];
     }
   });
 }
