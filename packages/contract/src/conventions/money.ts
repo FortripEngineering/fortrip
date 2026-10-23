@@ -23,10 +23,13 @@ export const money: z.ZodType<Money> = z.looseObject({
 /** A Money a caller sends: USD only, no unknown fields. */
 export const usdMoney: z.ZodType<Money> = z.strictObject(
   {
-    amount: z.string({ error: amountError }).regex(/^\d+(\.\d+)?$/, {
-      error: amountError,
-    }),
-    currency: z.literal("USD", { error: "currency must be USD" }),
+    amount: z
+      .string({ error: amountError })
+      .regex(/^\d+(\.\d+)?$/, { error: amountError })
+      .describe("Decimal string such as 132.40, never a number."),
+    currency: z
+      .literal("USD", { error: "currency must be USD" })
+      .describe("Always USD in a request."),
   },
   {
     error: (issue) =>
