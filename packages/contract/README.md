@@ -38,4 +38,6 @@ can import it from `@fortrip/agent-contract/guest-name`. That module imports
 no package, so it does not pull in `zod` or the schemas the root entry builds
 at load. The root entry exports the same names.
 
-MIT licensed. Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.
+Apache License 2.0 (versions before 2.0.0: MIT). Copyright 2026 FortripAI, Inc.
+"Fortrip" is a trademark of FortripAI, Inc.; the license grants no right to use
+it. Source: <https://github.com/FortripEngineering/fortrip/tree/main/packages/contract>.

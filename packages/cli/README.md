@@ -44,7 +44,9 @@ arguments:
 | `book` | `hotels book` |
 
 Two MCP tools are renamed: `get_rates` is now `get_hotel_rates` and
-`create_booking` is now `book_hotel`. Sign-in and `fortrip mcp` are unchanged.
+`create_booking` is now `book_hotel`. Sign-in is unchanged. `fortrip mcp` now
+also starts before you sign in: it lists its tools, and the first tool call
+answers with the sign-in link. 2.0 is licensed under Apache 2.0 instead of MIT.
 
 ## Sign in
 
@@ -225,6 +227,11 @@ repository's README.
 ## License
 
 The code and documentation in this repository are licensed under the
-[MIT License](https://github.com/FortripEngineering/fortrip/blob/main/LICENSE).
-This license does not grant access to the hosted Fortrip service, hotel
-inventory, or third-party data.
+[Apache License 2.0](https://github.com/FortripEngineering/fortrip/blob/main/LICENSE).
+Copyright 2026 FortripAI, Inc. Versions before 2.0.0 were published under the
+MIT License. This license does not grant access to the hosted Fortrip service,
+hotel inventory, or third-party data.
+
+"Fortrip" and the Fortrip logo are trademarks of FortripAI, Inc. The license
+does not grant permission to use them (section 6), except to describe where the
+software comes from.

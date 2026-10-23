@@ -1,7 +1,7 @@
 {
   "name": "@fortrip/agent-contract",
   "version": "2.0.0",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "description": "The contract of Fortrip's agent API (/api/agent/v1): limits, paths, input schemas and field rules.",
   "type": "module",
   "repository": {
@@ -19,9 +19,7 @@
       "import": "./dist/guest-name.js"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist", "NOTICE"],
   "sideEffects": false,
   "engines": {
     "node": ">=22"

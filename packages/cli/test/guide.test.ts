@@ -39,7 +39,7 @@ describe("guide", () => {
 
   it("the package ships no Markdown guides to read", async () => {
     const { files } = JSON.parse(await readFile("package.json", "utf8"));
-    assert.deepEqual(files, ["dist", "README.md"]);
+    assert.deepEqual(files, ["dist", "README.md", "NOTICE"]);
   });
 
   it("no guide or help text names the supplier", async () => {
