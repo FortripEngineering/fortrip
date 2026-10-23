@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { COMMANDS, GLOBAL_FLAGS } from "../src/commands.ts";
+import {
+  COMMAND_GROUPS,
+  COMMANDS,
+  commandInvocation,
+  GLOBAL_FLAGS,
+} from "../src/commands.ts";
 import {
   type GuideSurface,
   type GuideTopic,
@@ -131,7 +136,7 @@ describe("consent before the payment link, on every surface", () => {
   // Conditions decide what each surface shows, so one misplaced {{#if}}
   // could drop a consent step from one surface without any other error.
   for (const surface of SURFACES) {
-    const book = renderText("{{tool:book}}", surface);
+    const book = renderText("{{tool:hotels book}}", surface);
 
     it(`${surface} main: book only the picked rate, show the charge and terms, ask, wait`, () => {
       const text = flat(renderGuide(surface, "main"));
@@ -170,10 +175,10 @@ describe("the MCP instructions", () => {
 
   it("carry the cross-tool rules", () => {
     for (const phrase of [
-      "Call order: `search_hotels` → (optional) `get_hotel` → `get_rates` → `create_booking`",
+      "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_rates` → `book_hotel`",
       "minimum-price feed, not live rates",
       "2 rooms for 4 adults is `rooms: 2, adults: 2`",
-      "`nationality` given to `get_rates` isn't sent with the booking",
+      "`nationality` given to `get_hotel_rates` isn't sent with the booking",
       "anyone holding it can pay",
       "Never ask for, accept or pass on payment card details; payment happens only on the payment page.",
       "Never ask the user to paste a token",
@@ -184,10 +189,10 @@ describe("the MCP instructions", () => {
   });
 
   it("name every tool as the server does", () => {
-    for (const name of ["search_hotels", "get_hotel", "get_rates", "create_booking"]) {
+    for (const name of ["search_hotels", "get_hotel", "get_hotel_rates", "book_hotel"]) {
       assert.match(text, new RegExp(`\`${name}\``), name);
     }
-    assert.doesNotMatch(text, /fortrip:|fortrip search|--rooms/);
+    assert.doesNotMatch(text, /fortrip:|fortrip hotels|--rooms/);
   });
 });
 
@@ -196,7 +201,7 @@ describe("the Claude skill", () => {
 
   it("keeps the tools table, the payment-link sequence and the errors table", () => {
     assert.match(main, /^\| Tool \| Returns \|$/m);
-    for (const tool of ["search_hotels", "get_hotel", "get_rates", "create_booking"]) {
+    for (const tool of ["search_hotels", "get_hotel", "get_hotel_rates", "book_hotel"]) {
       assert.match(main, new RegExp(`^\\| \`fortrip:${tool}\` \\|`, "m"), tool);
     }
     assert.match(main, /^## Before giving the payment link$/m);
@@ -210,13 +215,13 @@ describe("the Claude skill", () => {
 
   it("points to its planning reference file, and has no CLI text", () => {
     assert.match(main, /\[references\/planning\.md\]\(references\/planning\.md\)/);
-    assert.doesNotMatch(main, /--rooms|exit code|fortrip search/i);
+    assert.doesNotMatch(main, /--rooms|exit code|fortrip hotels/i);
   });
 
   it("names tools as fortrip:<tool>", () => {
     const planning = renderGuide("claude-skill", "planning");
     for (const text of [main, planning]) {
-      assert.doesNotMatch(text, /(?<!fortrip:)\b(search_hotels|get_hotel|get_rates|create_booking)\b/);
+      assert.doesNotMatch(text, /(?<!fortrip:)\b(search_hotels|get_hotel|get_hotel_rates|book_hotel)\b/);
     }
   });
 });
@@ -245,7 +250,7 @@ describe("the CLI guide", () => {
       "give `paymentUrl` exactly as returned",
       "`stay`",
       "Never ask for, accept or pass on payment card details",
-      "`--nationality` given to `fortrip rates` isn't sent with the booking",
+      "`--nationality` given to `fortrip hotels rates` isn't sent with the booking",
       "run it again with identical flags",
       "`nationality`) is rejected",
       // Errors and sign-in edge cases.
@@ -279,7 +284,7 @@ describe("the CLI guide", () => {
   it("the planning guide asks for confirmation of what book returned", () => {
     assert.ok(
       planning.includes(
-        "give its payment link only after the user confirms the amount, currency, stay and terms that `fortrip book` returned",
+        "give its payment link only after the user confirms the amount, currency, stay and terms that `fortrip hotels book` returned",
       ),
     );
     assert.ok(planning.includes("Occupancy is per room and the same in every room"));
@@ -300,14 +305,24 @@ describe("the CLI guide", () => {
     }
   });
 
-  it("names only commands the CLI has", () => {
-    const names = new Set(COMMANDS.map((spec) => spec.name));
+  it("names only commands the CLI has, with their group", () => {
+    const invocations = new Set(COMMANDS.map(commandInvocation));
+    const groups = new Set<string>(COMMAND_GROUPS.map((group) => group.name));
+    let named = 0;
     for (const text of [main, planning]) {
-      for (const [, name] of text.matchAll(/`fortrip ([a-z]+)/g)) {
-        assert.ok(names.has(name as never), `fortrip ${name}`);
+      for (const [, first, second] of text.matchAll(/`fortrip ([a-z]+)(?: ([a-z]+))?/g)) {
+        // A group alone (`fortrip hotels --help`) is its help.
+        if (groups.has(first as string) && second === undefined) continue;
+        const invocation = groups.has(first as string)
+          ? `fortrip ${first} ${second}`
+          : `fortrip ${first}`;
+        assert.ok(invocations.has(invocation), invocation);
+        named++;
       }
     }
+    assert.ok(named > 10, `${named} commands named`);
   });
+
 });
 
 describe("the full guides", () => {
@@ -350,10 +365,13 @@ describe("the full guides", () => {
 
 describe("renderText", () => {
   it("renders tools for each surface", () => {
-    assert.equal(renderText("{{tool:search}}", "mcp"), "search_hotels");
-    assert.equal(renderText("{{tool:search}}", "claude-skill"), "fortrip:search_hotels");
-    assert.equal(renderText("{{tool:search}}", "cli"), "fortrip search");
-    assert.equal(renderText("{{tool:book}}", "mcp"), "create_booking");
+    assert.equal(renderText("{{tool:hotels search}}", "mcp"), "search_hotels");
+    assert.equal(renderText("{{tool:hotels search}}", "claude-skill"), "fortrip:search_hotels");
+    assert.equal(renderText("{{tool:hotels search}}", "cli"), "fortrip hotels search");
+    assert.equal(renderText("{{tool:hotels get}}", "cli"), "fortrip hotels get");
+    assert.equal(renderText("{{tool:hotels rates}}", "mcp"), "get_hotel_rates");
+    assert.equal(renderText("{{tool:hotels book}}", "mcp"), "book_hotel");
+    assert.equal(renderText("{{tool:hotels book}}", "claude-skill"), "fortrip:book_hotel");
     assert.equal(renderText("{{tool:guide}}", "mcp"), "get_planning_guide");
     assert.equal(renderText("{{tool:guide}}", "cli"), "fortrip guide");
     assert.equal(renderText("{{tool:whoami}}", "cli"), "fortrip whoami");
@@ -399,6 +417,13 @@ describe("renderText", () => {
   it("throws on an unknown token, so a typo can't ship", () => {
     for (const text of [
       "{{tool:serch}}",
+      // A hotel command is named with its group.
+      "{{tool:search}}",
+      "{{tool:book}}",
+      "{{tool:hotels}}",
+      "{{tool:hotels whoami}}",
+      "{{tool:hotels  search}}",
+      "{{tool:hotels search extra}}",
       "{{arg:adutls}}",
       "{{limit:nigths}}",
       "{{suport}}",

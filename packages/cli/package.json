@@ -1,7 +1,7 @@
 {
   "name": "fortrip",
-  "version": "1.0.0",
-  "license": "MIT",
+  "version": "2.0.0",
+  "license": "Apache-2.0",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "mcpName": "io.github.FortripEngineering/fortrip",
   "type": "module",
@@ -13,10 +13,7 @@
   "bin": {
     "fortrip": "dist/cli.js"
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md", "NOTICE", "THIRD-PARTY-NOTICES"],
   "engines": {
     "node": ">=22"
   },

@@ -462,7 +462,7 @@ describe("login from a command (agents)", () => {
     api.approve(JSON.parse(first.stderr).loginUrl);
     // The file turns unreadable just as the login is redeemed.
     api.hooks.onPoll = () => writeFile(path, "{not json");
-    const failed = await cli(["search", "--query", "x"], env);
+    const failed = await cli(["hotels", "search", "--query", "x"], env);
     api.hooks.onPoll = undefined;
     assert.equal(failed.code, 1);
     const error = JSON.parse(failed.stderr);
@@ -954,9 +954,9 @@ describe("a config directory that can't be written", () => {
     const home = await unwritableHome(t);
     if (!home) return;
 
-    for (const args of [["whoami"], ["search", "--query", "x"]]) {
+    for (const args of [["whoami"], ["hotels", "search", "--query", "x"]]) {
       const result = await cli(args, { ...cliEnv(), XDG_CONFIG_HOME: home });
-      assert.equal(result.code, 1, args[0]);
+      assert.equal(result.code, 1, args.join(" "));
       const error = JSON.parse(result.stderr);
       assert.equal(error.exitCode, 1);
       assertGuidance(error.error);

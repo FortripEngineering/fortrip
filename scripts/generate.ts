@@ -39,14 +39,14 @@ const SKILLS: readonly {
     surface: "claude-skill",
     name: "fortrip",
     description:
-      "Finds, compares, prices and books hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_rates, create_booking), from hotel search to a booking payment link. Use when those tools are available and the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing or cancelling an existing booking, or coding work.",
+      "Finds, compares, prices and books hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_rates, book_hotel), from hotel search to a booking payment link. Use when those tools are available and the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing or cancelling an existing booking, or coding work.",
   },
   {
     dir: "skills/fortrip-cli",
     surface: "cli",
     name: "fortrip-cli",
     description:
-      "Searches hotels, compares live room rates and creates a hotel booking with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_rates, create_booking) aren't available. Not for flights, activities or changing an existing booking.",
+      "Searches hotels, compares live room rates and creates a hotel booking with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_rates, book_hotel) aren't available. Not for flights, activities or changing an existing booking.",
   },
 ];
 

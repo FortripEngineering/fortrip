@@ -1,4 +1,4 @@
-import { COMMANDS, type CommandSpec } from "./commands.ts";
+import { COMMANDS, type CommandSpec, commandInvocation } from "./commands.ts";
 import { FRAGMENTS } from "./guide-data.generated.ts";
 import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
 
@@ -14,9 +14,10 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  *
  * In a fragment:
  *
- * - `{{tool:<command>}}` names a command's tool: `search_hotels` (mcp),
- *   `fortrip:search_hotels` (claude-skill), `fortrip search` (cli). It
- *   throws on a surface without that tool: the Claude plugin has no
+ * - `{{tool:<command>}}` names a command's tool, the command as typed after
+ *   `fortrip` (`{{tool:hotels search}}`): `search_hotels` (mcp),
+ *   `fortrip:search_hotels` (claude-skill), `fortrip hotels search` (cli).
+ *   It throws on a surface without that tool: the Claude plugin has no
  *   `get_planning_guide` (Directory Policy §2F), MCP has no `whoami`.
  * - `{{arg:<field>}}` names an input field: `rooms`, or the CLI's `--rooms`.
  * - `{{limit:<key>}}` is a number from `LIMITS`; `{{support}}` is the
@@ -126,7 +127,9 @@ function resolve(token: string, surface: GuideSurface, shown: boolean): string {
       return String(LIMITS[name as keyof typeof LIMITS]);
     }
     if (kind === "tool") {
-      const spec = COMMANDS.find((command) => command.name === name);
+      const spec = COMMANDS.find(
+        (command) => commandInvocation(command) === `fortrip ${name}`,
+      );
       if (spec) return shown ? toolName(spec, surface, token) : token;
     }
     if (kind === "arg") {
@@ -149,7 +152,7 @@ function toolName(
   surface: GuideSurface,
   token: string,
 ): string {
-  if (surface === "cli") return `fortrip ${spec.name}`;
+  if (surface === "cli") return commandInvocation(spec);
   // The Claude plugin ships the planning guide as a file instead.
   if (
     spec.tool === null ||

@@ -180,5 +180,15 @@ a partial publish skips what is already on npm.
 
 ## License
 
-[MIT](LICENSE). This license does not grant access to the hosted Fortrip
-service, hotel inventory, or third-party data.
+[Apache License 2.0](LICENSE). Copyright 2026 FortripAI, Inc. (see
+[NOTICE](NOTICE)). Releases before 2.0.0 were published under the MIT License.
+This license does not grant access to the hosted Fortrip service, hotel
+inventory, or third-party data.
+
+## Trademarks
+
+"Fortrip" and the Fortrip logo are trademarks of FortripAI, Inc. The Apache
+License 2.0 does not grant permission to use the trade names, trademarks,
+service marks or product names of FortripAI, Inc., except as required for
+reasonable and customary use in describing the origin of the software and
+reproducing the content of the NOTICE file (section 6).

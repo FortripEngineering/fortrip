@@ -1,7 +1,10 @@
 export { containsCardNumber, CARD_NUMBER_MESSAGE } from "./card-number.ts";
 export {
+  COMMAND_GROUPS,
   COMMANDS,
+  commandInvocation,
   GLOBAL_FLAGS,
+  type CommandGroupSpec,
   type CommandSpec,
   type FlagSpec,
   type OptionSpec,

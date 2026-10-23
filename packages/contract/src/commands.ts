@@ -19,6 +19,12 @@ import type { ToolName } from "./tools.ts";
  * render, and what the CLI builds its argument parser from. A flag is a field
  * of the tool's input, so its description is the field's own unless the CLI
  * words it differently.
+ *
+ * The commands of a product category are typed after its group
+ * (`fortrip hotels search`); the CLI's own account and meta commands are
+ * typed on their own (`fortrip login`). Adding a category is adding its
+ * group to `CommandGroupSpec` and `COMMAND_GROUPS`, and its commands to
+ * `COMMANDS`.
  */
 
 /** A flag that sets one field of a tool's input. */
@@ -61,10 +67,19 @@ export interface OptionSpec {
   description: string;
 }
 
+/** A product category's commands, typed after its name: `fortrip hotels`. */
+export interface CommandGroupSpec {
+  name: "hotels";
+  summary: string;
+}
+
 export interface CommandSpec {
+  /** The group it is typed after; `null` for a command typed on its own. */
+  group: CommandGroupSpec["name"] | null;
+  /** Unique within its group. */
   name:
     | "search"
-    | "hotel"
+    | "get"
     | "rates"
     | "book"
     | "login"
@@ -179,7 +194,7 @@ const ratesFlags = flagsOf(getRatesInput, [
     type: "id",
     multiple: true,
     placeholder: ID,
-    description: `Hotels to price, by id from \`search\`: repeat the flag or comma-separate, up to ${LIMITS.ratesHotels}. Each call takes about 15 seconds.`,
+    description: `Hotels to price, by id from \`hotels search\`: repeat the flag or comma-separate, up to ${LIMITS.ratesHotels}. Each call takes about 15 seconds.`,
   },
   { flag: "check-in", field: "checkIn", type: "string", placeholder: DATE },
   { flag: "check-out", field: "checkOut", type: "string", placeholder: DATE },
@@ -242,14 +257,14 @@ const bookFlags = flagsOf(createBookingInput, [
     field: "roomId",
     type: "string",
     placeholder: ID,
-    description: "`roomId` from `rates`",
+    description: "`roomId` from `hotels rates`",
   },
   {
     flag: "rate-plan",
     field: "ratePlanCode",
     type: "string",
     placeholder: "<code>",
-    description: "`ratePlanCode` from `rates`",
+    description: "`ratePlanCode` from `hotels rates`",
   },
   { flag: "check-in", field: "checkIn", type: "string", placeholder: DATE },
   { flag: "check-out", field: "checkOut", type: "string", placeholder: DATE },
@@ -259,7 +274,7 @@ const bookFlags = flagsOf(createBookingInput, [
     type: "number",
     placeholder: COUNT,
     description:
-      "Number of rooms, as in `rates`; every room has the same occupancy",
+      "Number of rooms, as in `hotels rates`; every room has the same occupancy",
   },
   {
     flag: "adults",
@@ -267,7 +282,7 @@ const bookFlags = flagsOf(createBookingInput, [
     type: "number",
     placeholder: COUNT,
     description:
-      "Adults per room, not in total, as in `rates` (2 rooms for 4 adults = `--rooms 2 --adults 2`)",
+      "Adults per room, not in total, as in `hotels rates` (2 rooms for 4 adults = `--rooms 2 --adults 2`)",
   },
   {
     flag: "child-age",
@@ -276,7 +291,7 @@ const bookFlags = flagsOf(createBookingInput, [
     multiple: true,
     placeholder: "<age>",
     description:
-      "Age of each child in one room (0-17), per room, as in `rates`",
+      "Age of each child in one room (0-17), per room, as in `hotels rates`",
   },
   {
     flag: "guest",
@@ -322,8 +337,13 @@ const BODY_OPTION: OptionSpec = {
     "The raw request body as a JSON object, or `@file.json` to read it from a file. Flags override its fields.",
 };
 
+export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
+  { name: "hotels", summary: "Search, price and book hotels" },
+];
+
 export const COMMANDS: readonly CommandSpec[] = [
   {
+    group: "hotels",
     name: "search",
     summary: "Find hotels with indicative prices",
     tool: "search_hotels",
@@ -331,27 +351,31 @@ export const COMMANDS: readonly CommandSpec[] = [
     options: [BODY_OPTION],
   },
   {
-    name: "hotel",
+    group: "hotels",
+    name: "get",
     summary: "Static hotel detail: description, policies, facilities and photos",
     tool: "get_hotel",
     flags: hotelFlags,
     positionals: ["hotelId"],
   },
   {
+    group: "hotels",
     name: "rates",
     summary: `Live rooms and rates for up to ${LIMITS.ratesHotels} hotels`,
-    tool: "get_rates",
+    tool: "get_hotel_rates",
     flags: ratesFlags,
     options: [BODY_OPTION],
   },
   {
+    group: "hotels",
     name: "book",
     summary: "Create an order and get a payment link",
-    tool: "create_booking",
+    tool: "book_hotel",
     flags: bookFlags,
     options: [BODY_OPTION],
   },
   {
+    group: null,
     name: "login",
     summary: "Sign in through the browser (device code)",
     tool: null,
@@ -366,18 +390,21 @@ export const COMMANDS: readonly CommandSpec[] = [
     ],
   },
   {
+    group: null,
     name: "logout",
     summary: "Revoke and forget the saved token",
     tool: null,
     flags: [],
   },
   {
+    group: null,
     name: "whoami",
     summary: "Show the signed-in account",
     tool: null,
     flags: [],
   },
   {
+    group: null,
     name: "guide",
     summary: "Print the guide for AI agents (Markdown)",
     tool: "get_planning_guide",
@@ -385,6 +412,7 @@ export const COMMANDS: readonly CommandSpec[] = [
     positionals: ["topic"],
   },
   {
+    group: null,
     name: "mcp",
     summary:
       "Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server",
@@ -393,6 +421,16 @@ export const COMMANDS: readonly CommandSpec[] = [
   },
 ];
 
+/** `fortrip hotels search`, `fortrip login`: a command as it is typed,
+ *  without its arguments. */
+export function commandInvocation(
+  spec: Pick<CommandSpec, "group" | "name">,
+): string {
+  return spec.group === null
+    ? `fortrip ${spec.name}`
+    : `fortrip ${spec.group} ${spec.name}`;
+}
+
 /** Options of the CLI itself: `--help` after any command, `--version` on its own. */
 export const GLOBAL_FLAGS: readonly OptionSpec[] = [
   {
@@ -400,7 +438,7 @@ export const GLOBAL_FLAGS: readonly OptionSpec[] = [
     short: "h",
     type: "boolean",
     description:
-      "Show help for the command, or for the CLI when no command is given.",
+      "Show help for the command or group, or for the CLI when no command is given.",
   },
   {
     flag: "version",

@@ -55,6 +55,14 @@ export interface FakeApi {
     expireAll: boolean;
     /** `/me` and `/api/mcp` answer 401 whatever the token. */
     rejectAll: boolean;
+    /** The protocol version `initialize` answers with, instead of the
+     *  client's. */
+    protocolVersion?: string;
+    /** The JSON-RPC error `initialize` answers with, instead of a result. */
+    initializeError?: { code: number; message: string };
+    /** An MCP method the server never answers (`hang`), or answers with an
+     *  event stream that ends without the result (`drop`). */
+    stall?: { method: string; how: "hang" | "drop" };
   };
   /** Answers for the next device polls, refreshes, revocations, config and
    *  `/me` requests, before the fake's own logic. */
@@ -167,6 +175,9 @@ export async function startFakeApi(): Promise<FakeApi> {
         rotate: true,
         expireAll: false,
         rejectAll: false,
+        protocolVersion: undefined,
+        initializeError: undefined,
+        stall: undefined,
       };
       api.scripts = { poll: [], refresh: [], revoke: [], config: [], me: [], mcp: [] };
       api.hooks = {};
@@ -343,6 +354,13 @@ export async function startFakeApi(): Promise<FakeApi> {
     if (!api.accessTokens.has(token) || api.options.rejectAll) {
       return json(401, { error: "invalid_token" }, { "www-authenticate": 'Bearer error="invalid_token"' });
     }
+    const { stall } = api.options;
+    if (stall && message.method === stall.method) {
+      if (stall.how === "hang") return;
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.flushHeaders();
+      return void setImmediate(() => res.destroy());
+    }
     // Notifications, and a client's answers to the server's requests.
     if (message.id === undefined || typeof message.method !== "string") {
       res.writeHead(202);
@@ -359,10 +377,13 @@ export async function startFakeApi(): Promise<FakeApi> {
     const result = (value: unknown) => ({ jsonrpc: "2.0", id, result: value });
     switch (method) {
       case "initialize":
+        if (api.options.initializeError) {
+          return json(200, { jsonrpc: "2.0", id, error: api.options.initializeError });
+        }
         return json(
           200,
           result({
-            protocolVersion: params.protocolVersion,
+            protocolVersion: api.options.protocolVersion ?? params.protocolVersion,
             capabilities: { tools: {} },
             serverInfo: { name: "fake-fortrip", version: "0.0.0" },
           }),

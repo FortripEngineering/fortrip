@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in `fortrip guide` still apply (call order, occupancy per room, confirming the terms `fortrip book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in `fortrip guide` still apply (call order, occupancy per room, confirming the terms `fortrip hotels book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
 
 ## What to collect
 
@@ -8,13 +8,13 @@ Keep track of: dates (or the flexible window), nights, destination(s), rooms and
 
 Occupancy is per room and the same in every room, so if the party doesn't split evenly across the rooms, ask how it splits.
 
-Ask only for what changes which hotels qualify or how they rank. If children come along, ask each child's age; `fortrip rates` and `fortrip book` need it. Don't ask for trip type or style: infer it from the conversation or leave it general.
+Ask only for what changes which hotels qualify or how they rank. If children come along, ask each child's age; `fortrip hotels rates` and `fortrip hotels book` need it. Don't ask for trip type or style: infer it from the conversation or leave it general.
 
 ## Evidence
 
-- A `fortrip search` price is an indicative minimum, not a quote. Never call a search result available or bookable.
-- Use `fortrip hotel` only when a stated preference needs evidence (a pool, a policy, room size).
-- A hotel is available only once `fortrip rates` returned a live option for it.
+- A `fortrip hotels search` price is an indicative minimum, not a quote. Never call a search result available or bookable.
+- Use `fortrip hotels get` only when a stated preference needs evidence (a pool, a policy, room size).
+- A hotel is available only once `fortrip hotels rates` returned a live option for it.
 - Anything the CLI didn't return, such as reviews, style, price trends or exchange rates other than `fx`, is unknown. Say so instead of filling it in.
 
 ## Ranking
@@ -26,9 +26,9 @@ Ask only for what changes which hotels qualify or how they rank. If children com
 
 Use the cheapest comparable live room as the baseline unless the user fixed the room type. Show at most three plans, each with its price difference from the baseline and what it trades off (meal plan, cancellation, location, instant confirmation). Keep hotel names as returned and dates in the user's notation.
 
-For a split stay or several destinations, price each leg with its own `fortrip rates` call and add up the legs. Each leg is a separate `fortrip book` call, with its own confirmation and its own payment link.
+For a split stay or several destinations, price each leg with its own `fortrip hotels rates` call and add up the legs. Each leg is a separate `fortrip hotels book` call, with its own confirmation and its own payment link.
 
 ## Stop and say so
 
-- `fortrip rates` covers up to 15 hotels per call and takes about 15 seconds. If the request needs more hotels or date combinations than a few calls can cover, narrow it with the user, or present the result as a comparison of the hotels you priced, not the best overall.
-- Urgency is not consent. Call `fortrip book` only for the rate the user picked, and give its payment link only after the user confirms the amount, currency, stay and terms that `fortrip book` returned.
+- `fortrip hotels rates` covers up to 15 hotels per call and takes about 15 seconds. If the request needs more hotels or date combinations than a few calls can cover, narrow it with the user, or present the result as a comparison of the hotels you priced, not the best overall.
+- Urgency is not consent. Call `fortrip hotels book` only for the rate the user picked, and give its payment link only after the user confirms the amount, currency, stay and terms that `fortrip hotels book` returned.

@@ -39,12 +39,12 @@ describe("guide", () => {
 
   it("the package ships no Markdown guides to read", async () => {
     const { files } = JSON.parse(await readFile("package.json", "utf8"));
-    assert.deepEqual(files, ["dist", "README.md"]);
+    assert.deepEqual(files, ["dist", "README.md", "NOTICE", "THIRD-PARTY-NOTICES"]);
   });
 
   it("no guide or help text names the supplier", async () => {
     const texts = [expected("main"), expected("planning")];
-    for (const args of [["--help"], ["rates", "--help"], ["book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
       texts.push((await cli(...args)).stdout);
     }
     // Assembled, so that this file doesn't name the supplier either.
