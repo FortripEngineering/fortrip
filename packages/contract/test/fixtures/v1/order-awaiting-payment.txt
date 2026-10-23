@@ -1,0 +1,10 @@
+Order ord_BundAwaiting00000000 · reference FT-7KQ2MX · awaiting payment · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:05 UTC
+Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
+Room: Deluxe King Room · beds: 1 king bed
+Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · nothing to pay at the property
+Hotel confirmation number: none yet
+Total: USD 365.00 · payment unpaid · charged in USD (the user's card may pay in its local currency at checkout)
+Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4
+Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
+
+Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.

@@ -136,6 +136,11 @@ export {
   type SearchResult,
 } from "./outputs/search.ts";
 export { API, MCP_PATH, PUBLIC_ORIGINS } from "./paths.ts";
+export {
+  renderError,
+  renderToolResult,
+  type RenderedTool,
+} from "./render/index.ts";
 export { ERROR_CODES, type ErrorCode } from "./errors.ts";
 export {
   MCP_OUTPUT,

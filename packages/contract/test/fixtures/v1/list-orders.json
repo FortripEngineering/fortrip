@@ -1,0 +1,371 @@
+{
+  "tool": "list_orders",
+  "data": {
+    "data": [
+      {
+        "orderId": "ord_OtherStore0000000000",
+        "reference": "FT-R8ZK4C",
+        "status": "awaiting_payment",
+        "createdAt": "2026-11-02T10:00:00Z",
+        "updatedAt": "2026-11-02T10:00:00Z",
+        "items": [
+          {
+            "type": "hotel",
+            "hotel": {
+              "hotelId": null,
+              "name": "Canal House Lisbon",
+              "names": {
+                "en": "Canal House Lisbon",
+                "zh": null
+              },
+              "checkIn": "2026-12-03",
+              "checkOut": "2026-12-05",
+              "timeZone": "Europe/Lisbon",
+              "rooms": [
+                {
+                  "adults": 1,
+                  "childrenAges": []
+                }
+              ],
+              "room": {
+                "name": {
+                  "text": "Classic Double",
+                  "locale": "en"
+                },
+                "beds": null
+              },
+              "meals": {
+                "known": false,
+                "included": null,
+                "unspecifiedMainMeals": null,
+                "allInclusive": null,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              },
+              "cancellation": {
+                "status": "unknown",
+                "asOf": "2026-11-02T10:00:00Z",
+                "freeCancellationEndsAt": null,
+                "penalties": [],
+                "timeZone": "Europe/Lisbon"
+              },
+              "payAtProperty": {
+                "disclosure": "incomplete",
+                "items": []
+              },
+              "confirmationNumber": null
+            }
+          }
+        ],
+        "price": {
+          "total": {
+            "amount": "410.00",
+            "currency": "EUR"
+          }
+        },
+        "payment": {
+          "status": "unpaid",
+          "url": "https://fortrip.ai/stays/book/sb_9f3k2Lx",
+          "requiresSignIn": true,
+          "expiresAt": "2026-11-02T10:30:00Z",
+          "chargeCurrency": "EUR",
+          "localCurrencyAtCheckout": false,
+          "localCharge": null
+        },
+        "manageUrl": "https://fortrip.ai/stays/book/sb_9f3k2Lx"
+      },
+      {
+        "orderId": "ord_KataNoLink0000000000",
+        "reference": "FT-N4V6TB",
+        "status": "awaiting_payment",
+        "createdAt": "2026-11-01T11:00:00Z",
+        "updatedAt": "2026-11-01T11:00:00Z",
+        "items": [
+          {
+            "type": "hotel",
+            "hotel": {
+              "hotelId": "htl_KataBeach00000000000",
+              "name": "Kata Beach Resort",
+              "names": {
+                "en": "Kata Beach Resort",
+                "zh": "卡塔海滩度假村"
+              },
+              "checkIn": "2026-12-20",
+              "checkOut": "2026-12-27",
+              "timeZone": "Asia/Bangkok",
+              "rooms": [
+                {
+                  "adults": 2,
+                  "childrenAges": [
+                    7
+                  ]
+                },
+                {
+                  "adults": 2,
+                  "childrenAges": [
+                    7
+                  ]
+                }
+              ],
+              "room": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 king bed",
+                  "locale": "en"
+                }
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Breakfast for 2",
+                  "locale": "en"
+                }
+              },
+              "cancellation": {
+                "status": "free",
+                "asOf": "2026-11-01T09:00:00Z",
+                "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+                "penalties": [
+                  {
+                    "startsAt": "2026-11-12T16:00:00Z",
+                    "amount": {
+                      "amount": "182.50",
+                      "currency": "USD"
+                    }
+                  }
+                ],
+                "timeZone": "Asia/Bangkok"
+              },
+              "payAtProperty": {
+                "disclosure": "complete",
+                "items": []
+              },
+              "confirmationNumber": null
+            }
+          }
+        ],
+        "price": {
+          "total": {
+            "amount": "1235.50",
+            "currency": "USD"
+          }
+        },
+        "payment": {
+          "status": "unpaid",
+          "url": null,
+          "requiresSignIn": false,
+          "expiresAt": null,
+          "chargeCurrency": "USD",
+          "localCurrencyAtCheckout": true,
+          "localCharge": null
+        },
+        "manageUrl": "https://fortrip.ai/orders/ord_KataNoLink0000000000"
+      },
+      {
+        "orderId": "ord_BundAwaiting00000000",
+        "reference": "FT-7KQ2MX",
+        "status": "awaiting_payment",
+        "createdAt": "2026-11-01T09:05:00Z",
+        "updatedAt": "2026-11-01T09:05:00Z",
+        "items": [
+          {
+            "type": "hotel",
+            "hotel": {
+              "hotelId": "htl_BundRiverside0000000",
+              "name": "The Bund Riverside Hotel",
+              "names": {
+                "en": "The Bund Riverside Hotel",
+                "zh": "外滩江畔酒店"
+              },
+              "checkIn": "2026-11-14",
+              "checkOut": "2026-11-16",
+              "timeZone": "Asia/Shanghai",
+              "rooms": [
+                {
+                  "adults": 2,
+                  "childrenAges": []
+                }
+              ],
+              "room": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 king bed",
+                  "locale": "en"
+                }
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Breakfast for 2",
+                  "locale": "en"
+                }
+              },
+              "cancellation": {
+                "status": "free",
+                "asOf": "2026-11-01T09:00:00Z",
+                "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+                "penalties": [
+                  {
+                    "startsAt": "2026-11-12T16:00:00Z",
+                    "amount": {
+                      "amount": "182.50",
+                      "currency": "USD"
+                    }
+                  }
+                ],
+                "timeZone": "Asia/Shanghai"
+              },
+              "payAtProperty": {
+                "disclosure": "complete",
+                "items": []
+              },
+              "confirmationNumber": null
+            }
+          }
+        ],
+        "price": {
+          "total": {
+            "amount": "365.00",
+            "currency": "USD"
+          }
+        },
+        "payment": {
+          "status": "unpaid",
+          "url": "https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4",
+          "requiresSignIn": false,
+          "expiresAt": "2026-11-01T12:50:00Z",
+          "chargeCurrency": "USD",
+          "localCurrencyAtCheckout": true,
+          "localCharge": null
+        },
+        "manageUrl": "https://fortrip.ai/orders/ord_BundAwaiting00000000"
+      },
+      {
+        "orderId": "ord_LakeConfirmed0000000",
+        "reference": "FT-H3W9PA",
+        "status": "confirmed",
+        "createdAt": "2026-10-20T03:12:00Z",
+        "updatedAt": "2026-10-20T03:40:00Z",
+        "items": [
+          {
+            "type": "hotel",
+            "hotel": {
+              "hotelId": "htl_LakesideGarden000000",
+              "name": "Lakeside Garden Resort",
+              "names": {
+                "en": "Lakeside Garden Resort",
+                "zh": "湖畔花园度假酒店"
+              },
+              "checkIn": "2026-11-20",
+              "checkOut": "2026-11-23",
+              "timeZone": "Asia/Shanghai",
+              "rooms": [
+                {
+                  "adults": 2,
+                  "childrenAges": [
+                    5,
+                    9
+                  ]
+                }
+              ],
+              "room": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": null
+              },
+              "meals": {
+                "known": true,
+                "included": [],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              },
+              "cancellation": {
+                "status": "partial_penalty",
+                "asOf": "2026-10-24T08:00:00Z",
+                "freeCancellationEndsAt": null,
+                "penalties": [
+                  {
+                    "startsAt": null,
+                    "amount": {
+                      "amount": "120.00",
+                      "currency": "USD"
+                    }
+                  },
+                  {
+                    "startsAt": "2026-11-18T16:00:00Z",
+                    "amount": {
+                      "amount": "366.00",
+                      "currency": "USD"
+                    }
+                  }
+                ],
+                "timeZone": "Asia/Shanghai"
+              },
+              "payAtProperty": {
+                "disclosure": "complete",
+                "items": [
+                  {
+                    "label": {
+                      "text": "Resort fee",
+                      "locale": "en"
+                    },
+                    "amount": {
+                      "amount": "80.00",
+                      "currency": "CNY"
+                    },
+                    "mandatory": true,
+                    "basis": "per_night",
+                    "collectedAt": "property"
+                  }
+                ]
+              },
+              "confirmationNumber": "LGR-449120"
+            }
+          }
+        ],
+        "price": {
+          "total": {
+            "amount": "366.00",
+            "currency": "USD"
+          }
+        },
+        "payment": {
+          "status": "paid",
+          "url": null,
+          "requiresSignIn": false,
+          "expiresAt": null,
+          "chargeCurrency": "USD",
+          "localCurrencyAtCheckout": true,
+          "localCharge": {
+            "amount": "339.80",
+            "currency": "EUR"
+          }
+        },
+        "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"
+      }
+    ],
+    "nextCursor": "c_orders_page_2"
+  }
+}

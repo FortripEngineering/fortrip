@@ -1,0 +1,294 @@
+{
+  "tool": "get_hotel_offers",
+  "data": {
+    "stay": {
+      "checkIn": "2026-11-14",
+      "checkOut": "2026-11-16",
+      "rooms": [
+        {
+          "adults": 2,
+          "childrenAges": []
+        }
+      ]
+    },
+    "hotels": [
+      {
+        "hotel": {
+          "hotelId": "htl_BundRiverside0000000",
+          "name": "The Bund Riverside Hotel",
+          "names": {
+            "en": "The Bund Riverside Hotel",
+            "zh": "外滩江畔酒店"
+          }
+        },
+        "offers": [
+          {
+            "offerId": "off_BundNonRefundable000",
+            "type": "hotel",
+            "expiresAt": "2026-11-01T09:30:00Z",
+            "hotel": {
+              "hotelId": "htl_BundRiverside0000000",
+              "room": {
+                "name": null,
+                "beds": null,
+                "areaSqm": null,
+                "maxOccupancy": null,
+                "window": null
+              },
+              "roomCount": 1,
+              "meals": {
+                "known": false,
+                "included": null,
+                "unspecifiedMainMeals": null,
+                "allInclusive": null,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              }
+            },
+            "price": {
+              "total": {
+                "amount": "320.00",
+                "currency": "USD"
+              },
+              "perNightAllRooms": {
+                "amount": "160.00",
+                "currency": "USD"
+              },
+              "approx": {
+                "total": {
+                  "amount": "2281.60",
+                  "currency": "CNY"
+                },
+                "perNightAllRooms": {
+                  "amount": "1140.80",
+                  "currency": "CNY"
+                },
+                "rateDate": "2026-11-01"
+              },
+              "payAtProperty": {
+                "disclosure": "incomplete",
+                "items": [
+                  {
+                    "label": {
+                      "text": "City tax",
+                      "locale": "en"
+                    },
+                    "amount": {
+                      "amount": "15.00",
+                      "currency": "CNY"
+                    },
+                    "mandatory": true,
+                    "basis": "unknown",
+                    "collectedAt": "property"
+                  },
+                  {
+                    "label": null,
+                    "amount": null,
+                    "mandatory": false,
+                    "basis": "unknown",
+                    "collectedAt": "unknown"
+                  }
+                ]
+              }
+            },
+            "cancellation": {
+              "status": "non_refundable",
+              "asOf": "2026-11-01T09:00:00Z",
+              "freeCancellationEndsAt": null,
+              "penalties": [
+                {
+                  "startsAt": null,
+                  "amount": {
+                    "amount": "320.00",
+                    "currency": "USD"
+                  }
+                }
+              ],
+              "timeZone": "Asia/Shanghai"
+            },
+            "confirmation": {
+              "mode": "on_request",
+              "withinMinutes": 30
+            }
+          },
+          {
+            "offerId": "off_BundKingBreakfast000",
+            "type": "hotel",
+            "expiresAt": "2026-11-01T09:30:00Z",
+            "hotel": {
+              "hotelId": "htl_BundRiverside0000000",
+              "room": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 king bed",
+                  "locale": "en"
+                },
+                "areaSqm": {
+                  "min": 35,
+                  "max": 35
+                },
+                "maxOccupancy": 2,
+                "window": "yes"
+              },
+              "roomCount": 1,
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Breakfast for 2",
+                  "locale": "en"
+                }
+              }
+            },
+            "price": {
+              "total": {
+                "amount": "365.00",
+                "currency": "USD"
+              },
+              "perNightAllRooms": {
+                "amount": "182.50",
+                "currency": "USD"
+              },
+              "approx": {
+                "total": {
+                  "amount": "2602.45",
+                  "currency": "CNY"
+                },
+                "perNightAllRooms": {
+                  "amount": "1301.23",
+                  "currency": "CNY"
+                },
+                "rateDate": "2026-11-01"
+              },
+              "payAtProperty": {
+                "disclosure": "complete",
+                "items": []
+              }
+            },
+            "cancellation": {
+              "status": "free",
+              "asOf": "2026-11-01T09:00:00Z",
+              "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+              "penalties": [
+                {
+                  "startsAt": "2026-11-12T16:00:00Z",
+                  "amount": {
+                    "amount": "182.50",
+                    "currency": "USD"
+                  }
+                }
+              ],
+              "timeZone": "Asia/Shanghai"
+            },
+            "confirmation": {
+              "mode": "instant",
+              "withinMinutes": null
+            }
+          },
+          {
+            "offerId": "off_BundHalfBoard0000000",
+            "type": "hotel",
+            "expiresAt": "2026-11-01T09:30:00Z",
+            "hotel": {
+              "hotelId": "htl_BundRiverside0000000",
+              "room": {
+                "name": {
+                  "text": "江景双床房",
+                  "locale": "zh"
+                },
+                "beds": {
+                  "text": "2 张单人床",
+                  "locale": "zh"
+                },
+                "areaSqm": {
+                  "min": 30,
+                  "max": 38
+                },
+                "maxOccupancy": 3,
+                "window": "partial"
+              },
+              "roomCount": 1,
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 1,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": null,
+                "label": {
+                  "text": "Half board",
+                  "locale": "en"
+                }
+              }
+            },
+            "price": {
+              "total": {
+                "amount": "410.00",
+                "currency": "USD"
+              },
+              "perNightAllRooms": {
+                "amount": "205.00",
+                "currency": "USD"
+              },
+              "approx": {
+                "total": {
+                  "amount": "2923.30",
+                  "currency": "CNY"
+                },
+                "perNightAllRooms": {
+                  "amount": "1461.65",
+                  "currency": "CNY"
+                },
+                "rateDate": "2026-11-01"
+              },
+              "payAtProperty": {
+                "disclosure": "complete",
+                "items": []
+              }
+            },
+            "cancellation": {
+              "status": "unknown",
+              "asOf": "2026-11-01T09:00:00Z",
+              "freeCancellationEndsAt": null,
+              "penalties": [],
+              "timeZone": null
+            },
+            "confirmation": {
+              "mode": "unknown",
+              "withinMinutes": null
+            }
+          }
+        ],
+        "omitted": {
+          "byNationality": 0,
+          "byFilters": 0,
+          "dominated": 4,
+          "unreadable": 1,
+          "byLimit": 0
+        }
+      }
+    ],
+    "unavailable": [
+      {
+        "hotelId": "htl_PearlTower0000000000",
+        "reason": "sold_out",
+        "omitted": {
+          "byNationality": 0,
+          "byFilters": 0,
+          "dominated": 0,
+          "unreadable": 0,
+          "byLimit": 0
+        }
+      }
+    ]
+  }
+}

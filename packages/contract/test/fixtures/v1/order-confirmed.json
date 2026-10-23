@@ -1,0 +1,110 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_LakeConfirmed0000000",
+    "reference": "FT-H3W9PA",
+    "status": "confirmed",
+    "createdAt": "2026-10-20T03:12:00Z",
+    "updatedAt": "2026-10-20T03:40:00Z",
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": "htl_LakesideGarden000000",
+          "name": "Lakeside Garden Resort",
+          "names": {
+            "en": "Lakeside Garden Resort",
+            "zh": "湖畔花园度假酒店"
+          },
+          "checkIn": "2026-11-20",
+          "checkOut": "2026-11-23",
+          "timeZone": "Asia/Shanghai",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": [
+                5,
+                9
+              ]
+            }
+          ],
+          "room": {
+            "name": {
+              "text": "Deluxe King Room",
+              "locale": "en"
+            },
+            "beds": null
+          },
+          "meals": {
+            "known": true,
+            "included": [],
+            "unspecifiedMainMeals": 0,
+            "allInclusive": false,
+            "guestsCoveredPerRoom": null,
+            "label": null
+          },
+          "cancellation": {
+            "status": "partial_penalty",
+            "asOf": "2026-10-24T08:00:00Z",
+            "freeCancellationEndsAt": null,
+            "penalties": [
+              {
+                "startsAt": null,
+                "amount": {
+                  "amount": "120.00",
+                  "currency": "USD"
+                }
+              },
+              {
+                "startsAt": "2026-11-18T16:00:00Z",
+                "amount": {
+                  "amount": "366.00",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Shanghai"
+          },
+          "payAtProperty": {
+            "disclosure": "complete",
+            "items": [
+              {
+                "label": {
+                  "text": "Resort fee",
+                  "locale": "en"
+                },
+                "amount": {
+                  "amount": "80.00",
+                  "currency": "CNY"
+                },
+                "mandatory": true,
+                "basis": "per_night",
+                "collectedAt": "property"
+              }
+            ]
+          },
+          "confirmationNumber": "LGR-449120"
+        }
+      }
+    ],
+    "price": {
+      "total": {
+        "amount": "366.00",
+        "currency": "USD"
+      }
+    },
+    "payment": {
+      "status": "paid",
+      "url": null,
+      "requiresSignIn": false,
+      "expiresAt": null,
+      "chargeCurrency": "USD",
+      "localCurrencyAtCheckout": true,
+      "localCharge": {
+        "amount": "339.80",
+        "currency": "EUR"
+      }
+    },
+    "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"
+  }
+}

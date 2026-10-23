@@ -1,0 +1,387 @@
+{
+  "tool": "search_hotels",
+  "data": {
+    "destination": {
+      "kind": "place",
+      "place": {
+        "placeId": "plc_9100001",
+        "name": "Shanghai",
+        "names": {
+          "en": "Shanghai",
+          "zh": "上海"
+        },
+        "kind": "region",
+        "scope": "area",
+        "cityLike": true,
+        "population": 24874500,
+        "region": null,
+        "countryCode": "CN",
+        "location": {
+          "lat": 31.22222,
+          "lng": 121.45806
+        }
+      },
+      "resolution": "only_match",
+      "otherMatches": 0,
+      "scope": "area",
+      "center": {
+        "location": {
+          "lat": 31.22222,
+          "lng": 121.45806
+        },
+        "place": {
+          "placeId": "plc_9100002",
+          "name": "Shanghai",
+          "names": {
+            "en": "Shanghai",
+            "zh": "上海"
+          }
+        },
+        "basis": "seat"
+      },
+      "radiusMeters": null,
+      "radiusSource": null
+    },
+    "text": null,
+    "stay": {
+      "checkIn": "2026-11-14",
+      "checkOut": "2026-11-16",
+      "rooms": [
+        {
+          "adults": 2,
+          "childrenAges": []
+        }
+      ]
+    },
+    "pricing": {
+      "mode": "indicative",
+      "scope": "page",
+      "status": "ok"
+    },
+    "sort": "distance",
+    "coverage": {
+      "matched": 31205,
+      "priced": 4,
+      "withPrice": 3,
+      "poolRadiusMeters": null,
+      "excludedNoPrice": null,
+      "excludedNoFacilityData": null,
+      "withinMaxRadius": null,
+      "textAnywhere": null,
+      "localities": {
+        "items": [
+          {
+            "place": {
+              "placeId": "plc_9100002",
+              "name": "Shanghai",
+              "names": {
+                "en": "Shanghai",
+                "zh": "上海"
+              }
+            },
+            "count": 6953,
+            "total": 6953,
+            "includes": [
+              {
+                "place": {
+                  "placeId": "plc_9100011",
+                  "name": "Jing'an",
+                  "names": {
+                    "en": "Jing'an",
+                    "zh": "静安"
+                  }
+                },
+                "members": 512
+              },
+              {
+                "place": {
+                  "placeId": "plc_9100012",
+                  "name": "Huangpu",
+                  "names": {
+                    "en": "Huangpu",
+                    "zh": "黄浦"
+                  }
+                },
+                "members": 488
+              },
+              {
+                "place": {
+                  "placeId": "plc_9100013",
+                  "name": "Xujiahui",
+                  "names": {
+                    "en": "Xujiahui",
+                    "zh": "徐家汇"
+                  }
+                },
+                "members": 301
+              }
+            ]
+          },
+          {
+            "place": {
+              "placeId": "plc_9100021",
+              "name": "Pudong",
+              "names": {
+                "en": "Pudong",
+                "zh": "浦东"
+              }
+            },
+            "count": 4120,
+            "total": 4120,
+            "includes": [
+              {
+                "place": {
+                  "placeId": "plc_9100022",
+                  "name": "Lujiazui",
+                  "names": {
+                    "en": "Lujiazui",
+                    "zh": "陆家嘴"
+                  }
+                },
+                "members": 359
+              }
+            ]
+          },
+          {
+            "place": {
+              "placeId": "plc_9100031",
+              "name": "Minhang",
+              "names": {
+                "en": "Minhang",
+                "zh": "闵行"
+              }
+            },
+            "count": 2210,
+            "total": 2210,
+            "includes": []
+          },
+          {
+            "place": {
+              "placeId": "plc_9100041",
+              "name": "Songjiang",
+              "names": {
+                "en": "Songjiang",
+                "zh": "松江"
+              }
+            },
+            "count": 1306,
+            "total": 1306,
+            "includes": [
+              {
+                "place": {
+                  "placeId": "plc_9100042",
+                  "name": "Sheshan",
+                  "names": {
+                    "en": "Sheshan",
+                    "zh": "佘山"
+                  }
+                },
+                "members": 64
+              }
+            ]
+          }
+        ],
+        "unassigned": 351,
+        "more": 112
+      },
+      "nameAsText": null
+    },
+    "data": [
+      {
+        "hotelId": "htl_BundRiverside0000000",
+        "name": "The Bund Riverside Hotel",
+        "names": {
+          "en": "The Bund Riverside Hotel",
+          "zh": "外滩江畔酒店"
+        },
+        "stars": 5,
+        "address": {
+          "line": {
+            "text": "88 Zhongshan East 1st Road, Huangpu",
+            "locale": "en"
+          },
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": {
+          "lat": 31.2381,
+          "lng": 121.4905
+        },
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": 640,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "182.50",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "365.00",
+            "currency": "USD"
+          },
+          "approx": {
+            "fromPerRoomNight": {
+              "amount": "1301.23",
+              "currency": "CNY"
+            },
+            "fromPerRoomStay": {
+              "amount": "2602.45",
+              "currency": "CNY"
+            },
+            "rateDate": "2026-11-01"
+          }
+        }
+      },
+      {
+        "hotelId": "htl_JinganCourt000000000",
+        "name": "Jing'an Court Hotel",
+        "names": {
+          "en": "Jing'an Court Hotel",
+          "zh": "静安阁酒店"
+        },
+        "stars": 4.5,
+        "address": {
+          "line": {
+            "text": "1200 Nanjing West Road, Jing'an",
+            "locale": "en"
+          },
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": {
+          "lat": 31.2295,
+          "lng": 121.4553
+        },
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": 1830,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "96.10",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "192.20",
+            "currency": "USD"
+          },
+          "approx": {
+            "fromPerRoomNight": {
+              "amount": "685.19",
+              "currency": "CNY"
+            },
+            "fromPerRoomStay": {
+              "amount": "1370.39",
+              "currency": "CNY"
+            },
+            "rateDate": "2026-11-01"
+          }
+        }
+      },
+      {
+        "hotelId": "htl_NoAddress00000000000",
+        "name": "Riverside Inn",
+        "names": {
+          "en": "Riverside Inn",
+          "zh": null
+        },
+        "stars": null,
+        "address": {
+          "line": null,
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": null,
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": null,
+        "price": null
+      },
+      {
+        "hotelId": "htl_ZhOnlyName0000000000",
+        "name": "静安小筑",
+        "names": {
+          "en": null,
+          "zh": "静安小筑"
+        },
+        "stars": 2,
+        "address": {
+          "line": {
+            "text": "上海市静安区愚园路 168 号",
+            "locale": "zh"
+          },
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": {
+          "lat": 31.2241,
+          "lng": 121.4412
+        },
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": 2410,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "41.00",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "82.00",
+            "currency": "USD"
+          },
+          "approx": {
+            "fromPerRoomNight": {
+              "amount": "292.33",
+              "currency": "CNY"
+            },
+            "fromPerRoomStay": {
+              "amount": "584.66",
+              "currency": "CNY"
+            },
+            "rateDate": "2026-11-01"
+          }
+        }
+      }
+    ],
+    "nextCursor": "c_shanghai_area_page_2",
+    "notes": [
+      {
+        "code": "indicative_prices",
+        "message": "Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays."
+      },
+      {
+        "code": "area_absorbed",
+        "message": "Shanghai: the whole municipality, starting from the city center."
+      }
+    ]
+  }
+}

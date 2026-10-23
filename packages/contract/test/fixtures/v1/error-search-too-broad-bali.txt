@@ -1,0 +1,16 @@
+Error search_too_broad (HTTP 422): 9,850 hotels match: more than the 3,000 a price sort or price filter can price. Narrow the search to a locality.
+Not retryable.
+Next: search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.
+Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").
+- Denpasar plc_9400001 3,911 (incl. Kuta plc_9400011, 1,205 hotels overall; Seminyak plc_9400012, 802 hotels overall; Sanur plc_9400013, 410 hotels overall)
+- Ubud plc_9400002 1,762 (incl. Tegallalang plc_9400021, 88 hotels overall; Mas plc_9400022, 41 hotels overall)
+- Jimbaran plc_9400003 728 (incl. Kedonganan plc_9400031, 30 hotels overall)
+- Nusa Dua plc_9400004 540
+- Canggu plc_9400005 515
+- Lovina plc_9400006 312
+- Amed plc_9400007 150
+- Nusa Lembongan plc_9400008 140
+40 hotels in this search belong to no locality.
+31 more localities; name one with place_name.
+Denpasar alone has 3,911 matching hotels, so a locality search on it prices its nearest 3,000. If Denpasar is the searched area's center, the same destination with radiusMeters prices nearly the same hotels.
+Request id: req_bali_0001

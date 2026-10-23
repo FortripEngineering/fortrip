@@ -1,0 +1,7 @@
+Order ord_LakeConfirmed0000000 · reference FT-H3W9PA · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
+Hotel: Lakeside Garden Resort (湖畔花园度假酒店) · htl_LakesideGarden000000 · 2026-11-20 → 2026-11-23 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
+Room: Deluxe King Room · beds not listed
+Terms: room only · partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · pay at the property: Resort fee CNY 80.00, per night, mandatory
+Hotel confirmation number: LGR-449120
+Total: USD 366.00 · payment paid · charged in USD (the user's card may pay in its local currency at checkout) · card charged EUR 339.80
+Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000

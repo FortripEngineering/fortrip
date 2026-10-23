@@ -1,0 +1,185 @@
+{
+  "tool": "search_hotels",
+  "data": {
+    "destination": {
+      "kind": "place",
+      "place": {
+        "placeId": "plc_9100002",
+        "name": "Shanghai",
+        "names": {
+          "en": "Shanghai",
+          "zh": "上海"
+        },
+        "kind": "settlement",
+        "scope": "radius",
+        "cityLike": null,
+        "population": 22315474,
+        "region": {
+          "placeId": "plc_9100001",
+          "name": "Shanghai",
+          "names": {
+            "en": "Shanghai",
+            "zh": "上海"
+          }
+        },
+        "countryCode": "CN",
+        "location": {
+          "lat": 31.22222,
+          "lng": 121.45806
+        }
+      },
+      "resolution": "by_id",
+      "otherMatches": 0,
+      "scope": "radius",
+      "center": {
+        "location": {
+          "lat": 31.22222,
+          "lng": 121.45806
+        },
+        "place": {
+          "placeId": "plc_9100002",
+          "name": "Shanghai",
+          "names": {
+            "en": "Shanghai",
+            "zh": "上海"
+          }
+        },
+        "basis": "point"
+      },
+      "radiusMeters": 20000,
+      "radiusSource": "requested"
+    },
+    "text": null,
+    "stay": {
+      "checkIn": "2026-11-14",
+      "checkOut": "2026-11-16",
+      "rooms": [
+        {
+          "adults": 2,
+          "childrenAges": []
+        }
+      ]
+    },
+    "pricing": {
+      "mode": "indicative",
+      "scope": "pool",
+      "status": "ok"
+    },
+    "sort": "price_asc",
+    "coverage": {
+      "matched": 8412,
+      "priced": 3000,
+      "withPrice": 1650,
+      "poolRadiusMeters": 9012,
+      "excludedNoPrice": 1350,
+      "excludedNoFacilityData": null,
+      "withinMaxRadius": 14980,
+      "textAnywhere": null,
+      "localities": null,
+      "nameAsText": null
+    },
+    "data": [
+      {
+        "hotelId": "htl_ZhOnlyName0000000000",
+        "name": "静安小筑",
+        "names": {
+          "en": null,
+          "zh": "静安小筑"
+        },
+        "stars": 2,
+        "address": {
+          "line": {
+            "text": "上海市静安区愚园路 168 号",
+            "locale": "zh"
+          },
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": {
+          "lat": 31.2241,
+          "lng": 121.4412
+        },
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": 1620,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "41.00",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "82.00",
+            "currency": "USD"
+          },
+          "approx": null
+        }
+      },
+      {
+        "hotelId": "htl_JinganCourt000000000",
+        "name": "Jing'an Court Hotel",
+        "names": {
+          "en": "Jing'an Court Hotel",
+          "zh": "静安阁酒店"
+        },
+        "stars": 4.5,
+        "address": {
+          "line": {
+            "text": "1200 Nanjing West Road, Jing'an",
+            "locale": "en"
+          },
+          "countryCode": "CN",
+          "region": {
+            "placeId": "plc_9100001",
+            "name": "Shanghai",
+            "names": {
+              "en": "Shanghai",
+              "zh": "上海"
+            }
+          }
+        },
+        "location": {
+          "lat": 31.2295,
+          "lng": 121.4553
+        },
+        "timeZone": "Asia/Shanghai",
+        "distanceMeters": 890,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "96.10",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "192.20",
+            "currency": "USD"
+          },
+          "approx": null
+        }
+      }
+    ],
+    "nextCursor": "c_shanghai_pool_page_2",
+    "notes": [
+      {
+        "code": "indicative_prices",
+        "message": "Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays."
+      },
+      {
+        "code": "pool_limited",
+        "message": "8,412 hotels match; the 3,000 nearest were priced, up to 9.0 km from Shanghai. Cheaper hotels farther out are not compared."
+      },
+      {
+        "code": "locality_available",
+        "message": "Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: \"locality\", placeId: \"plc_9100002\" } for exactly its hotels instead of a circle."
+      }
+    ]
+  }
+}

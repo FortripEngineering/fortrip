@@ -1,0 +1,23 @@
+Shanghai (region) · 31,205 hotels · plc_9100001 · CN · also named 上海
+Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates, not bookable (only offers are) · sort: nearest first
+Distances from Shanghai plc_9100002 (the seat).
+Counts: 31,205 matched, 4 priced, 3 with a price.
+
+Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").
+- Shanghai plc_9100002 6,953 — the locality, not the whole of Shanghai (incl. Jing'an plc_9100011, 512 hotels overall; Huangpu plc_9100012, 488 hotels overall; Xujiahui plc_9100013, 301 hotels overall)
+- Pudong plc_9100021 4,120 (incl. Lujiazui plc_9100022, 359 hotels overall)
+- Minhang plc_9100031 2,210
+- Songjiang plc_9100041 1,306 (incl. Sheshan plc_9100042, 64 hotels overall)
+351 hotels in this search belong to no locality.
+112 more localities; name one with place_name.
+
+1. The Bund Riverside Hotel (外滩江畔酒店) · 5★ · 0.6 km · from USD 182.50/room-night (USD 365.00 per room for the stay) ≈ CNY 1301.23/room-night (CNY 2602.45), exchange rate of 2026-11-01 · 88 Zhongshan East 1st Road, Huangpu · Shanghai, CN · htl_BundRiverside0000000
+2. Jing'an Court Hotel (静安阁酒店) · 4.5★ · 1.8 km · from USD 96.10/room-night (USD 192.20 per room for the stay) ≈ CNY 685.19/room-night (CNY 1370.39), exchange rate of 2026-11-01 · 1200 Nanjing West Road, Jing'an · Shanghai, CN · htl_JinganCourt000000000
+3. Riverside Inn · stars not listed · distance unknown · no indicative price · address not listed · Shanghai, CN · htl_NoAddress00000000000
+4. 静安小筑 · 2★ · 2.4 km · from USD 41.00/room-night (USD 82.00 per room for the stay) ≈ CNY 292.33/room-night (CNY 584.66), exchange rate of 2026-11-01 · 上海市静安区愚园路 168 号 · Shanghai, CN · htl_ZhOnlyName0000000000
+
+Notes:
+- indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
+- area_absorbed: Shanghai: the whole municipality, starting from the city center.
+
+Next page: call again with { cursor: "c_shanghai_area_page_2" } alone.
