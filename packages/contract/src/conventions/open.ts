@@ -7,12 +7,18 @@ import { z } from "zod";
  * versions exist only for server tests (`strictOutput`).
  */
 
-type Registered =
-  | { kind: "enum"; values: readonly string[] }
-  | { kind: "union"; branches: readonly z.ZodType[] };
+/**
+ * Marks the def of an open enum or open union. The marker is an own symbol
+ * property of the def, so it survives `.describe()`/`.meta()` (which clone the
+ * schema around the same def) and any `{ ...def }` copy, unlike a registry
+ * keyed by schema identity.
+ */
+const OPEN = Symbol("fortrip.open");
+type OpenMark = "enum" | "union";
 
-/** What `strictOutput` needs to undo the openness of an enum or union. */
-const registry = new WeakMap<object, Registered>();
+function mark(schema: z.ZodType, kind: OpenMark): void {
+  (schema._zod.def as unknown as Record<symbol, OpenMark>)[OPEN] = kind;
+}
 
 /** An object that keeps fields it does not know. */
 export function openObject<T extends z.ZodRawShape>(shape: T): z.ZodObject<T> {
@@ -27,7 +33,7 @@ export function openEnum<const V extends readonly string[]>(
     z.enum(values as unknown as [string, ...string[]]),
     z.string(),
   ]) as unknown as z.ZodType<V[number] | (string & {})>;
-  registry.set(schema, { kind: "enum", values });
+  mark(schema, "enum");
   return schema;
 }
 
@@ -55,7 +61,7 @@ export function openUnion(
       .refine((v) => !known.has(v), { error: "malformed value for a known type" }),
   });
   const schema = z.union([...branches, fallback]);
-  registry.set(schema, { kind: "union", branches });
+  mark(schema, "union");
   return schema;
 }
 
@@ -66,54 +72,93 @@ export function parseOpen<T>(schema: z.ZodType<T>, value: unknown): T {
 
 /**
  * A deep-strict copy of an output schema for server tests: no unknown fields,
- * no unknown enum values, no fallback union branch. Refinements on objects
- * and arrays themselves are not carried over.
+ * no unknown enum values, no fallback union branch. Wrappers (optional,
+ * nullable, default, readonly, pipe, lazy) and containers (object, array,
+ * tuple, record) are rebuilt around their closed contents, keeping their
+ * checks and metadata. A schema type it cannot close (any, unknown,
+ * intersection, custom, ...) throws instead of silently staying open.
  */
 export function strictOutput<T extends z.ZodType>(schema: T): T {
   return strictify(schema) as T;
 }
 
+type Def = Record<string, unknown> & { type: string };
+
+/** The closed schema types that hold no nested schema. */
+const LEAVES = new Set([
+  "string",
+  "number",
+  "boolean",
+  "bigint",
+  "null",
+  "undefined",
+  "literal",
+  "enum",
+  "date",
+  "nan",
+  "never",
+  "template_literal",
+  "transform",
+]);
+
+/** Wrapper types and the def key holding the one schema inside. */
+const WRAPPERS: Record<string, string> = {
+  optional: "innerType",
+  nullable: "innerType",
+  default: "innerType",
+  prefault: "innerType",
+  nonoptional: "innerType",
+  readonly: "innerType",
+  array: "element",
+};
+
 function strictify(schema: z.ZodType): z.ZodType {
-  const registered = registry.get(schema);
-  if (registered?.kind === "enum") {
-    return z.enum(registered.values as unknown as [string, ...string[]]);
+  const def = schema._zod.def as unknown as Def;
+  const kind = (def as unknown as Record<symbol, OpenMark | undefined>)[OPEN];
+  const rebuild = (changes: Record<string, unknown>) =>
+    (schema as unknown as { clone(d: unknown): z.ZodType }).clone({
+      ...def,
+      ...changes,
+    });
+
+  if (kind === "enum") return strictify((def.options as z.ZodType[])[0]!);
+  if (kind === "union") {
+    return rebuild({ options: (def.options as z.ZodType[]).slice(0, -1).map(strictify) });
   }
-  if (registered?.kind === "union") {
-    return z.union(
-      registered.branches.map(strictify) as unknown as [z.ZodType, z.ZodType],
-    );
-  }
-  const def = schema._zod.def as unknown as Record<string, unknown> & {
-    type: string;
-  };
+
+  const inner = WRAPPERS[def.type];
+  if (inner) return rebuild({ [inner]: strictify(def[inner] as z.ZodType) });
+
   switch (def.type) {
     case "object": {
       const shape = def.shape as Record<string, z.ZodType>;
-      return z.strictObject(
-        Object.fromEntries(
+      return rebuild({
+        shape: Object.fromEntries(
           Object.entries(shape).map(([k, v]) => [k, strictify(v)]),
         ),
-      );
+        catchall: z.never(),
+      });
     }
-    case "array": {
-      let out = z.array(strictify(def.element as z.ZodType));
-      for (const check of (def.checks as z.core.$ZodCheck[] | undefined) ?? []) {
-        out = out.check(check as z.core.$ZodCheck<unknown[]>);
-      }
-      return out;
-    }
-    case "optional":
-      return strictify(def.innerType as z.ZodType).optional();
-    case "nullable":
-      return strictify(def.innerType as z.ZodType).nullable();
     case "union":
-      return z.union(
-        (def.options as z.ZodType[]).map(strictify) as unknown as [
-          z.ZodType,
-          z.ZodType,
-        ],
-      );
+      return rebuild({ options: (def.options as z.ZodType[]).map(strictify) });
+    case "tuple":
+      return rebuild({
+        items: (def.items as z.ZodType[]).map(strictify),
+        rest: def.rest ? strictify(def.rest as z.ZodType) : def.rest,
+      });
+    case "record":
+      return rebuild({ valueType: strictify(def.valueType as z.ZodType) });
+    case "pipe":
+      return rebuild({
+        in: strictify(def.in as z.ZodType),
+        out: strictify(def.out as z.ZodType),
+      });
+    case "lazy": {
+      const getter = def.getter as () => z.ZodType;
+      return rebuild({ getter: () => strictify(getter()) });
+    }
     default:
-      return schema;
+      if (LEAVES.has(def.type)) return schema;
+      throw new Error(`strictOutput: cannot close a "${def.type}" schema`);
   }
 }

@@ -115,3 +115,63 @@ describe("strictOutput", () => {
     assert.equal(shape.safeParse({ ...ok, extra: 1, mode: "other" }).success, true);
   });
 });
+
+describe("strictOutput on cloned and wrapped schemas", () => {
+  const A = openObject({ type: z.literal("a"), x: z.number() });
+
+  it("closes an open enum or union carrying .describe() or .meta()", () => {
+    const e = strictOutput(openEnum(["a", "b"]).describe("d"));
+    assert.equal(e.safeParse("c").success, false);
+    assert.equal(e.safeParse("a").success, true);
+    const m = strictOutput(openEnum(["a", "b"]).meta({ title: "t" }));
+    assert.equal(m.safeParse("c").success, false);
+    const u = strictOutput(openUnion("type", [A]).describe("d"));
+    assert.equal(u.safeParse({ type: "zzz" }).success, false);
+    assert.equal(u.safeParse({ type: "a", x: 1 }).success, true);
+    const um = strictOutput(openUnion("type", [A]).meta({ title: "t" }));
+    assert.equal(um.safeParse({ type: "zzz" }).success, false);
+  });
+
+  it("closes objects inside default, record, tuple, readonly, pipe and lazy", () => {
+    const inner = openObject({ n: z.number() });
+    const extra = { n: 1, extra: 1 };
+    assert.equal(
+      strictOutput(inner.default({ n: 0 })).safeParse(extra).success,
+      false,
+    );
+    assert.equal(
+      strictOutput(z.record(z.string(), inner)).safeParse({ k: extra }).success,
+      false,
+    );
+    assert.equal(
+      strictOutput(z.record(z.string(), inner)).safeParse({ k: { n: 1 } }).success,
+      true,
+    );
+    assert.equal(
+      strictOutput(z.tuple([inner], inner)).safeParse([{ n: 1 }, extra]).success,
+      false,
+    );
+    assert.equal(strictOutput(inner.readonly()).safeParse(extra).success, false);
+    assert.equal(
+      strictOutput(z.pipe(inner, z.transform((v) => v))).safeParse(extra).success,
+      false,
+    );
+    assert.equal(strictOutput(z.lazy(() => inner)).safeParse(extra).success, false);
+  });
+
+  it("keeps array checks and a nested enum closed", () => {
+    const s = strictOutput(z.array(openEnum(["a"])).min(1));
+    assert.equal(s.safeParse([]).success, false);
+    assert.equal(s.safeParse(["b"]).success, false);
+    assert.equal(s.safeParse(["a"]).success, true);
+  });
+
+  it("throws on a type it cannot close", () => {
+    assert.throws(() => strictOutput(z.any()), /cannot close/);
+    assert.throws(() => strictOutput(openObject({ a: z.unknown() })), /cannot close/);
+    assert.throws(
+      () => strictOutput(z.intersection(z.object({ a: z.string() }), z.object({ b: z.string() }))),
+      /cannot close/,
+    );
+  });
+});
