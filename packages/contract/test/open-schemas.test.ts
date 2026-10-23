@@ -175,3 +175,14 @@ describe("strictOutput on cloned and wrapped schemas", () => {
     );
   });
 });
+
+describe("strictOutput is idempotent", () => {
+  it("keeps every known branch of an open union on a second pass", () => {
+    const A = openObject({ type: z.literal("a") });
+    const B = openObject({ type: z.literal("b") });
+    const twice = strictOutput(strictOutput(openUnion("type", [A, B])));
+    assert.equal(twice.safeParse({ type: "a" }).success, true);
+    assert.equal(twice.safeParse({ type: "b" }).success, true);
+    assert.equal(twice.safeParse({ type: "zzz" }).success, false);
+  });
+});

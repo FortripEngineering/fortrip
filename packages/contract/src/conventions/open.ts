@@ -115,11 +115,11 @@ const WRAPPERS: Record<string, string> = {
 function strictify(schema: z.ZodType): z.ZodType {
   const def = schema._zod.def as unknown as Def;
   const kind = (def as unknown as Record<symbol, OpenMark | undefined>)[OPEN];
-  const rebuild = (changes: Record<string, unknown>) =>
-    (schema as unknown as { clone(d: unknown): z.ZodType }).clone({
-      ...def,
-      ...changes,
-    });
+  const rebuild = (changes: Record<string, unknown>) => {
+    const next: Record<string | symbol, unknown> = { ...def, ...changes };
+    delete next[OPEN]; // the closed copy is not open: a second pass must not cut a branch
+    return (schema as unknown as { clone(d: unknown): z.ZodType }).clone(next);
+  };
 
   if (kind === "enum") return strictify((def.options as z.ZodType[])[0]!);
   if (kind === "union") {
