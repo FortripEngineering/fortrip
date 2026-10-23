@@ -47,7 +47,7 @@ function changeLine(c: OfferChange): string {
     case "confirmation":
       return `- confirmation: ${pair(confirmationText)}${worse}`;
     case "pay_at_property":
-      return `- fees at the property: ${pair(feesText)}${worse}`;
+      return `- fees not in the total: ${pair(feesText)}${worse}`;
     default:
       return `- ${c.field}: ${raw(c.previous)} → ${raw(c.current)}${worse}`;
   }

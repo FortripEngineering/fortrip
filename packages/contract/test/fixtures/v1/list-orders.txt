@@ -3,7 +3,7 @@ Orders, newest first: 4 on this page.
 Order ord_OtherStore0000000000 · reference FT-R8ZK4C · awaiting payment · created 2026-11-02 10:00 UTC · updated 2026-11-02 10:00 UTC
 Hotel: Canal House Lisbon · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 1 adult · time zone Europe/Lisbon
 Room: Classic Double · beds not listed
-Terms: meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · cancellation terms unknown · fees at the property not fully disclosed
+Terms: meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · cancellation terms unknown · fees not fully disclosed (amounts or how they are collected may be missing)
 Hotel confirmation number: none yet
 Total: EUR 410.00 · payment unpaid · charged in EUR
 Payment link (expires 2026-11-02 10:30 UTC; the user signs in to Fortrip to pay): https://fortrip.ai/stays/book/sb_9f3k2Lx

@@ -92,8 +92,8 @@ export function feesText(p: PayAtProperty): string {
   }
   const caveat =
     p.disclosure === "incomplete"
-      ? "fees at the property not fully disclosed"
-      : `fees at the property: disclosure ${p.disclosure}`;
+      ? "fees not fully disclosed (amounts or how they are collected may be missing)"
+      : `fees not in the total: disclosure ${p.disclosure}`;
   return items.length ? `${listed}; ${caveat}` : caveat;
 }
 
@@ -166,7 +166,7 @@ const UNAVAILABLE: Record<string, string> = {
 export function renderOffers(r: HotelOffersResult): string {
   const lines = [
     `Live offers · ${stayLine(r.stay.checkIn, r.stay.checkOut)} · ${party(r.stay.rooms)}`,
-    "total = the whole stay and every room, the amount charged. Fees at the property are in the property's currency, not converted. Times are UTC, then the hotel's time zone.",
+    "total = the whole stay and every room, the amount charged. Fees not in the total are in the property's currency, not converted. Times are UTC, then the hotel's time zone.",
   ];
   if (r.hotels.length === 0) lines.push("", "No hotel has offers for this stay.");
   for (const h of r.hotels) {

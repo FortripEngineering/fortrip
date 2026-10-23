@@ -523,7 +523,7 @@ describe("offers", () => {
     const text = render(load("offers-two-hotels-one-unavailable"));
     for (const part of [
       "cancellation terms unknown",
-      "fees at the property not fully disclosed",
+      "fees not fully disclosed (amounts or how they are collected may be missing)",
       "confirmation mode unknown",
       "room name not listed",
       "sold out",
@@ -559,6 +559,9 @@ describe("unknowns carry their own negation inline", () => {
       line,
     );
     assert.doesNotMatch(line, /pay at the property:/);
+    // Incomplete disclosure names no collection place either.
+    assert.ok(line.endsWith("; fees not fully disclosed (amounts or how they are collected may be missing) · offer expires 2026-11-01 09:30 UTC"), line);
+    assert.doesNotMatch(render(load("list-orders")), /fees at the property/);
   });
 
   it("offers cut by limitPerHotel are said to exist", () => {
