@@ -110,6 +110,21 @@ describe("TOOLS", () => {
     );
   });
 
+  // Titles are what MCP clients show people; like the names, they say the
+  // category.
+  it("titles every tool with its category", () => {
+    assert.deepEqual(
+      Object.fromEntries(TOOLS.map((spec) => [spec.name, spec.title])),
+      {
+        get_planning_guide: "Get hotel planning guide",
+        search_hotels: "Search hotels",
+        get_hotel: "Get hotel details",
+        get_hotel_rates: "Get live hotel rates",
+        book_hotel: "Create hotel booking payment link",
+      },
+    );
+  });
+
   it("gives every tool a title and a description", () => {
     for (const spec of TOOLS) {
       assert.ok(spec.title.trim(), `${spec.name} title`);

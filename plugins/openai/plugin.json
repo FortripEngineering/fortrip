@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Search hotels worldwide, check live room rates, and create booking payment links with Fortrip.",
   "author": {
     "name": "Fortrip",
@@ -93,7 +93,7 @@
         "commerce_description": "Users can book hotel stays. book_hotel creates an unpaid order and returns a link to a Fortrip page on fortrip.ai that recaps the booking and its terms; the user completes payment there through Stripe Checkout. The plugin never collects card details and nothing is charged until the user pays on that page."
       },
       "publication": {
-        "release_notes": "Initial release: hotel search, hotel details, live rates and booking payment links.",
+        "release_notes": "The live rates and booking tools are now get_hotel_rates and book_hotel, so every tool's name says its category.",
         "translations": {
           "zh-CN": {
             "subtitle": "搜索并预订酒店",

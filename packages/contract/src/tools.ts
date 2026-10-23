@@ -112,7 +112,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "get_hotel_rates",
-    title: "Get live rates",
+    title: "Get live hotel rates",
     description: `Live rooms and rate plans for up to ${LIMITS.ratesHotels} hotels, prices in currency (CNY by default, or USD) at Stripe's exchange rate. rooms, adults and childrenAges are per room: every room has the same occupancy. Each room carries its catalogue facts (static) and the cheapest rate per meal plan × free-cancellation variant, with roomId and ratePlanCode for book_hotel. boardCode is the meal plan (${MEAL_CODES}); boardCount is how many guests per room it covers: fewer than adults per room means the meals don't cover everyone (BB with boardCount 1 for 2 adults is breakfast for 1 of 2). Takes about 15 seconds; query a few hotels at a time. Returns the ${MCP_MAX_ROOMS_PER_HOTEL} cheapest rooms per hotel unless maxRoomsPerHotel says otherwise.`,
     annotations: {
       readOnlyHint: true,
@@ -125,7 +125,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "book_hotel",
-    title: "Create booking payment link",
+    title: "Create hotel booking payment link",
     description: `Create (or resume) a booking for one rate from get_hotel_rates, with the same rooms, adults and childrenAges (per room). Returns the amount and currency the user will be charged, the accepted terms (meal plan, cancellation, confirmation, pay-at-hotel fees), the stay as booked, and paymentUrl: a Fortrip page that recaps the booking and continues to payment. Nothing is charged until the user pays there; anyone holding paymentUrl can pay. The same user and stay always returns the same order; a stay that is already paid returns 409. This tool can't change or cancel a booking: for changes, cancellations or refunds the user emails ${SUPPORT_EMAIL} with the booking's orderUrl. Can take up to about two minutes; if the call times out, call it again with the same details — it resumes the same order.`,
     annotations: {
       readOnlyHint: false,
