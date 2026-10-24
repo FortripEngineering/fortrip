@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "node:stream";
 
-import { API, CONTRACT_VERSION, renderGuide, TOOLS } from "@fortrip/agent-contract";
+import { CONTRACT_VERSION, renderError, renderGuide, TOOLS } from "@fortrip/agent-contract";
 import {
   type FetchLike,
   isJSONRPCErrorResponse,
@@ -21,10 +21,12 @@ import {
   type ToolCallback,
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import type { z } from "zod";
 
+import { isEnvelope } from "./api.ts";
 import { refreshSession, requireToken } from "./auth.ts";
 import { loadSession } from "./credentials.ts";
-import { CliError, EXIT } from "./errors.ts";
+import { CliError, EXIT, localRequestId } from "./errors.ts";
 
 /** JSON-RPC error codes of the bridge's own answers: the user has to sign in,
  *  or Fortrip couldn't be reached or failed (the standard internal error). */
@@ -71,20 +73,21 @@ async function signedIn<T>(run: () => Promise<T>): Promise<T> {
 }
 
 /**
- * `fetch` for the hosted server: every request carries the user's token, and
+ * `fetch` for the hosted server at `mcpUrl`, signed in as for `apiUrl`
+ * (`resolveMcpUrl` pairs them): every request carries the user's token, and
  * a 401 gets one refresh and one replay with the new token, as in
  * `authorizedRequest`. A token the server still turns down is the user's to
  * fix: `SignInRequired`. Any other answer, a 503 included, goes on to the
  * transport, which makes it an error for that request.
  */
-function authorizedFetch(apiUrl: string): FetchLike {
+function authorizedFetch(mcpUrl: string, apiUrl: string): FetchLike {
   const attempt: FetchLike = async (url, init) => {
     try {
       return await fetch(url, init);
     } catch (error) {
       if ((error as Error)?.name === "AbortError") throw error;
       const cause = (error as { cause?: Error })?.cause ?? (error as Error);
-      throw new Error(`Could not reach ${apiUrl}: ${cause?.message ?? String(error)}`);
+      throw new Error(`Could not reach ${mcpUrl}: ${cause?.message ?? String(error)}`);
     }
   };
   // Each request starts only once the one before it has, so messages leave in
@@ -125,22 +128,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** The error a failed send is answered with. */
+function isRpcError(value: unknown): value is RpcError {
+  return (
+    isRecord(value) &&
+    !(value instanceof Error) &&
+    typeof value.code === "number" &&
+    typeof value.message === "string"
+  );
+}
+
+/** What the server's HTTP answer said, parsed; undefined if it isn't JSON. */
+function bodyOf(error: SdkHttpError): unknown {
+  try {
+    return JSON.parse(typeof error.data.text === "string" ? error.data.text : "");
+  } catch {
+    return undefined;
+  }
+}
+
+/** The error a failed send is answered with: `error` itself if it is one
+ *  already (an answer of the server's, or the bridge's own). */
 function rpcErrorOf(error: unknown): RpcError {
+  if (isRpcError(error)) return error;
   if (error instanceof SignInRequired) {
     return { code: SIGN_IN_REQUIRED, message: error.message, data: error.data };
   }
   if (error instanceof SdkHttpError) {
     const { status } = error;
     const text = typeof error.data.text === "string" ? error.data.text : "";
-    let body: unknown;
-    try {
-      body = JSON.parse(text);
-    } catch {}
+    const body = bodyOf(error);
     // A JSON-RPC error in the body is the server's own answer to the request.
     if (isRecord(body) && isRecord(body.error)) {
       const { code, message } = body.error;
       if (typeof code === "number" && typeof message === "string") return body.error as RpcError;
+    }
+    // The v1 envelope: the hosted server's error outside the tools.
+    if (isEnvelope(body)) {
+      const { message, requestId, retryable, retryAfterSeconds } = body.error;
+      return {
+        code: INTERNAL_ERROR,
+        message: `Fortrip answered HTTP ${status}${typeof message === "string" ? `: ${message}` : ""}${
+          typeof requestId === "string" ? ` (request id ${requestId})` : ""
+        }`,
+        data: {
+          status,
+          ...(retryable === true ? { retryable } : {}),
+          ...(typeof retryAfterSeconds === "number" ? { retryAfterSeconds } : {}),
+        },
+      };
     }
     const said = isRecord(body) ? (body.error ?? body.message) : text.slice(0, 200);
     return {
@@ -154,6 +189,51 @@ function rpcErrorOf(error: unknown): RpcError {
     message: error instanceof Error ? error.message : String(error),
     ...(error instanceof CliError && error.details.retryable ? { data: { retryable: true } } : {}),
   };
+}
+
+/**
+ * A tool call that failed with a v1 envelope, answered as the hosted server
+ * answers a tool's error (spec §6): `isError`, the rendered error and the
+ * envelope as JSON text, the envelope in `_meta`, and no
+ * `structuredContent`. The envelope is the hosted server's own when it
+ * turned the HTTP request down with one, Fortrip's when the API refused a
+ * step of the sign-in with one (`/v1/auth/config` answering 503, say), and
+ * the bridge's for a sign-in it couldn't make: `unauthenticated`, as the hosted server answers a request
+ * without a token it takes, with no `details` (§11) and a request id of
+ * the bridge's own (`local_…`): that answer is the bridge's, not Fortrip's.
+ * Any other failure has no envelope: undefined.
+ */
+function toolErrorOf(error: unknown) {
+  let envelope: unknown;
+  if (error instanceof SignInRequired) {
+    envelope = {
+      error: {
+        code: "unauthenticated",
+        message: error.message,
+        retryable: false,
+        requestId: localRequestId(),
+      },
+    };
+  } else if (error instanceof SdkHttpError) {
+    envelope = bodyOf(error);
+  } else if (error instanceof CliError) {
+    envelope = error.envelope;
+  }
+  if (!isEnvelope(envelope)) return undefined;
+  return {
+    isError: true,
+    content: [
+      { type: "text", text: renderError(envelope) },
+      { type: "text", text: JSON.stringify(envelope) },
+    ],
+    _meta: { "ai.fortrip/error": envelope },
+  };
+}
+
+/** The answer to a request of the client's that failed with `error`. */
+function failureAnswer(id: RequestId, method: string, error: unknown): JSONRPCMessage {
+  const result = method === "tools/call" ? toolErrorOf(error) : undefined;
+  return result ? { jsonrpc: "2.0", id, result } : { jsonrpc: "2.0", id, error: rpcErrorOf(error) };
 }
 
 const CONNECTION_LOST: RpcError = {
@@ -175,10 +255,25 @@ async function hasSignIn(apiUrl: string): Promise<boolean> {
   return (await loadSession(apiUrl).catch(() => null)) !== null;
 }
 
+/** A schema the SDK advertises as published and never enforces, as the
+ *  hosted server registers each tool's: its validator passes every value
+ *  through, and its JSON Schema is the contract's. */
+function passThrough(schema: z.ZodType): StandardSchemaWithJSON {
+  return {
+    "~standard": {
+      version: 1,
+      vendor: "fortrip",
+      validate: (value) => ({ value }),
+      jsonSchema: schema["~standard"].jsonSchema,
+    },
+  };
+}
+
 /**
  * What answers the client while it isn't signed in: an MCP SDK server set up
  * as the hosted one is (its `serverInfo`, `instructions` and the contract's
- * tools, registered as the hosted server registers them), so `initialize`,
+ * tools, registered as the hosted server registers them: pass-through
+ * schemas, an output schema on every tool but the guide), so `initialize`,
  * `tools/list`, `ping` and a method it lacks get the answers the hosted
  * server would give. Its tools are never called: the bridge takes a
  * `tools/call` to the hosted server.
@@ -196,14 +291,14 @@ function localServer(): McpServer {
       title: spec.title,
       description: spec.description,
       annotations: spec.annotations,
-      outputSchema: spec.output ?? undefined,
+      ...(spec.output ? { outputSchema: passThrough(spec.output) } : {}),
     };
     if (spec.input === null) {
       server.registerTool(spec.name, config, handler);
     } else {
       server.registerTool(
         spec.name,
-        { ...config, inputSchema: spec.input },
+        { ...config, inputSchema: passThrough(spec.input) },
         handler as ToolCallback<StandardSchemaWithJSON>,
       );
     }
@@ -212,9 +307,10 @@ function localServer(): McpServer {
 }
 
 /**
- * `fortrip mcp`: a stdio MCP server for Fortrip's hosted server (Streamable
- * HTTP, signed in with the CLI's session). It runs until stdin ends or it is
- * told to stop with SIGINT or SIGTERM; requests still waiting then go
+ * `fortrip mcp`: a stdio MCP server for Fortrip's hosted server at `mcpUrl`
+ * (Streamable HTTP, signed in with the CLI's session for `apiUrl`; the CLI
+ * pairs them with `resolveMcpUrl`). It runs until stdin ends or it is told
+ * to stop with SIGINT or SIGTERM; requests still waiting then go
  * unanswered, as for any stdio server.
  *
  * With a sign-in the hosted server takes, it forwards every JSON-RPC message
@@ -223,9 +319,10 @@ function localServer(): McpServer {
  * answers `initialize`, `tools/list` and `ping` itself, as the hosted server
  * would ("local"), so a client connects and lists the tools before the user
  * has signed in. A tool call while local checks the sign-in the way the
- * commands do. Still signed out, the call is answered with a JSON-RPC error
- * (-32001, whose message names `LOGIN_COMMAND` and the sign-in link it
- * starts). Signed in by now (the link approved, or `LOGIN_COMMAND` run), the
+ * commands do. Still signed out, the call is answered as the hosted server
+ * answers a tool's error, with `unauthenticated` (`toolErrorOf`), whose
+ * message names `LOGIN_COMMAND` and the sign-in link it starts. Signed in
+ * by now (the link approved, or `LOGIN_COMMAND` run), the
  * bridge sends the client's `initialize` on to the hosted server and is
  * remote from that call on, no restart needed; it then tells the client the
  * tool list may have changed, so that it lists the hosted server's. A switch
@@ -234,11 +331,13 @@ function localServer(): McpServer {
  * local.
  *
  * stdout carries only JSON-RPC, so a problem the user has to fix is the
- * error response to the request that hit it, and the bridge stays up. A
- * sign-in that stops working mid-session fails only that request. All
- * diagnostics go to stderr.
+ * answer to the request that hit it (a tool error for a tool call, as
+ * above, a JSON-RPC error -32001 for any other request), and the bridge
+ * stays up. A sign-in that stops working mid-session fails only that
+ * request. All diagnostics go to stderr.
  */
 export async function runMcpBridge(
+  mcpUrl: string,
   apiUrl: string,
   io: { stdin: Readable; stdout: Writable; stderr?: Writable } = {
     stdin: process.stdin,
@@ -248,8 +347,8 @@ export async function runMcpBridge(
 ): Promise<void> {
   const stderr = io.stderr ?? process.stderr;
   const stdio = new StdioServerTransport(io.stdin, io.stdout);
-  const http = new StreamableHTTPClientTransport(new URL(API.mcp, apiUrl), {
-    fetch: authorizedFetch(apiUrl),
+  const http = new StreamableHTTPClientTransport(new URL(mcpUrl), {
+    fetch: authorizedFetch(mcpUrl, apiUrl),
   });
   const server = localServer();
   const [local, localServerEnd] = InMemoryTransport.createLinkedPair();
@@ -269,8 +368,8 @@ export async function runMcpBridge(
    *  in while a switch ran out of time. */
   let received = 0;
   let abandonedThrough = 0;
-  /** Requests sent on that the server hasn't answered. */
-  const pending = new Set<RequestId>();
+  /** Requests sent on that the server hasn't answered, with their method. */
+  const pending = new Map<RequestId, string>();
   let initializeId: RequestId | undefined;
   /** Requests whose answer the bridge waits for itself (`ask`). */
   const asked = new Map<RequestId, (answer: JSONRPCResponse) => void>();
@@ -281,9 +380,11 @@ export async function runMcpBridge(
   const toClient = (message: JSONRPCMessage) => {
     stdio.send(message).catch((cause: Error) => log(cause.message));
   };
-  const fail = (id: RequestId, error: RpcError) => {
-    if (closed || !pending.delete(id)) return;
-    toClient({ jsonrpc: "2.0", id, error });
+  const fail = (id: RequestId, error: unknown) => {
+    const method = pending.get(id);
+    if (closed || method === undefined) return;
+    pending.delete(id);
+    toClient(failureAnswer(id, method, error));
   };
   // What a Client does once it is initialized: later requests name the
   // protocol version they agreed on.
@@ -299,12 +400,12 @@ export async function runMcpBridge(
       await http.send(message).catch(() => {});
       return;
     }
-    pending.add(message.id);
+    pending.set(message.id, message.method);
     if (message.method === "initialize") initializeId = message.id;
     try {
       await http.send(message, { onRequestStreamEnd: () => fail(message.id, CONNECTION_LOST) });
     } catch (error) {
-      fail(message.id, rpcErrorOf(error));
+      fail(message.id, error);
     }
   };
 
@@ -357,13 +458,13 @@ export async function runMcpBridge(
    * it is answered, the protocol version adopted and
    * `notifications/initialized` sent. Sending the `initialize` checks the
    * sign-in as the commands do: it finishes a login the user has approved,
-   * else fails with the sign-in link. Resolves with the error to answer the
-   * tool call with, or undefined once the bridge can go remote. Past
-   * `switchTimeoutMs` it aborts what it sent, so no answer comes after, and
-   * gives up with CONNECTION_LOST, as do the tool calls that came in
-   * meanwhile.
+   * else fails with the sign-in link. Resolves with what the tool call
+   * failed with (a JSON-RPC error, or what sending threw), or undefined
+   * once the bridge can go remote. Past `switchTimeoutMs` it aborts what it
+   * sent, so no answer comes after, and gives up with CONNECTION_LOST, as
+   * do the tool calls that came in meanwhile.
    */
-  const handshake = async (initialize: JSONRPCRequest): Promise<RpcError | undefined> => {
+  const handshake = async (initialize: JSONRPCRequest): Promise<{ error: unknown } | undefined> => {
     const deadline = new AbortController();
     const timer = setTimeout(() => deadline.abort(), switchTimeoutMs);
     const late = new Promise<undefined>((resolve) =>
@@ -374,9 +475,9 @@ export async function runMcpBridge(
       try {
         answer = await Promise.race([ask(initialize, deadline.signal), late]);
       } catch (error) {
-        return rpcErrorOf(error);
+        return { error };
       }
-      if (answer && !isJSONRPCResultResponse(answer)) return answer.error;
+      if (answer && !isJSONRPCResultResponse(answer)) return { error: answer.error };
       if (answer) {
         adopt(answer);
         await http
@@ -388,7 +489,7 @@ export async function runMcpBridge(
       }
       if (!deadline.signal.aborted) return undefined;
       abandonedThrough = received;
-      return CONNECTION_LOST;
+      return { error: CONNECTION_LOST };
     } finally {
       clearTimeout(timer);
     }
@@ -400,8 +501,8 @@ export async function runMcpBridge(
    *  that counts from now on). */
   const callTool = async (call: JSONRPCRequest) => {
     if (clientInitialize) {
-      const error = await handshake(clientInitialize);
-      if (error) return toClient({ jsonrpc: "2.0", id: call.id, error });
+      const failed = await handshake(clientInitialize);
+      if (failed) return toClient(failureAnswer(call.id, call.method, failed.error));
     }
     remote = true;
     void forward(call);

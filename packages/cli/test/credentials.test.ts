@@ -19,15 +19,20 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { MCP_PATH, PUBLIC_ORIGINS } from "@fortrip/agent-contract";
+
 import {
   addPendingLogin,
   credentialsPath,
+  DEFAULT_API_URL,
+  DEFAULT_MCP_URL,
   deleteSession,
   loadPendingLogins,
   loadRecoveredSessions,
   loadSession,
   type PendingLogin,
   resolveApiUrl,
+  resolveMcpUrl,
   type Session,
   saveSession,
   tryLock,
@@ -566,8 +571,10 @@ function session(name: string, expiresAt = IN_AN_HOUR): Session {
 }
 
 describe("resolveApiUrl", () => {
-  it("defaults to production and normalizes to the origin", () => {
-    assert.equal(resolveApiUrl({}), "https://fortrip.ai");
+  it("defaults to the production API and drops a trailing slash", () => {
+    assert.equal(resolveApiUrl({}), "https://api.fortrip.ai");
+    assert.equal(DEFAULT_API_URL, "https://api.fortrip.ai");
+    assert.equal(resolveApiUrl({ FORTRIP_API_URL: "  " }), "https://api.fortrip.ai");
     assert.equal(
       resolveApiUrl({ FORTRIP_API_URL: "https://preview.fortrip.ai/" }),
       "https://preview.fortrip.ai",
@@ -578,9 +585,84 @@ describe("resolveApiUrl", () => {
     );
   });
 
+  it("keeps a path prefix, without its trailing slash", () => {
+    for (const [given, expected] of [
+      ["http://localhost:3000/api/public", "http://localhost:3000/api/public"],
+      ["http://localhost:3000/api/public/", "http://localhost:3000/api/public"],
+      ["https://preview.fortrip.ai/api/public//", "https://preview.fortrip.ai/api/public"],
+      ["http://127.0.0.1:3000/api/public?x=1#y", "http://127.0.0.1:3000/api/public"],
+    ] as const) {
+      assert.equal(resolveApiUrl({ FORTRIP_API_URL: given }), expected, given);
+    }
+  });
+
   it("refuses plain http off localhost and invalid URLs", () => {
-    for (const url of ["http://fortrip.ai", "ftp://x", "not a url"]) {
-      assert.throws(() => resolveApiUrl({ FORTRIP_API_URL: url }), CliError);
+    for (const url of [
+      "http://fortrip.ai",
+      "http://api.fortrip.ai/api/public",
+      "http://localhost.example.com",
+      "ftp://x",
+      "not a url",
+    ]) {
+      assert.throws(() => resolveApiUrl({ FORTRIP_API_URL: url }), CliError, url);
+    }
+  });
+
+  it("sessions are kept per API URL, prefix included", async () => {
+    await saveSession("http://localhost:3000/api/public", session("prefixed"), env);
+    assert.equal(await loadSession("http://localhost:3000", env), null);
+    assert.equal(
+      (await loadSession("http://localhost:3000/api/public", env))?.accessToken,
+      "access_prefixed",
+    );
+  });
+});
+
+describe("resolveMcpUrl", () => {
+  it("defaults to the contract's MCP server, for the production API", () => {
+    assert.equal(DEFAULT_MCP_URL, `${PUBLIC_ORIGINS.mcp}${MCP_PATH}`);
+    assert.equal(DEFAULT_MCP_URL, "https://mcp.fortrip.ai/");
+    assert.equal(resolveMcpUrl(DEFAULT_API_URL, {}), DEFAULT_MCP_URL);
+    assert.equal(resolveMcpUrl(DEFAULT_API_URL, { FORTRIP_MCP_URL: "  " }), DEFAULT_MCP_URL);
+    assert.equal(resolveMcpUrl(DEFAULT_API_URL, { FORTRIP_MCP_URL: "https://mcp.fortrip.ai" }), DEFAULT_MCP_URL);
+  });
+
+  it("takes FORTRIP_MCP_URL on the API URL's origin, without its query or fragment", () => {
+    for (const [apiUrl, given, expected] of [
+      ["http://localhost:3000/api/public", "http://localhost:3000/api/public/mcp?x=1#y", "http://localhost:3000/api/public/mcp"],
+      ["http://127.0.0.1:3000", " http://127.0.0.1:3000/api/public/mcp ", "http://127.0.0.1:3000/api/public/mcp"],
+      ["https://preview.fortrip.ai/api/public", "https://preview.fortrip.ai/api/public/mcp", "https://preview.fortrip.ai/api/public/mcp"],
+    ] as const) {
+      assert.equal(resolveMcpUrl(apiUrl, { FORTRIP_MCP_URL: given }), expected, given);
+    }
+  });
+
+  it("refuses plain http off localhost and invalid URLs, naming FORTRIP_MCP_URL", () => {
+    for (const url of ["http://mcp.fortrip.ai/", "http://localhost.example.com/", "ftp://x", "not a url"]) {
+      assert.throws(
+        () => resolveMcpUrl(DEFAULT_API_URL, { FORTRIP_MCP_URL: url }),
+        (error: unknown) => error instanceof CliError && error.exitCode === 2 && /FORTRIP_MCP_URL/.test(error.message),
+        url,
+      );
+    }
+  });
+
+  it("sends a sign-in only to its API URL's own MCP server", () => {
+    for (const [apiUrl, env] of [
+      // The production sign-in to another host.
+      [DEFAULT_API_URL, { FORTRIP_MCP_URL: "https://mcp.example.com/" }],
+      [DEFAULT_API_URL, { FORTRIP_MCP_URL: "http://localhost:3000/api/public/mcp" }],
+      // Another API's sign-in to the production MCP server.
+      ["https://preview.fortrip.ai/api/public", {}],
+      ["http://localhost:3000/api/public", { FORTRIP_MCP_URL: "https://mcp.fortrip.ai/" }],
+      // Another port is another origin.
+      ["http://localhost:3000", { FORTRIP_MCP_URL: "http://localhost:4000/api/public/mcp" }],
+    ] as const) {
+      assert.throws(
+        () => resolveMcpUrl(apiUrl, env),
+        (error: unknown) => error instanceof CliError && error.exitCode === 2 && /FORTRIP_MCP_URL/.test(error.message),
+        `${apiUrl} ${JSON.stringify(env)}`,
+      );
     }
   });
 });

@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { API, type AuthConfig, authConfig } from "@fortrip/agent-contract";
 
-import { type ApiResponse, postForm, request, unwrap } from "./api.ts";
+import { type ApiResponse, isEnvelope, postForm, request, unwrap } from "./api.ts";
 import { openBrowser } from "./browser.ts";
 import {
   addPendingLogin,
@@ -387,6 +387,7 @@ export async function authorizedRequest(
       `${apiUrl} didn't accept FORTRIP_TOKEN. If this keeps happening, the user should replace it, or unset it to sign in through the browser.`,
       EXIT.unauthenticated,
       { status: 401, tokenSource: "FORTRIP_TOKEN" },
+      isEnvelope(response.body) ? response.body : undefined,
     );
   }
   if (!auth.fresh) {

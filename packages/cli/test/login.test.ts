@@ -19,7 +19,7 @@ import {
 } from "../src/credentials.ts";
 import { CliError, EXIT, notices } from "../src/errors.ts";
 import { cli } from "./helpers/cli.ts";
-import { type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
+import { envelope, type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
 
 let api: FakeApi;
 let apiUrl: string;
@@ -428,7 +428,7 @@ describe("login from a command (agents)", () => {
 
   it("a signed-out command never starts a sign-in while the sign-in config is unavailable", async () => {
     api.scripts.config = [
-      { status: 503, body: { success: false, error: "Sign-in is unavailable", retryable: true } },
+      { status: 503, body: envelope("service_unavailable", "Sign-in is unavailable", { retryable: true }) },
     ];
     const error = await failure(requireToken(apiUrl));
     assert.equal(error.exitCode, EXIT.error);
@@ -458,21 +458,21 @@ describe("login from a command (agents)", () => {
     const env = cliEnv();
     const path = credentialsPath();
 
-    const first = await cli(["whoami"], env);
+    const first = await cli(["whoami", "--json"], env);
     api.approve(JSON.parse(first.stderr).loginUrl);
     // The file turns unreadable just as the login is redeemed.
     api.hooks.onPoll = () => writeFile(path, "{not json");
-    const failed = await cli(["hotels", "search", "--query", "x"], env);
+    const failed = await cli(["hotels", "search", "--text", "x", "--json"], env);
     api.hooks.onPoll = undefined;
     assert.equal(failed.code, 1);
     const error = JSON.parse(failed.stderr);
-    assert.equal(error.error, "not found");
+    assert.equal(error.error.code, "not_found");
     assert.match(error.warning, /kept in/);
     assert.match(error.recoveryFile, /credentials\.recovered-/);
 
     // The user moves the broken file away, as the warning says.
     await rename(path, `${path}.broken`);
-    const next = await cli(["whoami"], env);
+    const next = await cli(["whoami", "--json"], env);
     assert.equal(next.code, 0, next.stderr);
     assert.equal(JSON.parse(next.stdout).email, "a@b.c");
     assert.equal(next.stderr, "");
@@ -485,7 +485,8 @@ describe("login from a command (agents)", () => {
     api.options.minPollGapMs = 500;
     const env = cliEnv();
 
-    const first = await Promise.all([cli(["whoami"], env), cli(["whoami"], env), cli(["whoami"], env)]);
+    const whoami = () => cli(["whoami", "--json"], env);
+    const first = await Promise.all([whoami(), whoami(), whoami()]);
     assert.deepEqual(
       first.map((result) => result.code),
       [3, 3, 3],
@@ -496,7 +497,7 @@ describe("login from a command (agents)", () => {
     api.approve(urls[0]);
 
     api.counts.polls = 0;
-    const reruns = await Promise.all([cli(["whoami"], env), cli(["whoami"], env), cli(["whoami"], env)]);
+    const reruns = await Promise.all([whoami(), whoami(), whoami()]);
     assert.deepEqual(
       reruns.map((result) => result.code),
       [0, 0, 0],
@@ -634,7 +635,7 @@ describe("refresh", () => {
     assert.equal(error.details.retryable, true);
 
     api.scripts.config = [
-      { status: 503, body: { success: false, error: "Sign-in is unavailable", retryable: true } },
+      { status: 503, body: envelope("service_unavailable", "Sign-in is unavailable", { retryable: true }) },
     ];
     error = await failure(whoami(apiUrl));
     assert.equal(error.exitCode, EXIT.error);
@@ -649,7 +650,7 @@ describe("R1: a 401 never deletes the saved session", () => {
   it("a 401 refreshes once and retries with the new token", async () => {
     const old = api.session();
     await saveSession(apiUrl, old);
-    api.scripts.me = [{ status: 401, body: { success: false, error: "Invalid or expired token" } }];
+    api.scripts.me = [{ status: 401, body: envelope("unauthenticated", "Invalid or expired token") }];
 
     assert.deepEqual(await whoami(apiUrl), { ...ME, apiUrl });
     assert.equal(api.counts.refreshes, 1);
@@ -690,7 +691,7 @@ describe("R1: a 401 never deletes the saved session", () => {
 
   it("after a passing 401, the next run works with the saved session", async () => {
     await saveSession(apiUrl, api.session());
-    const rejected = { status: 401, body: { success: false, error: "Invalid or expired token" } };
+    const rejected = { status: 401, body: envelope("unauthenticated", "Invalid or expired token") };
     api.scripts.me = [rejected, rejected];
     await failure(whoami(apiUrl));
 
@@ -736,12 +737,7 @@ describe("R1: a 401 never deletes the saved session", () => {
     api.scripts.me = [
       {
         status: 503,
-        body: {
-          success: false,
-          error: "Supplier unavailable",
-          reason: "supplier_unavailable",
-          retryable: true,
-        },
+        body: envelope("service_unavailable", "Service unavailable", { retryable: true }),
       },
     ];
     const error = await failure(whoami(apiUrl));
@@ -954,17 +950,23 @@ describe("a config directory that can't be written", () => {
     const home = await unwritableHome(t);
     if (!home) return;
 
-    for (const args of [["whoami"], ["hotels", "search", "--query", "x"]]) {
-      const result = await cli(args, { ...cliEnv(), XDG_CONFIG_HOME: home });
+    for (const args of [["whoami"], ["hotels", "search", "--text", "x"]]) {
+      const result = await cli([...args, "--json"], { ...cliEnv(), XDG_CONFIG_HOME: home });
       assert.equal(result.code, 1, args.join(" "));
-      const error = JSON.parse(result.stderr);
-      assert.equal(error.exitCode, 1);
-      assertGuidance(error.error);
-      assert.equal(error.loginUrl, undefined);
-      assert.equal(error.retryable, undefined);
+      const printed = JSON.parse(result.stderr);
+      assertGuidance(printed.error.message);
+      assert.equal(printed.loginUrl, undefined);
+      assert.equal(printed.error.code, "cli_error");
+      assert.equal(printed.error.retryable, false);
       // JSON only: no stack trace.
       assert.doesNotMatch(result.stderr, /\n\s+at /);
       assert.equal(result.stdout, "");
+      // As text, the same error, and no stack trace either.
+      const text = await cli(args, { ...cliEnv(), XDG_CONFIG_HOME: home });
+      assert.equal(text.code, 1, args.join(" "));
+      assert.match(text.stderr, /^Error: /);
+      assertGuidance(text.stderr.split("\n")[0] ?? "");
+      assert.doesNotMatch(text.stderr, /\n\s+at /);
     }
     assert.equal(api.counts.deviceStarts, 0);
   });
@@ -973,7 +975,7 @@ describe("a config directory that can't be written", () => {
     const home = await unwritableHome(t);
     if (!home) return;
 
-    const result = await cli(["whoami"], {
+    const result = await cli(["whoami", "--json"], {
       ...cliEnv(),
       XDG_CONFIG_HOME: home,
       FORTRIP_TOKEN: api.session().accessToken,

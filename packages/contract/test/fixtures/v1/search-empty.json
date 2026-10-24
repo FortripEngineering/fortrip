@@ -1,0 +1,101 @@
+{
+  "tool": "search_hotels",
+  "data": {
+    "destination": {
+      "kind": "place",
+      "place": {
+        "placeId": "plc_9300002",
+        "name": "Niseko",
+        "names": {
+          "en": "Niseko",
+          "zh": "二世古"
+        },
+        "kind": "settlement",
+        "scope": "radius",
+        "cityLike": null,
+        "population": 4823,
+        "region": {
+          "placeId": "plc_9300001",
+          "name": "Hokkaido",
+          "names": {
+            "en": "Hokkaido",
+            "zh": "北海道"
+          }
+        },
+        "countryCode": "JP",
+        "location": {
+          "lat": 42.8048,
+          "lng": 140.6874
+        }
+      },
+      "resolution": "only_match",
+      "otherMatches": 0,
+      "scope": "radius",
+      "center": {
+        "location": {
+          "lat": 42.8048,
+          "lng": 140.6874
+        },
+        "place": {
+          "placeId": "plc_9300002",
+          "name": "Niseko",
+          "names": {
+            "en": "Niseko",
+            "zh": "二世古"
+          }
+        },
+        "basis": "point"
+      },
+      "radiusMeters": 8000,
+      "radiusSource": "default"
+    },
+    "text": {
+      "value": "Ritz Carlton",
+      "match": "exact"
+    },
+    "stay": {
+      "checkIn": "2027-01-10",
+      "checkOut": "2027-01-14",
+      "rooms": [
+        {
+          "adults": 1,
+          "childrenAges": []
+        }
+      ]
+    },
+    "pricing": {
+      "mode": "indicative",
+      "scope": "page",
+      "status": "ok"
+    },
+    "sort": "distance",
+    "coverage": {
+      "matched": 0,
+      "priced": 0,
+      "withPrice": 0,
+      "poolRadiusMeters": null,
+      "excludedNoPrice": null,
+      "excludedNoFacilityData": null,
+      "withinMaxRadius": 0,
+      "textAnywhere": 2,
+      "localities": null,
+      "nameAsText": null
+    },
+    "data": [],
+    "nextCursor": null,
+    "notes": [
+      {
+        "code": "few_hotels_in_scope",
+        "message": "0 hotels match within 8.0 km of Niseko (a settlement); 0 within 80 km."
+      },
+      {
+        "code": "more_elsewhere",
+        "message": "2 hotels match \"Ritz Carlton\" elsewhere in JP."
+      },
+      {
+        "code": "no_results",
+        "message": "No hotel within 8.0 km of Niseko matches \"Ritz Carlton\" (0 within 80 km, 2 elsewhere in JP). Search the text without a destination, or Niseko without the text."
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+Phuket (locality) · 2,752 hotels · plc_9200002 · Phuket Province plc_9200001, TH · also named 普吉
+Stay 2026-12-20 → 2026-12-27 (7 nights), 2 rooms, each 2 adults and 1 child (age 7) · indicative prices per room-night: estimates, not bookable (only offers are) · sort: cheapest first
+Distances from Phuket plc_9200002 (the locality's hub).
+Counts: 2,752 matched, 2,752 priced, 1,403 with a price.
+
+1. Old Town Guesthouse · 2★ · 1.1 km · from USD 18.40/room-night (USD 128.80 per room for the stay) · 12 Thalang Road, Talat Yai · Phuket Province, TH · htl_PhuketOldTown0000000
+2. Karon Hill Residence (卡伦山公寓) · 3★ · 12.3 km · from USD 33.00/room-night (USD 231.00 per room for the stay) · 45 Patak Road, Karon · Phuket Province, TH · htl_KaronHill00000000000
+3. Kata Beach Resort (卡塔海滩度假村) · 4★ · 13.5 km · from USD 88.25/room-night (USD 617.75 per room for the stay) · 1 Pakbang Road, Kata · Phuket Province, TH · htl_KataBeach00000000000
+
+Notes:
+- indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
+
+Last page.

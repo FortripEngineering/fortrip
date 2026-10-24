@@ -1,10 +1,11 @@
 {{#if claude-skill cli}}
-## Occupancy
+## Rooms and guests
 
+- {{#if mcp claude-skill}}`stay.rooms` lists each room's party as `{ adults, childrenAges }`: two rooms of 2 adults, one with a child of 6, is `[{ adults: 2, childrenAges: [6] }, { adults: 2, childrenAges: [] }]`{{/if}}{{#if cli}}`--room <adults[:age,…]>`, once per room, gives each room's party: two rooms of 2 adults, one with a child of 6, is `--room 2:6 --room 2`{{/if}}.
+- Ask each child's age; offers need it.
+- If the party doesn't split evenly across the rooms (3 adults in 2 rooms), ask the user how it splits.
 {{/if}}
-- `{{tool:hotels rates}}` and `{{tool:hotels book}}` both require `{{arg:rooms}}` and `{{arg:adults}}`. `{{arg:adults}}` and `{{arg:childrenAges}}` are **per room**, the same in every room: 2 rooms for 4 adults is {{#if cli}}`--rooms 2 --adults 2`{{/if}}{{#if mcp claude-skill}}`rooms: 2, adults: 2`{{/if}}.
+- Offers and orders take one party per call, every room the same: for different parties, order once per party.{{#if claude-skill cli}} `{{tool:hotels offers}}` answers `stay_unsupported` (`mixed_occupancy`) for mixed rooms; `{{tool:hotels search}}` accepts them but prices only from the dates, with the note `party_split_required`.{{/if}}
 {{#if claude-skill cli}}
-- If the party doesn't divide evenly across the rooms (3 adults in 2 rooms), ask the user whether to price every room for the larger number or to price and book each occupancy as its own stay.
-- Ask each child's age; `{{tool:hotels rates}}` and `{{tool:hotels book}}` need it.
-- Limits: 1–{{limit:rooms}} rooms, 1–{{limit:adultsPerRoom}} adults and 0–{{limit:childrenPerRoom}} children (aged 0–{{limit:childAgeMax}}) per room, 1–{{limit:nights}} nights, up to {{limit:ratesHotels}} hotels per `{{tool:hotels rates}}` call.
+- Limits: 1–{{limit:rooms}} rooms, 1–{{limit:adultsPerRoom}} adults and 0–{{limit:childrenPerRoom}} children (aged 0–{{limit:childAgeMax}}) per room, 1–{{limit:nightsSupplier}} nights, up to {{limit:offersHotels}} hotels per `{{tool:hotels offers}}` call. A longer stay answers `stay_unsupported` (`max_nights`): ask the user whether to split it into consecutive stays, each its own order.
 {{/if}}

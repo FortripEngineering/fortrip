@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
+import { renderToolResult } from "@fortrip/agent-contract";
+
 import type { Session } from "../../src/credentials.ts";
 
-type Reply = { status: number; body: unknown };
+type Reply = { status: number; body: unknown; headers?: Record<string, string> };
 
 /** What a request to the fake MCP endpoint carried. */
 export interface McpRequest {
@@ -22,17 +25,43 @@ export const MCP_TOOLS = [
   { name: "get_planning_guide", description: "Guide", inputSchema: { type: "object" } },
 ];
 
+/** Where the fake MCP server answers: the path a non-production Fortrip
+ *  host serves it on. */
+export const MCP_FAKE_PATH = "/api/public/mcp";
+
+const fixture = (name: string) =>
+  (
+    JSON.parse(
+      readFileSync(new URL(`../../../contract/test/fixtures/v1/${name}.json`, import.meta.url), "utf8"),
+    ) as { data: Record<string, unknown> }
+  ).data;
+
+/** What the fake answers a `tools/call` with, as the hosted server shapes a
+ *  success: the compact text, the full object and the request id. */
+export const MCP_CALL_RESULT = (() => {
+  const data = fixture("search-shanghai-area");
+  return {
+    content: [{ type: "text", text: renderToolResult("search_hotels", data) }],
+    structuredContent: data,
+    _meta: { "ai.fortrip/requestId": "req_fakecall" },
+  };
+})();
+
 /**
  * A fake of what the CLI signs in with and calls, for tests: the Fortrip
- * API's public `/api/agent/v1/auth/config` and `/api/agent/v1/me`, and the
- * OAuth server the config names (RFC 8628 device authorization, the token
- * endpoint for device codes and refresh tokens, RFC 7009 revocation).
+ * API's public `/v1/auth/config` and `/v1/me`, which answer with the
+ * resource itself or the v1 error envelope, and the OAuth server the config
+ * names (RFC 8628 device authorization, the token endpoint for device codes
+ * and refresh tokens, RFC 7009 revocation).
  *
- * `POST /api/mcp` is the hosted MCP server (Streamable HTTP): it takes the
- * OAuth access tokens the fake issued, answers `initialize` with a session id
- * that later requests must carry, `tools/list` as JSON, and `tools/call` as
- * an event stream with a notification and a server request before the
- * result. A `tools/call` of the tool `drop` ends its stream without a result.
+ * `POST /api/public/mcp` (`mcpUrl`) is the hosted MCP server (Streamable
+ * HTTP): it takes the OAuth access tokens the fake issued (any other token
+ * gets the hosted route's 401: the v1 envelope and `WWW-Authenticate`),
+ * answers `initialize` with a session id that later requests must carry,
+ * `tools/list` as JSON, and `tools/call` as an event stream with a
+ * notification and a server request before the result (`toolResults` by
+ * tool name, else `MCP_CALL_RESULT`). A `tools/call` of the tool `drop`
+ * ends its stream without a result.
  *
  * Device logins follow the real server: a poll sooner than `minPollGapMs`
  * after the last gets `slow_down`, and an approved code is redeemed once.
@@ -42,6 +71,8 @@ export const MCP_TOOLS = [
  */
 export interface FakeApi {
   url: string;
+  /** The fake MCP server's URL. */
+  mcpUrl: string;
   clientId: string;
   options: {
     /** `interval` and `expires_in` of a device authorization, in seconds. */
@@ -53,7 +84,7 @@ export interface FakeApi {
     rotate: boolean;
     /** Every device poll answers `expired_token`. */
     expireAll: boolean;
-    /** `/me` and `/api/mcp` answer 401 whatever the token. */
+    /** `/me` and the MCP server answer 401 whatever the token. */
     rejectAll: boolean;
     /** The protocol version `initialize` answers with, instead of the
      *  client's. */
@@ -104,8 +135,11 @@ export interface FakeApi {
   revoked: string[];
   /** The access token of every `/me` request. */
   meTokens: string[];
-  /** Every POST to `/api/mcp`, in order. */
+  /** Every POST to the MCP server, in order. */
   mcpRequests: McpRequest[];
+  /** What a `tools/call` of the tool answers with, instead of
+   *  `MCP_CALL_RESULT`. */
+  toolResults: Record<string, unknown>;
   /** Every token the fake has issued, to check none is printed. */
   issued: string[];
   approve(loginUrl: string): void;
@@ -117,6 +151,11 @@ export interface FakeApi {
 }
 
 const SCOPES = "openid profile email offline_access";
+
+/** The v1 error envelope (spec §11). */
+export function envelope(code: string, message: string, extra: Record<string, unknown> = {}) {
+  return { error: { code, message, retryable: false, requestId: "req_fake", ...extra } };
+}
 
 export async function startFakeApi(): Promise<FakeApi> {
   let serial = 0;
@@ -142,6 +181,7 @@ export async function startFakeApi(): Promise<FakeApi> {
 
   const api: FakeApi = {
     url: "",
+    mcpUrl: "",
     clientId: "client_cli",
     options: {} as FakeApi["options"],
     scripts: {} as FakeApi["scripts"],
@@ -155,6 +195,7 @@ export async function startFakeApi(): Promise<FakeApi> {
     revoked: [],
     meTokens: [],
     mcpRequests: [],
+    toolResults: {},
     issued: [],
     approve: (loginUrl) => decide(loginUrl, "approved"),
     deny: (loginUrl) => decide(loginUrl, "denied"),
@@ -191,6 +232,7 @@ export async function startFakeApi(): Promise<FakeApi> {
       api.revoked = [];
       api.meTokens = [];
       api.mcpRequests = [];
+      api.toolResults = {};
       api.issued = [];
     },
     close: async () => {},
@@ -214,23 +256,20 @@ export async function startFakeApi(): Promise<FakeApi> {
     const form = Object.fromEntries(new URLSearchParams(raw));
     const oauthError = (error: string, status = 400) => ({ status, body: { error } });
     switch (`${method} ${path}`) {
-      case "GET /api/agent/v1/auth/config": {
+      case "GET /v1/auth/config": {
         api.counts.config += 1;
         const scripted = api.scripts.config.shift();
         if (scripted) return scripted;
         return {
           status: 200,
           body: {
-            success: true,
-            data: {
-              issuer: api.url,
-              clientId: api.clientId,
-              scopes: SCOPES,
-              deviceAuthorizationEndpoint: `${api.url}/oauth/device_authorization`,
-              tokenEndpoint: `${api.url}/oauth/token`,
-              revocationEndpoint: `${api.url}/oauth/token/revoke`,
-              ...api.configOverrides,
-            },
+            issuer: api.url,
+            clientId: api.clientId,
+            scopes: SCOPES,
+            deviceAuthorizationEndpoint: `${api.url}/oauth/device_authorization`,
+            tokenEndpoint: `${api.url}/oauth/token`,
+            revocationEndpoint: `${api.url}/oauth/token/revoke`,
+            ...api.configOverrides,
           },
         };
       }
@@ -307,27 +346,24 @@ export async function startFakeApi(): Promise<FakeApi> {
         api.refreshTokens.delete(form.token ?? "");
         return { status: 200, body: {} };
       }
-      case "GET /api/agent/v1/me": {
+      case "GET /v1/me": {
         api.counts.me += 1;
         const token = authorization.replace(/^Bearer /, "");
         api.meTokens.push(token);
         const scripted = api.scripts.me.shift();
         if (scripted) return scripted;
         if (api.accessTokens.has(token) && !api.options.rejectAll) {
-          return {
-            status: 200,
-            body: { success: true, data: { userId: "user_1", email: "a@b.c", name: "Ada" } },
-          };
+          return { status: 200, body: { userId: "user_1", email: "a@b.c", name: "Ada" } };
         }
         await api.hooks.onRejected?.();
-        return { status: 401, body: { success: false, error: "Invalid or expired token" } };
+        return { status: 401, body: envelope("unauthenticated", "Invalid or expired token") };
       }
       default:
-        return { status: 404, body: { success: false, error: "not found" } };
+        return { status: 404, body: envelope("not_found", "not found") };
     }
   }
 
-  /** One POST to `/api/mcp`. */
+  /** One POST to the MCP server. */
   function handleMcp(req: IncomingMessage, res: ServerResponse, raw: string): void {
     const header = (name: string) => {
       const value = req.headers[name];
@@ -350,9 +386,15 @@ export async function startFakeApi(): Promise<FakeApi> {
       res.end(JSON.stringify(body));
     };
     const scripted = api.scripts.mcp.shift();
-    if (scripted) return json(scripted.status, scripted.body);
+    if (scripted) return json(scripted.status, scripted.body, scripted.headers);
     if (!api.accessTokens.has(token) || api.options.rejectAll) {
-      return json(401, { error: "invalid_token" }, { "www-authenticate": 'Bearer error="invalid_token"' });
+      return json(
+        401,
+        envelope("unauthenticated", "Send a valid OAuth access token as `Authorization: Bearer <token>`."),
+        {
+          "www-authenticate": `Bearer error="invalid_token", resource_metadata="${api.url}/api/public/mcp-resource"`,
+        },
+      );
     }
     const { stall } = api.options;
     if (stall && message.method === stall.method) {
@@ -398,7 +440,8 @@ export async function startFakeApi(): Promise<FakeApi> {
         event({ jsonrpc: "2.0", method: "notifications/message", params: { level: "info", data: "searching" } });
         event({ jsonrpc: "2.0", id: "srv-1", method: "ping" });
         if (params.name === "drop") return void setImmediate(() => res.destroy());
-        event(result({ content: [{ type: "text", text: "ok" }] }));
+        const name = String(params.name);
+        event(result(Object.hasOwn(api.toolResults, name) ? api.toolResults[name] : MCP_CALL_RESULT));
         return void res.end();
       }
       default:
@@ -416,7 +459,7 @@ export async function startFakeApi(): Promise<FakeApi> {
       raw += chunk;
     });
     req.on("end", () => {
-      if (req.url === "/api/mcp") {
+      if (req.url === MCP_FAKE_PATH) {
         // It offers no event stream apart from a POST's.
         if (req.method !== "POST") {
           res.writeHead(405);
@@ -434,6 +477,7 @@ export async function startFakeApi(): Promise<FakeApi> {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   api.url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  api.mcpUrl = `${api.url}${MCP_FAKE_PATH}`;
   api.close = () =>
     new Promise<void>((resolve) => {
       server.closeAllConnections();

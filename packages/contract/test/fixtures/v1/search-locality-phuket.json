@@ -1,0 +1,228 @@
+{
+  "tool": "search_hotels",
+  "data": {
+    "destination": {
+      "kind": "place",
+      "place": {
+        "placeId": "plc_9200002",
+        "name": "Phuket",
+        "names": {
+          "en": "Phuket",
+          "zh": "普吉"
+        },
+        "kind": "settlement",
+        "scope": "radius",
+        "cityLike": null,
+        "population": 89072,
+        "region": {
+          "placeId": "plc_9200001",
+          "name": "Phuket Province",
+          "names": {
+            "en": "Phuket Province",
+            "zh": "普吉府"
+          }
+        },
+        "countryCode": "TH",
+        "location": {
+          "lat": 7.89059,
+          "lng": 98.3981
+        }
+      },
+      "resolution": "by_locality",
+      "otherMatches": 0,
+      "scope": "locality",
+      "center": {
+        "location": {
+          "lat": 7.89059,
+          "lng": 98.3981
+        },
+        "place": {
+          "placeId": "plc_9200002",
+          "name": "Phuket",
+          "names": {
+            "en": "Phuket",
+            "zh": "普吉"
+          }
+        },
+        "basis": "hub"
+      },
+      "radiusMeters": null,
+      "radiusSource": null
+    },
+    "text": null,
+    "stay": {
+      "checkIn": "2026-12-20",
+      "checkOut": "2026-12-27",
+      "rooms": [
+        {
+          "adults": 2,
+          "childrenAges": [
+            7
+          ]
+        },
+        {
+          "adults": 2,
+          "childrenAges": [
+            7
+          ]
+        }
+      ]
+    },
+    "pricing": {
+      "mode": "indicative",
+      "scope": "pool",
+      "status": "ok"
+    },
+    "sort": "price_asc",
+    "coverage": {
+      "matched": 2752,
+      "priced": 2752,
+      "withPrice": 1403,
+      "poolRadiusMeters": null,
+      "excludedNoPrice": null,
+      "excludedNoFacilityData": null,
+      "withinMaxRadius": null,
+      "textAnywhere": null,
+      "localities": null,
+      "nameAsText": null
+    },
+    "data": [
+      {
+        "hotelId": "htl_PhuketOldTown0000000",
+        "name": "Old Town Guesthouse",
+        "names": {
+          "en": "Old Town Guesthouse",
+          "zh": null
+        },
+        "stars": 2,
+        "address": {
+          "line": {
+            "text": "12 Thalang Road, Talat Yai",
+            "locale": "en"
+          },
+          "countryCode": "TH",
+          "region": {
+            "placeId": "plc_9200001",
+            "name": "Phuket Province",
+            "names": {
+              "en": "Phuket Province",
+              "zh": "普吉府"
+            }
+          }
+        },
+        "location": {
+          "lat": 7.8863,
+          "lng": 98.3887
+        },
+        "timeZone": "Asia/Bangkok",
+        "distanceMeters": 1150,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "18.40",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "128.80",
+            "currency": "USD"
+          },
+          "approx": null
+        }
+      },
+      {
+        "hotelId": "htl_KaronHill00000000000",
+        "name": "Karon Hill Residence",
+        "names": {
+          "en": "Karon Hill Residence",
+          "zh": "卡伦山公寓"
+        },
+        "stars": 3,
+        "address": {
+          "line": {
+            "text": "45 Patak Road, Karon",
+            "locale": "en"
+          },
+          "countryCode": "TH",
+          "region": {
+            "placeId": "plc_9200001",
+            "name": "Phuket Province",
+            "names": {
+              "en": "Phuket Province",
+              "zh": "普吉府"
+            }
+          }
+        },
+        "location": {
+          "lat": 7.8459,
+          "lng": 98.2949
+        },
+        "timeZone": "Asia/Bangkok",
+        "distanceMeters": 12320,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "33.00",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "231.00",
+            "currency": "USD"
+          },
+          "approx": null
+        }
+      },
+      {
+        "hotelId": "htl_KataBeach00000000000",
+        "name": "Kata Beach Resort",
+        "names": {
+          "en": "Kata Beach Resort",
+          "zh": "卡塔海滩度假村"
+        },
+        "stars": 4,
+        "address": {
+          "line": {
+            "text": "1 Pakbang Road, Kata",
+            "locale": "en"
+          },
+          "countryCode": "TH",
+          "region": {
+            "placeId": "plc_9200001",
+            "name": "Phuket Province",
+            "names": {
+              "en": "Phuket Province",
+              "zh": "普吉府"
+            }
+          }
+        },
+        "location": {
+          "lat": 7.8203,
+          "lng": 98.2977
+        },
+        "timeZone": "Asia/Bangkok",
+        "distanceMeters": 13510,
+        "price": {
+          "kind": "indicative",
+          "basis": "lowest_unit",
+          "fromPerRoomNight": {
+            "amount": "88.25",
+            "currency": "USD"
+          },
+          "fromPerRoomStay": {
+            "amount": "617.75",
+            "currency": "USD"
+          },
+          "approx": null
+        }
+      }
+    ],
+    "nextCursor": null,
+    "notes": [
+      {
+        "code": "indicative_prices",
+        "message": "Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays."
+      }
+    ]
+  }
+}

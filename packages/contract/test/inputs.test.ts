@@ -7,20 +7,25 @@ import { CARD_NUMBER_MESSAGE } from "../src/card-number.ts";
 import { addIsoDateDays } from "../src/dates.ts";
 import { GUEST_NAME_MESSAGE } from "../src/guest-name.ts";
 import {
-  createBookingInput,
+  createOrderInput,
+  createSearchHotelsInput,
+  destination,
   getHotelInput,
-  getRatesInput,
+  getOrderInput,
+  hotelOffersInput,
+  listOrdersInput,
   searchHotelsInput,
+  stay,
 } from "../src/inputs.ts";
 import { LIMITS } from "../src/limits.ts";
+import { AMENITY_CODES, FILTERABLE_AMENITIES } from "../src/vocabulary.ts";
 
-// The production bundle never runs zod's `config(en())` (zod is
-// `sideEffects: false`): every message asserted here must be our own.
+// The production bundle never runs zod's `config(en())`: every message
+// asserted here must be our own.
 z.config({ localeError: undefined });
 
 type Issue = { path: string; message: string };
 
-/** The issues the schema raises for `value` (path joined with dots), or `null` if it passes. */
 function issuesOf(schema: z.ZodType, value: unknown): Issue[] | null {
   const result = schema.safeParse(value);
   return result.success
@@ -31,7 +36,7 @@ function issuesOf(schema: z.ZodType, value: unknown): Issue[] | null {
       }));
 }
 
-/** The issues `schema` raises for `value`; fails if it passes or if any issue falls back to zod's "Invalid input". */
+/** The issues for `value`; fails if it passes or an issue reads "Invalid input". */
 function refusalOf(schema: z.ZodType, value: unknown): Issue[] {
   const issues = issuesOf(schema, value);
   assert.ok(issues, `should fail: ${JSON.stringify(value)}`);
@@ -41,900 +46,812 @@ function refusalOf(schema: z.ZodType, value: unknown): Issue[] {
   return issues;
 }
 
-/** Every case fails with the given first issue, and no issue falls back to zod's "Invalid input". */
-function assertRefused(
-  schema: z.ZodType,
-  cases: ReadonlyArray<readonly [unknown, string, string]>,
-) {
-  for (const [value, path, message] of cases) {
-    const issues = refusalOf(schema, value);
-    assert.deepEqual(issues[0], { path, message }, JSON.stringify(value));
-  }
+function assertAccepted(schema: z.ZodType, value: unknown) {
+  assert.equal(issuesOf(schema, value), null, JSON.stringify(value));
 }
 
-type JsonSchema = {
+function assertRefusedAt(schema: z.ZodType, value: unknown, path: string) {
+  const issues = refusalOf(schema, value);
+  assert.ok(
+    issues.some((issue) => issue.path === path),
+    `expected an issue at "${path}", got ${JSON.stringify(issues)}`,
+  );
+}
+
+const today = new Date().toISOString().slice(0, 10);
+const checkIn = addIsoDateDays(today, 30);
+const checkOut = addIsoDateDays(today, 32);
+const room = { adults: 2, childrenAges: [] };
+const goodStay = { checkIn, checkOut, rooms: [room] };
+const tokyo = {
+  kind: "place_name",
+  name: "Tokyo",
+  countryCode: "JP",
+} as const;
+const hotel = "htl_aaaaaaaaaaaaaaaaaaaa";
+const offer = "off_aaaaaaaaaaaaaaaaaaaa";
+const VISA = "4111 1111 1111 1111";
+
+type Json = {
   description?: string;
-  properties?: Record<string, JsonSchema>;
-  items?: JsonSchema;
+  properties?: Record<string, Json>;
+  items?: Json;
+  anyOf?: Json[];
+  oneOf?: Json[];
   [key: string]: unknown;
 };
 
-/** Dotted paths of every property, nested ones (`near.lat`, `guests[].firstName`) included, that has no description. */
-function undescribed(schema: JsonSchema, prefix = ""): string[] {
+/** Dotted paths of every property that has no description, branches of a union included. */
+function undescribed(schema: Json, prefix = ""): string[] {
   const missing: string[] = [];
   for (const [name, property] of Object.entries(schema.properties ?? {})) {
     const path = `${prefix}${name}`;
     if (!property.description?.trim()) missing.push(path);
     missing.push(...undescribed(property, `${path}.`));
-    if (property.items) {
-      missing.push(...undescribed(property.items, `${path}[].`));
-    }
+  }
+  if (schema.items) missing.push(...undescribed(schema.items, `${prefix}[].`));
+  for (const branch of [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])]) {
+    missing.push(...undescribed(branch, prefix));
   }
   return missing;
 }
 
-const today = new Date().toISOString().slice(0, 10);
-const checkIn = addIsoDateDays(today, 30);
-
-describe("the inputs run without zod's own messages", () => {
-  it("falls back to Invalid input for a bare zod check, as the production bundle does", () => {
-    assert.equal(
-      z.string().safeParse(1).error?.issues[0]?.message,
-      "Invalid input",
-    );
-  });
-});
-
-describe("every input field has a non-empty description", () => {
+describe("every request field has a description", () => {
   for (const [name, schema] of [
     ["searchHotelsInput", searchHotelsInput],
     ["getHotelInput", getHotelInput],
-    ["getRatesInput", getRatesInput],
-    ["createBookingInput", createBookingInput],
+    ["hotelOffersInput", hotelOffersInput],
+    ["createOrderInput", createOrderInput],
+    ["getOrderInput", getOrderInput],
+    ["listOrdersInput", listOrdersInput],
+    ["stay", stay],
+    ["destination", destination],
   ] as const) {
     it(name, () => {
-      const json = z.toJSONSchema(schema, { io: "input" }) as JsonSchema;
-      assert.ok(Object.keys(json.properties ?? {}).length > 0);
+      const json = z.toJSONSchema(schema, { io: "input" }) as Json;
       assert.deepEqual(undescribed(json), []);
     });
   }
 
-  it("reaches nested fields and array items", () => {
-    const search = z.toJSONSchema(searchHotelsInput, {
-      io: "input",
-    }) as JsonSchema;
-    assert.ok(search.properties?.near?.properties?.lat?.description);
-    const booking = z.toJSONSchema(createBookingInput, {
-      io: "input",
-    }) as JsonSchema;
+  it("reaches nested fields, array items and union branches", () => {
+    const search = z.toJSONSchema(searchHotelsInput, { io: "input" }) as Json;
+    assert.ok(search.properties?.filters?.properties?.stars?.properties?.min);
+    assert.ok(search.properties?.stay?.properties?.rooms?.items);
+    const order = z.toJSONSchema(createOrderInput, { io: "input" }) as Json;
     assert.ok(
-      booking.properties?.guests?.items?.properties?.firstName?.description,
+      order.properties?.items?.items?.properties?.hotel?.properties?.rooms
+        ?.items?.properties?.guests?.items?.properties?.firstName?.description,
     );
   });
 });
 
-describe("the date fields say what they are and their format", () => {
-  it("checkIn and checkOut do, in every schema that has them", () => {
-    for (const schema of [
-      searchHotelsInput,
-      getRatesInput,
-      createBookingInput,
+describe("amenity codes", () => {
+  it("the filterable ones come first and are the nine of §7.7", () => {
+    assert.deepEqual(
+      [...FILTERABLE_AMENITIES],
+      [
+        "parking",
+        "wifi",
+        "laundry",
+        "restaurant",
+        "room_service",
+        "bar",
+        "non_smoking",
+        "business_center",
+        "pool",
+      ],
+    );
+    assert.deepEqual(AMENITY_CODES.slice(0, 9), FILTERABLE_AMENITIES);
+    assert.deepEqual(AMENITY_CODES.slice(9), [
+      "airport_shuttle",
+      "spa",
+      "gym",
+      "accessible",
+      "ev_charging",
+      "air_conditioning",
+      "pets_allowed",
+      "kitchen",
+      "other",
+    ]);
+  });
+});
+
+describe("stay", () => {
+  it("accepts one to eight rooms and 1 to 30 nights", () => {
+    assertAccepted(stay, goodStay);
+    assertAccepted(stay, {
+      checkIn,
+      checkOut: addIsoDateDays(checkIn, 30),
+      rooms: Array.from({ length: 8 }, () => ({
+        adults: 8,
+        childrenAges: [0, 17, 5, 5],
+      })),
+    });
+  });
+
+  it("refuses a bad party", () => {
+    assertRefusedAt(stay, { ...goodStay, rooms: [] }, "rooms");
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: Array.from({ length: 9 }, () => room) },
+      "rooms",
+    );
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: [{ adults: 0, childrenAges: [] }] },
+      "rooms.0.adults",
+    );
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: [{ adults: 9, childrenAges: [] }] },
+      "rooms.0.adults",
+    );
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: [{ adults: 2, childrenAges: [1, 2, 3, 4, 5] }] },
+      "rooms.0.childrenAges",
+    );
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: [{ adults: 2, childrenAges: [18] }] },
+      "rooms.0.childrenAges.0",
+    );
+    assertRefusedAt(
+      stay,
+      { ...goodStay, rooms: [{ adults: 2 }] },
+      "rooms.0.childrenAges",
+    );
+  });
+
+  it("refuses 0 and 31 nights, and a date that is not a date", () => {
+    assertRefusedAt(stay, { ...goodStay, checkOut: checkIn }, "checkOut");
+    assertRefusedAt(
+      stay,
+      { ...goodStay, checkOut: addIsoDateDays(checkIn, 31) },
+      "checkOut",
+    );
+    assertRefusedAt(stay, { ...goodStay, checkIn: "2026-02-30" }, "checkIn");
+  });
+
+  it("names an unknown key", () => {
+    const issues = refusalOf(stay, { ...goodStay, nights: 2 });
+    assert.equal(issues[0]?.message, "Unknown argument(s): nights");
+  });
+});
+
+describe("destination", () => {
+  it("accepts each of the five kinds", () => {
+    for (const value of [
+      tokyo,
+      { ...tokyo, radiusMeters: 500 },
+      { kind: "place", placeId: "plc_1850147" },
+      { kind: "place", placeId: "plc_1850147", radiusMeters: 80_000 },
+      { kind: "point", location: { lat: 35.68, lng: 139.69 }, radiusMeters: 1 },
+      { kind: "country", countryCode: "JP" },
+      { kind: "locality", placeId: "plc_1", radiusMeters: 8_000 },
     ]) {
-      const { properties } = z.toJSONSchema(schema, {
-        io: "input",
-      }) as JsonSchema;
-      assert.match(
-        properties?.checkIn?.description ?? "",
-        /^Check-in date, yyyy-MM-dd/,
-      );
-      assert.match(
-        properties?.checkOut?.description ?? "",
-        /^Check-out date, yyyy-MM-dd.*1 to 15 nights/,
+      assertAccepted(destination, value);
+    }
+  });
+
+  it("holds the radius to 1 to 80000 meters", () => {
+    for (const radiusMeters of [80_001, 0, -1, 1.5, "100"]) {
+      assertRefusedAt(
+        destination,
+        { kind: "locality", placeId: "plc_1", radiusMeters },
+        "radiusMeters",
       );
     }
+  });
+
+  it("refuses a country with a radius, a bad code, a bad place id and a bad point", () => {
+    assert.equal(
+      refusalOf(destination, {
+        kind: "country",
+        countryCode: "JP",
+        radiusMeters: 5,
+      })[0]?.message,
+      "Unknown argument(s): radiusMeters",
+    );
+    assertRefusedAt(
+      destination,
+      { ...tokyo, countryCode: "jp" },
+      "countryCode",
+    );
+    assertRefusedAt(
+      destination,
+      { ...tokyo, countryCode: "JPN" },
+      "countryCode",
+    );
+    assertRefusedAt(destination, { ...tokyo, name: "" }, "name");
+    assertRefusedAt(
+      destination,
+      { kind: "place", placeId: "1850147" },
+      "placeId",
+    );
+    assertRefusedAt(
+      destination,
+      { kind: "point", location: { lat: 91, lng: 0 } },
+      "location.lat",
+    );
+    assertRefusedAt(
+      destination,
+      { kind: "point", location: { lat: 0, lng: 181 } },
+      "location.lng",
+    );
+  });
+
+  it("answers an unknown kind by listing the kinds", () => {
+    const issues = refusalOf(destination, { kind: "city", name: "x" });
+    assert.match(
+      issues[0]?.message ?? "",
+      /place_name, place, point, country, locality/,
+    );
+    refusalOf(destination, "Tokyo");
   });
 });
 
 describe("searchHotelsInput", () => {
-  const valid = {
-    query: "曼谷",
-    checkIn,
-    checkOut: addIsoDateDays(checkIn, 2),
-  };
-
-  it("applies defaults and accepts the 15-night boundary", () => {
-    const parsed = searchHotelsInput.parse({
-      ...valid,
-      checkOut: addIsoDateDays(checkIn, LIMITS.nights),
-    });
-    assert.equal(parsed.currency, "CNY");
-    assert.equal(parsed.sortBy, "recommended");
-    assert.equal(parsed.page, 1);
-    assert.equal(parsed.pageSize, 20);
-  });
-
-  it("accepts a geo-only search sorted by distance", () => {
-    assert.equal(
-      searchHotelsInput.safeParse({
-        checkIn: valid.checkIn,
-        checkOut: valid.checkOut,
-        near: { lat: 13.75, lng: 100.5, radiusKm: 3 },
-        sortBy: "distance",
-      }).success,
-      true,
-    );
-  });
-
-  it("accepts a search from yesterday in UTC, for travellers ahead of UTC", () => {
-    assert.equal(
-      searchHotelsInput.safeParse({
-        query: "Bangkok",
-        checkIn: addIsoDateDays(today, -1),
-        checkOut: addIsoDateDays(today, 1),
-      }).success,
-      true,
-    );
-  });
-
-  it("trims and de-duplicates facilities", () => {
-    const parsed = searchHotelsInput.parse({
-      ...valid,
-      facilities: [" 游泳池 ", "停车场", "游泳池"],
-    });
-    assert.deepEqual(parsed.facilities, ["游泳池", "停车场"]);
-  });
-
-  it("rejects invalid dates, spans, scopes and ranges", () => {
-    for (const input of [
-      { ...valid, checkIn: "2026-02-30" },
-      { ...valid, checkOut: addIsoDateDays(checkIn, 16) },
-      { ...valid, checkOut: checkIn },
-      {
-        ...valid,
-        checkIn: addIsoDateDays(today, -2),
-        checkOut: addIsoDateDays(today, 1),
+  it("accepts a destination or text, with or without a stay", () => {
+    assertAccepted(searchHotelsInput, { destination: tokyo });
+    assertAccepted(searchHotelsInput, { text: "ritz" });
+    assertAccepted(searchHotelsInput, { destination: tokyo, stay: goodStay });
+    assertAccepted(searchHotelsInput, {
+      destination: tokyo,
+      stay: goodStay,
+      pricing: "indicative",
+      filters: {
+        stars: { min: 3.5, max: 5 },
+        amenities: ["pool", "spa"],
+        price: { maxPerRoomNight: { amount: "200.00", currency: "USD" } },
       },
-      { checkIn: valid.checkIn, checkOut: valid.checkOut },
-      { ...valid, query: "   " },
-      { ...valid, sortBy: "distance" },
-      { ...valid, starMin: 5, starMax: 3 },
-      { ...valid, priceMin: 500, priceMax: 100 },
-      { ...valid, pageSize: 51 },
-      { ...valid, facilities: [] },
-      { ...valid, facilities: ["  "] },
-      { ...valid, facilities: Array.from({ length: 11 }, (_, i) => `f${i}`) },
-      { ...valid, hotelIds: [1] },
-    ]) {
-      refusalOf(searchHotelsInput, input);
+      sort: "price_asc",
+      limit: 50,
+      locale: "zh",
+      displayCurrency: "CNY",
+    });
+  });
+
+  it("needs a destination or text on a first page", () => {
+    assertRefusedAt(searchHotelsInput, {}, "destination");
+    assertRefusedAt(searchHotelsInput, { stay: goodStay }, "destination");
+    assertRefusedAt(searchHotelsInput, { text: "  " }, "text");
+    assertRefusedAt(
+      searchHotelsInput,
+      { text: "x".repeat(LIMITS.textLength + 1) },
+      "text",
+    );
+  });
+
+  it("a next page is a cursor and a limit only", () => {
+    assertAccepted(searchHotelsInput, { cursor: "c" });
+    assertAccepted(searchHotelsInput, { cursor: "c", limit: 10 });
+    assertRefusedAt(searchHotelsInput, { cursor: "c", text: "x" }, "text");
+    assertRefusedAt(
+      searchHotelsInput,
+      { cursor: "c", destination: tokyo },
+      "destination",
+    );
+    assertRefusedAt(
+      searchHotelsInput,
+      { cursor: "c", sort: "distance" },
+      "sort",
+    );
+    assertRefusedAt(searchHotelsInput, { cursor: "c", locale: "en" }, "locale");
+    assertRefusedAt(searchHotelsInput, { cursor: "" }, "cursor");
+  });
+
+  it("limit runs from 1 to 50 and is not defaulted by the schema", () => {
+    assertRefusedAt(searchHotelsInput, { text: "x", limit: 0 }, "limit");
+    assertRefusedAt(searchHotelsInput, { text: "x", limit: 51 }, "limit");
+    assertRefusedAt(searchHotelsInput, { text: "x", limit: 1.5 }, "limit");
+    const parsed = searchHotelsInput.parse({ cursor: "c" });
+    assert.equal("limit" in parsed ? parsed.limit : undefined, undefined);
+  });
+
+  it("distance needs a destination and relevance needs text", () => {
+    assertRefusedAt(searchHotelsInput, { text: "x", sort: "distance" }, "sort");
+    assertAccepted(searchHotelsInput, {
+      destination: tokyo,
+      sort: "distance",
+    });
+    assertRefusedAt(
+      searchHotelsInput,
+      { destination: tokyo, sort: "relevance" },
+      "sort",
+    );
+    assertAccepted(searchHotelsInput, { text: "x", sort: "relevance" });
+    assertRefusedAt(searchHotelsInput, { text: "x", sort: "cheapest" }, "sort");
+  });
+
+  it("price sorts and the price filter need indicative pricing, which needs a stay", () => {
+    const price = { maxPerRoomNight: { amount: "200", currency: "USD" } };
+    assertRefusedAt(
+      searchHotelsInput,
+      { destination: tokyo, sort: "price_asc" },
+      "sort",
+    );
+    assertRefusedAt(
+      searchHotelsInput,
+      {
+        destination: tokyo,
+        stay: goodStay,
+        pricing: "none",
+        sort: "price_desc",
+      },
+      "sort",
+    );
+    assertRefusedAt(
+      searchHotelsInput,
+      {
+        destination: tokyo,
+        stay: goodStay,
+        pricing: "none",
+        filters: { price },
+      },
+      "filters.price",
+    );
+    assertRefusedAt(
+      searchHotelsInput,
+      { destination: tokyo, filters: { price } },
+      "filters.price",
+    );
+    assertAccepted(searchHotelsInput, {
+      destination: tokyo,
+      stay: goodStay,
+      filters: { price },
+      sort: "price_desc",
+    });
+    assertRefusedAt(
+      searchHotelsInput,
+      { destination: tokyo, pricing: "indicative" },
+      "stay",
+    );
+    assertAccepted(searchHotelsInput, {
+      destination: tokyo,
+      stay: goodStay,
+      pricing: "none",
+    });
+  });
+
+  it("the price filter is USD", () => {
+    assertRefusedAt(
+      searchHotelsInput,
+      {
+        destination: tokyo,
+        stay: goodStay,
+        filters: {
+          price: { maxPerRoomNight: { amount: "200", currency: "CNY" } },
+        },
+      },
+      "filters.price.maxPerRoomNight.currency",
+    );
+  });
+
+  it("stars run from 1 to 5 in half steps, min not above max", () => {
+    for (const stars of [{ min: 4 }, { max: 4.5 }, { min: 1, max: 1 }, {}]) {
+      assertAccepted(searchHotelsInput, { text: "x", filters: { stars } });
+    }
+    for (const [stars, path] of [
+      [{ min: 0.5 }, "filters.stars.min"],
+      [{ min: 3.7 }, "filters.stars.min"],
+      [{ max: 5.5 }, "filters.stars.max"],
+      [{ min: 4, max: 3 }, "filters.stars.max"],
+    ] as const) {
+      assertRefusedAt(
+        searchHotelsInput,
+        { text: "x", filters: { stars } },
+        path,
+      );
     }
   });
 
-  it("names what is wrong, with its own message", () => {
-    assertRefused(searchHotelsInput, [
-      [
-        { checkIn: valid.checkIn, checkOut: valid.checkOut },
-        "query",
-        "Provide query, cityCode or near",
-      ],
-      [
-        { ...valid, sortBy: "distance" },
-        "sortBy",
-        "distance sort requires near",
-      ],
-      [
-        { ...valid, sortBy: "cheapest" },
-        "sortBy",
-        "sortBy must be one of: recommended, price-asc, price-desc, star-desc, distance",
-      ],
-      [
-        { ...valid, starMin: 5, starMax: 3 },
-        "starMax",
-        "starMax must be >= starMin",
-      ],
-      [
-        { ...valid, priceMin: 500, priceMax: 100 },
-        "priceMax",
-        "priceMax must be >= priceMin",
-      ],
-      [
-        { ...valid, checkIn: addIsoDateDays(today, -2), checkOut: today },
-        "checkIn",
-        "checkIn must not be in the past",
-      ],
-      [
-        { ...valid, checkOut: valid.checkIn },
-        "checkOut",
-        "checkOut must be after checkIn",
-      ],
-      [
-        { ...valid, checkOut: addIsoDateDays(checkIn, 16) },
-        "checkOut",
-        "search supports at most 15 nights",
-      ],
-      [
-        { ...valid, checkIn: "2026-02-30" },
-        "checkIn",
-        "checkIn must be a real yyyy-MM-dd calendar date",
-      ],
-      [
-        { ...valid, query: "   " },
-        "query",
-        "query must be text of 1 to 128 characters",
-      ],
-      [
-        { ...valid, query: "x".repeat(129) },
-        "query",
-        "query must be text of 1 to 128 characters",
-      ],
-      [
-        { ...valid, cityCode: 0 },
-        "cityCode",
-        "cityCode must be a positive whole number",
-      ],
-      [
-        { ...valid, currency: "EUR" },
-        "currency",
-        "currency must be one of: CNY, USD",
-      ],
-      [
-        { ...valid, starMin: 6 },
-        "starMin",
-        "starMin must be a number from 0 to 5",
-      ],
-      [
-        { ...valid, priceMin: -1 },
-        "priceMin",
-        "priceMin must be a number, 0 or more",
-      ],
-      [
-        { ...valid, priceMax: 0 },
-        "priceMax",
-        "priceMax must be a number above 0",
-      ],
-      [
-        { ...valid, page: 0 },
-        "page",
-        "page must be a whole number from 1 to 100",
-      ],
-      [
-        { ...valid, pageSize: 51 },
-        "pageSize",
-        "pageSize must be a whole number from 1 to 50",
-      ],
-      [
-        { ...valid, facilities: [] },
-        "facilities",
-        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
-      ],
-      [
-        { ...valid, facilities: ["  "] },
-        "facilities.0",
-        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
-      ],
-      [
-        { ...valid, facilities: Array.from({ length: 11 }, (_, i) => `f${i}`) },
-        "facilities",
-        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
-      ],
-      [
-        { ...valid, facilities: ["x".repeat(65)] },
-        "facilities.0",
-        "facilities must list 1 to 10 catalogue facility names (1 to 64 characters each)",
-      ],
-      [
-        { ...valid, near: { lat: 91, lng: 0, radiusKm: 3 } },
-        "near.lat",
-        "near.lat must be a number from -90 to 90",
-      ],
-      [
-        { ...valid, near: { lat: 0, lng: 181, radiusKm: 3 } },
-        "near.lng",
-        "near.lng must be a number from -180 to 180",
-      ],
-      [
-        { ...valid, near: { lat: 0, lng: 0, radiusKm: 201 } },
-        "near.radiusKm",
-        "near.radiusKm must be more than 0, at most 200",
-      ],
-      [{ ...valid, hotelIds: [1] }, "", "Unknown argument(s): hotelIds"],
-      [
-        { ...valid, near: { lat: 0, lng: 0, radiusKm: 3, zoom: 2 } },
-        "near",
-        "Unknown argument(s): zoom",
-      ],
-      ["not an object", "", "Expected a JSON object"],
-    ]);
+  it("amenities take any amenity code, up to nine", () => {
+    assertAccepted(searchHotelsInput, {
+      text: "x",
+      filters: { amenities: ["spa"] },
+    });
+    assertAccepted(searchHotelsInput, {
+      text: "x",
+      filters: { amenities: [...FILTERABLE_AMENITIES] },
+    });
+    const sauna = refusalOf(searchHotelsInput, {
+      text: "x",
+      filters: { amenities: ["sauna"] },
+    });
+    assert.ok(sauna.some((i) => i.path === "filters.amenities.0"));
+    assert.match(sauna[0]?.message ?? "", /pool/);
+    assertRefusedAt(
+      searchHotelsInput,
+      { text: "x", filters: { amenities: AMENITY_CODES.slice(0, 10) } },
+      "filters.amenities",
+    );
+  });
+
+  it("refuses a past check-in at UTC-12, with the clock injectable", () => {
+    // 2026-10-24 11:59Z is still 2026-10-23 at UTC-12.
+    const at = (iso: string) => createSearchHotelsInput(() => Date.parse(iso));
+    const input = (date: string) => ({
+      destination: tokyo,
+      stay: { checkIn: date, checkOut: addIsoDateDays(date, 1), rooms: [room] },
+    });
+    const early = at("2026-10-24T11:59:00Z");
+    assertAccepted(early, input("2026-10-23"));
+    assertRefusedAt(early, input("2026-10-22"), "stay.checkIn");
+    const later = at("2026-10-24T12:00:00Z");
+    assertRefusedAt(later, input("2026-10-23"), "stay.checkIn");
+    assertAccepted(later, input("2026-10-24"));
+  });
+
+  it("the default instance reads the real clock", () => {
+    assertRefusedAt(
+      searchHotelsInput,
+      {
+        destination: tokyo,
+        stay: { checkIn: "2020-01-01", checkOut: "2020-01-02", rooms: [room] },
+      },
+      "stay.checkIn",
+    );
+  });
+
+  it("a party with different rooms is fine, and so is a stay of 30 nights", () => {
+    assertAccepted(searchHotelsInput, {
+      destination: tokyo,
+      stay: {
+        checkIn,
+        checkOut: addIsoDateDays(checkIn, 30),
+        rooms: [room, { adults: 1, childrenAges: [3] }],
+      },
+    });
+  });
+
+  it("names an unknown key", () => {
+    assert.equal(
+      refusalOf(searchHotelsInput, { text: "x", page: 2 })[0]?.message,
+      "Unknown argument(s): page",
+    );
+    assert.equal(
+      refusalOf(searchHotelsInput, {
+        text: "x",
+        filters: { brand: "hilton" },
+      })[0]?.message,
+      "Unknown argument(s): brand",
+    );
   });
 });
 
 describe("getHotelInput", () => {
-  const message = "hotelId must be a positive whole number";
-
-  it("takes a hotelId and an optional includeRooms", () => {
-    assert.deepEqual(getHotelInput.parse({ hotelId: 16525 }), {
-      hotelId: 16525,
+  it("takes a hotel id, include and locale", () => {
+    assertAccepted(getHotelInput, { hotelId: hotel });
+    assertAccepted(getHotelInput, {
+      hotelId: hotel,
+      include: "rooms",
+      locale: "zh",
     });
-    assert.deepEqual(
-      getHotelInput.parse({ hotelId: 16525, includeRooms: true }),
-      { hotelId: 16525, includeRooms: true },
+    assertRefusedAt(getHotelInput, { hotelId: "12345" }, "hotelId");
+    assertRefusedAt(
+      getHotelInput,
+      { hotelId: hotel, include: "photos" },
+      "include",
     );
-  });
-
-  it("takes the numeric string a URL path gives", () => {
-    assert.deepEqual(getHotelInput.parse({ hotelId: "123" }), { hotelId: 123 });
-    assert.deepEqual(
-      getHotelInput.parse({ hotelId: "16525", includeRooms: true }),
-      { hotelId: 16525, includeRooms: true },
+    assertRefusedAt(getHotelInput, { hotelId: hotel, locale: "fr" }, "locale");
+    assert.equal(
+      refusalOf(getHotelInput, { hotelId: hotel, rooms: true })[0]?.message,
+      "Unknown argument(s): rooms",
     );
-  });
-
-  it("accepts ids from 1 to 2147483647 and refuses outside them", () => {
-    for (const hotelId of [1, "1", 2_147_483_647, "2147483647"]) {
-      assert.equal(getHotelInput.safeParse({ hotelId }).success, true);
-    }
-    for (const hotelId of [
-      0,
-      "0",
-      -5,
-      "-5",
-      2_147_483_648,
-      "2147483648",
-      1.5,
-      "1.5",
-      "abc",
-      "",
-      null,
-    ]) {
-      assert.deepEqual(
-        issuesOf(getHotelInput, { hotelId }),
-        [{ path: "hotelId", message }],
-        JSON.stringify(hotelId),
-      );
-    }
-  });
-
-  it("is not strict: keys it doesn't know are dropped, not refused", () => {
-    assert.deepEqual(getHotelInput.parse({ hotelId: 1, include: "rooms" }), {
-      hotelId: 1,
-    });
-  });
-
-  it("names what is wrong, with its own message", () => {
-    assertRefused(getHotelInput, [
-      [{ hotelId: 0 }, "hotelId", message],
-      [{ hotelId: "0" }, "hotelId", message],
-      [{ hotelId: "2147483648" }, "hotelId", message],
-      [{}, "hotelId", message],
-      [
-        { hotelId: 1, includeRooms: "yes" },
-        "includeRooms",
-        "includeRooms must be true or false",
-      ],
-      ["not an object", "", "Expected a JSON object"],
-    ]);
   });
 });
 
-describe("getRatesInput", () => {
-  const valid = {
-    hotelIds: [16525],
-    checkIn,
-    checkOut: addIsoDateDays(checkIn, 2),
-    rooms: 1,
-    adults: 2,
-  };
+describe("hotelOffersInput", () => {
+  const base = { hotelIds: [hotel], stay: goodStay };
 
-  it("applies defaults", () => {
-    const parsed = getRatesInput.parse(valid);
-    assert.equal(parsed.currency, "CNY");
-    assert.equal(parsed.bookableOnly, true);
-    assert.equal(parsed.maxRoomsPerHotel, 10);
-    assert.equal(parsed.childrenAges, undefined);
+  it("accepts the full request and defaults limitPerHotel to 5", () => {
+    assertAccepted(hotelOffersInput, {
+      ...base,
+      filters: { requireBreakfast: true, requireFreeCancellation: false },
+      limitPerHotel: 20,
+      locale: "en",
+      displayCurrency: "USD",
+    });
+    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 5);
+    assert.equal(LIMITS.offersPerHotelDefault, 5);
   });
 
-  it("has no occupancy defaults", () => {
-    const { rooms: _rooms, ...withoutRooms } = valid;
-    const { adults: _adults, ...withoutAdults } = valid;
-    refusalOf(getRatesInput, withoutRooms);
-    refusalOf(getRatesInput, withoutAdults);
-  });
-
-  it("rates without rooms fails with the rooms message", () => {
-    const { rooms: _rooms, ...withoutRooms } = valid;
-    assert.deepEqual(issuesOf(getRatesInput, withoutRooms), [
-      { path: "rooms", message: "rooms must be a whole number from 1 to 8" },
-    ]);
-  });
-
-  it("accepts the per-room caps themselves", () => {
-    assert.equal(
-      getRatesInput.safeParse({
-        ...valid,
-        hotelIds: Array.from({ length: LIMITS.ratesHotels }, (_, i) => i + 1),
-        checkOut: addIsoDateDays(checkIn, LIMITS.nights),
-        rooms: LIMITS.rooms,
-        adults: LIMITS.adultsPerRoom,
-        childrenAges: [0, 1, 2, 3, 4, 5, 6, 17],
-        maxRoomsPerHotel: LIMITS.maxRoomsPerHotel,
-        nationality: "CN",
-        boardCodes: ["BB", "HBLD"],
-        freeCancellation: true,
-      }).success,
-      true,
+  it("holds hotelIds to 1 to 15, distinct", () => {
+    const ids = (n: number) =>
+      Array.from({ length: n }, (_, i) => `htl_${String(i).padStart(20, "a")}`);
+    assertAccepted(hotelOffersInput, { ...base, hotelIds: ids(15) });
+    assertRefusedAt(hotelOffersInput, { ...base, hotelIds: [] }, "hotelIds");
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, hotelIds: ids(16) },
+      "hotelIds",
+    );
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, hotelIds: [hotel, hotel] },
+      "hotelIds",
+    );
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, hotelIds: ["12"] },
+      "hotelIds.0",
     );
   });
 
-  it("rejects invalid stays", () => {
-    for (const input of [
-      { ...valid, hotelIds: [] },
-      { ...valid, hotelIds: Array.from({ length: 16 }, (_, i) => i + 1) },
-      { ...valid, checkOut: checkIn },
-      { ...valid, checkOut: addIsoDateDays(checkIn, 16) },
-      { ...valid, checkIn: "2026-02-30" },
-      { ...valid, rooms: 9 },
-      { ...valid, adults: 0 },
-      { ...valid, adults: 9 },
-      { ...valid, childrenAges: [18] },
-      { ...valid, childrenAges: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-      { ...valid, nationality: "cn" },
-      { ...valid, extra: true },
-      { ...valid, boardCodes: ["XX"] },
-      { ...valid, boardCodes: [] },
-      { ...valid, maxRoomsPerHotel: 0 },
-      { ...valid, maxRatesPerRoom: 3 },
-      { ...valid, maxRoomsPerHotel: 201 },
-      { ...valid, currency: "usd" },
-      { ...valid, currency: "EUR" },
-    ]) {
-      refusalOf(getRatesInput, input);
-    }
-  });
-
-  it("names what is wrong, with its own message", () => {
-    assertRefused(getRatesInput, [
-      [
-        { ...valid, rooms: 9 },
-        "rooms",
-        "rooms must be a whole number from 1 to 8",
-      ],
-      [
-        { ...valid, adults: 9 },
-        "adults",
-        "adults (per room) must be a whole number from 1 to 8",
-      ],
-      [
-        { ...valid, childrenAges: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-        "childrenAges",
-        "childrenAges must list each child's age (0 to 17) in one room, at most 8",
-      ],
-      [
-        { ...valid, hotelIds: [] },
-        "hotelIds",
-        "hotelIds must list 1 to 15 hotelIds",
-      ],
-      [
-        { ...valid, hotelIds: Array.from({ length: 16 }, (_, i) => i + 1) },
-        "hotelIds",
-        "hotelIds must list 1 to 15 hotelIds",
-      ],
-      [
-        { ...valid, hotelIds: [0] },
-        "hotelIds.0",
-        "Each hotelId must be a positive whole number",
-      ],
-      [
-        { ...valid, checkIn: "2026-02-30" },
-        "checkIn",
-        "checkIn must be a real yyyy-MM-dd calendar date",
-      ],
-      [
-        { ...valid, checkOut: valid.checkIn },
-        "checkOut",
-        "checkOut must be after checkIn",
-      ],
-      [
-        { ...valid, checkOut: addIsoDateDays(checkIn, 16) },
-        "checkOut",
-        "rates support at most 15 nights",
-      ],
-      [
-        { ...valid, currency: "EUR" },
-        "currency",
-        "currency must be one of: CNY, USD",
-      ],
-      [
-        { ...valid, boardCodes: ["XX"] },
-        "boardCodes.0",
-        "Each boardCode must be one of: RO, BB, HB, FB, BL, BD, HBBL, HBLD, AI",
-      ],
-      [
-        { ...valid, boardCodes: [] },
-        "boardCodes",
-        "boardCodes must list meal codes from: RO, BB, HB, FB, BL, BD, HBBL, HBLD, AI",
-      ],
-      [
-        { ...valid, nationality: "cn" },
-        "nationality",
-        "nationality must be a 2-letter ISO 3166-1 code, upper case",
-      ],
-      [
-        { ...valid, nationality: 86 },
-        "nationality",
-        "nationality must be a 2-letter ISO 3166-1 code",
-      ],
-      [
-        { ...valid, bookableOnly: "yes" },
-        "bookableOnly",
-        "bookableOnly must be true or false",
-      ],
-      [
-        { ...valid, maxRoomsPerHotel: 201 },
-        "maxRoomsPerHotel",
-        "maxRoomsPerHotel must be a whole number from 1 to 200",
-      ],
-      [
-        { ...valid, maxRatesPerRoom: 3 },
-        "",
-        "Unknown argument(s): maxRatesPerRoom",
-      ],
-    ]);
-  });
-
-  it("carries the limits into its JSON Schema", () => {
-    const json = z.toJSONSchema(getRatesInput, { io: "input" }) as {
-      properties: Record<string, Record<string, unknown>>;
-    };
-    assert.equal(json.properties.rooms?.maximum, LIMITS.rooms);
-    assert.equal(json.properties.adults?.maximum, LIMITS.adultsPerRoom);
-    assert.equal(json.properties.hotelIds?.maxItems, LIMITS.ratesHotels);
-    assert.equal(
-      json.properties.childrenAges?.maxItems,
-      LIMITS.childrenPerRoom,
+  it("needs a stay, bounds limitPerHotel and is strict", () => {
+    assertRefusedAt(hotelOffersInput, { hotelIds: [hotel] }, "stay");
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, limitPerHotel: 0 },
+      "limitPerHotel",
+    );
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, limitPerHotel: 21 },
+      "limitPerHotel",
+    );
+    assertRefusedAt(
+      hotelOffersInput,
+      { ...base, filters: { requireBreakfast: "yes" } },
+      "filters.requireBreakfast",
     );
     assert.equal(
-      json.properties.maxRoomsPerHotel?.maximum,
-      LIMITS.maxRoomsPerHotel,
+      refusalOf(hotelOffersInput, { ...base, filters: { board: "BB" } })[0]
+        ?.message,
+      "Unknown argument(s): board",
     );
-    assert.equal(json.properties.maxRoomsPerHotel?.default, 10);
-    assert.equal(json.properties.currency?.default, "CNY");
+  });
+
+  it("does not check the date against today: the service does, in the hotel's zone", () => {
+    assertAccepted(hotelOffersInput, {
+      hotelIds: [hotel],
+      stay: { checkIn: "2020-01-01", checkOut: "2020-01-02", rooms: [room] },
+    });
   });
 });
 
-describe("createBookingInput", () => {
-  const stay = {
-    hotelId: 16525,
-    roomId: "18035576",
-    ratePlanCode: "rp_xxx",
-    checkIn: "2026-06-24",
-    checkOut: "2026-06-26",
-    adults: 2,
-    rooms: 1,
+describe("createOrderInput", () => {
+  const guest = { firstName: "Wei", lastName: "Zhang" };
+  const item = {
+    offerId: offer,
+    hotel: { rooms: [{ guests: [guest] }] },
   };
-  const body = {
-    ...stay,
-    guests: [{ firstName: "Test", lastName: "Guest", roomNo: 1 }],
-    contactName: "Test Contact",
-    contactPhone: "+1234567890",
+  const order = {
+    contact: {
+      firstName: "Wei",
+      lastName: "Zhang",
+      email: "wei@example.com",
+      phone: "+86 138 0013 8000",
+    },
+    items: [item],
   };
-
-  it("accepts a booking and defaults childrenAges to none", () => {
-    assert.deepEqual(createBookingInput.parse(body), {
-      ...body,
-      childrenAges: [],
-    });
+  const withItem = (hotelPart: object) => ({
+    ...order,
+    items: [{ ...item, hotel: { ...item.hotel, ...hotelPart } }],
+  });
+  const withContact = (contact: object) => ({
+    ...order,
+    contact: { ...order.contact, ...contact },
   });
 
-  it("accepts the per-room caps and a full stay of 15 nights", () => {
-    assert.equal(
-      createBookingInput.safeParse({
-        ...body,
-        checkIn: "2026-06-24",
-        checkOut: "2026-07-09",
-        rooms: LIMITS.rooms,
-        adults: LIMITS.adultsPerRoom,
-        childrenAges: [0, 1, 2, 3, 4, 5, 6, 17],
-        guests: [
-          { firstName: "A".repeat(LIMITS.guestName), lastName: "B", roomNo: 8 },
-        ],
-        contactName: "C".repeat(LIMITS.contactName),
-        specialRequests: "D".repeat(LIMITS.specialRequests),
-        contactEmail: "a@b.co",
-      }).success,
-      true,
+  it("accepts a complete order", () => {
+    assertAccepted(createOrderInput, order);
+    assertAccepted(
+      createOrderInput,
+      withItem({ specialRequests: "High floor" }),
     );
-  });
-
-  it("refuses a reversed, same-day or over-long stay on checkOut", () => {
-    for (const [dates, message] of [
-      [
-        { checkIn: "2026-06-26", checkOut: "2026-06-24" },
-        "checkOut must be after checkIn",
-      ],
-      [
-        { checkIn: "2026-06-24", checkOut: "2026-06-24" },
-        "checkOut must be after checkIn",
-      ],
-      [
-        { checkIn: "2026-06-24", checkOut: "2026-07-10" },
-        "A booking covers at most 15 nights; book a longer stay as separate bookings",
-      ],
-    ] as const) {
-      assert.deepEqual(
-        issuesOf(createBookingInput, { ...body, ...dates }),
-        [{ path: "checkOut", message }],
-        JSON.stringify(dates),
-      );
-    }
-  });
-
-  it("names what is wrong, with its own message", () => {
-    assertRefused(createBookingInput, [
-      [
-        { ...body, hotelId: 0 },
-        "hotelId",
-        "hotelId must be a positive whole number",
-      ],
-      [
-        { ...body, hotelId: undefined },
-        "hotelId",
-        "hotelId must be a positive whole number",
-      ],
-      [{ ...body, roomId: "" }, "roomId", "roomId must be a non-empty string"],
-      [
-        { ...body, ratePlanCode: "" },
-        "ratePlanCode",
-        "ratePlanCode must be a non-empty string",
-      ],
-      [
-        { ...body, guests: [] },
-        "guests",
-        "guests must list at least one guest per room",
-      ],
-      [
-        { ...body, checkIn: "24/06/2026" },
-        "checkIn",
-        "checkIn must be a real yyyy-MM-dd calendar date",
-      ],
-      [
-        { ...body, checkIn: "2026-13-01" },
-        "checkIn",
-        "checkIn must be a real yyyy-MM-dd calendar date",
-      ],
-      [
-        { ...body, checkOut: "2026-06-31" },
-        "checkOut",
-        "checkOut must be a real yyyy-MM-dd calendar date",
-      ],
-      [
-        { ...body, rooms: 9 },
-        "rooms",
-        "rooms must be a whole number from 1 to 8",
-      ],
-      [
-        { ...body, rooms: "2" },
-        "rooms",
-        "rooms must be a whole number from 1 to 8",
-      ],
-      [
-        { ...body, adults: 9 },
-        "adults",
-        "adults (per room) must be a whole number from 1 to 8",
-      ],
-      [
-        { ...body, childrenAges: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
-        "childrenAges",
-        "childrenAges must list each child's age (0 to 17) in one room, at most 8",
-      ],
-      [
-        { ...body, childrenAges: [18] },
-        "childrenAges.0",
-        "Each child's age must be a whole number from 0 to 17",
-      ],
-      // A misspelled optional key must not book the default party.
-      [{ ...body, children: [5] }, "", "Unknown argument(s): children"],
-      [{ ...body, nationality: "CN" }, "", "Unknown argument(s): nationality"],
-      [
-        {
-          ...body,
-          guests: [
-            { firstName: "Test", lastName: "Guest", roomNo: 1, title: "Mr" },
-          ],
-        },
-        "guests.0",
-        "Unknown argument(s): title",
-      ],
-      // A dropped middle name would change the name booked: refused.
-      [
-        {
-          ...body,
-          guests: [
-            {
-              firstName: "Test",
-              middleName: "Q",
-              lastName: "Guest",
-              roomNo: 1,
-              age: 30,
-            },
-          ],
-        },
-        "guests.0",
-        "Unknown argument(s): middleName, age",
-      ],
-      [
-        { ...body, guests: [{ firstName: "伟", lastName: "张", roomNo: 1 }] },
-        "guests.0.firstName",
-        GUEST_NAME_MESSAGE,
-      ],
-      [
-        {
-          ...body,
-          guests: [{ firstName: "José", lastName: "Müller", roomNo: 1 }],
-        },
-        "guests.0.firstName",
-        GUEST_NAME_MESSAGE,
-      ],
-      [
-        { ...body, guests: [{ firstName: " ", lastName: "Guest", roomNo: 1 }] },
-        "guests.0.firstName",
-        "firstName must not be blank",
-      ],
-      [
-        {
-          ...body,
-          guests: [{ firstName: "Wei", lastName: "Zhang", roomNo: "two" }],
-        },
-        "guests.0.roomNo",
-        "roomNo must be a whole number from 1 to 8",
-      ],
-      [
-        {
-          ...body,
-          guests: [{ firstName: "Wei", lastName: "Zhang", roomNo: 9 }],
-        },
-        "guests.0.roomNo",
-        "roomNo must be a whole number from 1 to 8",
-      ],
-      [
-        { ...body, contactPhone: "1" },
-        "contactPhone",
-        "contactPhone must be text of 3 to 40 characters",
-      ],
-      [
-        { ...body, contactName: "" },
-        "contactName",
-        "contactName must be text of 1 to 120 characters",
-      ],
-      [
-        { ...body, specialRequests: "x".repeat(501) },
-        "specialRequests",
-        "specialRequests must be text of 0 to 500 characters",
-      ],
-      [
-        { ...body, contactEmail: "nope" },
-        "contactEmail",
-        "contactEmail must be an email address",
-      ],
-      ["not an object", "", "Expected a JSON object"],
-    ]);
-  });
-
-  it("a 61-character guest name fails", () => {
-    for (const field of ["firstName", "lastName"] as const) {
-      const guest = { firstName: "Wei", lastName: "Zhang", roomNo: 1 };
-      assert.deepEqual(
-        issuesOf(createBookingInput, {
-          ...body,
-          guests: [{ ...guest, [field]: "A".repeat(LIMITS.guestName + 1) }],
-        }),
-        [
-          {
-            path: `guests.0.${field}`,
-            message: `${field} must be text of 1 to 60 characters`,
-          },
+    assertAccepted(
+      createOrderInput,
+      withItem({
+        rooms: [
+          { guests: [guest, { firstName: "O’Brien", lastName: "St. John" }] },
+          { guests: [guest] },
         ],
-        field,
-      );
-    }
-  });
-
-  it("refuses a payment card number in free text, naming only that field", () => {
-    for (const [payload, path] of [
-      [
-        { ...body, specialRequests: "My card is 4242424242424242" },
-        "specialRequests",
-      ],
-      [
-        { ...body, specialRequests: "room 12 4111 1111 1111 1111 thanks" },
-        "specialRequests",
-      ],
-      [{ ...body, contactName: "5555-5555-5555-4444" }, "contactName"],
-      [{ ...body, contactPhone: "4242 4242 4242 4242" }, "contactPhone"],
-      [{ ...body, contactPhone: "+4242424242424242" }, "contactPhone"],
-      [
-        {
-          ...body,
-          guests: [
-            { firstName: "Test", lastName: "378282246310005", roomNo: 1 },
-          ],
-        },
-        "guests.0.lastName",
-      ],
-    ] as const) {
-      assert.deepEqual(
-        issuesOf(createBookingInput, payload),
-        [{ path, message: CARD_NUMBER_MESSAGE }],
-        JSON.stringify(payload),
-      );
-    }
-  });
-
-  it("contactPhone 4242 4242 4242 4242 fails with the card message, +86 138 0013 8000 passes", () => {
-    assert.deepEqual(
-      issuesOf(createBookingInput, {
-        ...body,
-        contactPhone: "4242 4242 4242 4242",
       }),
-      [{ path: "contactPhone", message: CARD_NUMBER_MESSAGE }],
+    );
+  });
+
+  it("takes exactly one item", () => {
+    assertRefusedAt(
+      createOrderInput,
+      { ...order, items: [item, item] },
+      "items",
+    );
+    assertRefusedAt(createOrderInput, { ...order, items: [] }, "items");
+    assertRefusedAt(
+      createOrderInput,
+      { ...order, items: [{ ...item, offerId: "off_1" }] },
+      "items.0.offerId",
+    );
+  });
+
+  it("holds each contact name to 59 characters after normalizing", () => {
+    assertAccepted(
+      createOrderInput,
+      withContact({ firstName: "a".repeat(59) }),
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ firstName: "a".repeat(60) }),
+      "contact.firstName",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ lastName: "a".repeat(60) }),
+      "contact.lastName",
+    );
+    // 62 characters typed, 59 once the run of spaces collapses.
+    assertAccepted(
+      createOrderInput,
+      withContact({ firstName: `${"a".repeat(30)}    ${"a".repeat(28)}` }),
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ firstName: "   " }),
+      "contact.firstName",
+    );
+    assertAccepted(
+      createOrderInput,
+      withContact({ firstName: "伟", lastName: "张" }),
+    );
+  });
+
+  it("checks the contact email and phone", () => {
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ email: "wei" }),
+      "contact.email",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ email: undefined }),
+      "contact.email",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ phone: "12" }),
+      "contact.phone",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withContact({ phone: "1".repeat(LIMITS.contactPhoneMax + 1) }),
+      "contact.phone",
+    );
+  });
+
+  it("holds guests to the guest-name rule", () => {
+    for (const firstName of ["张伟", "José", "-Wei", "   "]) {
+      assertRefusedAt(
+        createOrderInput,
+        withItem({ rooms: [{ guests: [{ firstName, lastName: "Zhang" }] }] }),
+        "items.0.hotel.rooms.0.guests.0.firstName",
+      );
+    }
+    const issues = refusalOf(
+      createOrderInput,
+      withItem({
+        rooms: [{ guests: [{ firstName: "José", lastName: "Zhang" }] }],
+      }),
+    );
+    assert.equal(issues[0]?.message, GUEST_NAME_MESSAGE);
+    assertRefusedAt(
+      createOrderInput,
+      withItem({
+        rooms: [{ guests: [{ firstName: "a".repeat(61), lastName: "Zhang" }] }],
+      }),
+      "items.0.hotel.rooms.0.guests.0.firstName",
+    );
+  });
+
+  it("holds rooms and guests to their counts", () => {
+    assertRefusedAt(
+      createOrderInput,
+      withItem({ rooms: [] }),
+      "items.0.hotel.rooms",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withItem({
+        rooms: Array.from({ length: 9 }, () => ({ guests: [guest] })),
+      }),
+      "items.0.hotel.rooms",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withItem({ rooms: [{ guests: [] }] }),
+      "items.0.hotel.rooms.0.guests",
+    );
+    assertRefusedAt(
+      createOrderInput,
+      withItem({
+        rooms: [{ guests: Array.from({ length: 13 }, () => guest) }],
+      }),
+      "items.0.hotel.rooms.0.guests",
+    );
+  });
+
+  it("rejects a card number in every free-text field", () => {
+    const requests = refusalOf(
+      createOrderInput,
+      withItem({ specialRequests: `Late arrival, card ${VISA}` }),
+    );
+    assert.equal(requests[0]?.path, "items.0.hotel.specialRequests");
+    assert.equal(requests[0]?.message, CARD_NUMBER_MESSAGE);
+    assertRefusedAt(
+      createOrderInput,
+      withItem({ specialRequests: "x".repeat(LIMITS.specialRequests + 1) }),
+      "items.0.hotel.specialRequests",
     );
     assert.equal(
-      createBookingInput.safeParse({
-        ...body,
-        contactPhone: "+86 138 0013 8000",
-      }).success,
-      true,
+      refusalOf(createOrderInput, withContact({ firstName: VISA }))[0]?.message,
+      CARD_NUMBER_MESSAGE,
+    );
+    assert.equal(
+      refusalOf(createOrderInput, withContact({ lastName: VISA }))[0]?.message,
+      CARD_NUMBER_MESSAGE,
+    );
+    assert.equal(
+      refusalOf(createOrderInput, withContact({ phone: "4111111111111111" }))[0]
+        ?.message,
+      CARD_NUMBER_MESSAGE,
+    );
+    assert.equal(
+      refusalOf(
+        createOrderInput,
+        withItem({
+          rooms: [{ guests: [{ firstName: VISA, lastName: "Zhang" }] }],
+        }),
+      )[0]?.message,
+      CARD_NUMBER_MESSAGE,
+    );
+    // A phone number is not a card.
+    assertAccepted(createOrderInput, withContact({ phone: "+4915112345678" }));
+  });
+
+  it("names an unknown key at every level", () => {
+    for (const value of [
+      { ...order, note: 1 },
+      withContact({ nationality: "CN" }),
+      { ...order, items: [{ ...item, quantity: 1 }] },
+      withItem({ breakfast: true }),
+      withItem({ rooms: [{ guests: [guest], adults: 2 }] }),
+      withItem({ rooms: [{ guests: [{ ...guest, roomNo: 1 }] }] }),
+    ]) {
+      assert.match(
+        refusalOf(createOrderInput, value)[0]?.message ?? "",
+        /^Unknown argument\(s\): /,
+      );
+    }
+  });
+});
+
+describe("getOrderInput and listOrdersInput", () => {
+  it("getOrderInput takes an order id and a locale", () => {
+    assertAccepted(getOrderInput, { orderId: "ord_aaaaaaaaaaaaaaaaaaaa" });
+    assertAccepted(getOrderInput, {
+      orderId: "ord_aaaaaaaaaaaaaaaaaaaa",
+      locale: "zh",
+    });
+    assertRefusedAt(getOrderInput, { orderId: hotel }, "orderId");
+    assert.equal(
+      refusalOf(getOrderInput, { orderId: "ord_aaaaaaaaaaaaaaaaaaaa", x: 1 })[0]
+        ?.message,
+      "Unknown argument(s): x",
     );
   });
 
-  it("lets numbers that aren't cards through", () => {
-    for (const specialRequests of [
-      // Luhn-invalid 16 digits, a phone number, dates and a flight.
-      "Ref 4242424242424241, call +86 138 0013 8000",
-      "Arriving 2026-06-24 on CA 1234, late check-in",
-      "Stay 2026-11-10 2026-11-12, mobiles 138 0013 8000 / 139 1234 5678",
-    ]) {
-      assert.equal(
-        createBookingInput.safeParse({ ...body, specialRequests }).success,
-        true,
-        specialRequests,
-      );
-    }
-    // Phone numbers of 13–15 digits that pass the card check.
-    for (const contactPhone of [
-      "6281234567899",
-      "4930 1234 5678 907",
-      "+86 138 0013 8000 / 393331234567893",
-    ]) {
-      assert.equal(
-        createBookingInput.safeParse({ ...body, contactPhone }).success,
-        true,
-        contactPhone,
-      );
-    }
-  });
-
-  it("still takes what booked before: a blank email, a numeric-string roomNo, a curly apostrophe", () => {
-    for (const [extra, expected] of [
-      [{ contactEmail: "" }, { contactEmail: "" }],
-      [{ contactEmail: "   " }, { contactEmail: "" }],
-      [{ contactEmail: " a@b.co " }, { contactEmail: "a@b.co" }],
-      [
-        { guests: [{ firstName: "Test", lastName: "Guest", roomNo: "1" }] },
-        { guests: [{ firstName: "Test", lastName: "Guest", roomNo: 1 }] },
-      ],
-      [
-        { guests: [{ firstName: "Sean", lastName: "O’Brien", roomNo: 1 }] },
-        { guests: [{ firstName: "Sean", lastName: "O’Brien", roomNo: 1 }] },
-      ],
-    ] as const) {
-      const result = createBookingInput.safeParse({ ...body, ...extra });
-      assert.ok(result.success, JSON.stringify(extra));
-      for (const [key, value] of Object.entries(expected)) {
-        assert.deepEqual(
-          (result.data as Record<string, unknown>)[key],
-          value,
-          `${JSON.stringify(extra)} ${key}`,
-        );
-      }
-    }
+  it("listOrdersInput takes a cursor, a limit of 1 to 50 and a locale", () => {
+    assertAccepted(listOrdersInput, {});
+    assertAccepted(listOrdersInput, { cursor: "c", limit: 50, locale: "en" });
+    assertAccepted(listOrdersInput, { limit: "20" });
+    assertRefusedAt(listOrdersInput, { limit: 0 }, "limit");
+    assertRefusedAt(listOrdersInput, { limit: 51 }, "limit");
+    assertRefusedAt(listOrdersInput, { limit: "" }, "limit");
+    assertRefusedAt(listOrdersInput, { cursor: "" }, "cursor");
+    assert.equal(
+      refusalOf(listOrdersInput, { status: "confirmed" })[0]?.message,
+      "Unknown argument(s): status",
+    );
   });
 });

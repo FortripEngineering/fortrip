@@ -1,0 +1,209 @@
+{
+  "status": 422,
+  "envelope": {
+    "error": {
+      "code": "search_too_broad",
+      "message": "9,850 hotels match: more than the 3,000 a price sort or price filter can price. Narrow the search to a locality.",
+      "retryable": false,
+      "details": {
+        "matched": 9850,
+        "poolLimit": 3000,
+        "localities": {
+          "items": [
+            {
+              "place": {
+                "placeId": "plc_9400001",
+                "name": "Denpasar",
+                "names": {
+                  "en": "Denpasar",
+                  "zh": "登巴萨"
+                }
+              },
+              "count": 3911,
+              "total": 3911,
+              "includes": [
+                {
+                  "place": {
+                    "placeId": "plc_9400011",
+                    "name": "Kuta",
+                    "names": {
+                      "en": "Kuta",
+                      "zh": "库塔"
+                    }
+                  },
+                  "members": 1205
+                },
+                {
+                  "place": {
+                    "placeId": "plc_9400012",
+                    "name": "Seminyak",
+                    "names": {
+                      "en": "Seminyak",
+                      "zh": "水明漾"
+                    }
+                  },
+                  "members": 802
+                },
+                {
+                  "place": {
+                    "placeId": "plc_9400013",
+                    "name": "Sanur",
+                    "names": {
+                      "en": "Sanur",
+                      "zh": "沙努尔"
+                    }
+                  },
+                  "members": 410
+                }
+              ]
+            },
+            {
+              "place": {
+                "placeId": "plc_9400002",
+                "name": "Ubud",
+                "names": {
+                  "en": "Ubud",
+                  "zh": "乌布"
+                }
+              },
+              "count": 1762,
+              "total": 1762,
+              "includes": [
+                {
+                  "place": {
+                    "placeId": "plc_9400021",
+                    "name": "Tegallalang",
+                    "names": {
+                      "en": "Tegallalang",
+                      "zh": null
+                    }
+                  },
+                  "members": 88
+                },
+                {
+                  "place": {
+                    "placeId": "plc_9400022",
+                    "name": "Mas",
+                    "names": {
+                      "en": "Mas",
+                      "zh": null
+                    }
+                  },
+                  "members": 41
+                }
+              ]
+            },
+            {
+              "place": {
+                "placeId": "plc_9400003",
+                "name": "Jimbaran",
+                "names": {
+                  "en": "Jimbaran",
+                  "zh": "金巴兰"
+                }
+              },
+              "count": 728,
+              "total": 728,
+              "includes": [
+                {
+                  "place": {
+                    "placeId": "plc_9400031",
+                    "name": "Kedonganan",
+                    "names": {
+                      "en": "Kedonganan",
+                      "zh": null
+                    }
+                  },
+                  "members": 30
+                }
+              ]
+            },
+            {
+              "place": {
+                "placeId": "plc_9400004",
+                "name": "Nusa Dua",
+                "names": {
+                  "en": "Nusa Dua",
+                  "zh": "努沙杜瓦"
+                }
+              },
+              "count": 540,
+              "total": 540,
+              "includes": []
+            },
+            {
+              "place": {
+                "placeId": "plc_9400005",
+                "name": "Canggu",
+                "names": {
+                  "en": "Canggu",
+                  "zh": "长谷"
+                }
+              },
+              "count": 515,
+              "total": 515,
+              "includes": []
+            },
+            {
+              "place": {
+                "placeId": "plc_9400006",
+                "name": "Lovina",
+                "names": {
+                  "en": "Lovina",
+                  "zh": null
+                }
+              },
+              "count": 312,
+              "total": 312,
+              "includes": []
+            },
+            {
+              "place": {
+                "placeId": "plc_9400007",
+                "name": "Amed",
+                "names": {
+                  "en": "Amed",
+                  "zh": null
+                }
+              },
+              "count": 150,
+              "total": 150,
+              "includes": []
+            },
+            {
+              "place": {
+                "placeId": "plc_9400008",
+                "name": "Nusa Lembongan",
+                "names": {
+                  "en": "Nusa Lembongan",
+                  "zh": "蓝梦岛"
+                }
+              },
+              "count": 140,
+              "total": 140,
+              "includes": []
+            }
+          ],
+          "unassigned": 40,
+          "more": 31
+        },
+        "center": {
+          "location": {
+            "lat": -8.65,
+            "lng": 115.21667
+          },
+          "place": {
+            "placeId": "plc_9400001",
+            "name": "Denpasar",
+            "names": {
+              "en": "Denpasar",
+              "zh": "登巴萨"
+            }
+          },
+          "basis": "seat"
+        }
+      },
+      "requestId": "req_bali_0001"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "tool": "book_hotel",
+  "data": {
+    "orderId": "ord_BundAwaiting00000000",
+    "reference": "FT-7KQ2MX",
+    "status": "awaiting_payment",
+    "createdAt": "2026-11-01T09:05:00Z",
+    "updatedAt": "2026-11-01T09:05:00Z",
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": "htl_BundRiverside0000000",
+          "name": "The Bund Riverside Hotel",
+          "names": {
+            "en": "The Bund Riverside Hotel",
+            "zh": "外滩江畔酒店"
+          },
+          "checkIn": "2026-11-14",
+          "checkOut": "2026-11-16",
+          "timeZone": "Asia/Shanghai",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": []
+            }
+          ],
+          "room": {
+            "name": {
+              "text": "Deluxe King Room",
+              "locale": "en"
+            },
+            "beds": {
+              "text": "1 king bed",
+              "locale": "en"
+            }
+          },
+          "meals": {
+            "known": true,
+            "included": [
+              "breakfast"
+            ],
+            "unspecifiedMainMeals": 0,
+            "allInclusive": false,
+            "guestsCoveredPerRoom": 2,
+            "label": {
+              "text": "Breakfast for 2",
+              "locale": "en"
+            }
+          },
+          "cancellation": {
+            "status": "free",
+            "asOf": "2026-11-01T09:00:00Z",
+            "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+            "penalties": [
+              {
+                "startsAt": "2026-11-12T16:00:00Z",
+                "amount": {
+                  "amount": "182.50",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Shanghai"
+          },
+          "payAtProperty": {
+            "disclosure": "complete",
+            "items": []
+          },
+          "confirmationNumber": null
+        }
+      }
+    ],
+    "price": {
+      "total": {
+        "amount": "365.00",
+        "currency": "USD"
+      }
+    },
+    "payment": {
+      "status": "unpaid",
+      "url": "https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4",
+      "requiresSignIn": false,
+      "expiresAt": "2026-11-01T12:50:00Z",
+      "chargeCurrency": "USD",
+      "localCurrencyAtCheckout": true,
+      "localCharge": null
+    },
+    "manageUrl": "https://fortrip.ai/orders/ord_BundAwaiting00000000"
+  }
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -9,18 +9,23 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import { promisify } from "node:util";
 
 import {
+  addIsoDateDays,
   API,
   COMMAND_GROUPS,
   COMMANDS,
   commandInvocation,
   type CommandSpec,
+  errorEnvelope,
   GLOBAL_FLAGS,
+  type RenderedTool,
+  renderError,
+  renderToolResult,
 } from "@fortrip/agent-contract";
 
 const run = promisify(execFile);
 
 /** What the fake API answers next, and every request it has received. */
-let reply: { status: number; body: unknown };
+let reply: { status: number; body: unknown; headers?: Record<string, string> };
 let requests: { method?: string; url?: string; authorization?: string; body: unknown }[];
 let server: Server;
 let apiUrl: string;
@@ -38,7 +43,7 @@ before(async () => {
         authorization: req.headers.authorization,
         body: raw ? JSON.parse(raw) : undefined,
       });
-      res.writeHead(reply.status, { "content-type": "application/json" });
+      res.writeHead(reply.status, { "content-type": "application/json", ...reply.headers });
       res.end(JSON.stringify(reply.body));
     });
   });
@@ -48,7 +53,7 @@ before(async () => {
 after(() => server.close());
 beforeEach(() => {
   requests = [];
-  reply = { status: 200, body: { success: true, data: {} } };
+  reply = { status: 200, body: {} };
 });
 
 const TOKEN = `fth_${"x".repeat(43)}`;
@@ -58,7 +63,7 @@ async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
     ...process.env,
     FORTRIP_API_URL: apiUrl,
     FORTRIP_TOKEN: TOKEN,
-    FORTRIP_CURRENCY: "",
+    FORTRIP_DISPLAY_CURRENCY: "",
     XDG_CONFIG_HOME: await mkdtemp(join(tmpdir(), "fortrip-cli-")),
     ...extraEnv,
   };
@@ -68,120 +73,289 @@ async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
   );
 }
 
-const STAY = ["--check-in", "2026-11-10", "--check-out", "2026-11-12"];
+/** A synthetic v1 answer from the contract's render fixtures. */
+async function fixture(name: string): Promise<{ tool: RenderedTool; data: unknown }> {
+  return JSON.parse(
+    await readFile(new URL(`../../contract/test/fixtures/v1/${name}.json`, import.meta.url), "utf8"),
+  );
+}
 
-const OCCUPANCY = ["--rooms", "1", "--adults", "2"];
+async function errorFixture(name: string): Promise<{ status: number; envelope: unknown }> {
+  return JSON.parse(
+    await readFile(new URL(`../../contract/test/fixtures/v1/${name}.json`, import.meta.url), "utf8"),
+  );
+}
 
-const RATES = ["hotels", "rates", "--hotel", "266000", ...STAY, ...OCCUPANCY];
+const today = new Date().toISOString().slice(0, 10);
+const STAY = ["--check-in", addIsoDateDays(today, 30), "--check-out", addIsoDateDays(today, 32)];
+const HOTEL = `htl_${"a1".repeat(10)}`;
+const OFFER = `off_${"c3".repeat(10)}`;
+const ORDER = `ord_${"d4".repeat(10)}`;
 
-const bookWith = (occupancy: string[]) => [
-  "hotels",
-  "book",
-  "--hotel",
-  "266000",
-  "--room-id",
-  "9191658",
-  "--rate-plan",
-  "rp_1",
-  ...STAY,
-  ...occupancy,
-  "--guest",
-  "John Smith",
-  "--contact-name",
-  "John Smith",
-  "--contact-phone",
-  "+8613800000000",
+const SEARCH = ["hotels", "search", "--place-name", "Bangkok", "--country", "TH", ...STAY, "--room", "2"];
+const OFFERS = ["hotels", "offers", "--hotel", HOTEL, ...STAY, "--room", "2:6", "--room", "2:6"];
+const BOOK = [
+  ...["hotels", "book", "--offer", OFFER, "--guest", "1:John:Smith"],
+  ...["--first-name", "John", "--last-name", "Smith", "--email", "john@example.com"],
+  ...["--phone", "+8613800000000"],
 ];
 
-const BOOK = bookWith(OCCUPANCY);
-
 describe("requests", () => {
-  it("hotels search posts to /api/agent/v1/hotels/search with the signed-in token", async () => {
-    const { code } = await cli(["hotels", "search", "-q", "Bangkok", ...STAY, "--currency", "usd"]);
-    assert.equal(code, 0);
-    assert.equal(requests.length, 1);
-    assert.equal(requests[0]?.method, "POST");
-    assert.equal(requests[0]?.url, "/api/agent/v1/hotels/search");
-    assert.equal(requests[0]?.url, API.search);
-    assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
-    assert.deepEqual(requests[0]?.body, {
-      query: "Bangkok",
-      checkIn: "2026-11-10",
-      checkOut: "2026-11-12",
-      currency: "USD",
-    });
-  });
-
-  it("FORTRIP_CURRENCY is the default currency of hotels search", async () => {
-    await cli(["hotels", "search", "-q", "Bangkok"], { FORTRIP_CURRENCY: "usd" });
-    assert.deepEqual(requests[0]?.body, { query: "Bangkok", currency: "USD" });
-  });
-
-  it("hotels get gets /api/agent/v1/hotels/{id}, with ?include=rooms on request", async () => {
-    await cli(["hotels", "get", "266000"]);
-    await cli(["hotels", "get", "266000", "--with-rooms"]);
-    assert.deepEqual(
-      requests.map(({ method, url, body }) => [method, url, body]),
-      [
-        ["GET", "/api/agent/v1/hotels/266000", undefined],
-        ["GET", "/api/agent/v1/hotels/266000?include=rooms", undefined],
-      ],
-    );
-  });
-
-  it("hotels rates posts to /api/agent/v1/hotels/rates", async () => {
-    const { code } = await cli(RATES);
-    assert.equal(code, 0);
-    assert.equal(requests[0]?.method, "POST");
-    assert.equal(requests[0]?.url, "/api/agent/v1/hotels/rates");
-    assert.deepEqual(requests[0]?.body, {
-      hotelIds: [266000],
-      checkIn: "2026-11-10",
-      checkOut: "2026-11-12",
-      rooms: 1,
-      adults: 2,
-    });
-  });
-
-  it("hotels book posts to /api/agent/v1/hotels/bookings", async () => {
-    const { code } = await cli(BOOK);
-    assert.equal(code, 0);
-    assert.equal(requests[0]?.method, "POST");
-    assert.equal(requests[0]?.url, "/api/agent/v1/hotels/bookings");
-    assert.equal((requests[0]?.body as { hotelId: number }).hotelId, 266000);
-  });
-
-  it("hotels rates without --rooms exits 2 and sends nothing", async () => {
-    const { code, stderr } = await cli([
-      "hotels",
-      "rates",
-      "--hotel",
-      "266000",
-      ...STAY,
-      "--adults",
-      "2",
-    ]);
-    assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /--rooms/);
-    assert.equal(requests.length, 0);
-  });
-
-  it("hotels rates without --adults, and hotels book without either, exit 2 and send nothing", async () => {
-    for (const args of [
-      ["hotels", "rates", "--hotel", "266000", ...STAY, "--rooms", "1"],
-      bookWith([]),
-      bookWith(["--rooms", "1"]),
-    ]) {
-      assert.equal((await cli(args)).code, 2, args.join(" "));
+  it("each command sends its method, path and body with the token", async () => {
+    for (const [args, method, url] of [
+      [SEARCH, "POST", "/v1/hotels/search"],
+      [["hotels", "get", HOTEL, "--rooms"], "GET", `/v1/hotels/${HOTEL}?include=rooms`],
+      [OFFERS, "POST", "/v1/hotels/offers"],
+      [BOOK, "POST", "/v1/orders"],
+      [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
+      [["orders", "list", "--limit", "5"], "GET", "/v1/orders?limit=5"],
+    ] as const) {
+      requests = [];
+      const { code, stderr } = await cli([...args]);
+      assert.equal(code, 0, `${args.join(" ")}: ${stderr}`);
+      assert.equal(requests.length, 1, args.join(" "));
+      assert.equal(requests[0]?.method, method, args.join(" "));
+      assert.equal(requests[0]?.url, url, args.join(" "));
+      assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
+      assert.equal(requests[0]?.body === undefined, method === "GET", args.join(" "));
     }
+  });
+
+  it("hotels search posts the contract's body", async () => {
+    await cli(SEARCH);
+    assert.equal(requests[0]?.url, API.hotelSearch);
+    assert.deepEqual(requests[0]?.body, {
+      destination: { kind: "place_name", name: "Bangkok", countryCode: "TH" },
+      stay: {
+        checkIn: STAY[1],
+        checkOut: STAY[3],
+        rooms: [{ adults: 2, childrenAges: [] }],
+      },
+    });
+  });
+
+  it("FORTRIP_DISPLAY_CURRENCY is the default display currency", async () => {
+    await cli(OFFERS, { FORTRIP_DISPLAY_CURRENCY: "cny" });
+    assert.equal((requests[0]?.body as { displayCurrency?: string }).displayCurrency, "CNY");
+  });
+
+  it("FORTRIP_API_URL may carry a path prefix, which every path follows", async () => {
+    for (const prefix of ["/api/public", "/api/public/"]) {
+      requests = [];
+      const { code, stderr } = await cli(SEARCH, { FORTRIP_API_URL: `${apiUrl}${prefix}` });
+      assert.equal(code, 0, stderr);
+      assert.equal(requests[0]?.url, "/api/public/v1/hotels/search");
+    }
+  });
+
+  it("a request the contract refuses exits 2 and sends nothing", async () => {
+    const { code, stdout, stderr } = await cli(["hotels", "offers", "--hotel", "266000", ...STAY, "--room", "2"]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.equal(
+      stderr,
+      [
+        "Error: Not sent: fortrip hotels offers was given an invalid request.",
+        "- /hotelIds/0: hotelId must be htl_ followed by 20 letters or digits",
+        "",
+      ].join("\n"),
+    );
+    const json = JSON.parse((await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"])).stderr);
+    assert.deepEqual(json.error.details.issues, [
+      { pointer: "/hotelIds/0", message: "hotelId must be htl_ followed by 20 letters or digits" },
+    ]);
     assert.equal(requests.length, 0);
   });
 
-  it("a 400 from the API is exit 2 with the server's error on stderr", async () => {
-    reply = { status: 400, body: { success: false, error: "checkIn must be a date" } };
-    const { code, stderr } = await cli(RATES);
+  it("flags that pick different destinations exit 2 and send nothing", async () => {
+    const { code, stderr } = await cli([...SEARCH, "--place", "plc_1"]);
     assert.equal(code, 2);
-    assert.equal(JSON.parse(stderr).error, "checkIn must be a date");
+    assert.match(stderr, /^Error: --place-name and --place can't be given together/);
+    assert.equal(requests.length, 0);
+  });
+});
+
+describe("output", () => {
+  it("prints each answer as the contract's compact text", async () => {
+    for (const [args, name] of [
+      [SEARCH, "search-shanghai-area"],
+      [["hotels", "get", HOTEL], "hotel-long-description"],
+      [OFFERS, "offers-two-hotels-one-unavailable"],
+      [BOOK, "order-awaiting-payment"],
+      [["orders", "get", ORDER], "order-confirmed"],
+      [["orders", "list"], "list-orders"],
+    ] as const) {
+      const { tool, data } = await fixture(name);
+      reply = { status: 200, body: data };
+      const { code, stdout, stderr } = await cli([...args]);
+      assert.equal(code, 0, stderr);
+      assert.equal(stdout, `${renderToolResult(tool, data)}\n`, name);
+      assert.equal(stderr, "", name);
+    }
+  });
+
+  it("an order with a payment link ends with the consent rule", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    reply = { status: 201, body: data };
+    const { stdout } = await cli(BOOK);
+    assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
+  });
+
+  it("--json prints the answer as one line of JSON, anywhere before --", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    reply = { status: 200, body: data };
+    for (const args of [
+      ["orders", "get", ORDER, "--json"],
+      ["--json", "orders", "get", ORDER],
+      ["orders", "--json", "get", ORDER],
+    ]) {
+      const { code, stdout } = await cli(args);
+      assert.equal(code, 0, args.join(" "));
+      assert.equal(stdout, `${JSON.stringify(data)}\n`, args.join(" "));
+    }
+    // After --, it is an argument: an order id that isn't one.
+    const { code } = await cli(["orders", "get", "--", "--json"]);
+    assert.equal(code, 2);
+  });
+
+  it("an answer the renderer doesn't know is shown as JSON, not an error", async () => {
+    reply = { status: 200, body: { unexpected: true } };
+    const { code, stdout } = await cli(["orders", "get", ORDER]);
+    assert.equal(code, 0);
+    assert.equal(stdout, `${renderToolResult("get_order", { unexpected: true })}\n`);
+  });
+});
+
+describe("errors", () => {
+  it("an API error is the contract's rendering on stderr, with its exit code", async () => {
+    for (const [name, exit] of [
+      ["error-destination-ambiguous-suzhou", 1],
+      ["error-search-too-broad-bali", 1],
+      ["error-not-a-locality-patong", 1],
+    ] as const) {
+      const { status, envelope } = await errorFixture(name);
+      reply = { status, body: envelope };
+      const { code, stdout, stderr } = await cli(SEARCH);
+      assert.equal(code, exit, name);
+      assert.equal(stdout, "", name);
+      assert.equal(stderr, `${renderError(envelope)}\n`, name);
+    }
+  });
+
+  it("--json prints the error envelope as one line of JSON on stderr", async () => {
+    const { status, envelope } = await errorFixture("error-destination-ambiguous-suzhou");
+    reply = { status, body: envelope };
+    const { code, stdout, stderr } = await cli([...SEARCH, "--json"]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.equal(stderr.split("\n").length, 2);
+    const printed = JSON.parse(stderr);
+    assert.deepEqual(printed, { ...(envelope as object), status });
+  });
+
+  it("invalid_request is exit 2, rate_limited exit 4", async () => {
+    const error = (code: string, retryable = false) => ({
+      error: { code, message: `${code} happened`, retryable, requestId: "req_1" },
+    });
+    reply = { status: 400, body: error("invalid_request") };
+    assert.equal((await cli(SEARCH)).code, 2);
+    reply = { status: 429, body: { error: { ...error("rate_limited", true).error, retryAfterSeconds: 7 } } };
+    const limited = await cli(SEARCH);
+    assert.equal(limited.code, 4);
+    assert.match(limited.stderr, /^Error rate_limited: rate_limited happened\nRetryable: retry after 7 s\./);
+  });
+
+  it("an unknown error code falls back to the HTTP status", async () => {
+    reply = {
+      status: 409,
+      body: { error: { code: "brand_new", message: "Something new", retryable: true, requestId: "req_1" } },
+    };
+    const { code, stderr } = await cli(SEARCH);
+    assert.equal(code, 1);
+    assert.match(stderr, /^Error brand_new \(HTTP 409\): Something new\nRetryable\./);
+  });
+
+  it("a 401 for FORTRIP_TOKEN exits 3 with the server's error and tokenSource beside it", async () => {
+    reply = {
+      status: 401,
+      body: { error: { code: "unauthenticated", message: "Invalid token", retryable: false, requestId: "req_1" } },
+    };
+    const { code, stdout, stderr } = await cli(["orders", "list"]);
+    assert.equal(code, 3);
+    assert.equal(stdout, "");
+    assert.match(stderr, /^Error unauthenticated: Invalid token\n/);
+    assert.match(stderr, /^tokenSource: FORTRIP_TOKEN$/m);
+    assert.match(stderr, /didn't accept FORTRIP_TOKEN/);
+
+    const json = JSON.parse((await cli(["orders", "list", "--json"])).stderr);
+    assert.equal(json.error.code, "unauthenticated");
+    assert.equal(json.tokenSource, "FORTRIP_TOKEN");
+  });
+
+  it("the CLI's own error is text on stderr, or { error: { code, message, retryable } } with --json", async () => {
+    const text = await cli(["hotels", "search", "--nope"]);
+    assert.equal(text.code, 2);
+    assert.match(text.stderr, /^Error: Unknown option '--nope'/);
+    const json = await cli(["hotels", "search", "--nope", "--json"]);
+    assert.equal(json.code, 2);
+    const { error } = JSON.parse(json.stderr);
+    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId"]);
+    assert.match(error.requestId, /^local_[0-9a-f]{20}$/);
+    assert.equal(error.code, "invalid_request");
+    assert.match(error.message, /Unknown option '--nope'/);
+    assert.equal(error.retryable, false);
+    assert.equal(requests.length, 0);
+  });
+
+  it("with --json, the CLI's own errors are envelope-shaped, its facts beside the error", async () => {
+    const usage = JSON.parse((await cli(["hotels", "rates", "--json"])).stderr);
+    assert.match(usage.error.requestId, /^local_[0-9a-f]{20}$/);
+    assert.deepEqual(usage, {
+      error: {
+        code: "invalid_request",
+        message: 'Unknown command "hotels rates". Did you mean `fortrip hotels offers`?',
+        retryable: false,
+        requestId: usage.error.requestId,
+      },
+    });
+    const unsendable = await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" });
+    assert.equal(unsendable.code, 3);
+    const signIn = JSON.parse(unsendable.stderr);
+    assert.equal(signIn.error.code, "unauthenticated");
+    assert.equal(signIn.error.retryable, false);
+    assert.equal(signIn.tokenSource, "FORTRIP_TOKEN");
+    const down = JSON.parse((await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" })).stderr);
+    assert.equal(down.error.code, "service_unavailable");
+    assert.equal(down.error.retryable, true);
+    const badDir = JSON.parse(
+      (await cli(["orders", "list", "--json"], { FORTRIP_TOKEN: "", XDG_CONFIG_HOME: "/dev/null/nope" })).stderr,
+    );
+    assert.equal(badDir.error.code, "cli_error");
+    assert.equal(badDir.error.retryable, false);
+    assert.equal(requests.length, 0);
+  });
+
+  it("every local --json error parses with the contract's errorEnvelope", async () => {
+    const runs = [
+      await cli(["hotels", "search", "--nope", "--json"]),
+      await cli(["hotels", "rates", "--json"]),
+      await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" }),
+      await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" }),
+      await cli(["orders", "list", "--json"], { FORTRIP_TOKEN: "", XDG_CONFIG_HOME: "/dev/null/nope" }),
+    ];
+    for (const { stderr } of runs) {
+      const { error } = JSON.parse(stderr);
+      assert.ok(errorEnvelope.safeParse({ error }).success, stderr);
+    }
+  });
+
+  it("an unreachable API is retryable, said in the error", async () => {
+    const { code, stderr } = await cli(["orders", "list"], { FORTRIP_API_URL: "http://127.0.0.1:1" });
+    assert.equal(code, 1);
+    assert.match(stderr, /^Error: Could not reach http:\/\/127\.0\.0\.1:1/);
+    assert.match(stderr, /^retryable: true$/m);
+    const json = await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" });
+    assert.equal(JSON.parse(json.stderr).error.retryable, true);
   });
 });
 
@@ -195,91 +369,42 @@ describe("FORTRIP_TOKEN", () => {
       `abc\r\n${SECRET}`,
       `abc\u0007${SECRET}`,
       `abc\u007f${SECRET}`,
-      `abc${SECRET}\u4ee4\u724c`,
+      `abc${SECRET}令牌`,
     ]) {
-      const { code, stdout, stderr } = await cli(["whoami"], { FORTRIP_TOKEN: bad });
+      const { code, stdout, stderr } = await cli(["whoami", "--json"], { FORTRIP_TOKEN: bad });
       assert.equal(code, 3, JSON.stringify(bad));
-      const error = JSON.parse(stderr);
-      assert.match(error.error, /FORTRIP_TOKEN/);
-      assert.match(error.error, /line break/);
+      const printed = JSON.parse(stderr);
+      assert.match(printed.error.message, /FORTRIP_TOKEN/);
+      assert.match(printed.error.message, /line break/);
       // The same answer as a token the server turns down: no link to open.
-      assert.equal(error.exitCode, 3);
-      assert.equal(error.tokenSource, "FORTRIP_TOKEN");
-      assert.equal(error.loginUrl, undefined);
-      assert.equal(error.retryable, undefined);
+      assert.equal(printed.tokenSource, "FORTRIP_TOKEN");
+      assert.equal(printed.loginUrl, undefined);
+      assert.equal(printed.error.retryable, false);
       assert.ok(!stdout.includes(SECRET) && !stderr.includes(SECRET), JSON.stringify(bad));
     }
     assert.equal(requests.length, 0);
   });
 
   it("is still trimmed of surrounding whitespace", async () => {
+    reply = { status: 200, body: { userId: "user_1", email: "a@b.c", name: "Ada" } };
     const { code } = await cli(["whoami"], { FORTRIP_TOKEN: `  ${TOKEN}\n` });
     assert.equal(code, 0);
     assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
   });
 });
 
-describe("book prints what the server returned", () => {
-  const STRIPE = `https://checkout.stripe.com/c/pay/cs_test_1#${"f".repeat(300)}`;
-
-  it("paymentUrl and the other links exactly as returned", async () => {
-    const data = {
-      agentOrderId: "ao_1",
-      paymentUrl: "https://fortrip.ai/booking-status?session_id=cs_test_1",
-      amount: 120.5,
-      currency: "USD",
-      orderUrl: "https://fortrip.ai/orders/ao_1",
-      statusUrl: "https://fortrip.ai/booking-status?session_id=cs_test_1",
-      terms: { boardCode: "BB", boardCount: 2 },
-      stay: {
-        hotelId: 266000,
-        hotelName: "Hotel",
-        roomName: null,
-        checkIn: "2026-11-10",
-        checkOut: "2026-11-12",
-        nights: 2,
-        rooms: 1,
-        adultsPerRoom: 2,
-        childrenAgesPerRoom: [],
-      },
-    };
-    reply = { status: 200, body: { success: true, data } };
-    const { code, stdout } = await cli(BOOK);
-    assert.equal(code, 0);
-    assert.deepEqual(JSON.parse(stdout), data);
-  });
-
-  it("does not rewrite a link: no host is made absolute, no Stripe link swapped", async () => {
-    const data = {
-      paymentUrl: STRIPE,
-      statusUrl: "/booking-status?session_id=cs_test_1",
-      orderUrl: "/orders/ao_1",
-    };
-    reply = { status: 200, body: { success: true, data } };
-    assert.deepEqual(JSON.parse((await cli(BOOK)).stdout), data);
-  });
-
-  it("a 409 for a stay already booked has its links on stderr as returned", async () => {
-    const body = {
-      success: false,
-      error: "This stay already has a paid or completed booking.",
-      reason: "already_booked",
-      agentOrderId: "ao_1",
-      orderUrl: "/orders/ao_1",
-      statusUrl: "/booking-status?session_id=cs_test_1",
-    };
-    reply = { status: 409, body };
-    const { code, stderr } = await cli(BOOK);
-    assert.equal(code, 1);
-    assert.deepEqual(JSON.parse(stderr), {
-      error: body.error,
-      exitCode: 1,
-      status: 409,
-      reason: "already_booked",
-      agentOrderId: "ao_1",
-      orderUrl: "/orders/ao_1",
-      statusUrl: "/booking-status?session_id=cs_test_1",
-    });
+describe("whoami", () => {
+  it("prints the account as text, or as 2.0's JSON with --json", async () => {
+    reply = { status: 200, body: { userId: "user_1", email: "a@b.c", name: null } };
+    const text = await cli(["whoami"]);
+    assert.equal(text.code, 0);
+    assert.equal(requests[0]?.url, API.me);
+    assert.equal(
+      text.stdout,
+      `Signed in to ${apiUrl}.\nuserId: user_1\nemail: a@b.c\nname: not given\n`,
+    );
+    const json = await cli(["whoami", "--json"]);
+    assert.deepEqual(JSON.parse(json.stdout), { userId: "user_1", email: "a@b.c", name: null, apiUrl });
   });
 });
 
@@ -356,8 +481,8 @@ describe("help", () => {
   it("-h works like --help, and anywhere in the command", async () => {
     for (const args of [
       ["hotels", "book", "-h"],
-      ["hotels", "rates", "--hotel", "1", "--help"],
-      ["hotels", "get", "-h"],
+      ["hotels", "offers", "--hotel", "1", "--help"],
+      ["orders", "get", "-h"],
     ]) {
       const { code, stdout } = await cli(args);
       assert.equal(code, 0, args.join(" "));
@@ -366,11 +491,9 @@ describe("help", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("hotels get's usage names its positional, guide's is optional", async () => {
-    assert.match(
-      (await cli(["hotels", "get", "--help"])).stdout,
-      /^Usage: fortrip hotels get <hotelId> /,
-    );
+  it("positionals are named in the usage; guide's is optional", async () => {
+    assert.match((await cli(["hotels", "get", "--help"])).stdout, /^Usage: fortrip hotels get <hotelId> /);
+    assert.match((await cli(["orders", "get", "--help"])).stdout, /^Usage: fortrip orders get <orderId> /);
     assert.match((await cli(["guide", "--help"])).stdout, /^Usage: fortrip guide \[topic\]/);
   });
 
@@ -378,7 +501,7 @@ describe("help", () => {
     for (const args of [["constructor", "--help"], ["hotels", "constructor", "--help"]]) {
       const { code, stderr } = await cli(args);
       assert.equal(code, 2, args.join(" "));
-      assert.match(JSON.parse(stderr).error, /Unknown command/);
+      assert.match(stderr, /^Error: Unknown command/);
     }
   });
 
@@ -387,42 +510,54 @@ describe("help", () => {
     assert.equal(code, 2);
   });
 
-  it("--help names the commands FORTRIP_CURRENCY is the default for as they are typed", async () => {
-    const typed = COMMANDS.filter((spec) => spec.flags.some((flag) => flag.field === "currency")).map(
+  it("--help states the output, the base URL and FORTRIP_DISPLAY_CURRENCY's commands", async () => {
+    const typed = COMMANDS.filter((spec) => spec.flags.some((flag) => flag.field === "displayCurrency")).map(
       (spec) => commandInvocation(spec).replace(/^fortrip /, ""),
     );
-    assert.deepEqual(typed, ["hotels search", "hotels rates"]);
+    assert.deepEqual(typed, ["hotels search", "hotels offers"]);
     const { stdout } = await cli(["--help"]);
     assert.match(
       stdout,
-      new RegExp(`^  FORTRIP_CURRENCY Default --currency for ${typed.join(" and ")}$`, "m"),
+      new RegExp(`^  FORTRIP_DISPLAY_CURRENCY +Default --display-currency for ${typed.join(" and ")}$`, "m"),
     );
+    assert.match(stdout, /^  FORTRIP_API_URL +API base URL \(default https:\/\/api\.fortrip\.ai\)$/m);
+    assert.match(
+      stdout,
+      /^  FORTRIP_MCP_URL +MCP server URL for fortrip mcp \(default https:\/\/mcp\.fortrip\.ai\/\)$/m,
+    );
+    assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
+    assert.doesNotMatch(stdout, /FORTRIP_CURRENCY\b/);
   });
 
-  it("no help names the old paths or per-room defaults", async () => {
-    for (const args of [["--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
-      const { stdout } = await cli(args);
-      assert.doesNotMatch(stdout, /\/api\//);
-      assert.doesNotMatch(stdout, /default(s)? to 1 room/);
+  it("no help names an API path", async () => {
+    for (const args of [["--help"], ["hotels", "offers", "--help"], ["hotels", "book", "--help"]]) {
+      assert.doesNotMatch((await cli(args)).stdout, /\/api\/|\/v1\//);
     }
   });
 });
 
-describe("commands are typed after their group", () => {
-  it("the 1.x hotel commands are gone: exit 2, naming the 2.0 command", async () => {
-    const renamed = {
-      search: "fortrip hotels search",
-      hotel: "fortrip hotels get",
-      rates: "fortrip hotels rates",
-      book: "fortrip hotels book",
-    };
-    const invocations = new Set(COMMANDS.map(commandInvocation));
-    for (const [old, now] of Object.entries(renamed)) {
-      assert.ok(invocations.has(now), now);
-      const { code, stdout, stderr } = await cli([old, "266000"]);
+describe("renamed commands", () => {
+  it("2.x hotels rates is gone: exit 2, naming hotels offers", async () => {
+    const { code, stdout, stderr } = await cli(["hotels", "rates", "--hotel", "1"]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.equal(stderr, 'Error: Unknown command "hotels rates". Did you mean `fortrip hotels offers`?\n');
+    assert.equal(requests.length, 0);
+  });
+
+  it("1.x commands typed without their group name the 3.0 command", async () => {
+    for (const [old, now] of [
+      ["search", "`fortrip hotels search`"],
+      ["hotel", "`fortrip hotels get`"],
+      ["rates", "`fortrip hotels offers`"],
+      ["book", "`fortrip hotels book`"],
+      ["get", "`fortrip hotels get` or `fortrip orders get`"],
+      ["list", "`fortrip orders list`"],
+    ]) {
+      const { code, stdout, stderr } = await cli([old as string, "x"]);
       assert.equal(code, 2, old);
       assert.equal(stdout, "", old);
-      assert.equal(JSON.parse(stderr).error, `Unknown command "${old}". Did you mean \`${now}\`?`);
+      assert.equal(stderr, `Error: Unknown command "${old}". Did you mean ${now}?\n`);
     }
     assert.equal(requests.length, 0);
   });
@@ -431,30 +566,20 @@ describe("commands are typed after their group", () => {
     for (const name of ["nope", "hotelz", "constructor", "toString"]) {
       const { code, stderr } = await cli([name]);
       assert.equal(code, 2, name);
-      assert.equal(
-        JSON.parse(stderr).error,
-        `Unknown command "${name}". Run \`fortrip --help\`.`,
-        name,
-      );
+      assert.equal(stderr, `Error: Unknown command "${name}". Run \`fortrip --help\`.\n`, name);
     }
   });
 
   it("an unknown command in a group is exit 2, pointing at the group's help", async () => {
-    for (const args of [["hotels", "nope"], ["hotels", "login"], ["hotels", "hotels"]]) {
-      const { code, stderr } = await cli(args);
-      assert.equal(code, 2, args.join(" "));
-      assert.equal(
-        JSON.parse(stderr).error,
-        `Unknown command "${args.join(" ")}". Run \`fortrip hotels --help\`.`,
-      );
+    for (const [group, name] of [
+      ["hotels", "nope"],
+      ["hotels", "login"],
+      ["orders", "cancel"],
+    ]) {
+      const { code, stderr } = await cli([group as string, name as string]);
+      assert.equal(code, 2, `${group} ${name}`);
+      assert.equal(stderr, `Error: Unknown command "${group} ${name}". Run \`fortrip ${group} --help\`.\n`);
     }
-    assert.equal(requests.length, 0);
-  });
-
-  it("a group's command takes its flags after its name, not before", async () => {
-    const { code, stderr } = await cli(["hotels", "--query", "x", "search"]);
-    assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /Unknown command "hotels --query"/);
     assert.equal(requests.length, 0);
   });
 });
@@ -463,13 +588,7 @@ describe("other commands", () => {
   it("mcp takes no arguments and exits 2", async () => {
     const { code, stderr } = await cli(["mcp", "extra"]);
     assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /mcp takes no arguments/);
-  });
-
-  it("skill is gone: guide replaced it", async () => {
-    const { code, stderr } = await cli(["skill"]);
-    assert.equal(code, 2);
-    assert.match(JSON.parse(stderr).error, /Unknown command "skill"/);
+    assert.match(stderr, /mcp takes no arguments/);
   });
 
   it("--version and -v print the version", async () => {

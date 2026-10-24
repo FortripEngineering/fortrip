@@ -1,0 +1,8 @@
+Error destination_ambiguous (HTTP 422): Several places in CN are named "Suzhou". Ask the user which one, then search it by placeId.
+Not retryable.
+Field: /destination/name
+Places named "Suzhou" in CN (2). Ask the user which one, then search with destination { kind: "place", placeId: "<id>" }:
+- Suzhou (苏州) plc_9500001 · district in Jiangsu plc_9500100, CN · population 12,748,262 · 9,210 hotels in the area
+- Suzhou (宿州) plc_9500002 · district in Anhui plc_9500200, CN · population 5,324,476 · 512 hotels in the area
+57 hotels have "Suzhou" in their name or address: it can also be searched as text.
+Request id: req_suzhou_0001

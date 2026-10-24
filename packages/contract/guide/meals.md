@@ -1,10 +1,18 @@
 {{#if claude-skill cli}}
-## Presenting a rate
+## Presenting an offer
 
-Give the user, for each option:
+Give the user, for each offer:
 
-- the meal plan: `boardCode` (RO room only, BB breakfast, HB breakfast + dinner, FB breakfast + lunch + dinner, BL lunch, BD dinner, HBBL breakfast + lunch, HBLD lunch + dinner, AI all inclusive) with `boardCount`, how many guests per room the meal plan covers. Fewer than the adults per room means not everyone gets the meals (BB with `boardCount` 1 for 2 adults is breakfast for 1 of 2): say who is covered;
-- cancellation: `refundable` and `freeCancelUntil`;
-- confirmation: `isInstantConfirm`;
-- any `fees`: taxes paid at the hotel, in their own currency.
+- the room (`room.name`, beds, size) and the total, as above;
+- the meals: `meals.included` (breakfast, lunch, dinner) or `allInclusive`, with `guestsCoveredPerRoom`. Fewer than the guests per room means not everyone gets the meals (breakfast for 1 with 2 adults in the room): say who is covered. `unspecifiedMainMeals` counts main meals the hotel didn't name. With `known: false`, the meals are unknown: say so, and don't call it room only;
+- cancellation: `status` (`free`, `partial_penalty`, `non_refundable` or `unknown`), `freeCancellationEndsAt` (null with `free`: free until check-in) and the `penalties`. Times are in UTC: also give them in the hotel's `timeZone`;
+- confirmation: `mode` `instant` or `on_request` (within `withinMinutes`);
+- fees payable at the property (`payAtProperty.items`), in the property's currency. `disclosure: "incomplete"` means there can be fees not listed: say so.
+
+An offer expires at `expiresAt`, about 30 minutes after it was made; after that, get offers again.
+
+"Not listed" is not "no": `listed: false` (amenities, policies, rooms), `null` and `unknown` mean the source didn't say. Tell the user it's unknown instead of turning it into "no".
+{{/if}}
+{{#if mcp}}
+- "Not listed" or "unknown" is not "no".
 {{/if}}

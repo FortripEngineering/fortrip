@@ -1,0 +1,13 @@
+Niseko (settlement, within 8.0 km, the default radius) · 0 hotels · plc_9300002 · Hokkaido plc_9300001, JP · also named 二世古 · text "Ritz Carlton" (exact words)
+Stay 2027-01-10 → 2027-01-14 (4 nights), 1 room: 1 adult · indicative prices per room-night: estimates, not bookable (only offers are) · sort: nearest first
+Distances from Niseko plc_9300002 (its location).
+Counts: 0 matched, 0 priced, 0 with a price, 0 within 80 km, 2 match the text anywhere in JP.
+
+No hotels on this page.
+
+Notes:
+- few_hotels_in_scope: 0 hotels match within 8.0 km of Niseko (a settlement); 0 within 80 km.
+- more_elsewhere: 2 hotels match "Ritz Carlton" elsewhere in JP.
+- no_results: No hotel within 8.0 km of Niseko matches "Ritz Carlton" (0 within 80 km, 2 elsewhere in JP). Search the text without a destination, or Niseko without the text.
+
+Last page.

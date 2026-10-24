@@ -1,0 +1,15 @@
+Shanghai (settlement, within 20.0 km) · 8,412 hotels · plc_9100002 · Shanghai plc_9100001, CN · also named 上海
+Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates, not bookable (only offers are) · sort: cheapest first
+Distances from Shanghai plc_9100002 (its location).
+Counts: 8,412 matched, 3,000 priced, 1,650 with a price, 1,350 left out for having no indicative price, 14,980 within 80 km.
+Only the nearest 3,000 matches were priced: "cheapest" here means cheapest within 9.0 km of Shanghai.
+
+1. 静安小筑 · 2★ · 1.6 km · from USD 41.00/room-night (USD 82.00 per room for the stay) · 上海市静安区愚园路 168 号 · Shanghai, CN · htl_ZhOnlyName0000000000
+2. Jing'an Court Hotel (静安阁酒店) · 4.5★ · 0.9 km · from USD 96.10/room-night (USD 192.20 per room for the stay) · 1200 Nanjing West Road, Jing'an · Shanghai, CN · htl_JinganCourt000000000
+
+Notes:
+- indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
+- pool_limited: 8,412 hotels match; the 3,000 nearest were priced, up to 9.0 km from Shanghai. Cheaper hotels farther out are not compared.
+- locality_available: Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of a circle.
+
+Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_pool_page_2" }.

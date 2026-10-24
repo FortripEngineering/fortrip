@@ -1,0 +1,80 @@
+{
+  "status": 422,
+  "envelope": {
+    "error": {
+      "code": "destination_ambiguous",
+      "message": "Several places in CN are named \"Suzhou\". Ask the user which one, then search it by placeId.",
+      "param": "/destination/name",
+      "retryable": false,
+      "details": {
+        "name": "Suzhou",
+        "countryCode": "CN",
+        "candidates": [
+          {
+            "placeId": "plc_9500001",
+            "name": "Suzhou",
+            "names": {
+              "en": "Suzhou",
+              "zh": "苏州"
+            },
+            "kind": "district",
+            "scope": "area",
+            "cityLike": true,
+            "population": 12748262,
+            "region": {
+              "placeId": "plc_9500100",
+              "name": "Jiangsu",
+              "names": {
+                "en": "Jiangsu",
+                "zh": "江苏"
+              }
+            },
+            "countryCode": "CN",
+            "location": {
+              "lat": 31.30408,
+              "lng": 120.59538
+            },
+            "hotels": {
+              "scope": "area",
+              "radiusMeters": null,
+              "count": 9210
+            }
+          },
+          {
+            "placeId": "plc_9500002",
+            "name": "Suzhou",
+            "names": {
+              "en": "Suzhou",
+              "zh": "宿州"
+            },
+            "kind": "district",
+            "scope": "area",
+            "cityLike": false,
+            "population": 5324476,
+            "region": {
+              "placeId": "plc_9500200",
+              "name": "Anhui",
+              "names": {
+                "en": "Anhui",
+                "zh": "安徽"
+              }
+            },
+            "countryCode": "CN",
+            "location": {
+              "lat": 33.63611,
+              "lng": 116.97889
+            },
+            "hotels": {
+              "scope": "area",
+              "radiusMeters": null,
+              "count": 512
+            }
+          }
+        ],
+        "candidatesTotal": 2,
+        "nameAsText": 57
+      },
+      "requestId": "req_suzhou_0001"
+    }
+  }
+}

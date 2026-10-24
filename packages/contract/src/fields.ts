@@ -1,9 +1,7 @@
 import { z } from "zod";
 
-import { isIsoDate } from "./dates.ts";
-
 /*
- * Zod pieces for the agent-facing inputs (the `/api/agent/v1` bodies and the
+ * Zod pieces for the agent-facing inputs (the API's request bodies and the
  * MCP tool arguments), each carrying its own message. zod is
  * `sideEffects: false`, so the production bundle never runs the
  * `config(en())` that installs its English messages, and any check without
@@ -29,16 +27,6 @@ export function wholeNumber(name: string, min: number, max: number) {
     .max(max, { error });
 }
 
-export function positiveId(name: string) {
-  const error = `${name} must be a positive whole number`;
-  return z.number({ error }).int({ error }).positive({ error });
-}
-
-export function isoDate(name: string) {
-  const error = `${name} must be a real yyyy-MM-dd calendar date`;
-  return z.string({ error }).refine(isIsoDate, { error });
-}
-
 export function nonEmpty(name: string) {
   const error = `${name} must be a non-empty string`;
   return z.string({ error }).min(1, { error });
@@ -60,12 +48,4 @@ export function oneOf<const T extends readonly [string, ...string[]]>(
 
 export function flag(name: string) {
   return z.boolean({ error: `${name} must be true or false` });
-}
-
-/** Each child's age in one room, up to `max` children. */
-export function childrenAges(max: number) {
-  const error = `childrenAges must list each child's age (0 to 17) in one room, at most ${max}`;
-  return z
-    .array(wholeNumber("Each child's age", 0, 17), { error })
-    .max(max, { error });
 }

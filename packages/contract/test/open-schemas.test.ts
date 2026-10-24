@@ -1,0 +1,188 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { z } from "zod";
+
+import {
+  openEnum,
+  openObject,
+  openUnion,
+  parseOpen,
+  strictOutput,
+} from "../src/conventions/open.ts";
+
+describe("openObject", () => {
+  it("keeps fields the schema does not know", () => {
+    const s = openObject({ a: z.string() });
+    assert.deepEqual(parseOpen(s, { a: "x", b: 2 }), { a: "x", b: 2 });
+  });
+});
+
+describe("openEnum", () => {
+  const s = openEnum(["a", "b"]);
+
+  it("parses known and unknown strings, rejects non-strings", () => {
+    assert.equal(s.parse("a"), "a");
+    assert.equal(s.parse("c"), "c");
+    assert.equal(s.safeParse(1).success, false);
+  });
+
+  it("emits JSON Schema anyOf [enum, string]", () => {
+    const js = z.toJSONSchema(s) as unknown as {
+      anyOf: [{ enum: string[] }, Record<string, unknown>];
+    };
+    assert.equal(js.anyOf.length, 2);
+    assert.deepEqual(js.anyOf[0].enum, ["a", "b"]);
+    assert.deepEqual(js.anyOf[1], { type: "string" });
+  });
+});
+
+describe("openUnion", () => {
+  const A = openObject({ kind: z.literal("a"), x: z.number() });
+  const B = openObject({ kind: z.literal("b"), y: z.string() });
+  const u = openUnion("kind", [A, B]);
+
+  it("parses a known value into its branch", () => {
+    assert.deepEqual(u.parse({ kind: "a", x: 1 }), { kind: "a", x: 1 });
+    assert.deepEqual(u.parse({ kind: "b", y: "s", more: true }), {
+      kind: "b",
+      y: "s",
+      more: true,
+    });
+  });
+
+  it("fails a malformed known branch instead of falling back", () => {
+    assert.equal(u.safeParse({ kind: "a", x: "no" }).success, false);
+    assert.equal(u.safeParse({ kind: "b" }).success, false);
+  });
+
+  it("passes an unknown discriminator value through the fallback", () => {
+    assert.deepEqual(u.parse({ kind: "zzz", x: 1 }), { kind: "zzz", x: 1 });
+  });
+
+  it("rejects a missing or non-string discriminator", () => {
+    assert.equal(u.safeParse({ x: 1 }).success, false);
+    assert.equal(u.safeParse({ kind: 3 }).success, false);
+  });
+
+  it("emits JSON Schema anyOf with one entry per branch plus the fallback", () => {
+    const js = z.toJSONSchema(u, { io: "output" }) as unknown as { anyOf: unknown[] };
+    assert.equal(js.anyOf.length, 3);
+  });
+});
+
+describe("strictOutput", () => {
+  const shape = openObject({
+    id: z.string(),
+    inner: openObject({ n: z.number() }),
+    list: z.array(openObject({ v: z.string() })).min(1),
+    maybe: openObject({ q: z.string() }).nullable().optional(),
+    mode: openEnum(["fast", "slow"]),
+    item: openUnion("type", [
+      openObject({ type: z.literal("room"), beds: z.number() }),
+    ]),
+  });
+  const ok = {
+    id: "i",
+    inner: { n: 1 },
+    list: [{ v: "x" }],
+    maybe: null,
+    mode: "fast",
+    item: { type: "room", beds: 2 },
+  };
+  const strict = strictOutput(shape);
+
+  it("accepts a fully known value", () => {
+    assert.deepEqual(strict.parse(ok), ok);
+  });
+
+  it("rejects unknown fields at every depth", () => {
+    assert.equal(strict.safeParse({ ...ok, extra: 1 }).success, false);
+    assert.equal(strict.safeParse({ ...ok, inner: { n: 1, extra: 1 } }).success, false);
+    assert.equal(strict.safeParse({ ...ok, list: [{ v: "x", extra: 1 }] }).success, false);
+    assert.equal(strict.safeParse({ ...ok, maybe: { q: "a", extra: 1 } }).success, false);
+    assert.equal(
+      strict.safeParse({ ...ok, item: { type: "room", beds: 2, extra: 1 } }).success,
+      false,
+    );
+  });
+
+  it("rejects unknown enum values and unknown union branches", () => {
+    assert.equal(strict.safeParse({ ...ok, mode: "other" }).success, false);
+    assert.equal(strict.safeParse({ ...ok, item: { type: "villa" } }).success, false);
+  });
+
+  it("leaves the open schema untouched", () => {
+    assert.equal(shape.safeParse({ ...ok, extra: 1, mode: "other" }).success, true);
+  });
+});
+
+describe("strictOutput on cloned and wrapped schemas", () => {
+  const A = openObject({ type: z.literal("a"), x: z.number() });
+
+  it("closes an open enum or union carrying .describe() or .meta()", () => {
+    const e = strictOutput(openEnum(["a", "b"]).describe("d"));
+    assert.equal(e.safeParse("c").success, false);
+    assert.equal(e.safeParse("a").success, true);
+    const m = strictOutput(openEnum(["a", "b"]).meta({ title: "t" }));
+    assert.equal(m.safeParse("c").success, false);
+    const u = strictOutput(openUnion("type", [A]).describe("d"));
+    assert.equal(u.safeParse({ type: "zzz" }).success, false);
+    assert.equal(u.safeParse({ type: "a", x: 1 }).success, true);
+    const um = strictOutput(openUnion("type", [A]).meta({ title: "t" }));
+    assert.equal(um.safeParse({ type: "zzz" }).success, false);
+  });
+
+  it("closes objects inside default, record, tuple, readonly, pipe and lazy", () => {
+    const inner = openObject({ n: z.number() });
+    const extra = { n: 1, extra: 1 };
+    assert.equal(
+      strictOutput(inner.default({ n: 0 })).safeParse(extra).success,
+      false,
+    );
+    assert.equal(
+      strictOutput(z.record(z.string(), inner)).safeParse({ k: extra }).success,
+      false,
+    );
+    assert.equal(
+      strictOutput(z.record(z.string(), inner)).safeParse({ k: { n: 1 } }).success,
+      true,
+    );
+    assert.equal(
+      strictOutput(z.tuple([inner], inner)).safeParse([{ n: 1 }, extra]).success,
+      false,
+    );
+    assert.equal(strictOutput(inner.readonly()).safeParse(extra).success, false);
+    assert.equal(
+      strictOutput(z.pipe(inner, z.transform((v) => v))).safeParse(extra).success,
+      false,
+    );
+    assert.equal(strictOutput(z.lazy(() => inner)).safeParse(extra).success, false);
+  });
+
+  it("keeps array checks and a nested enum closed", () => {
+    const s = strictOutput(z.array(openEnum(["a"])).min(1));
+    assert.equal(s.safeParse([]).success, false);
+    assert.equal(s.safeParse(["b"]).success, false);
+    assert.equal(s.safeParse(["a"]).success, true);
+  });
+
+  it("throws on a type it cannot close", () => {
+    assert.throws(() => strictOutput(z.any()), /cannot close/);
+    assert.throws(() => strictOutput(openObject({ a: z.unknown() })), /cannot close/);
+    assert.throws(
+      () => strictOutput(z.intersection(z.object({ a: z.string() }), z.object({ b: z.string() }))),
+      /cannot close/,
+    );
+  });
+});
+
+describe("strictOutput is idempotent", () => {
+  it("keeps every known branch of an open union on a second pass", () => {
+    const A = openObject({ type: z.literal("a") });
+    const B = openObject({ type: z.literal("b") });
+    const twice = strictOutput(strictOutput(openUnion("type", [A, B])));
+    assert.equal(twice.safeParse({ type: "a" }).success, true);
+    assert.equal(twice.safeParse({ type: "b" }).success, true);
+    assert.equal(twice.safeParse({ type: "zzz" }).success, false);
+  });
+});

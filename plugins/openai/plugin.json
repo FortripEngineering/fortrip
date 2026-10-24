@@ -55,20 +55,20 @@
             {
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live room rates in CNY with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today.",
-              "tools_triggered": "search_hotels, get_hotel_rates",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_rates for it with the dates, 1 room, 2 adults, currency CNY and only free-cancellation rates, and lists rooms with their meal plan, free-cancellation deadline and live price in CNY. If the hotel has no free-cancellation rate for those dates, it says so."
+              "tools_triggered": "search_hotels, get_hotel_offers",
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room, 2 adults, currency CNY and only free-cancellation rates, and lists rooms with their meal plan, free-cancellation deadline and live price in CNY. If the hotel has no free-cancellation rate for those dates, it says so."
             },
             {
               "description": "Compare two check-in dates within a budget",
               "prompt": "I need 3 nights in Shanghai for 2 adults in 1 room, checking in either 30 or 37 days from today, for under 1,200 CNY per night. Which dates and hotels give the best value?",
-              "tools_triggered": "search_hotels, get_hotel_rates (get_planning_guide optional)",
-              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with currency CNY and a maximum nightly price of 1,200, then get_hotel_rates for a shortlist of the results on each date; it may also call get_planning_guide first. It compares each live rate per night (totalPrice divided by 3 nights, for 1 room) with the 1,200 CNY budget and recommends options within it, each with its dates, live price, meal plan and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_rates returned a rate for it."
+              "tools_triggered": "search_hotels, get_hotel_offers (get_planning_guide optional)",
+              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with currency CNY and a maximum nightly price of 1,200, then get_hotel_offers for a shortlist of the results on each date; it may also call get_planning_guide first. It compares each live rate per night (totalPrice divided by 3 nights, for 1 room) with the 1,200 CNY budget and recommends options within it, each with its dates, live price, meal plan and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned a rate for it."
             },
             {
               "description": "Create a booking payment link after confirmation",
               "prompt": "Book the cheapest free-cancellation room at Anantara Riverside Bangkok Resort for 1 adult in 1 room, 2 nights starting 60 days from today. Guest: John Smith, phone +1 415 555 0100.",
-              "tools_triggered": "search_hotels, get_hotel_rates, book_hotel",
-              "expected_behavior": "Finds the hotel, calls get_hotel_rates, and calls book_hotel with the cheapest free-cancellation rate and the guest details. It shows the stay, the amount with its currency, the meal plan, cancellation rules, confirmation type and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the https://fortrip.ai/booking-status link, which opens a Fortrip page that recaps the booking and continues to Stripe Checkout. Nothing is charged unless the user pays there. If no free-cancellation rate is available, it says so and asks how to proceed instead of booking another rate."
+              "tools_triggered": "search_hotels, get_hotel_offers, book_hotel",
+              "expected_behavior": "Finds the hotel, calls get_hotel_offers, and calls book_hotel with the cheapest free-cancellation rate and the guest details. It shows the stay, the amount with its currency, the meal plan, cancellation rules, confirmation type and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the https://fortrip.ai/booking-status link, which opens a Fortrip page that recaps the booking and continues to Stripe Checkout. Nothing is charged unless the user pays there. If no free-cancellation rate is available, it says so and asks how to proceed instead of booking another rate."
             }
           ],
           "negative": [

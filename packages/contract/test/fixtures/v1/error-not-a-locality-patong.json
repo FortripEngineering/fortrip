@@ -1,0 +1,25 @@
+{
+  "status": 422,
+  "envelope": {
+    "error": {
+      "code": "destination_not_found",
+      "message": "Patong is not a locality: its hotels belong to the locality Phuket. Search Phuket as a locality, or Patong itself as a place (an 8 km circle).",
+      "param": "/destination/placeId",
+      "retryable": false,
+      "details": {
+        "reason": "not_a_locality",
+        "placeId": "plc_9200010",
+        "hub": {
+          "placeId": "plc_9200002",
+          "name": "Phuket",
+          "names": {
+            "en": "Phuket",
+            "zh": "普吉"
+          }
+        },
+        "hubTotal": 2752
+      },
+      "requestId": "req_patong_0001"
+    }
+  }
+}

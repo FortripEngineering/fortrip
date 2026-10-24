@@ -1,15 +1,16 @@
 {{#if claude-skill cli}}
-## Booking
+## Ordering
 
 {{/if}}
-- Call `{{tool:hotels book}}` only for the rate the user picked{{#if claude-skill cli}}, with exactly the hotel, `{{arg:roomId}}`, `{{arg:ratePlanCode}}`, dates, `{{arg:rooms}}`, `{{arg:adults}}` and `{{arg:childrenAges}}` used in `{{tool:hotels rates}}`{{/if}}.
-- Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–{{limit:guestName}} characters each{{#if cli}}, as `--guest "First Last"` (the last word is the last name; `"First Last:2"` puts the guest in room 2){{/if}}.{{#if claude-skill cli}} At least one guest per room, no more than the room sleeps.{{/if}}
+- Call `{{tool:hotels book}}` only for the offer the user picked, with at least one guest per room{{#if claude-skill cli}}, named as the user gave them{{/if}}; never invent guests.{{#if claude-skill cli}} Room 1 is the offer's first room, and a room takes no more guests than it sleeps.{{/if}}
+- Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–{{limit:guestName}} characters each{{#if cli}}, as `--guest 1:John:Smith` (room 1, first name, last name){{/if}}.
 {{#if claude-skill cli}}
-- A contact name (up to {{limit:contactName}} characters) and phone ({{limit:contactPhoneMin}}–{{limit:contactPhoneMax}} characters) are required; an email is optional. Special requests must be in English and aren't guaranteed.
-- One booking covers at most {{limit:nights}} nights; book a longer stay as separate bookings.
+- The contact's first and last name (up to {{limit:contactFirstName}} characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
 {{/if}}
-- The `{{arg:nationality}}` given to `{{tool:hotels rates}}` isn't sent with the booking: a rate restricted by nationality may change or be refused.
-- `{{tool:hotels book}}` can take up to about two minutes{{#if cli}}: allow the command at least 3 minutes{{/if}}. If it times out, {{#if cli}}run it again with identical flags{{/if}}{{#if mcp claude-skill}}call it again with the same details{{/if}}: it resumes the same order{{#if claude-skill cli}}, with the same or a refreshed payment link{{/if}}.
+- `{{tool:hotels book}}` can take up to about two minutes{{#if cli}}: allow the command at least 3 minutes{{/if}}. If it times out, {{#if cli}}run it again with identical flags{{/if}}{{#if mcp claude-skill}}call it again with the same details{{/if}}: it returns the same order.
+{{#if mcp}}
+- On `offer_changed`, show the user every change and ask again before ordering the new offer.
+{{/if}}
 {{#if cli}}
 - `{{tool:hotels book}}` takes only these fields: a `--body` with any other field (such as `nationality`) is rejected with exit 2.
 {{/if}}

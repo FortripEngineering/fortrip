@@ -10,6 +10,8 @@
  *     pnpm generate                write them
  *     pnpm generate --check        exit 1 with a unified diff when any of
  *                                  them differs from a fresh render (CI)
+ *     --only guide-data            only the contract's embedded guide data,
+ *                                  not the skills
  *     --root <dir>                 read and write <dir> instead of the
  *                                  repository (the tests use it)
  *
@@ -39,29 +41,33 @@ const SKILLS: readonly {
     surface: "claude-skill",
     name: "fortrip",
     description:
-      "Finds, compares, prices and books hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_rates, book_hotel), from hotel search to a booking payment link. Use when those tools are available and the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing or cancelling an existing booking, or coding work.",
+      "Finds, compares, prices and orders hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing or cancelling an existing booking, or coding work.",
   },
   {
     dir: "skills/fortrip-cli",
     surface: "cli",
     name: "fortrip-cli",
     description:
-      "Searches hotels, compares live room rates and creates a hotel booking with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_rates, book_hotel) aren't available. Not for flights, activities or changing an existing booking.",
+      "Searches hotels, compares live offers and creates a hotel order with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_offers, book_hotel) aren't available. Not for flights, activities or changing an existing booking.",
   },
 ];
 
 let check = false;
+let guideDataOnly = false;
 let root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const args = process.argv.slice(2);
 for (let n = 0; n < args.length; n++) {
   const arg = args[n];
   if (arg === "--check") {
     check = true;
+  } else if (arg === "--only" && args[n + 1] === "guide-data") {
+    guideDataOnly = true;
+    n++;
   } else if (arg === "--root" && args[n + 1] !== undefined) {
     root = path.resolve(args[++n] as string);
   } else {
     console.error(
-      `Unknown option ${arg}\nUsage: generate.ts [--check] [--root <dir>]`,
+      `Unknown option ${arg}\nUsage: generate.ts [--check] [--only guide-data] [--root <dir>]`,
     );
     process.exit(2);
   }
@@ -124,7 +130,7 @@ async function unifiedDiff(file: string, before: string, after: string) {
 await update(GUIDE_DATA, await embeddedGuide());
 
 const { renderGuide } = await import("../packages/contract/src/index.ts");
-for (const { dir, surface, name, description } of SKILLS) {
+for (const { dir, surface, name, description } of guideDataOnly ? [] : SKILLS) {
   await update(
     `${dir}/SKILL.md`,
     `---\nname: ${name}\ndescription: ${description}\n---\n\n${renderGuide(surface, "main")}`,
