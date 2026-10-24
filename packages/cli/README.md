@@ -43,18 +43,35 @@ hosted MCP server's address (see [MCP server](#mcp-server)).
   instead of by room and rate plan. `hotels search`, `hotels get`, `login`,
   `logout`, `whoami`, `guide` and `mcp` keep their names; `orders get` and
   `orders list` are new.
-- **Flags changed with the API.** A place is searched by `--place-name` with its
-  `--country` (or `--place`, `--locality`, `--point`, `--country-only`) instead
-  of `--query` and `--city-code`; `--text` matches a hotel name, brand or area.
-  Rooms are `--room <adults[:age,…]>`, once per room, instead of `--rooms`,
-  `--adults` and `--child-age`. `--star-min`, `--facility`, `--price-min`,
-  `--price-max`, `--page` and `--page-size` became `--stars-min`, `--amenity`,
-  `--price-max-per-room-night`, `--cursor` and `--limit` (there is no minimum
-  price). `--currency` became
-  `--display-currency`, which only changes the currency prices are shown in:
-  orders are paid in USD. Ids are strings (`htl_…`, `off_…`, `ord_…`, `plc_…`)
-  you pass back as they were returned. Run `fortrip <command> --help` for the
-  flags of 3.0.
+- **Flags changed with the API.** Run `fortrip <command> --help` for the flags
+  of 3.0; these are the 2.x ones that moved.
+  - Search: `--query` and `--city-code` are replaced by `--place-name` with its
+    `--country` (or `--place`, `--locality`, `--point`, `--country-only`);
+    `--text` matches a hotel name, brand or area. `--near` is
+    `--point lat,lng` with `--radius-meters` (meters, where `--near` took km). `--star-min` and `--star-max`
+    are `--stars-min` and `--stars-max`, `--facility` is `--amenity` and
+    `--price-max` is `--price-max-per-room-night`. `--price-min` and the short `-q` are gone.
+  - Paging: `--page` and `--page-size` are not renamed but replaced. Results
+    are paged with a cursor: pass the `nextCursor` of the previous page to
+    `--cursor`, and set the page size with `--limit`. There is no page number.
+  - Rooms: `--rooms`, `--adults` and `--child-age` are replaced by
+    `--room <adults[:age,…]>`, once per room, in `hotels search` and
+    `hotels offers`. `hotels book` no longer takes the stay at all: the offer
+    carries it.
+  - `hotels get`: `--with-rooms` is `--rooms`.
+  - `hotels offers` (was `hotels rates`): `--board` is `--require-breakfast`,
+    `--free-cancellation` is `--require-free-cancellation`, and `--max-rooms`
+    (rooms per hotel) is `--limit-per-hotel` (offers per hotel, 5 by default).
+    `--nationality` and `--include-unbookable` are gone.
+  - `hotels book`: `--hotel`, `--room-id` and `--rate-plan` are replaced by
+    `--offer`, the `offerId` from `hotels offers`. `--guest "First Last:2"` is
+    `--guest 2:First:Last` (room, first name, last name). `--contact-name` is
+    `--first-name` and `--last-name`, `--contact-phone` is `--phone` and
+    `--contact-email` is `--email`.
+  - `--currency` is `--display-currency`, which only changes the currency
+    prices are shown in: orders are paid in USD.
+  - Ids are strings (`htl_…`, `off_…`, `ord_…`, `plc_…`) that you pass back as
+    they were returned.
 - **New output.** A result is compact text by default, written for people and
   for models; `--json` prints the API's JSON instead (see
   [Output and exit codes](#output-and-exit-codes)). 2.x printed JSON.
@@ -183,12 +200,13 @@ runs an MCP server on stdio that forwards to the hosted server with your saved
 sign-in.
 
 You can add the bridge to a client before you sign in: signed out, it still
-starts and lists its tools. The first tool call is then answered with a
-JSON-RPC error (`-32001`) whose message says to run `npx -y fortrip login` in a
-terminal, or to open the sign-in link it names and approve it. Once you have,
-the next tool call works, with no restart. If a sign-in stops working later,
-only the request that hit it fails with the same kind of error, and the server
-keeps running.
+starts and lists its tools. A tool call is then answered with a tool error
+(`isError: true`, code `unauthenticated`) whose message says to run
+`npx -y fortrip login` in a terminal, or to open the sign-in link it names and
+approve it. Once you have, the next tool call works, with no restart. If a
+sign-in stops working later, only the request that hit it fails, the same way
+for a tool call; any other request that hits a sign-in problem gets the
+JSON-RPC error `-32001` instead. The server keeps running.
 
 Claude Desktop (Settings, Developer, Edit Config; on macOS
 `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows
