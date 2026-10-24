@@ -3,7 +3,7 @@
   "name": "io.github.FortripEngineering/fortrip",
   "title": "Fortrip",
   "description": "Search hotels worldwide, compare live room rates, and create booking payment links.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "websiteUrl": "https://fortrip.ai",
   "repository": {
     "url": "https://github.com/FortripEngineering/fortrip",
@@ -29,7 +29,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://fortrip.ai/api/mcp"
+      "url": "https://mcp.fortrip.ai/"
     }
   ]
 }

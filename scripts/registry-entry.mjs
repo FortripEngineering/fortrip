@@ -1,13 +1,26 @@
 // What is wrong with the MCP Registry entry (plugins/registry/server.json)
 // next to the package it lists: the CLI at packages/cli. Used by validate.mjs;
-// a function of two parsed files so that a test can feed it both.
+// a function of parsed files so that a test can feed it all of them.
+
+/** `a.b.c` as numbers, or null for anything else. */
+function parseVersion(version) {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version ?? "");
+  return match ? match.slice(1).map(Number) : null;
+}
+
+/** Whether version `a` is greater than version `b` (both `a.b.c`). */
+function isGreater(a, b) {
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return false;
+}
 
 /**
  * @param {{ name?: string, packages?: { registryType?: string, identifier?: string, version?: string }[] }} server
  * @param {{ name: string, version: string, mcpName?: string }} cli (the MCP Registry requires `mcpName` on the package it lists)
+ * @param {{ version?: string } | undefined} [published] the entry on origin/main, when it can be read: the Registry rejects a version that is not greater than the one it has, so a changed entry must raise `version`
  * @returns {string[]} one line per problem; empty when the entry matches
  */
-export function registryEntryProblems(server, cli) {
+export function registryEntryProblems(server, cli, published) {
   const problems = [];
   const entry = server.packages?.find(
     (candidate) => candidate.registryType === "npm" && candidate.identifier === cli.name,
@@ -24,5 +37,38 @@ export function registryEntryProblems(server, cli) {
       `packages/cli mcpName is ${cli.mcpName}, but the registry entry is named ${server.name}`,
     );
   }
+  // An entry that is the published one is not a new publish, so only a
+  // changed entry has to raise the version.
+  if (published && JSON.stringify(published) !== JSON.stringify(server)) {
+    const next = parseVersion(server.version);
+    const current = parseVersion(published.version);
+    if (!next) {
+      problems.push(`the entry's version ${server.version} is not a.b.c`);
+    } else if (current && !isGreater(next, current)) {
+      problems.push(
+        `the entry's version is ${server.version}, which is not greater than ${published.version} on origin/main`,
+      );
+    }
+  }
   return problems;
+}
+
+/**
+ * The entry on origin/main, for `registryEntryProblems`' `published`.
+ *
+ * @param {() => string} show reads `plugins/registry/server.json` on origin/main (throws when git can't)
+ * @param {boolean} ci whether this is a CI run, where the version check must not be skipped
+ * @returns {{ published?: object, skipped?: string, problem?: string }} `skipped` is the message
+ *   of a check left out locally; `problem` is the failure in CI, where a ref that can't be read
+ *   would otherwise let the check pass unrun
+ */
+export function publishedEntry(show, ci) {
+  const message = "origin/main:plugins/registry/server.json is not readable with git";
+  try {
+    return { published: JSON.parse(show()) };
+  } catch {
+    return ci
+      ? { problem: `${message}; CI has to fetch main before the registry version check` }
+      : { skipped: `registry version check: ${message}` };
+  }
 }
