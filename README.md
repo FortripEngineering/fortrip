@@ -1,20 +1,20 @@
 # Fortrip
 
 Fortrip's public agent surface in one repository: the `fortrip` command-line
-tool for hotel search, live rates and booking, the contract that every agent
+tool for hotel search, live offers and orders, the contract that every agent
 surface shares, and the store listings that point agents at Fortrip. Hotels
 only for now.
 
-Everything here talks to Fortrip's agent API, `https://fortrip.ai/api/agent/v1`,
-or to the hosted MCP server, `https://fortrip.ai/api/mcp`, as a Fortrip user
-who has signed in with OAuth in the browser.
+Everything here talks to Fortrip API v1, `https://api.fortrip.ai/v1`, or to the
+hosted MCP server, `https://mcp.fortrip.ai/`, as a Fortrip user who has signed
+in with OAuth in the browser.
 
 ## Using Fortrip
 
 - **From a shell, or an agent with one:** `npx -y fortrip <command>`. Start
   with `npx -y fortrip login`; the [CLI's README](packages/cli/README.md) has
   the commands, sign-in and exit codes.
-- **In an MCP client:** connect the hosted server `https://fortrip.ai/api/mcp`
+- **In an MCP client:** connect the hosted server `https://mcp.fortrip.ai/`
   if the client supports remote servers with OAuth, or run the local bridge,
   `npx -y fortrip mcp`. The [CLI's README](packages/cli/README.md#mcp-server)
   has the config for Claude Desktop, Cursor, Codex and Claude Code. The Claude
@@ -30,8 +30,8 @@ who has signed in with OAuth in the browser.
 
 | Path | What it is | How it's published |
 |---|---|---|
-| [`packages/contract`](packages/contract) | The contract of the agent API (`/api/agent/v1`): limits, paths, input schemas, field rules, the specs of the MCP tools and CLI commands, and the agent guide, written once and rendered for the MCP server, the Claude skill and the CLI | npm: `@fortrip/agent-contract`, from a `v*` tag on `main`, together with `fortrip` |
-| [`packages/cli`](packages/cli) | The `fortrip` CLI: hotel search, live rates and booking from a shell, the local MCP bridge (`fortrip mcp`) and the agent guide (`fortrip guide`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
+| [`packages/contract`](packages/contract) | The contract of Fortrip API v1: limits, paths, request and response schemas, error codes, field rules, the specs of the MCP tools and CLI commands, and the agent guide, written once and rendered for the MCP server, the Claude skill and the CLI | npm: `@fortrip/agent-contract`, from a `v*` tag on `main`, together with `fortrip` |
+| [`packages/cli`](packages/cli) | The `fortrip` CLI: hotel search, live offers, orders and payment links from a shell, the local MCP bridge (`fortrip mcp`) and the agent guide (`fortrip guide`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
 | [`plugins/claude`](plugins/claude) | Claude plugin (hosted MCP server + static skill, generated) | Submitted in the [developer portal](https://claude.ai/directory/manage); `.claude-plugin/marketplace.json` at the root lets Claude Code add this repo as a marketplace |
 | [`plugins/openai`](plugins/openai) | ChatGPT / Codex plugin | Zip uploaded in the OpenAI portal |
 | [`plugins/registry`](plugins/registry) | [MCP Registry](https://registry.modelcontextprotocol.io) entry | The **Publish Fortrip to MCP Registry** workflow |

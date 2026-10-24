@@ -22,12 +22,9 @@ export {
 export { instant, localDate, localTime, timeZone } from "./conventions/time.ts";
 export { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
 export {
-  childrenAges,
   flag,
-  isoDate,
   nonEmpty,
   oneOf,
-  positiveId,
   strictInput,
   text,
   wholeNumber,
