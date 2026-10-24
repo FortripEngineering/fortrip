@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
-import { registryEntryProblems } from "./registry-entry.mjs";
+import { publishedEntry, registryEntryProblems } from "./registry-entry.mjs";
 
 const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (file) => fs.readFileSync(path.join(repo, file), "utf8");
@@ -64,18 +64,17 @@ check("registry name", server.name === "io.github.FortripEngineering/fortrip", s
 check("registry remote", server.remotes?.some((r) => r.url === MCP_URL), JSON.stringify(server.remotes));
 // The entry lists the package that is released, so a release has to move it.
 // The version it must beat is the one on origin/main, when git can say.
-let published;
-try {
-  published = JSON.parse(
+const { published, skipped, problem } = publishedEntry(
+  () =>
     execFileSync("git", ["show", "origin/main:plugins/registry/server.json"], {
       cwd: repo,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }),
-  );
-} catch {
-  console.log("SKIP registry version check: origin/main:plugins/registry/server.json is not readable with git");
-}
+  process.env.CI === "true",
+);
+if (skipped) console.log(`SKIP ${skipped}`);
+check("registry version check ran", !problem, problem);
 const registryProblems = registryEntryProblems(server, load("packages/cli/package.json"), published);
 check("registry entry matches packages/cli", registryProblems.length === 0, registryProblems.join("; "));
 check("plugins/claude/.mcp.json url", load("plugins/claude/.mcp.json").mcpServers?.fortrip?.url === MCP_URL);

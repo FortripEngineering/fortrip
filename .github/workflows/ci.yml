@@ -55,6 +55,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # The registry version check compares with main, which the shallow
+      # checkout doesn't have.
+      - run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+
       # The skills are rendered from the contract's source: generate --check
       # fails, with a diff, when a committed skill or the embedded guide is
       # stale. It runs before the build, which rewrites the embedded guide.

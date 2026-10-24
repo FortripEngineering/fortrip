@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { registryEntryProblems } from "./registry-entry.mjs";
+import { publishedEntry, registryEntryProblems } from "./registry-entry.mjs";
 
 const NAME = "io.github.FortripEngineering/fortrip";
 
@@ -87,5 +87,29 @@ describe("the MCP Registry entry against packages/cli", () => {
       registryEntryProblems(read("plugins/registry/server.json"), read("packages/cli/package.json")),
       [],
     );
+  });
+});
+
+describe("the entry on origin/main", () => {
+  const unreadable = () => {
+    throw new Error("fatal: invalid object name 'origin/main'");
+  };
+
+  it("is parsed when git can read it, in CI or not", () => {
+    for (const ci of [false, true]) {
+      assert.deepEqual(publishedEntry(() => JSON.stringify(server()), ci), { published: server() });
+    }
+  });
+
+  it("is skipped, with a message, when git can't read it outside CI", () => {
+    const result = publishedEntry(unreadable, false);
+    assert.equal(result.problem, undefined);
+    assert.match(result.skipped ?? "", /registry version check: origin\/main.*not readable/);
+  });
+
+  it("fails when git can't read it in CI, so the check can't be skipped silently", () => {
+    const result = publishedEntry(unreadable, true);
+    assert.equal(result.skipped, undefined);
+    assert.match(result.problem ?? "", /not readable.*CI has to fetch main/);
   });
 });

@@ -52,3 +52,23 @@ export function registryEntryProblems(server, cli, published) {
   }
   return problems;
 }
+
+/**
+ * The entry on origin/main, for `registryEntryProblems`' `published`.
+ *
+ * @param {() => string} show reads `plugins/registry/server.json` on origin/main (throws when git can't)
+ * @param {boolean} ci whether this is a CI run, where the version check must not be skipped
+ * @returns {{ published?: object, skipped?: string, problem?: string }} `skipped` is the message
+ *   of a check left out locally; `problem` is the failure in CI, where a ref that can't be read
+ *   would otherwise let the check pass unrun
+ */
+export function publishedEntry(show, ci) {
+  const message = "origin/main:plugins/registry/server.json is not readable with git";
+  try {
+    return { published: JSON.parse(show()) };
+  } catch {
+    return ci
+      ? { problem: `${message}; CI has to fetch main before the registry version check` }
+      : { skipped: `registry version check: ${message}` };
+  }
+}
