@@ -956,7 +956,8 @@ describe("a config directory that can't be written", () => {
       const printed = JSON.parse(result.stderr);
       assertGuidance(printed.error.message);
       assert.equal(printed.loginUrl, undefined);
-      assert.equal(printed.error.retryable, undefined);
+      assert.equal(printed.error.code, "cli_error");
+      assert.equal(printed.error.retryable, false);
       // JSON only: no stack trace.
       assert.doesNotMatch(result.stderr, /\n\s+at /);
       assert.equal(result.stdout, "");

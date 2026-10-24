@@ -1,7 +1,7 @@
 {{#if cli}}
 ## Setup
 
-Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:hotels book}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:hotels book}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 When the user first asks about hotels, run `{{tool:whoami}}` before asking follow-up questions, so the sign-in can happen while they answer.
 

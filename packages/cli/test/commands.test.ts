@@ -422,6 +422,41 @@ describe("flags", () => {
     ]);
   });
 
+  it("--guest merges into --body's rooms by room number", () => {
+    const BODY = JSON.stringify({
+      items: [
+        {
+          offerId: OFFER,
+          hotel: {
+            rooms: [
+              { guests: [{ firstName: "Old", lastName: "One" }] },
+              { guests: [{ firstName: "Mary", lastName: "Lee" }] },
+            ],
+          },
+        },
+      ],
+    });
+    const roomsOf = (argv: string[]) =>
+      (body("hotels book", ["--body", BODY, ...argv, ...CONTACT]).items as { hotel: { rooms: unknown } }[])[0]
+        ?.hotel.rooms;
+    // Room 1's guests are replaced; room 2 is kept.
+    assert.deepEqual(roomsOf(["--guest", "1:John:Smith"]), [
+      { guests: [{ firstName: "John", lastName: "Smith" }] },
+      { guests: [{ firstName: "Mary", lastName: "Lee" }] },
+    ]);
+    // A room past the body's rooms is added after them.
+    assert.deepEqual(roomsOf(["--guest", "3:Ann:Wu"]), [
+      { guests: [{ firstName: "Old", lastName: "One" }] },
+      { guests: [{ firstName: "Mary", lastName: "Lee" }] },
+      { guests: [{ firstName: "Ann", lastName: "Wu" }] },
+    ]);
+    // A room skipped between the body's and the flags' is still refused.
+    assert.throws(
+      () => roomsOf(["--guest", "4:Ann:Wu"]),
+      (error) => isUsage(error) && /no guest for room 3/.test((error as Error).message),
+    );
+  });
+
   it("--guest refuses a bad form, a skipped room and a room past the limit", () => {
     for (const guests of [
       ["John Smith"],
@@ -583,9 +618,28 @@ describe("display currency", () => {
     assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
   });
 
-  it("an unknown currency is refused, not sent", () => {
-    assert.throws(() => body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: "EUR" }), isUsage);
-    assert.throws(() => body("hotels search", [...SEARCH, "--display-currency", ""]), isUsage);
+  it("an unknown currency is refused, not sent, naming the variable when it came from there", () => {
+    assert.deepEqual(issuesOf(() => body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: "EUR" })), [
+      {
+        pointer: "/displayCurrency",
+        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+      },
+    ]);
+    assert.deepEqual(issuesOf(() => body("hotels offers", OFFERS, { FORTRIP_DISPLAY_CURRENCY: "eur" })), [
+      {
+        pointer: "/displayCurrency",
+        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+      },
+    ]);
+    // From a flag, it is the flag's own value: the variable isn't named.
+    for (const argv of [["--display-currency", ""], ["--display-currency", "EUR"]]) {
+      const issues = issuesOf(() =>
+        body("hotels search", [...SEARCH, ...argv], { FORTRIP_DISPLAY_CURRENCY: "CNY" }),
+      );
+      assert.deepEqual(issues, [
+        { pointer: "/displayCurrency", message: "displayCurrency must be one of: USD, CNY" },
+      ]);
+    }
   });
 
   it("orders never take one: they are charged in USD", () => {

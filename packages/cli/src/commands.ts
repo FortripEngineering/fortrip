@@ -33,8 +33,9 @@ const FROM_ENV: Record<string, string> = { displayCurrency: "FORTRIP_DISPLAY_CUR
 /** Lists a dot steps into the one item of: a v1 order holds one item. */
 const ONE_ITEM_LISTS = new Set(["items"]);
 
-/** `--guest room:first:last` sets this field of its room. */
+/** `--guest room:first:last` sets this field of its room, one of these. */
 const GUEST_FIELD = "items.hotel.rooms.guests";
+const ROOMS_FIELD = "items.hotel.rooms";
 
 const locale = (input: Body) => input.locale as "en" | "zh" | undefined;
 
@@ -137,22 +138,26 @@ export function parseCommand(
 
   setFlags(spec, values, input);
 
+  /** Fields the environment set, and the variable that did. */
+  const fromEnv = new Map<string, string>();
   for (const [field, name] of Object.entries(FROM_ENV)) {
     const fallback = env[name]?.trim().toUpperCase();
     if (fallback && input[field] === undefined && spec.flags.some((flag) => flag.field === field)) {
       input[field] = fallback;
+      fromEnv.set(`/${field}`, name);
     }
   }
 
-  check(spec, input, route.method === "GET");
+  check(spec, input, route.method === "GET", fromEnv);
   const path = route.path(input);
   return route.method === "POST" ? { method: "POST", path, body: input } : { method: "GET", path };
 }
 
 /** Refuses an input the contract's schema doesn't accept, with the issues
  *  the API's `invalid_request` would list (pointers into the body, or
- *  `/path/<name>` and `/query/<name>` for a GET). */
-function check(spec: CommandSpec, input: Body, isGet: boolean): void {
+ *  `/path/<name>` and `/query/<name>` for a GET). An issue with a value an
+ *  environment variable set (`fromEnv`, by pointer) names the variable. */
+function check(spec: CommandSpec, input: Body, isGet: boolean, fromEnv: Map<string, string>): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   const result = schema?.safeParse(input);
   if (!result || result.success) return;
@@ -168,7 +173,11 @@ function check(spec: CommandSpec, input: Body, isGet: boolean): void {
           message: `Unknown field: ${key}`,
         }))
       : [{ pointer: pointer(issue.path), message: issue.message }],
-  );
+  ).map(({ pointer, message }) => {
+    // A value no flag gave: say where it came from.
+    const name = fromEnv.get(pointer);
+    return { pointer, message: name ? `${name}: ${message}` : message };
+  });
   throw new CliError(
     `Not sent: ${commandInvocation(spec)} was given an invalid request.`,
     EXIT.usage,
@@ -208,7 +217,7 @@ function setFlags(spec: CommandSpec, values: Values, input: Body): void {
   for (const flag of given) {
     const raw = values[flag.flag] as NonNullable<Values[string]>;
     if (flag.field === GUEST_FIELD) {
-      setField(input, "items.hotel.rooms", parseGuests(raw as string[]));
+      setField(input, ROOMS_FIELD, withGuests(getField(input, ROOMS_FIELD), parseGuests(raw as string[])));
     } else {
       setField(input, flag.field, readFlag(flag, raw));
     }
@@ -332,10 +341,10 @@ function parseRoom(value: string): Body {
   };
 }
 
-/** `--guest room:first:last`, once per guest: the order's rooms, each with
- *  its guests in the order given. Rooms are numbered from 1, none skipped. */
-function parseGuests(values: string[]): Body[] {
-  const rooms: { guests: Body[] }[] = [];
+/** `--guest room:first:last`, once per guest: each room's guests, by room
+ *  number, in the order given. */
+function parseGuests(values: string[]): Map<number, Body[]> {
+  const rooms = new Map<number, Body[]>();
   for (const value of values) {
     const parts = value.split(":").map((part) => part.trim());
     const [room, firstName, lastName] = parts;
@@ -346,10 +355,22 @@ function parseGuests(values: string[]): Body[] {
     if (number < 1 || number > LIMITS.rooms) {
       throw usageError(`--guest room must be 1 to ${LIMITS.rooms}, got "${value}"`);
     }
-    (rooms[number - 1] ??= { guests: [] }).guests.push({ firstName, lastName });
+    rooms.set(number, [...(rooms.get(number) ?? []), { firstName, lastName }]);
+  }
+  return rooms;
+}
+
+/** The order's rooms with the flags' guests: a room the flags name gets
+ *  their guests in place of `--body`'s, and the other rooms are kept.
+ *  Rooms are numbered from 1, none skipped. */
+function withGuests(fromBody: unknown, guests: Map<number, Body[]>): unknown[] {
+  const rooms = Array.isArray(fromBody) ? [...fromBody] : [];
+  for (const [number, list] of guests) {
+    const room = rooms[number - 1];
+    rooms[number - 1] = { ...(isObject(room) ? room : {}), guests: list };
   }
   for (let index = 0; index < rooms.length; index++) {
-    if (!rooms[index]) {
+    if (rooms[index] === undefined) {
       throw usageError(
         `--guest rooms are numbered from 1 with none skipped: no guest for room ${index + 1}`,
       );
