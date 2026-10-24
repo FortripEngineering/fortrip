@@ -128,7 +128,7 @@ cd plugins/openai && rm -f ../../fortrip-openai.zip && zip -rX ../../fortrip-ope
 ```
 
 Upload the zip in the OpenAI portal. The portal verifies the domain through
-`https://fortrip.ai/.well-known/openai-apps-challenge`, served by fortrip.ai.
+`https://mcp.fortrip.ai/.well-known/openai-apps-challenge`, served by mcp.fortrip.ai.
 
 ### MCP Registry
 
