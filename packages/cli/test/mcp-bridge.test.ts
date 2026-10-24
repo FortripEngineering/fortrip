@@ -17,7 +17,7 @@ import {
   renderGuide,
   TOOLS,
 } from "@fortrip/agent-contract";
-import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import {
   InMemoryTransport,
   type JSONRPCMessage,
@@ -27,6 +27,7 @@ import {
   type ToolCallback,
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { z } from "zod";
 
 import { loadSession, saveSession, tryLoginLock } from "../src/credentials.ts";
 import { runMcpBridge } from "../src/mcp-bridge.ts";
@@ -162,16 +163,22 @@ async function hostedAnswers(...requests: Message[]): Promise<Message[]> {
   return answers;
 }
 
-/** The tools an SDK client lists from a fresh `hostedServer()`, as JSON
- *  carries them (no keys whose value is `undefined`). */
-async function hostedTools(): Promise<unknown> {
-  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  await hostedServer().connect(serverSide);
-  const client = new Client({ name: "test-client", version: "0.0.0" });
-  await client.connect(clientSide);
-  const { tools } = await client.listTools();
-  await client.close();
-  return JSON.parse(JSON.stringify(tools));
+/**
+ * The tools the hosted server lists, built from the contract alone (the
+ * hosted route test's oracle): each tool's title, description and
+ * annotations, its input as `z.toJSONSchema(input, { io: "input" })` (the
+ * guide's an empty object) and its output as `{ io: "output" }` (none for
+ * the guide).
+ */
+function contractTools(): unknown[] {
+  return TOOLS.map((spec) => ({
+    name: spec.name,
+    title: spec.title,
+    description: spec.description,
+    inputSchema: spec.input ? z.toJSONSchema(spec.input, { io: "input" }) : { type: "object", properties: {} },
+    ...(spec.output ? { outputSchema: z.toJSONSchema(spec.output, { io: "output" }) } : {}),
+    annotations: spec.annotations,
+  }));
 }
 
 /** Polls until `read` has a value. */
@@ -682,12 +689,15 @@ describe("fortrip mcp bridge, signed out", () => {
 
     const reply = await bridge.request(listTools(2));
 
-    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: { tools: await hostedTools() } });
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: { tools: contractTools() } });
     const tools = (reply.result as { tools: Record<string, any>[] }).tools;
     assert.deepEqual(
       tools.map((tool) => tool.name),
       TOOLS.map((spec) => spec.name),
     );
+    const guide = tools.find((tool) => tool.name === "get_planning_guide");
+    assert.deepEqual(guide?.inputSchema, { type: "object", properties: {} });
+    assert.ok(!("outputSchema" in (guide ?? {})));
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
     // The MCP variants: get_hotel_offers' own default, book_hotel's nextStep.
     assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, 5);
@@ -777,7 +787,39 @@ describe("fortrip mcp bridge, signed out", () => {
     assert.match(message, /npx -y fortrip login/);
     assert.ok(message.includes(loginUrl()));
     assert.deepEqual(api.mcpRequests, []);
-    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: await hostedTools() });
+    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: contractTools() });
+  });
+
+  it("a tool call whose sign-in can't start gets Fortrip's envelope in the hosted error shape", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    const unavailable = envelope("service_unavailable", "Sign-in is unavailable right now.", {
+      retryable: true,
+      retryAfterSeconds: 5,
+      requestId: "req_fakeconfig",
+    });
+    api.scripts.config = [{ status: 503, body: unavailable }];
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: hostedToolError(unavailable) });
+    assert.equal(api.counts.config, 1);
+    assert.deepEqual(api.mcpRequests, []);
+  });
+
+  it("a tool call whose sign-in can't start, with no envelope, gets a retryable JSON-RPC error", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    api.scripts.config = [{ status: 503, body: { not: "an envelope" } }];
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.equal(reply.result, undefined);
+    assert.equal(reply.error?.code, -32603);
+    assert.equal(reply.error?.data?.retryable, true);
+    assert.equal(api.counts.config, 1);
   });
 
   it("once the link is approved, the next tool call initializes the hosted server once and goes there", async () => {
@@ -858,7 +900,7 @@ describe("fortrip mcp bridge, signed out", () => {
     const reply = await bridge.request(callTool(2));
 
     assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, error });
-    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: await hostedTools() });
+    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: contractTools() });
     assert.deepEqual(
       api.mcpRequests.map((request) => request.message.method),
       ["initialize"],
@@ -912,7 +954,7 @@ describe("fortrip mcp bridge, signed out", () => {
       }
       // The bridge is still local: ping and tools/list are answered here.
       assert.deepEqual(replies[2]?.result, {});
-      assert.deepEqual(replies[3]?.result, { tools: await hostedTools() });
+      assert.deepEqual(replies[3]?.result, { tools: contractTools() });
       const tried = api.mcpRequests.map((request) => request.message.method);
       assert.equal(tried.filter((m) => m === "initialize").length, 1);
       assert.ok(!tried.includes("tools/call"));

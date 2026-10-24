@@ -197,8 +197,9 @@ function rpcErrorOf(error: unknown): RpcError {
  * answers a tool's error (spec §6): `isError`, the rendered error and the
  * envelope as JSON text, the envelope in `_meta`, and no
  * `structuredContent`. The envelope is the hosted server's own when it
- * turned the HTTP request down with one, and the bridge's for a sign-in it
- * couldn't make: `unauthenticated`, as the hosted server answers a request
+ * turned the HTTP request down with one, Fortrip's when the API refused a
+ * step of the sign-in with one (`/v1/auth/config` answering 503, say), and
+ * the bridge's for a sign-in it couldn't make: `unauthenticated`, as the hosted server answers a request
  * without a token it takes, with no `details` (§11) and a request id of
  * the bridge's own (`local_…`): that answer is the bridge's, not Fortrip's.
  * Any other failure has no envelope: undefined.
@@ -216,6 +217,8 @@ function toolErrorOf(error: unknown) {
     };
   } else if (error instanceof SdkHttpError) {
     envelope = bodyOf(error);
+  } else if (error instanceof CliError) {
+    envelope = error.envelope;
   }
   if (!isEnvelope(envelope)) return undefined;
   return {
