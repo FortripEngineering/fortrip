@@ -29,7 +29,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://fortrip.ai/api/mcp"
+      "url": "https://mcp.fortrip.ai/"
     }
   ]
 }

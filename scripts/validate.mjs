@@ -24,7 +24,7 @@ function check(label, ok, detail = "") {
   console.log(`FAIL ${label}${detail ? ` — ${detail}` : ""}`);
 }
 
-const MCP_URL = "https://fortrip.ai/api/mcp";
+const MCP_URL = "https://mcp.fortrip.ai/";
 // The hosted MCP server's tools, for the OpenAI review test cases: the
 // contract's, from its build.
 let TOOLS = new Set();

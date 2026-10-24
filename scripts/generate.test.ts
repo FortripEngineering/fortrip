@@ -107,10 +107,8 @@ describe("pnpm generate", () => {
     assert.equal(run.status, 0, run.output);
   });
 
-  // The committed skills stay at 2.0 until the listings change (PR C), which
-  // brings back the full check here and in CI.
-  it("--check --only guide-data passes on the committed files", () => {
-    const run = generate(repo, "--check", "--only", "guide-data");
+  it("--check passes on the committed files", () => {
+    const run = generate(repo, "--check");
     assert.equal(run.status, 0, run.output);
   });
 

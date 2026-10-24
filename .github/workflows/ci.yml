@@ -58,9 +58,7 @@ jobs:
       # The skills are rendered from the contract's source: generate --check
       # fails, with a diff, when a committed skill or the embedded guide is
       # stale. It runs before the build, which rewrites the embedded guide.
-      # Until the listings move to the v1 MCP host, the committed skills stay
-      # at 2.0, so only the embedded guide is checked.
-      - run: pnpm generate --check --only guide-data
+      - run: pnpm generate --check
 
       # validate.mjs reads the contract's build.
       - run: pnpm build
