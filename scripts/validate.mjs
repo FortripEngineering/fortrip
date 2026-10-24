@@ -63,7 +63,20 @@ const server = load("plugins/registry/server.json");
 check("registry name", server.name === "io.github.FortripEngineering/fortrip", server.name);
 check("registry remote", server.remotes?.some((r) => r.url === MCP_URL), JSON.stringify(server.remotes));
 // The entry lists the package that is released, so a release has to move it.
-const registryProblems = registryEntryProblems(server, load("packages/cli/package.json"));
+// The version it must beat is the one on origin/main, when git can say.
+let published;
+try {
+  published = JSON.parse(
+    execFileSync("git", ["show", "origin/main:plugins/registry/server.json"], {
+      cwd: repo,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }),
+  );
+} catch {
+  console.log("SKIP registry version check: origin/main:plugins/registry/server.json is not readable with git");
+}
+const registryProblems = registryEntryProblems(server, load("packages/cli/package.json"), published);
 check("registry entry matches packages/cli", registryProblems.length === 0, registryProblems.join("; "));
 check("plugins/claude/.mcp.json url", load("plugins/claude/.mcp.json").mcpServers?.fortrip?.url === MCP_URL);
 // `claude plugin validate` doesn't follow a marketplace entry's source.

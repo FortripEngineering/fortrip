@@ -61,6 +61,26 @@ describe("the MCP Registry entry against packages/cli", () => {
     }
   });
 
+  it("fails when a changed entry's version is not greater than the published one", () => {
+    const published = { name: NAME, version: "1.2.0", packages: [] };
+    for (const version of ["1.2.0", "1.1.9", "0.9.0"]) {
+      const problems = registryEntryProblems(server({ version }), cli(), published);
+      assert.equal(problems.length, 1, version);
+      assert.match(problems[0] ?? "", new RegExp(`${version.replaceAll(".", "\\.")}.*not greater than 1\\.2\\.0`));
+    }
+  });
+
+  it("passes a changed entry with a greater version, compared as numbers", () => {
+    for (const version of ["1.3.0", "1.10.0", "2.0.0"]) {
+      const published = { name: NAME, version: version === "1.10.0" ? "1.9.0" : "1.2.0" };
+      assert.deepEqual(registryEntryProblems(server({ version }), cli(), published), []);
+    }
+  });
+
+  it("does not ask an entry that is the published one to raise its version", () => {
+    assert.deepEqual(registryEntryProblems(server(), cli(), server()), []);
+  });
+
   it("holds for the files in this repository", () => {
     const read = (file: string) => JSON.parse(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
     assert.deepEqual(
