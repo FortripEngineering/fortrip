@@ -496,7 +496,34 @@ describe("shape rules", () => {
   });
 });
 
-const BANNED_KEYS = ["hopId", "roomId", "ratePlanCode", "boardCode", "resourceHotelId", "dailyPrices", "bookingCode"];
+/** Every key an output schema declares. A new key fails the test below until it
+ *  is listed here, so a name from outside the public vocabulary can't slip in. */
+const PUBLIC_KEYS = new Set([
+  "address", "adults", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
+  "basis", "beds", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
+  "cancellation", "candidates", "candidatesTotal", "center", "changes", "chargeCurrency",
+  "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
+  "code", "collectedAt", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
+  "coverage", "createdAt", "currency", "current", "data", "deposit", "description", "destination",
+  "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
+  "en", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
+  "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
+  "guestsCoveredPerRoom", "hotel", "hotelId", "hotels", "hub", "hubTotal", "included", "includes",
+  "issuer", "issues", "items", "kind", "known", "label", "lat", "line", "listed", "listedShare",
+  "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
+  "manageUrl", "mandatory", "match", "matched", "max", "maxOccupancy", "meals", "members",
+  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
+  "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
+  "payAtProperty", "payment", "penalties", "perNightAllRooms", "phone", "place", "placeId",
+  "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
+  "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference",
+  "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
+  "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "scope", "scopes", "share",
+  "sort", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
+  "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
+  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "website", "window",
+  "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
+]);
 
 function propertyNames(node: JsonSchema, into = new Set<string>()): Set<string> {
   for (const [key, value] of Object.entries(node)) {
@@ -509,10 +536,15 @@ function propertyNames(node: JsonSchema, into = new Set<string>()): Set<string> 
 }
 
 describe("no supplier fields", () => {
-  it("no output schema declares a supplier key", () => {
+  it("every key an output schema declares is a listed public key", () => {
     for (const [name, schema] of Object.entries(OUTPUT_SCHEMAS)) {
-      const keys = propertyNames(jsonSchemaOf(schema));
-      for (const banned of BANNED_KEYS) assert.ok(!keys.has(banned), `${name}.${banned}`);
+      for (const key of propertyNames(jsonSchemaOf(schema))) assert.ok(PUBLIC_KEYS.has(key), `${name}.${key}`);
     }
+  });
+
+  it("every listed public key is declared by some output schema", () => {
+    const used = new Set<string>();
+    for (const schema of Object.values(OUTPUT_SCHEMAS)) for (const key of propertyNames(jsonSchemaOf(schema))) used.add(key);
+    for (const key of PUBLIC_KEYS) assert.ok(used.has(key), key);
   });
 });
