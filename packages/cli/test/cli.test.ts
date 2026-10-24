@@ -15,6 +15,7 @@ import {
   COMMANDS,
   commandInvocation,
   type CommandSpec,
+  errorEnvelope,
   GLOBAL_FLAGS,
   type RenderedTool,
   renderError,
@@ -298,7 +299,8 @@ describe("errors", () => {
     const json = await cli(["hotels", "search", "--nope", "--json"]);
     assert.equal(json.code, 2);
     const { error } = JSON.parse(json.stderr);
-    assert.deepEqual(Object.keys(error), ["code", "message", "retryable"]);
+    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId"]);
+    assert.match(error.requestId, /^local_[0-9a-f]{20}$/);
     assert.equal(error.code, "invalid_request");
     assert.match(error.message, /Unknown option '--nope'/);
     assert.equal(error.retryable, false);
@@ -307,11 +309,13 @@ describe("errors", () => {
 
   it("with --json, the CLI's own errors are envelope-shaped, its facts beside the error", async () => {
     const usage = JSON.parse((await cli(["hotels", "rates", "--json"])).stderr);
+    assert.match(usage.error.requestId, /^local_[0-9a-f]{20}$/);
     assert.deepEqual(usage, {
       error: {
         code: "invalid_request",
         message: 'Unknown command "hotels rates". Did you mean `fortrip hotels offers`?',
         retryable: false,
+        requestId: usage.error.requestId,
       },
     });
     const unsendable = await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" });
@@ -329,6 +333,20 @@ describe("errors", () => {
     assert.equal(badDir.error.code, "cli_error");
     assert.equal(badDir.error.retryable, false);
     assert.equal(requests.length, 0);
+  });
+
+  it("every local --json error parses with the contract's errorEnvelope", async () => {
+    const runs = [
+      await cli(["hotels", "search", "--nope", "--json"]),
+      await cli(["hotels", "rates", "--json"]),
+      await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" }),
+      await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" }),
+      await cli(["orders", "list", "--json"], { FORTRIP_TOKEN: "", XDG_CONFIG_HOME: "/dev/null/nope" }),
+    ];
+    for (const { stderr } of runs) {
+      const { error } = JSON.parse(stderr);
+      assert.ok(errorEnvelope.safeParse({ error }).success, stderr);
+    }
   });
 
   it("an unreachable API is retryable, said in the error", async () => {

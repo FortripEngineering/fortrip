@@ -256,10 +256,11 @@ instead, on one line. `guide` prints Markdown and `fortrip mcp` speaks MCP over
 stdio.
 
 Errors go to stderr, as text, or with `--json` as one line of JSON:
-`{ "error": { "code", "message", "retryable", … } }`, Fortrip's error envelope,
-with the CLI's own facts (`loginUrl`, `tokenSource`, `warning`) beside it. A
-request the CLI refuses to send before it asks Fortrip has an envelope of the
-same shape.
+`{ "error": { "code", "message", "retryable", "requestId", … } }`, Fortrip's
+error envelope, with the CLI's own facts (`loginUrl`, `tokenSource`, `warning`)
+beside it. An error the CLI makes itself, such as a request it refuses to send
+before it asks Fortrip, has an envelope of the same shape, with a `requestId`
+that starts with `local_`.
 
 | Code | Meaning |
 |---|---|

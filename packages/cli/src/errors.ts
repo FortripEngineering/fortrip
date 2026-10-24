@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { ERROR_CODES, renderError } from "@fortrip/agent-contract";
 
 export const EXIT = {
@@ -30,6 +32,12 @@ export class CliError extends Error {
   ) {
     super(message);
   }
+}
+
+/** The request id of an error the CLI makes itself (`local_<hex>`): the
+ *  contract's envelope requires one, and no Fortrip request was made. */
+export function localRequestId(): string {
+  return `local_${randomBytes(10).toString("hex")}`;
 }
 
 /** Said alongside a command's result, or its error, as extra fields
@@ -85,8 +93,8 @@ function issueLines(details: unknown): string[] | null {
  *
  * With `--json`, one line: `{ error, ...facts, ...notices }`, where `error`
  * is Fortrip's error object, or one shaped like it for the CLI's own
- * (`{ code, message, retryable, retryAfterSeconds?, details? }`); the other
- * facts sit beside it, as in 2.0.
+ * (`{ code, message, retryable, requestId, retryAfterSeconds?, details? }`,
+ * the request id a `local_…` one); the other facts sit beside it, as in 2.0.
  */
 export function formatError(failure: CliError, json: boolean): string {
   const fromApi = failure.envelope?.error;
@@ -97,6 +105,7 @@ export function formatError(failure: CliError, json: boolean): string {
       code: localCode(failure),
       message: failure.message,
       retryable: failure.details.retryable === true,
+      requestId: localRequestId(),
       ...Object.fromEntries(own.filter(([n]) => inError(n) && n !== "retryable")),
     };
     return JSON.stringify({ error, ...Object.fromEntries(own.filter(([n]) => !inError(n))), ...notices });

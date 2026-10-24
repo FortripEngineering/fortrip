@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import type { Readable, Writable } from "node:stream";
 
 import { CONTRACT_VERSION, renderError, renderGuide, TOOLS } from "@fortrip/agent-contract";
@@ -27,7 +26,7 @@ import type { z } from "zod";
 import { isEnvelope } from "./api.ts";
 import { refreshSession, requireToken } from "./auth.ts";
 import { loadSession } from "./credentials.ts";
-import { CliError, EXIT } from "./errors.ts";
+import { CliError, EXIT, localRequestId } from "./errors.ts";
 
 /** JSON-RPC error codes of the bridge's own answers: the user has to sign in,
  *  or Fortrip couldn't be reached or failed (the standard internal error). */
@@ -212,7 +211,7 @@ function toolErrorOf(error: unknown) {
         code: "unauthenticated",
         message: error.message,
         retryable: false,
-        requestId: `local_${randomBytes(10).toString("hex")}`,
+        requestId: localRequestId(),
       },
     };
   } else if (error instanceof SdkHttpError) {
