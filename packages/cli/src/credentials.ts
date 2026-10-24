@@ -14,10 +14,12 @@ import { homedir, hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { PUBLIC_ORIGINS } from "@fortrip/agent-contract";
+
 import { REQUEST_TIMEOUT_MS } from "./api.ts";
 import { CliError, EXIT, usageError } from "./errors.ts";
 
-export const DEFAULT_API_URL = "https://fortrip.ai";
+export const DEFAULT_API_URL: string = PUBLIC_ORIGINS.api;
 
 /** A sign-in with one API URL, as the OAuth token endpoint issued it. */
 export interface Session {
@@ -77,9 +79,11 @@ export function credentialsPath(env: NodeJS.ProcessEnv = process.env): string {
   return join(base, "fortrip", "credentials.json");
 }
 
-/** `FORTRIP_API_URL` or the production site, without a trailing slash.
- *  Plain http is allowed only for localhost so a token never crosses the
- *  network unencrypted. */
+/** `FORTRIP_API_URL` or the production API, without a trailing slash. It
+ *  may end in a path prefix (`http://localhost:3000/api/public`), which
+ *  every request path follows; a query or fragment is dropped. Plain http
+ *  is allowed only for localhost so a token never crosses the network
+ *  unencrypted. */
 export function resolveApiUrl(env: NodeJS.ProcessEnv = process.env): string {
   const raw = env.FORTRIP_API_URL?.trim() || DEFAULT_API_URL;
   let url: URL;
@@ -92,7 +96,7 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv = process.env): string {
   if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocal)) {
     throw usageError("FORTRIP_API_URL must use https (http only for localhost)");
   }
-  return url.origin;
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

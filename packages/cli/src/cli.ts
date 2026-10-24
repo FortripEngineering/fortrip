@@ -5,13 +5,23 @@ import {
   commandInvocation,
   type CommandSpec,
   GLOBAL_FLAGS,
+  type RenderedTool,
+  renderToolResult,
 } from "@fortrip/agent-contract";
 
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
 import { parseCommand, parseOptions } from "./commands.ts";
 import { resolveApiUrl } from "./credentials.ts";
-import { CliError, EXIT, type ExitCode, notices, usageError } from "./errors.ts";
+import {
+  CliError,
+  EXIT,
+  type ExitCode,
+  fieldLines,
+  formatError,
+  notices,
+  usageError,
+} from "./errors.ts";
 import { readGuide } from "./guide.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
 import { VERSION } from "./version.ts";
@@ -24,12 +34,16 @@ function globalFlag(name: string): string[] {
 
 const HELP_FLAGS = globalFlag("help");
 const VERSION_FLAGS = globalFlag("version");
+const JSON_FLAG = "--json";
 
-/** 1.x commands that 2.0 renamed, not only moved into a group, and what each
- *  became. One that kept its name in a group (`search`, now `hotels search`)
- *  is found without an entry. */
+/** Commands of earlier versions that were renamed, not only moved into a
+ *  group, and what each became: 1.x's, typed on their own, and 2.x's, typed
+ *  after their group. One that kept its name in a group (1.x `search`, now
+ *  `hotels search`) is found without an entry. */
 const RENAMED = new Map<string, Pick<CommandSpec, "group" | "name">>([
   ["hotel", { group: "hotels", name: "get" }],
+  ["rates", { group: "hotels", name: "offers" }],
+  ["hotels rates", { group: "hotels", name: "offers" }],
 ]);
 
 /** The command `argv` names and the arguments after its name, or the group
@@ -49,8 +63,11 @@ function findCommand(
       (candidate) => candidate.group === group.name && candidate.name === name,
     );
     if (!spec) {
+      const renamed = RENAMED.get(`${group.name} ${name}`);
       throw usageError(
-        `Unknown command "${group.name} ${name}". Run \`fortrip ${group.name} --help\`.`,
+        renamed
+          ? `Unknown command "${group.name} ${name}". Did you mean \`${commandInvocation(renamed)}\`?`
+          : `Unknown command "${group.name} ${name}". Run \`fortrip ${group.name} --help\`.`,
       );
     }
     return { spec, rest };
@@ -73,7 +90,11 @@ function findCommand(
   );
 }
 
-async function run(argv: string[]): Promise<unknown> {
+/** What a command printed or answers: text it wrote itself, or an answer
+ *  to print as text, or as JSON with `--json`. */
+type Answer = { data: unknown; text: string } | undefined;
+
+async function run(argv: string[]): Promise<Answer> {
   const [command] = argv;
   if (!command || command === "help" || HELP_FLAGS.includes(command)) {
     process.stdout.write(overallHelp());
@@ -112,33 +133,42 @@ async function run(argv: string[]): Promise<unknown> {
         if (process.env.FORTRIP_TOKEN) {
           log("Note: FORTRIP_TOKEN is set and takes precedence over this login.");
         }
-        return login({ apiUrl, openBrowser: !values["no-browser"], log });
+        return account(await login({ apiUrl, openBrowser: !values["no-browser"], log }));
       }
-      case "logout":
+      case "logout": {
         parseOptions(spec, rest);
-        return logout(apiUrl);
+        const data = await logout(apiUrl);
+        return { data, text: `Logged out of ${apiUrl}.` };
+      }
       case "whoami":
         parseOptions(spec, rest);
-        return whoami(apiUrl);
+        return account(await whoami(apiUrl));
       case "mcp": {
         parseOptions(spec, rest);
         // Loaded only here: the other commands needn't pay for the MCP SDK.
         const { runMcpBridge } = await import("./mcp-bridge.ts");
-        return runMcpBridge(apiUrl);
+        await runMcpBridge(apiUrl);
+        return undefined;
       }
     }
   }
-  const { body, path } = parseCommand(spec, rest, process.env);
-  return call(apiUrl, body ? "POST" : "GET", path, body);
+  const { method, path, body } = parseCommand(spec, rest, process.env);
+  const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
+  return { data, text: renderToolResult(spec.tool as RenderedTool, data) };
 }
 
-async function call(
-  apiUrl: string,
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<unknown> {
-  return unwrap(await authorizedRequest(apiUrl, path, { method, body }));
+/** `whoami`, and `login` once signed in: the account as 2.0 printed it,
+ *  `{ userId, email, name, apiUrl }`. */
+function account(data: unknown): Answer {
+  const { apiUrl, userId, email, name } = data as Record<string, unknown>;
+  const given = (value: unknown) => value ?? "not given";
+  return {
+    data,
+    text: [
+      `Signed in to ${apiUrl}.`,
+      ...fieldLines({ userId, email: given(email), name: given(name) }),
+    ].join("\n"),
+  };
 }
 
 /** `--help` or `-h` anywhere before `--`. */
@@ -150,15 +180,29 @@ function wantsHelp(args: string[]): boolean {
   return false;
 }
 
+/** `argv` without `--json`, which any command takes anywhere before `--`,
+ *  and whether it was there. */
+function takeJson(argv: string[]): { json: boolean; argv: string[] } {
+  const end = argv.indexOf("--");
+  const before = end === -1 ? argv : argv.slice(0, end);
+  const after = end === -1 ? [] : argv.slice(end);
+  const kept = before.filter((arg) => arg !== JSON_FLAG);
+  return { json: kept.length < before.length, argv: [...kept, ...after] };
+}
+
 async function main(): Promise<ExitCode> {
+  const { json, argv } = takeJson(process.argv.slice(2));
   try {
-    const result = await run(process.argv.slice(2));
-    if (result !== undefined) {
-      const output =
-        result && typeof result === "object" && !Array.isArray(result)
-          ? { ...result, ...notices }
-          : result;
-      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    const answer = await run(argv);
+    if (answer !== undefined) {
+      const { data, text } = answer;
+      if (json) {
+        const output =
+          data && typeof data === "object" && !Array.isArray(data) ? { ...data, ...notices } : data;
+        process.stdout.write(`${JSON.stringify(output)}\n`);
+      } else {
+        process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
+      }
     }
     return EXIT.ok;
   } catch (error) {
@@ -166,9 +210,7 @@ async function main(): Promise<ExitCode> {
       error instanceof CliError
         ? error
         : new CliError((error as Error)?.message ?? String(error), EXIT.error);
-    process.stderr.write(
-      `${JSON.stringify({ error: failure.message, exitCode: failure.exitCode, ...failure.details, ...notices }, null, 2)}\n`,
-    );
+    process.stderr.write(`${formatError(failure, json)}\n`);
     return failure.exitCode;
   }
 }

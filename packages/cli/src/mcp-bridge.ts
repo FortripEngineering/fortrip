@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "node:stream";
 
-import { API, CONTRACT_VERSION, renderGuide, TOOLS } from "@fortrip/agent-contract";
+import { CONTRACT_VERSION, renderGuide, TOOLS } from "@fortrip/agent-contract";
 import {
   type FetchLike,
   isJSONRPCErrorResponse,
@@ -238,6 +238,10 @@ function localServer(): McpServer {
  * sign-in that stops working mid-session fails only that request. All
  * diagnostics go to stderr.
  */
+/** Where 2.0's hosted MCP server answered, on the API URL. The bridge keeps
+ *  calling it until it moves to the MCP host. */
+const LEGACY_MCP_PATH = "/api/mcp";
+
 export async function runMcpBridge(
   apiUrl: string,
   io: { stdin: Readable; stdout: Writable; stderr?: Writable } = {
@@ -248,7 +252,7 @@ export async function runMcpBridge(
 ): Promise<void> {
   const stderr = io.stderr ?? process.stderr;
   const stdio = new StdioServerTransport(io.stdin, io.stdout);
-  const http = new StreamableHTTPClientTransport(new URL(API.mcp, apiUrl), {
+  const http = new StreamableHTTPClientTransport(new URL(LEGACY_MCP_PATH, apiUrl), {
     fetch: authorizedFetch(apiUrl),
   });
   const server = localServer();

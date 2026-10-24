@@ -10,17 +10,11 @@ import {
   COMMANDS,
   commandInvocation,
   type CommandSpec,
-  createBookingInput,
-  type FlagSpec,
-  getHotelInput,
-  getRatesInput,
-  SEARCH_SORTS,
-  searchHotelsInput,
+  LIMITS,
   TOOLS,
 } from "@fortrip/agent-contract";
-import { z } from "zod";
 
-import { parseCommand, parseGuest, parseOptions } from "../src/commands.ts";
+import { parseCommand, parseOptions } from "../src/commands.ts";
 import { CliError, EXIT } from "../src/errors.ts";
 
 function isUsage(error: unknown): boolean {
@@ -38,496 +32,570 @@ function command(name: string): CommandSpec {
   return found;
 }
 
-function body(name: string, argv: string[], env = {}) {
-  const parsed = parseCommand(command(name), argv, env);
+const parse = (name: string, argv: string[], env: NodeJS.ProcessEnv = {}) =>
+  parseCommand(command(name), argv, env);
+
+function body(name: string, argv: string[], env: NodeJS.ProcessEnv = {}) {
+  const parsed = parse(name, argv, env);
   assert.ok(parsed.body, `${name} sends a body`);
   return parsed.body;
 }
 
-/** The value at a dotted field of a request body. */
-function get(value: unknown, field: string): unknown {
-  return field
-    .split(".")
-    .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], value);
-}
-
-/** What a flag's field defaults to in its tool's input: `bookableOnly`
- *  defaults to true, so its flag sets it to false. */
-function defaultOf(spec: CommandSpec, flag: FlagSpec): unknown {
+/** The contract's input of the tool a command mirrors. */
+function inputOf(spec: CommandSpec) {
   const input = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   assert.ok(input, `${typed(spec)} has an input`);
-  const json = z.toJSONSchema(input, { io: "input" }) as {
-    properties?: Record<string, { default?: unknown }>;
-  };
-  return json.properties?.[flag.field]?.default;
+  return input;
 }
 
-/** Flags whose value the CLI reads further than the type says. */
-const SPECIAL: Record<
-  string,
-  { args: (flag: string) => string[]; expected: unknown }
-> = {
-  near: {
-    args: (flag) => [flag, "13.75, 100.5, 5"],
-    expected: { lat: 13.75, lng: 100.5, radiusKm: 5 },
-  },
-  guests: {
-    args: (flag) => [flag, "John Smith", flag, "Mary Ann Lee:2"],
-    expected: [
-      { firstName: "John", lastName: "Smith", roomNo: 1 },
-      { firstName: "Mary Ann", lastName: "Lee", roomNo: 2 },
+/** The issues of a request the CLI refused to send. */
+function issuesOf(fn: () => unknown): { pointer: string; message: string }[] {
+  try {
+    fn();
+  } catch (error) {
+    assert.ok(isUsage(error), String(error));
+    const details = (error as CliError).details.details as
+      | { issues: { pointer: string; message: string }[] }
+      | undefined;
+    assert.ok(details, "the error carries issues");
+    return details.issues;
+  }
+  assert.fail("expected a usage error");
+}
+
+// Search refuses a check-in in the past, so the dates follow the clock.
+const today = new Date().toISOString().slice(0, 10);
+const CHECK_IN = addIsoDateDays(today, 30);
+const CHECK_OUT = addIsoDateDays(today, 32);
+const STAY = ["--check-in", CHECK_IN, "--check-out", CHECK_OUT];
+
+const HOTEL = `htl_${"a1".repeat(10)}`;
+const HOTEL_2 = `htl_${"b2".repeat(10)}`;
+const OFFER = `off_${"c3".repeat(10)}`;
+const ORDER = `ord_${"d4".repeat(10)}`;
+const PLACE = "plc_1850147";
+
+const CONTACT = [
+  ...["--first-name", "John", "--last-name", "Smith"],
+  ...["--email", "john@example.com", "--phone", "+8613800000000"],
+];
+
+/**
+ * A full command line for every command that sends a request, and the
+ * request it must build. Every flag of the command appears in at least one
+ * case, so a flag added to the contract without a case here fails.
+ */
+const CASES: {
+  name: string;
+  argv: string[];
+  method: "GET" | "POST";
+  path: string;
+  body?: Record<string, unknown>;
+}[] = [
+  {
+    name: "hotels search",
+    argv: [
+      ...["--place-name", "Bangkok", "--country", "th", "--radius-meters", "5000"],
+      ...["--text", "Riverside", ...STAY, "--room", "2:6,9", "--room", "1"],
+      ...["--pricing", "indicative", "--stars-min", "4", "--stars-max", "5"],
+      ...["--amenity", "pool", "--amenity", "wifi", "--price-max-per-room-night", "149.50"],
+      ...["--sort", "price_asc", "--limit", "10", "--locale", "en", "--display-currency", "cny"],
     ],
+    method: "POST",
+    path: API.hotelSearch,
+    body: {
+      destination: { kind: "place_name", name: "Bangkok", countryCode: "TH", radiusMeters: 5000 },
+      text: "Riverside",
+      stay: {
+        checkIn: CHECK_IN,
+        checkOut: CHECK_OUT,
+        rooms: [
+          { adults: 2, childrenAges: [6, 9] },
+          { adults: 1, childrenAges: [] },
+        ],
+      },
+      pricing: "indicative",
+      filters: {
+        stars: { min: 4, max: 5 },
+        amenities: ["pool", "wifi"],
+        price: { maxPerRoomNight: { amount: "149.50", currency: "USD" } },
+      },
+      sort: "price_asc",
+      limit: 10,
+      locale: "en",
+      displayCurrency: "CNY",
+    },
   },
-  nationality: { args: (flag) => [flag, "cn"], expected: "CN" },
-  currency: { args: (flag) => [flag, "usd"], expected: "USD" },
-  boardCodes: {
-    args: (flag) => [flag, "bb, hb", flag, "fb"],
-    expected: ["BB", "HB", "FB"],
+  {
+    name: "hotels search",
+    argv: ["--place", PLACE],
+    method: "POST",
+    path: API.hotelSearch,
+    body: { destination: { kind: "place", placeId: PLACE } },
   },
-  hotelIds: {
-    args: (flag) => [flag, "266000,266001", flag, "3"],
-    expected: [266000, 266001, 3],
+  {
+    name: "hotels search",
+    argv: ["--locality", PLACE, "--sort", "distance"],
+    method: "POST",
+    path: API.hotelSearch,
+    body: { destination: { kind: "locality", placeId: PLACE }, sort: "distance" },
   },
-  childrenAges: {
-    args: (flag) => [flag, "4,6", flag, "9"],
-    expected: [4, 6, 9],
+  {
+    name: "hotels search",
+    argv: ["--point", "13.75, -100.5", "--radius-meters", "2000"],
+    method: "POST",
+    path: API.hotelSearch,
+    body: { destination: { kind: "point", location: { lat: 13.75, lng: -100.5 }, radiusMeters: 2000 } },
   },
-};
+  {
+    name: "hotels search",
+    argv: ["--country-only", "mv"],
+    method: "POST",
+    path: API.hotelSearch,
+    body: { destination: { kind: "country", countryCode: "MV" } },
+  },
+  {
+    name: "hotels search",
+    argv: ["--cursor", "abc.def", "--limit", "5"],
+    method: "POST",
+    path: API.hotelSearch,
+    body: { cursor: "abc.def", limit: 5 },
+  },
+  {
+    name: "hotels get",
+    argv: [HOTEL],
+    method: "GET",
+    path: `/v1/hotels/${HOTEL}`,
+  },
+  {
+    name: "hotels get",
+    argv: [HOTEL, "--rooms", "--locale", "zh"],
+    method: "GET",
+    path: `/v1/hotels/${HOTEL}?include=rooms&locale=zh`,
+  },
+  {
+    name: "hotels offers",
+    argv: [
+      ...["--hotel", HOTEL, "--hotel", HOTEL_2, ...STAY, "--room", "2:6", "--room", "2:6"],
+      ...["--require-breakfast", "--require-free-cancellation", "--limit-per-hotel", "3"],
+      ...["--locale", "en", "--display-currency", "usd"],
+    ],
+    method: "POST",
+    path: API.hotelOffers,
+    body: {
+      hotelIds: [HOTEL, HOTEL_2],
+      stay: {
+        checkIn: CHECK_IN,
+        checkOut: CHECK_OUT,
+        rooms: [
+          { adults: 2, childrenAges: [6] },
+          { adults: 2, childrenAges: [6] },
+        ],
+      },
+      filters: { requireBreakfast: true, requireFreeCancellation: true },
+      limitPerHotel: 3,
+      locale: "en",
+      displayCurrency: "USD",
+    },
+  },
+  {
+    name: "hotels book",
+    argv: [
+      ...["--offer", OFFER, "--guest", "1:John:Smith", "--guest", "2:Mary Ann:Lee"],
+      ...["--guest", "1:Jane:Smith", ...CONTACT, "--special-requests", "Late arrival"],
+    ],
+    method: "POST",
+    path: API.orders,
+    body: {
+      items: [
+        {
+          offerId: OFFER,
+          hotel: {
+            rooms: [
+              {
+                guests: [
+                  { firstName: "John", lastName: "Smith" },
+                  { firstName: "Jane", lastName: "Smith" },
+                ],
+              },
+              { guests: [{ firstName: "Mary Ann", lastName: "Lee" }] },
+            ],
+            specialRequests: "Late arrival",
+          },
+        },
+      ],
+      contact: {
+        firstName: "John",
+        lastName: "Smith",
+        email: "john@example.com",
+        phone: "+8613800000000",
+      },
+    },
+  },
+  {
+    name: "orders get",
+    argv: [ORDER, "--locale", "zh"],
+    method: "GET",
+    path: `/v1/orders/${ORDER}?locale=zh`,
+  },
+  {
+    name: "orders get",
+    argv: [ORDER],
+    method: "GET",
+    path: `/v1/orders/${ORDER}`,
+  },
+  {
+    name: "orders list",
+    argv: ["--cursor", "a b/c", "--limit", "5", "--locale", "en"],
+    method: "GET",
+    path: "/v1/orders?cursor=a+b%2Fc&limit=5&locale=en",
+  },
+  {
+    name: "orders list",
+    argv: [],
+    method: "GET",
+    path: "/v1/orders",
+  },
+];
 
-/** The arguments that give `flag` a value, and the field value they mean. */
-function sample(spec: CommandSpec, flag: FlagSpec, name: string) {
-  const special = SPECIAL[flag.field];
-  if (special) return { args: special.args(name), expected: special.expected };
-  if (flag.type === "boolean") {
-    return { args: [name], expected: defaultOf(spec, flag) === true ? false : true };
-  }
-  const [one, two] =
-    flag.type === "string" ? ["text one", "text two"] : ["7", "8"];
-  const convert = (value: string | undefined) =>
-    flag.type === "string" ? value : Number(value);
-  return flag.multiple
-    ? { args: [name, one!, name, two!], expected: [convert(one), convert(two)] }
-    : { args: [name, one!], expected: convert(one) };
-}
+const SENDING = COMMANDS.filter((spec) => spec.group !== null);
 
-/** Arguments that satisfy what a command needs besides the flag under test. */
-function baseArgs(spec: CommandSpec): string[] {
-  const needsOccupancy = ["rooms", "adults"].every((field) =>
-    spec.flags.some((flag) => flag.field === field),
-  );
-  return [
-    ...(spec.tool === "get_hotel" ? ["5"] : []),
-    ...(needsOccupancy ? ["--body", '{"rooms":1,"adults":1}'] : []),
-  ];
-}
-
-const API_COMMANDS = COMMANDS.filter((spec) => spec.group === "hotels");
-
-describe("every COMMANDS flag parses into its field", () => {
-  for (const spec of API_COMMANDS) {
-    for (const flag of spec.flags) {
-      const names: [string, string][] = [[`--${flag.flag}`, "long"]];
-      if (flag.short) names.push([`-${flag.short}`, "short"]);
-      for (const [name, kind] of names) {
-        it(`${typed(spec)} ${name} (${kind}) → ${flag.field}`, () => {
-          const { args, expected } = sample(spec, flag, name);
-          const parsed = parseCommand(spec, [...baseArgs(spec), ...args], {});
-          if (spec.tool === "get_hotel") {
-            assert.equal(parsed.body, undefined);
-            assert.equal(parsed.path, API.hotel(5, expected === true));
-          } else {
-            assert.deepEqual(get(parsed.body, flag.field), expected);
-          }
-        });
+describe("every command builds the request the contract accepts", () => {
+  for (const { name, argv, method, path, body: expected } of CASES) {
+    it(`${name} ${argv.join(" ")}`, () => {
+      const request = parse(name, argv);
+      assert.equal(request.method, method);
+      assert.equal(request.path, path);
+      assert.deepEqual(request.body, expected);
+      if (expected) {
+        const parsed = inputOf(command(name)).safeParse(expected);
+        assert.ok(parsed.success, JSON.stringify(parsed.error?.issues));
       }
-    }
+    });
   }
 
-  it("the table covers every flag of the hotels commands", () => {
-    assert.deepEqual(API_COMMANDS.map(typed), [
+  it("the cases cover every command that sends a request, and every flag", () => {
+    assert.deepEqual(SENDING.map(typed), [
       "hotels search",
       "hotels get",
-      "hotels rates",
+      "hotels offers",
       "hotels book",
+      "orders get",
+      "orders list",
     ]);
-    for (const spec of API_COMMANDS) assert.ok(spec.flags.length > 0, typed(spec));
-  });
-
-  it("only hotel ids, child ages and meal codes are comma lists", () => {
-    // A facility name or a guest may hold a comma; a new multi-value flag
-    // has to be placed in one group or the other here.
-    const lists = new Set(["hotelIds", "childrenAges", "boardCodes"]);
-    const asGiven = new Set(["facilities", "guests"]);
-    for (const spec of API_COMMANDS) {
-      for (const flag of spec.flags.filter((f) => f.multiple)) {
-        assert.ok(lists.has(flag.field) || asGiven.has(flag.field), flag.field);
+    for (const spec of SENDING) {
+      const argvs = CASES.filter((c) => c.name === typed(spec)).map((c) => c.argv);
+      assert.ok(argvs.length > 0, typed(spec));
+      for (const flag of spec.flags) {
+        assert.ok(
+          argvs.some((argv) => argv.includes(`--${flag.flag}`)),
+          `${typed(spec)}: no case for --${flag.flag}`,
+        );
       }
     }
-    assert.deepEqual(body("hotels search", ["--facility", "Pool, Gym"]).facilities, ["Pool, Gym"]);
-  });
-});
-
-describe("endpoints come from the contract", () => {
-  it("hotels search, rates and book post to their API paths", () => {
-    assert.equal(parseCommand(command("hotels search"), ["-q", "Bangkok"], {}).path, API.search);
-    assert.equal(
-      parseCommand(command("hotels rates"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {})
-        .path,
-      API.rates,
-    );
-    assert.equal(
-      parseCommand(command("hotels book"), ["--hotel", "1", "--rooms", "1", "--adults", "2"], {})
-        .path,
-      API.bookings,
-    );
   });
 
-  it("hotels get is a GET of API.hotel with or without the rooms", () => {
-    for (const [argv, includeRooms] of [
-      [["266000"], false],
-      [["266000", "--with-rooms"], true],
-      [["--with-rooms", "266000"], true],
-    ] as const) {
-      const parsed = parseCommand(command("hotels get"), [...argv], {});
-      assert.equal(parsed.path, API.hotel(266000, includeRooms));
-      assert.equal(parsed.body, undefined);
-    }
-  });
-
-  it("hotels get needs exactly one numeric id", () => {
-    for (const argv of [[], ["abc"], ["1", "2"], ["0x10"], ["1e3"], ["-1"], ["9007199254740993"]]) {
-      assert.throws(() => parseCommand(command("hotels get"), argv, {}), isUsage, argv.join(" "));
-    }
-    assert.throws(
-      () => parseCommand(command("hotels get"), [], {}),
-      (error) =>
-        isUsage(error) &&
-        (error as Error).message === "Usage: fortrip hotels get <hotelId> [options]",
-    );
-    assert.equal(parseCommand(command("hotels get"), ["0012"], {}).path, API.hotel(12));
+  it("paths come from the contract", () => {
+    assert.equal(parse("hotels get", [HOTEL, "--rooms"]).path, API.hotel(HOTEL, { rooms: true }));
+    assert.equal(parse("orders get", [ORDER]).path, API.order(ORDER));
+    assert.ok(parse("orders list", []).path.startsWith(API.orders));
   });
 
   it("a command that sends no request has nothing to parse", () => {
     for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
-      assert.throws(() => parseCommand(command(name), [], {}), /sends no request/);
+      assert.throws(() => parse(name, []), /sends no request/);
     }
-  });
-
-  it("a usage error names the command as it is typed", () => {
-    assert.throws(
-      () => body("hotels search", ["Bangkok"]),
-      (error) => isUsage(error) && /^fortrip hotels search takes no arguments/.test((error as Error).message),
-    );
-    assert.throws(
-      () => body("hotels rates", ["--adults", "2"]),
-      (error) => isUsage(error) && /^fortrip hotels rates needs --rooms,/.test((error as Error).message),
-    );
   });
 });
 
-describe("hotels search", () => {
-  it("maps flags onto the API body", () => {
+describe("a request the contract refuses is not sent", () => {
+  it("exits 2 with each bad field as an invalid_request issue", () => {
+    const issues = issuesOf(() =>
+      parse("hotels offers", ["--hotel", "266000", ...STAY, "--room", "2", "--limit-per-hotel", "99"]),
+    );
     assert.deepEqual(
-      body("hotels search", [
-        "-q",
-        "Bangkok",
-        "--check-in",
-        "2026-11-10",
-        "--check-out",
-        "2026-11-12",
-        "--near",
-        "13.7, 100.5, 5",
-        "--facility",
-        "Swimming pool",
-        "--facility",
-        "Parking",
-        "--star-min",
-        "4",
-        "--sort",
-        "price-asc",
+      issues.map((issue) => issue.pointer),
+      ["/hotelIds/0", "/limitPerHotel"],
+    );
+    assert.match(issues[0]?.message ?? "", /htl_/);
+  });
+
+  it("the error lists the issues as the API's invalid_request would", () => {
+    try {
+      parse("hotels search", []);
+      assert.fail("expected a usage error");
+    } catch (error) {
+      assert.ok(isUsage(error));
+      assert.equal((error as Error).message, "Not sent: fortrip hotels search was given an invalid request.");
+      assert.equal((error as CliError).envelope, undefined);
+      assert.deepEqual((error as CliError).details, {
+        details: { issues: [{ pointer: "/destination", message: "Provide a destination or text" }] },
+      });
+    }
+  });
+
+  it("a --body field the input doesn't take is refused, one issue per field", () => {
+    const issues = issuesOf(() =>
+      parse("hotels book", [
+        "--body",
+        '{"nationality":"CN","currency":"USD"}',
+        ...["--offer", OFFER, "--guest", "1:A:B", ...CONTACT],
       ]),
-      {
-        query: "Bangkok",
-        checkIn: "2026-11-10",
-        checkOut: "2026-11-12",
-        near: { lat: 13.7, lng: 100.5, radiusKm: 5 },
-        facilities: ["Swimming pool", "Parking"],
-        starMin: 4,
-        sortBy: "price-asc",
-      },
     );
-  });
-
-  it("flags override --body fields; omitted flags keep them", () => {
-    assert.deepEqual(
-      body("hotels search", ["--body", '{"query":"Tokyo","pageSize":5}', "--query", "Osaka"]),
-      { query: "Osaka", pageSize: 5 },
-    );
-  });
-
-  it("--body @file reads the file", async () => {
-    const file = join(await mkdtemp(join(tmpdir(), "fortrip-body-")), "body.json");
-    await writeFile(file, '{"query":"Tokyo","page":2}');
-    assert.deepEqual(body("hotels search", ["--body", `@${file}`, "--page", "3"]), {
-      query: "Tokyo",
-      page: 3,
-    });
-    assert.throws(() => body("hotels search", ["--body", `@${file}.missing`]), isUsage);
-  });
-
-  it("rejects bad numbers, a bad --near and non-object bodies", () => {
-    for (const argv of [
-      ["--star-min", "four"],
-      ["--star-min", ""],
-      ["--near", "13.7,100.5"],
-      ["--near", "13.7,100.5,5,6"],
-      ["--near", "13.7,,5"],
-      ["--near", "a,b,c"],
-      ["--body", "[1,2]"],
-      ["--body", "not json"],
-    ]) {
-      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
-    }
-  });
-
-  it("unknown flags and stray arguments are usage errors", () => {
-    for (const argv of [["--nope"], ["Bangkok"], ["--with-rooms"]]) {
-      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
-    }
-  });
-
-  it("a single-value flag given twice is a usage error", () => {
-    for (const argv of [
-      ["--query", "Bangkok", "--query", "Phuket"],
-      ["-q", "Bangkok", "--query", "Phuket"],
-      ["--city-code", "1", "--city-code=2"],
-    ]) {
-      assert.throws(() => body("hotels search", argv), isUsage, argv.join(" "));
-    }
-    assert.deepEqual(body("hotels search", ["--facility", "Parking", "--facility", "Gym"]).facilities, [
-      "Parking",
-      "Gym",
+    assert.deepEqual(issues, [
+      { pointer: "/nationality", message: "Unknown field: nationality" },
+      { pointer: "/currency", message: "Unknown field: currency" },
     ]);
   });
 
-  it("--city-code takes digits only", () => {
-    for (const code of ["0x10", "1e3", "12.0", "-1", ""]) {
-      assert.throws(() => body("hotels search", [`--city-code=${code}`]), isUsage, code);
-    }
-    assert.equal(body("hotels search", ["--city-code", "0012"]).cityCode, 12);
-  });
-});
-
-describe("hotels rates", () => {
-  const STAY = ["--rooms", "1", "--adults", "2"];
-
-  it("accepts repeated or comma-separated ids, and reads the rest as given", () => {
+  it("a GET's fields point into its path or query, as the API's do", () => {
     assert.deepEqual(
-      body("hotels rates", [
-        "--hotel",
-        "266000,266001",
-        "--hotel",
-        "3",
-        "--check-in",
-        "2026-11-10",
-        "--check-out",
-        "2026-11-12",
-        ...STAY,
-        "--board",
-        "bb,hb",
-        "--free-cancellation",
-        "--include-unbookable",
-        "--nationality",
-        "cn",
-      ]),
-      {
-        hotelIds: [266000, 266001, 3],
-        checkIn: "2026-11-10",
-        checkOut: "2026-11-12",
-        rooms: 1,
-        adults: 2,
-        nationality: "CN",
-        boardCodes: ["BB", "HB"],
-        freeCancellation: true,
-        bookableOnly: false,
-      },
+      issuesOf(() => parse("hotels get", ["266000", "--locale", "fr"])).map((issue) => issue.pointer),
+      ["/path/hotelId", "/query/locale"],
+    );
+    assert.deepEqual(
+      issuesOf(() => parse("orders list", ["--limit", "0"])).map((issue) => issue.pointer),
+      ["/query/limit"],
     );
   });
 
-  it("--include-unbookable is the only way bookableOnly is sent", () => {
-    assert.equal("bookableOnly" in body("hotels rates", STAY), false);
+  it("a check-in in the past, and mixed rooms in offers", () => {
+    const yesterday = addIsoDateDays(today, -2);
+    assert.deepEqual(
+      issuesOf(() =>
+        parse("hotels search", ["--text", "x", "--check-in", yesterday, "--check-out", today, "--room", "1"]),
+      ).map((issue) => issue.pointer),
+      ["/stay/checkIn"],
+    );
+    // Offers take one party per call; mixed rooms are the API's answer
+    // (stay_unsupported), not a local refusal: the contract accepts them.
+    assert.equal(
+      parse("hotels offers", ["--hotel", HOTEL, ...STAY, "--room", "2", "--room", "1"]).method,
+      "POST",
+    );
   });
 
-  it("hotel ids are digits only", () => {
-    for (const ids of ["0x10", "266000,1e3", "266000,", "9007199254740993"]) {
-      assert.throws(() => body("hotels rates", ["--hotel", ids, ...STAY]), isUsage, ids);
+  it("ids must have their prefix", () => {
+    for (const [name, argv] of [
+      ["hotels get", ["266000"]],
+      ["orders get", ["ao_1"]],
+      ["hotels search", ["--place", "1850147"]],
+    ] as const) {
+      assert.throws(() => parse(name, [...argv]), isUsage, `${name} ${argv.join(" ")}`);
     }
   });
+});
 
-  it("has no occupancy defaults: --rooms and --adults are required", () => {
-    for (const argv of [
-      [],
-      ["--rooms", "2"],
-      ["--adults", "2"],
-      ["--body", '{"rooms":2}'],
-      ["--hotel", "1", "--check-in", "2026-11-10"],
-    ]) {
+describe("flags", () => {
+  it("--room is adults or adults:age,age", () => {
+    assert.deepEqual(body("hotels search", ["--text", "x", ...STAY, "--room", "2:6,9"]).stay, {
+      checkIn: CHECK_IN,
+      checkOut: CHECK_OUT,
+      rooms: [{ adults: 2, childrenAges: [6, 9] }],
+    });
+    assert.deepEqual(
+      (body("hotels search", ["--text", "x", ...STAY, "--room", " 3 : 0 , 17 "]).stay as { rooms: unknown })
+        .rooms,
+      [{ adults: 3, childrenAges: [0, 17] }],
+    );
+    for (const bad of ["", "two", "2:", "2:6,", "2:a", "-1", "2:-3", "2.5", "0x2"]) {
       assert.throws(
-        () => body("hotels rates", argv),
-        (error) => isUsage(error) && /--rooms|--adults/.test((error as Error).message),
-        argv.join(" "),
+        () => parse("hotels search", ["--text", "x", ...STAY, "--room", bad]),
+        (error) => isUsage(error) && /--room/.test((error as Error).message),
+        JSON.stringify(bad),
       );
     }
   });
 
-  it("takes rooms and adults from --body, and flags override them", () => {
-    const fromBody = body("hotels rates", ["--body", '{"rooms":2,"adults":3}']);
-    assert.equal(fromBody.rooms, 2);
-    assert.equal(fromBody.adults, 3);
-    const overridden = body("hotels rates", ["--body", '{"rooms":2,"adults":3}', "--adults", "1"]);
-    assert.equal(overridden.rooms, 2);
-    assert.equal(overridden.adults, 1);
+  it("--guest room:first:last lands in that room's guests", () => {
+    const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:John:Smith", ...CONTACT]);
+    assert.deepEqual(sent.items, [
+      { offerId: OFFER, hotel: { rooms: [{ guests: [{ firstName: "John", lastName: "Smith" }] }] } },
+    ]);
+    const rooms = (
+      body("hotels book", ["--offer", OFFER, "--guest", " 2 : Mary Ann : Lee ", "--guest", "1:A:B", ...CONTACT])
+        .items as { hotel: { rooms: unknown } }[]
+    )[0]?.hotel.rooms;
+    assert.deepEqual(rooms, [
+      { guests: [{ firstName: "A", lastName: "B" }] },
+      { guests: [{ firstName: "Mary Ann", lastName: "Lee" }] },
+    ]);
   });
-});
 
-describe("hotels book", () => {
-  it("parses guests: last word is the last name, optional :roomNo", () => {
-    assert.deepEqual(parseGuest("John Smith"), {
-      firstName: "John",
-      lastName: "Smith",
-      roomNo: 1,
-    });
-    assert.deepEqual(parseGuest("Mary Ann Lee:2"), {
-      firstName: "Mary Ann",
-      lastName: "Lee",
-      roomNo: 2,
-    });
-    for (const bad of ["Cher", "Cher:2", ""]) {
-      assert.throws(() => parseGuest(bad), isUsage, bad);
+  it("--guest refuses a bad form, a skipped room and a room past the limit", () => {
+    for (const guests of [
+      ["John Smith"],
+      ["1:John"],
+      ["1:John:Smith:Jr"],
+      ["x:John:Smith"],
+      ["0:John:Smith"],
+      ["2:John:Smith"],
+      ["1:A:B", "3:C:D"],
+      [`${LIMITS.rooms + 1}:A:B`],
+      ["1000000000:A:B"],
+    ]) {
+      assert.throws(
+        () => parse("hotels book", ["--offer", OFFER, ...guests.flatMap((g) => ["--guest", g]), ...CONTACT]),
+        (error) => isUsage(error) && /--guest/.test((error as Error).message),
+        guests.join(" "),
+      );
     }
   });
 
-  it("maps flags onto the bookings body", () => {
+  it("--point is lat,lng", () => {
+    for (const bad of ["13.7", "13.7,100.5,5", "a,b", "13.7,", "0x10,1", "1e3,1"]) {
+      assert.throws(
+        () => parse("hotels search", ["--point", bad]),
+        (error) => isUsage(error) && /--point/.test((error as Error).message),
+        bad,
+      );
+    }
+  });
+
+  it("numbers are decimal numbers", () => {
+    for (const bad of ["four", "", "0x10", "1e3", "Infinity"]) {
+      assert.throws(
+        () => parse("hotels search", ["--text", "x", "--limit", bad]),
+        (error) => isUsage(error) && /--limit/.test((error as Error).message),
+        bad,
+      );
+    }
+  });
+
+  it("flags that pick different destinations can't be given together", () => {
+    for (const [one, two] of [
+      [["--place-name", "Bangkok", "--country", "TH"], ["--place", PLACE]],
+      [["--place", PLACE], ["--locality", PLACE]],
+      [["--point", "1,2"], ["--country-only", "TH"]],
+      [["--country", "TH"], ["--country-only", "TH"]],
+    ]) {
+      assert.throws(
+        () => parse("hotels search", [...one!, ...two!]),
+        (error) =>
+          isUsage(error) &&
+          /can't be given together/.test((error as Error).message) &&
+          (error as Error).message.includes(two![0]!),
+        [...one!, ...two!].join(" "),
+      );
+    }
+    // Flags of one variant go together.
+    assert.deepEqual(body("hotels search", ["--place-name", "Kyoto", "--country", "JP"]).destination, {
+      kind: "place_name",
+      name: "Kyoto",
+      countryCode: "JP",
+    });
+  });
+
+  it("a flag's variant replaces another variant from --body", () => {
     assert.deepEqual(
-      body("hotels book", [
-        "--hotel",
-        "266000",
-        "--room-id",
-        "9191658",
-        "--rate-plan",
-        "rp_1",
-        "--check-in",
-        "2026-11-10",
-        "--check-out",
-        "2026-11-12",
-        "--rooms",
-        "1",
-        "--adults",
-        "2",
-        "--guest",
-        "John Smith",
-        "--contact-name",
-        "John Smith",
-        "--contact-phone",
-        "+8613800000000",
-      ]),
-      {
-        hotelId: 266000,
-        roomId: "9191658",
-        ratePlanCode: "rp_1",
-        checkIn: "2026-11-10",
-        checkOut: "2026-11-12",
-        rooms: 1,
-        adults: 2,
-        guests: [{ firstName: "John", lastName: "Smith", roomNo: 1 }],
-        contactName: "John Smith",
-        contactPhone: "+8613800000000",
-      },
+      body("hotels search", ["--body", `{"destination":{"kind":"place","placeId":"${PLACE}"}}`, "--point", "1,2"])
+        .destination,
+      { kind: "point", location: { lat: 1, lng: 2 } },
+    );
+    // The same variant is merged into.
+    assert.deepEqual(
+      body("hotels search", ["--body", '{"destination":{"kind":"place_name","name":"Kyoto"}}', "--country", "jp"])
+        .destination,
+      { kind: "place_name", name: "Kyoto", countryCode: "JP" },
     );
   });
 
-  it("requires --rooms and --adults, from flags or --body", () => {
+  it("unknown flags, stray arguments and a single-value flag given twice are usage errors", () => {
     for (const argv of [
-      [],
-      ["--rooms", "2"],
-      ["--adults", "2"],
-      ["--body", '{"rooms":2}'],
+      ["--query", "Bangkok"],
+      ["Bangkok"],
+      ["--text", "a", "--text", "b"],
+      ["--text", "a", "--text=b"],
     ]) {
-      assert.throws(() => body("hotels book", argv), isUsage, argv.join(" "));
+      assert.throws(() => parse("hotels search", argv), isUsage, argv.join(" "));
     }
-    const merged = body("hotels book", ["--body", '{"rooms":2,"adults":3}', "--adults", "2"]);
-    assert.equal(merged.rooms, 2);
-    assert.equal(merged.adults, 2);
-  });
-
-  it("--hotel takes digits only, and once", () => {
-    const stay = ["--rooms", "1", "--adults", "2"];
-    assert.throws(() => body("hotels book", ["--hotel", "0x10", ...stay]), isUsage);
-    assert.throws(() => body("hotels book", ["--hotel", "1", "--hotel", "2", ...stay]), isUsage);
-    assert.throws(() => body("hotels book", ["--rooms", "1", "--rooms", "2", "--adults", "2"]), isUsage);
-    assert.equal(body("hotels book", ["--hotel", "0012", ...stay]).hotelId, 12);
-  });
-
-  it("never takes a currency: it charges the one it returns", () => {
-    const stay = ["--rooms", "1", "--adults", "2"];
-    assert.equal("currency" in body("hotels book", stay, { FORTRIP_CURRENCY: "USD" }), false);
-    assert.throws(() => body("hotels book", [...stay, "--currency", "USD"]), isUsage);
+    for (const argv of [[], [HOTEL, HOTEL_2]]) {
+      assert.throws(
+        () => parse("hotels get", argv),
+        (error) => isUsage(error) && (error as Error).message === "Usage: fortrip hotels get <hotelId> [options]",
+        argv.join(" "),
+      );
+    }
   });
 });
 
-describe("currency", () => {
-  const env = { FORTRIP_CURRENCY: " usd " };
-  const stay = ["--rooms", "1", "--adults", "2"];
+describe("--body", () => {
+  it("flags override its fields; fields no flag sets are kept", () => {
+    assert.deepEqual(
+      body("hotels search", ["--body", '{"text":"Tokyo","limit":5}', "--text", "Osaka"]),
+      { text: "Osaka", limit: 5 },
+    );
+    assert.deepEqual(
+      body("hotels book", [
+        "--body",
+        `{"items":[{"offerId":"${OFFER}","hotel":{"rooms":[{"guests":[{"firstName":"A","lastName":"B"}]}],"specialRequests":"Quiet"}}]}`,
+        "--guest",
+        "1:John:Smith",
+        ...CONTACT,
+      ]).items,
+      [
+        {
+          offerId: OFFER,
+          hotel: { rooms: [{ guests: [{ firstName: "John", lastName: "Smith" }] }], specialRequests: "Quiet" },
+        },
+      ],
+    );
+  });
 
-  it("--currency beats --body, which beats FORTRIP_CURRENCY", () => {
-    assert.equal(body("hotels rates", [...stay, "--currency", "cny"], env).currency, "CNY");
-    assert.equal(body("hotels search", ["--body", '{"currency":"CNY"}'], env).currency, "CNY");
-    assert.equal(body("hotels search", [], env).currency, "USD");
+  it("@file reads the file", async () => {
+    const file = join(await mkdtemp(join(tmpdir(), "fortrip-body-")), "body.json");
+    await writeFile(file, '{"text":"Tokyo","limit":2}');
+    assert.deepEqual(body("hotels search", ["--body", `@${file}`, "--limit", "3"]), {
+      text: "Tokyo",
+      limit: 3,
+    });
+    assert.throws(() => body("hotels search", ["--body", `@${file}.missing`]), isUsage);
+  });
+
+  it("must be a JSON object", () => {
+    for (const raw of ["[1,2]", "not json", "null", "3"]) {
+      assert.throws(() => body("hotels search", ["--body", raw]), isUsage, raw);
+    }
+  });
+});
+
+describe("display currency", () => {
+  const SEARCH = ["--text", "x"];
+  const OFFERS = ["--hotel", HOTEL, ...STAY, "--room", "2"];
+
+  it("FORTRIP_DISPLAY_CURRENCY is the default of search and offers", () => {
+    const env = { FORTRIP_DISPLAY_CURRENCY: " cny " };
+    assert.equal(body("hotels search", SEARCH, env).displayCurrency, "CNY");
+    assert.equal(body("hotels offers", OFFERS, env).displayCurrency, "CNY");
+  });
+
+  it("--display-currency beats --body, which beats the environment", () => {
+    const env = { FORTRIP_DISPLAY_CURRENCY: "CNY" };
+    assert.equal(body("hotels search", [...SEARCH, "--display-currency", "usd"], env).displayCurrency, "USD");
     assert.equal(
-      body("hotels search", ["--body", '{"currency":"CNY"}', "--currency", "usd"]).currency,
+      body("hotels search", [...SEARCH, "--body", '{"displayCurrency":"USD"}'], env).displayCurrency,
       "USD",
     );
   });
 
-  it("rejects a blank --currency instead of falling back", () => {
-    for (const blank of ["", "  "]) {
-      assert.throws(() => body("hotels rates", [...stay, "--currency", blank], env), isUsage);
-      assert.throws(() => body("hotels search", ["--currency", blank], env), isUsage);
-    }
+  it("FORTRIP_CURRENCY is no longer read, and a blank variable sets nothing", () => {
+    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_CURRENCY: "CNY" }), false);
+    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
   });
 
-  it("is left to the API default when nothing sets it", () => {
-    assert.equal("currency" in body("hotels rates", stay, {}), false);
-    assert.equal("currency" in body("hotels search", [], { FORTRIP_CURRENCY: " " }), false);
-  });
-});
-
-describe("fields", () => {
-  const DOTTED: CommandSpec = {
-    group: "hotels",
-    name: "search",
-    summary: "",
-    tool: "search_hotels",
-    flags: [
-      { flag: "lat", field: "near.lat", type: "number", placeholder: "<n>", description: "" },
-      { flag: "lng", field: "near.lng", type: "number", placeholder: "<n>", description: "" },
-    ],
-    options: [{ flag: "body", type: "string", description: "" }],
-  };
-
-  it("a dotted field steps into an object, keeping what --body put there", () => {
-    assert.deepEqual(
-      parseCommand(DOTTED, ["--lat", "1", "--lng", "2", "--body", '{"near":{"radiusKm":5}}'], {})
-        .body,
-      { near: { radiusKm: 5, lat: 1, lng: 2 } },
-    );
-    assert.deepEqual(parseCommand(DOTTED, ["--lat", "1"], {}).body, { near: { lat: 1 } });
+  it("an unknown currency is refused, not sent", () => {
+    assert.throws(() => body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: "EUR" }), isUsage);
+    assert.throws(() => body("hotels search", [...SEARCH, "--display-currency", ""]), isUsage);
   });
 
-  it("a flag whose parent in --body is not an object replaces it", () => {
-    assert.deepEqual(
-      parseCommand(DOTTED, ["--lat", "1", "--body", '{"near":"here"}'], {}).body,
-      { near: { lat: 1 } },
+  it("orders never take one: they are charged in USD", () => {
+    const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT], {
+      FORTRIP_DISPLAY_CURRENCY: "CNY",
+    });
+    assert.equal("displayCurrency" in sent, false);
+    assert.throws(
+      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--display-currency", "CNY"]),
+      isUsage,
     );
   });
 });
@@ -549,97 +617,5 @@ describe("parseOptions", () => {
     ] as const) {
       assert.throws(() => parseOptions(command(name), [...argv]), isUsage, `${name} ${argv}`);
     }
-  });
-});
-
-describe("a full command line builds the request the contract accepts", () => {
-  // Search refuses a check-in in the past, so the dates follow the clock.
-  const today = new Date().toISOString().slice(0, 10);
-  const STAY = ["--check-in", addIsoDateDays(today, 30), "--check-out", addIsoDateDays(today, 32)];
-
-  /** Every flag of the command is in `argv`, so a flag added to the contract
-   *  without a case here fails this test. */
-  function assertFull(spec: CommandSpec, argv: string[]) {
-    for (const flag of spec.flags) {
-      assert.ok(argv.includes(`--${flag.flag}`), `${typed(spec)}: no case for --${flag.flag}`);
-    }
-  }
-
-  /** The body is exactly what the schema accepts, and says what was typed. */
-  function assertAccepted(
-    schema: { safeParse(input: unknown): { success: boolean; data?: unknown; error?: unknown } },
-    sent: Record<string, unknown>,
-  ) {
-    const parsed = schema.safeParse(sent);
-    assert.ok(parsed.success, JSON.stringify(parsed.error));
-    for (const [field, value] of Object.entries(sent)) {
-      assert.deepEqual((parsed.data as Record<string, unknown>)[field], value, field);
-    }
-  }
-
-  it("hotels search", () => {
-    const spec = command("hotels search");
-    const argv = [
-      ...["--query", "Bangkok", "--city-code", "1234", "--near", "13.75,100.5,5"],
-      ...STAY,
-      ...["--star-min", "3", "--star-max", "5", "--facility", "Parking", "--facility", "Swimming pool"],
-      ...["--price-min", "50", "--price-max", "500", "--sort", SEARCH_SORTS[0] as string],
-      ...["--page", "2", "--page-size", "10", "--currency", "usd"],
-    ];
-    assertFull(spec, argv);
-    assertAccepted(searchHotelsInput, body("hotels search", argv));
-  });
-
-  it("hotels get", () => {
-    const spec = command("hotels get");
-    const argv = ["266000", "--with-rooms"];
-    assertFull(spec, argv);
-    // The GET carries the id in its path and the flag in its query.
-    for (const [args, includeRooms] of [
-      [argv, true],
-      [["266000"], false],
-    ] as const) {
-      const { path, body: sent } = parseCommand(spec, [...args], {});
-      assert.equal(sent, undefined);
-      const url = new URL(path, "https://fortrip.test");
-      assert.equal(path, API.hotel(266000, includeRooms));
-      const parsed = getHotelInput.safeParse({
-        hotelId: url.pathname.split("/").pop(),
-        ...(url.searchParams.get("include") === "rooms" ? { includeRooms: true } : {}),
-      });
-      assert.ok(parsed.success, JSON.stringify(parsed.error));
-      assert.equal(parsed.data.hotelId, 266000);
-      assert.equal(parsed.data.includeRooms ?? false, includeRooms);
-    }
-  });
-
-  it("hotels rates", () => {
-    const spec = command("hotels rates");
-    const argv = [
-      ...["--hotel", "266000,266001", "--hotel", "3"],
-      ...STAY,
-      ...["--rooms", "2", "--adults", "2", "--child-age", "4,6", "--child-age", "9"],
-      ...["--nationality", "cn", "--board", "bb,hb", "--board", "fb", "--free-cancellation"],
-      ...["--include-unbookable", "--max-rooms", "3", "--currency", "usd"],
-    ];
-    assertFull(spec, argv);
-    const sent = body("hotels rates", argv);
-    assertAccepted(getRatesInput, sent);
-    // The inverted flag reaches the schema as false, not as its default.
-    assert.equal(sent.bookableOnly, false);
-  });
-
-  it("hotels book", () => {
-    const spec = command("hotels book");
-    const argv = [
-      ...["--hotel", "266000", "--room-id", "9191658", "--rate-plan", "rp_1"],
-      ...STAY,
-      ...["--rooms", "2", "--adults", "2", "--child-age", "7"],
-      ...["--guest", "John Smith", "--guest", "Mary Ann Lee:2"],
-      ...["--contact-name", "John Smith", "--contact-phone", "+8613800000000"],
-      ...["--contact-email", "john@example.com", "--special-requests", "Late arrival"],
-    ];
-    assertFull(spec, argv);
-    assertAccepted(createBookingInput, body("hotels book", argv));
   });
 });

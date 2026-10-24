@@ -1,4 +1,6 @@
-import { CliError, EXIT } from "./errors.ts";
+import { ERROR_CODES } from "@fortrip/agent-contract";
+
+import { CliError, EXIT, type ErrorEnvelope, type ExitCode } from "./errors.ts";
 import { VERSION } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
@@ -13,11 +15,15 @@ export const OAUTH_TIMEOUT_MS = 30_000;
 
 export interface ApiResponse {
   status: number;
-  body: Record<string, unknown>;
+  /** The parsed JSON; null when the answer wasn't JSON. */
+  body: unknown;
   headers: Headers;
+  /** The start of an answer that wasn't JSON, for the error. */
+  raw?: string;
 }
 
-/** One JSON request to the Fortrip API; never throws on HTTP status. */
+/** One JSON request to the Fortrip API; never throws on HTTP status.
+ *  `apiUrl` may end in a path prefix, which `path` follows. */
 export async function request(
   apiUrl: string,
   path: string,
@@ -52,20 +58,11 @@ export async function request(
   } catch (error) {
     throw transportError(apiUrl, error, response.status);
   }
-  let parsed: unknown = null;
   try {
-    parsed = text ? JSON.parse(text) : {};
+    return { status: response.status, body: JSON.parse(text), headers: response.headers };
   } catch {
-    parsed = null;
+    return { status: response.status, body: null, headers: response.headers, raw: text.slice(0, 200) };
   }
-  const isObject = parsed !== null && typeof parsed === "object";
-  const result: Record<string, unknown> = isObject
-    ? (parsed as Record<string, unknown>)
-    : { error: `Unexpected ${response.status} response`, raw: text.slice(0, 200) };
-  // A 5xx without the API's JSON (a proxy's error page, or nothing) is a
-  // platform hiccup.
-  if (response.status >= 500 && !(isObject && text)) result.retryable = true;
-  return { status: response.status, body: result, headers: response.headers };
 }
 
 /**
@@ -129,40 +126,70 @@ function transportError(
   });
 }
 
-/** The `data` of a successful `{ success: true, data }` response, or a
- *  `CliError` whose exit code follows the CLI contract. */
-export function unwrap(response: ApiResponse): unknown {
-  const { status, body, headers } = response;
-  if (status >= 200 && status < 300 && body.success === true) return body.data;
+/** Whether an answer is the v1 error envelope. */
+export function isEnvelope(body: unknown): body is ErrorEnvelope {
+  const error = (body as { error?: unknown } | null)?.error;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    typeof (error as { code?: unknown }).code === "string"
+  );
+}
 
-  const { success: _success, error, message, ...rest } = body;
-  const text =
-    typeof error === "string"
-      ? error
-      : typeof message === "string"
-        ? message
-        : `Request failed with status ${status}`;
-  // A 429, or a retryable 503, says how long to wait.
-  const retryAfter = Number(headers.get("retry-after"));
-  const details: Record<string, unknown> = {
-    status,
-    ...rest,
-    ...(Number.isFinite(retryAfter) && retryAfter > 0
-      ? { retryAfterSeconds: retryAfter }
-      : {}),
-  };
-
-  if (status === 401) {
-    throw new CliError(`${text}. ${LOGIN_HINT}`, EXIT.unauthenticated, details);
+/** The exit code of an error: by its code, or, for a code this version
+ *  doesn't know (or no envelope at all), by the HTTP status. */
+function exitCodeFor(code: string | undefined, status: number): ExitCode {
+  if (code !== undefined && Object.hasOwn(ERROR_CODES, code)) {
+    return code === "invalid_request"
+      ? EXIT.usage
+      : code === "unauthenticated"
+        ? EXIT.unauthenticated
+        : code === "rate_limited"
+          ? EXIT.rateLimited
+          : EXIT.error;
   }
-  if (status === 429) throw new CliError(text, EXIT.rateLimited, details);
-  if (status === 400) throw new CliError(text, EXIT.usage, details);
+  return status === 400
+    ? EXIT.usage
+    : status === 401
+      ? EXIT.unauthenticated
+      : status === 429
+        ? EXIT.rateLimited
+        : EXIT.error;
+}
+
+/**
+ * The resource a 2xx answer is, or a `CliError` carrying Fortrip's error
+ * envelope, whose exit code follows the CLI contract: `invalid_request` 2,
+ * `unauthenticated` 3, `rate_limited` 4, anything else 1.
+ */
+export function unwrap(response: ApiResponse): unknown {
+  const { status, body, headers, raw } = response;
+  if (status >= 200 && status < 300 && body !== null) return body;
   if (status >= 300 && status < 400) {
     throw new CliError(
       `Unexpected redirect to ${headers.get("location") ?? "?"}; check FORTRIP_API_URL`,
       EXIT.error,
-      details,
+      { status },
     );
   }
-  throw new CliError(text, EXIT.error, details);
+  if (isEnvelope(body)) {
+    const { code, message, retryable } = body.error;
+    const text = typeof message === "string" ? message : `Request failed with status ${status}`;
+    const exitCode = exitCodeFor(code, status);
+    throw new CliError(
+      exitCode === EXIT.unauthenticated ? LOGIN_HINT : text,
+      exitCode,
+      { status, ...(retryable === true ? { retryable } : {}) },
+      body,
+    );
+  }
+  // Not the API's answer: a proxy's error page, or nothing. A 5xx is a
+  // platform hiccup, and a 429 may still say how long to wait.
+  const retryAfter = Number(headers.get("retry-after"));
+  throw new CliError(`Unexpected ${status} answer from the API`, exitCodeFor(undefined, status), {
+    status,
+    ...(status >= 500 ? { retryable: true } : {}),
+    ...(Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfterSeconds: retryAfter } : {}),
+    ...(raw ? { raw } : {}),
+  });
 }

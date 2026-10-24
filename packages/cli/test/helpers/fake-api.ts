@@ -24,9 +24,10 @@ export const MCP_TOOLS = [
 
 /**
  * A fake of what the CLI signs in with and calls, for tests: the Fortrip
- * API's public `/api/agent/v1/auth/config` and `/api/agent/v1/me`, and the
- * OAuth server the config names (RFC 8628 device authorization, the token
- * endpoint for device codes and refresh tokens, RFC 7009 revocation).
+ * API's public `/v1/auth/config` and `/v1/me`, which answer with the
+ * resource itself or the v1 error envelope, and the OAuth server the config
+ * names (RFC 8628 device authorization, the token endpoint for device codes
+ * and refresh tokens, RFC 7009 revocation).
  *
  * `POST /api/mcp` is the hosted MCP server (Streamable HTTP): it takes the
  * OAuth access tokens the fake issued, answers `initialize` with a session id
@@ -117,6 +118,11 @@ export interface FakeApi {
 }
 
 const SCOPES = "openid profile email offline_access";
+
+/** The v1 error envelope (spec §11). */
+export function envelope(code: string, message: string, extra: Record<string, unknown> = {}) {
+  return { error: { code, message, retryable: false, requestId: "req_fake", ...extra } };
+}
 
 export async function startFakeApi(): Promise<FakeApi> {
   let serial = 0;
@@ -214,23 +220,20 @@ export async function startFakeApi(): Promise<FakeApi> {
     const form = Object.fromEntries(new URLSearchParams(raw));
     const oauthError = (error: string, status = 400) => ({ status, body: { error } });
     switch (`${method} ${path}`) {
-      case "GET /api/agent/v1/auth/config": {
+      case "GET /v1/auth/config": {
         api.counts.config += 1;
         const scripted = api.scripts.config.shift();
         if (scripted) return scripted;
         return {
           status: 200,
           body: {
-            success: true,
-            data: {
-              issuer: api.url,
-              clientId: api.clientId,
-              scopes: SCOPES,
-              deviceAuthorizationEndpoint: `${api.url}/oauth/device_authorization`,
-              tokenEndpoint: `${api.url}/oauth/token`,
-              revocationEndpoint: `${api.url}/oauth/token/revoke`,
-              ...api.configOverrides,
-            },
+            issuer: api.url,
+            clientId: api.clientId,
+            scopes: SCOPES,
+            deviceAuthorizationEndpoint: `${api.url}/oauth/device_authorization`,
+            tokenEndpoint: `${api.url}/oauth/token`,
+            revocationEndpoint: `${api.url}/oauth/token/revoke`,
+            ...api.configOverrides,
           },
         };
       }
@@ -307,23 +310,20 @@ export async function startFakeApi(): Promise<FakeApi> {
         api.refreshTokens.delete(form.token ?? "");
         return { status: 200, body: {} };
       }
-      case "GET /api/agent/v1/me": {
+      case "GET /v1/me": {
         api.counts.me += 1;
         const token = authorization.replace(/^Bearer /, "");
         api.meTokens.push(token);
         const scripted = api.scripts.me.shift();
         if (scripted) return scripted;
         if (api.accessTokens.has(token) && !api.options.rejectAll) {
-          return {
-            status: 200,
-            body: { success: true, data: { userId: "user_1", email: "a@b.c", name: "Ada" } },
-          };
+          return { status: 200, body: { userId: "user_1", email: "a@b.c", name: "Ada" } };
         }
         await api.hooks.onRejected?.();
-        return { status: 401, body: { success: false, error: "Invalid or expired token" } };
+        return { status: 401, body: envelope("unauthenticated", "Invalid or expired token") };
       }
       default:
-        return { status: 404, body: { success: false, error: "not found" } };
+        return { status: 404, body: envelope("not_found", "not found") };
     }
   }
 

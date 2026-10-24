@@ -9,6 +9,7 @@ import {
   type OptionSpec,
 } from "@fortrip/agent-contract";
 
+import { DEFAULT_API_URL } from "./credentials.ts";
 import { VERSION } from "./version.ts";
 
 /*
@@ -18,9 +19,6 @@ import { VERSION } from "./version.ts";
  */
 
 const WIDTH = 78;
-
-/** Positionals the command can do without. */
-const OPTIONAL_POSITIONALS = new Set(["topic"]);
 
 /** Word-wraps `text` to the help width, every line indented by `indent`. */
 function wrap(text: string, indent: number): string[] {
@@ -41,8 +39,8 @@ function wrap(text: string, indent: number): string[] {
 
 /** `<hotelId>`, `[topic]`: a command's positionals as they are typed. */
 function positionals(spec: CommandSpec): string[] {
-  return (spec.positionals ?? []).map((name) =>
-    OPTIONAL_POSITIONALS.has(name) ? `[${name}]` : `<${name}>`,
+  return (spec.positionals ?? []).map(({ name, optional }) =>
+    optional ? `[${name}]` : `<${name}>`,
   );
 }
 
@@ -59,14 +57,14 @@ export function usageLine(spec: CommandSpec): string {
 
 /** `-q, --query <text>`; a flag without a short name is indented to line up. */
 function names(option: FlagSpec | OptionSpec, aligned: boolean): string {
-  const short = option.short ? `-${option.short}, ` : aligned ? "    " : "";
+  const short = "short" in option && option.short ? `-${option.short}, ` : aligned ? "    " : "";
   const placeholder = option.placeholder ? ` ${option.placeholder}` : "";
   const repeats = "multiple" in option && option.multiple ? "..." : "";
   return `${short}--${option.flag}${placeholder}${repeats}`;
 }
 
 function optionList(options: readonly (FlagSpec | OptionSpec)[]): string {
-  const aligned = options.some((option) => option.short);
+  const aligned = options.some((option) => "short" in option && option.short);
   return options
     .map((option) =>
       [`  ${names(option, aligned)}`, ...wrap(option.description, 8)].join("\n"),
@@ -116,9 +114,9 @@ ${optionList(HELP_FLAG)}
 `;
 }
 
-/** The commands that take `--currency`: `hotels search and hotels rates`. */
+/** The commands that take `--display-currency`: `hotels search and hotels offers`. */
 const CURRENCY_COMMANDS = COMMANDS.filter((spec) =>
-  spec.flags.some((flag) => flag.field === "currency"),
+  spec.flags.some((flag) => flag.field === "displayCurrency"),
 )
   .map((spec) => commandInvocation(spec).slice("fortrip ".length))
   .join(" and ");
@@ -142,13 +140,14 @@ ${commandList(rows)}
 Options:
 ${optionList(GLOBAL_FLAGS)}
 
-Output is JSON on stdout; errors are JSON on stderr.
-Exit codes: 0 ok, 1 error (retry once when stderr has "retryable": true),
+Output is compact text on stdout; --json prints it as one line of JSON.
+Errors go to stderr, as text or, with --json, as JSON.
+Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
 2 invalid arguments, 3 not logged in, 4 rate limited.
 
 Environment:
-  FORTRIP_TOKEN    Use this token instead of the saved login (CI, sandboxes)
-  FORTRIP_API_URL  API base URL (default https://fortrip.ai)
-  FORTRIP_CURRENCY Default --currency for ${CURRENCY_COMMANDS}
+  FORTRIP_TOKEN             Use this token instead of the saved login (CI, sandboxes)
+  FORTRIP_API_URL           API base URL (default ${DEFAULT_API_URL})
+  FORTRIP_DISPLAY_CURRENCY  Default --display-currency for ${CURRENCY_COMMANDS}
 `;
 }

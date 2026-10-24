@@ -22,6 +22,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   addPendingLogin,
   credentialsPath,
+  DEFAULT_API_URL,
   deleteSession,
   loadPendingLogins,
   loadRecoveredSessions,
@@ -566,8 +567,10 @@ function session(name: string, expiresAt = IN_AN_HOUR): Session {
 }
 
 describe("resolveApiUrl", () => {
-  it("defaults to production and normalizes to the origin", () => {
-    assert.equal(resolveApiUrl({}), "https://fortrip.ai");
+  it("defaults to the production API and drops a trailing slash", () => {
+    assert.equal(resolveApiUrl({}), "https://api.fortrip.ai");
+    assert.equal(DEFAULT_API_URL, "https://api.fortrip.ai");
+    assert.equal(resolveApiUrl({ FORTRIP_API_URL: "  " }), "https://api.fortrip.ai");
     assert.equal(
       resolveApiUrl({ FORTRIP_API_URL: "https://preview.fortrip.ai/" }),
       "https://preview.fortrip.ai",
@@ -578,9 +581,35 @@ describe("resolveApiUrl", () => {
     );
   });
 
-  it("refuses plain http off localhost and invalid URLs", () => {
-    for (const url of ["http://fortrip.ai", "ftp://x", "not a url"]) {
-      assert.throws(() => resolveApiUrl({ FORTRIP_API_URL: url }), CliError);
+  it("keeps a path prefix, without its trailing slash", () => {
+    for (const [given, expected] of [
+      ["http://localhost:3000/api/public", "http://localhost:3000/api/public"],
+      ["http://localhost:3000/api/public/", "http://localhost:3000/api/public"],
+      ["https://preview.fortrip.ai/api/public//", "https://preview.fortrip.ai/api/public"],
+      ["http://127.0.0.1:3000/api/public?x=1#y", "http://127.0.0.1:3000/api/public"],
+    ] as const) {
+      assert.equal(resolveApiUrl({ FORTRIP_API_URL: given }), expected, given);
     }
+  });
+
+  it("refuses plain http off localhost and invalid URLs", () => {
+    for (const url of [
+      "http://fortrip.ai",
+      "http://api.fortrip.ai/api/public",
+      "http://localhost.example.com",
+      "ftp://x",
+      "not a url",
+    ]) {
+      assert.throws(() => resolveApiUrl({ FORTRIP_API_URL: url }), CliError, url);
+    }
+  });
+
+  it("sessions are kept per API URL, prefix included", async () => {
+    await saveSession("http://localhost:3000/api/public", session("prefixed"), env);
+    assert.equal(await loadSession("http://localhost:3000", env), null);
+    assert.equal(
+      (await loadSession("http://localhost:3000/api/public", env))?.accessToken,
+      "access_prefixed",
+    );
   });
 });

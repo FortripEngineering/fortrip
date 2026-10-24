@@ -44,7 +44,7 @@ describe("guide", () => {
 
   it("no guide or help text names the supplier", async () => {
     const texts = [expected("main"), expected("planning")];
-    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "rates", "--help"], ["hotels", "book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "offers", "--help"], ["orders", "--help"], ["hotels", "book", "--help"]]) {
       texts.push((await cli(...args)).stdout);
     }
     // Assembled, so that this file doesn't name the supplier either.
@@ -59,7 +59,7 @@ describe("guide", () => {
         (error: { code?: number; stdout?: string; stderr?: string }) => {
           assert.equal(error.code, 2, args.join(" "));
           assert.equal(error.stdout, "", args.join(" "));
-          assert.match(JSON.parse(error.stderr ?? "").error, /fortrip guide \[planning\]/);
+          assert.match(error.stderr ?? "", /^Error: Usage: fortrip guide \[planning\]/);
           return true;
         },
       );

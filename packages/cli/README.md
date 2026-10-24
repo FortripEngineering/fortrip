@@ -95,10 +95,12 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 
 | Command | What it does |
 |---|---|
-| `hotels search` | Find hotels with indicative prices |
-| `hotels get <hotelId>` | Static hotel detail: description, policies, facilities and photos |
-| `hotels rates` | Live rooms and rates for up to 15 hotels |
-| `hotels book` | Create an order and get a payment link |
+| `hotels search` | Find hotels in a place, near a point or by name, with indicative prices |
+| `hotels get <hotelId>` | Hotel details: description, policies, amenities and rooms |
+| `hotels offers` | Live bookable offers for up to 15 hotels |
+| `hotels book` | Order an offer: an unpaid order with a payment link |
+| `orders get <orderId>` | Show an order and its status |
+| `orders list` | List your orders, newest first |
 | `login` | Sign in through the browser (device code) |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
@@ -106,15 +108,16 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
-fortrip hotels rates --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --rooms 1 --adults 2
+fortrip hotels offers --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --room 2 --room 2
 ```
 
-`hotels search`, `hotels rates` and `hotels book` also accept `--body '<json>'`
+`hotels search`, `hotels offers` and `hotels book` also accept `--body '<json>'`
 or `--body @file.json` with the raw request body; flags override its fields.
 
-`--adults` and `--child-age` are per room, and every room has the same
-occupancy: 2 rooms for 4 adults is `--rooms 2 --adults 2`. `hotels rates` and
-`hotels book` both require `--rooms` and `--adults`.
+`--room` gives one room's party, as `adults` or `adults:age,age` with each
+child's age, and is repeated for each room: two rooms of 2 adults, one with a
+child of 6, is `--room 2 --room 2:6`. `hotels offers` takes one party per call,
+so every room must be the same.
 
 `hotels book` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens.
