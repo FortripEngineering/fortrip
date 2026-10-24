@@ -1,0 +1,81 @@
+name: Set an MCP Registry version's status
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Registry entry version, e.g. 1.0.3"
+        required: true
+        type: string
+      status:
+        description: "New status (deleting is not offered: it can't be undone)"
+        required: true
+        type: choice
+        options:
+          - deprecated
+          - active
+      message:
+        description: "For deprecated only: shown to registry users, e.g. what to use instead"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  status:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Same gate as publishing: imshuhao or bruce647 approve, and only from main.
+    # Personal GitHub logins only get io.github.<user>/*; the org namespace
+    # comes through this repository's OIDC identity.
+    environment: mcp-registry
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          STATUS: ${{ inputs.status }}
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          if [ "$STATUS" = active ] && [ -n "$MESSAGE" ]; then
+            echo "::error::mcp-publisher doesn't take a message when restoring a version to active; run again with the message left empty"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must be a semver like 1.0.3, got: $VERSION"
+            exit 1
+          fi
+          current=$(jq -r .version plugins/registry/server.json)
+          if [ "$STATUS" = deprecated ] && [ "$VERSION" = "$current" ]; then
+            echo "::error::$VERSION is the version plugins/registry/server.json publishes; publish a newer one before deprecating it"
+            exit 1
+          fi
+      - name: Install official MCP publisher
+        run: |
+          curl --fail --location --silent --show-error --retry 3 --output mcp-publisher_linux_amd64.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          echo 'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher_linux_amd64.tar.gz' | sha256sum --check
+          tar -xzf mcp-publisher_linux_amd64.tar.gz mcp-publisher
+      - name: Authenticate with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+      - name: Set the status
+        env:
+          VERSION: ${{ inputs.version }}
+          STATUS: ${{ inputs.status }}
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          name=$(jq -r .name plugins/registry/server.json)
+          if [ "$STATUS" = deprecated ] && [ -n "$MESSAGE" ]; then
+            ./mcp-publisher status --status "$STATUS" --message "$MESSAGE" "$name" "$VERSION"
+          else
+            ./mcp-publisher status --status "$STATUS" "$name" "$VERSION"
+          fi
