@@ -12,7 +12,7 @@ import {
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
 import { parseCommand, parseOptions } from "./commands.ts";
-import { resolveApiUrl } from "./credentials.ts";
+import { resolveApiUrl, resolveMcpUrl } from "./credentials.ts";
 import {
   CliError,
   EXIT,
@@ -146,8 +146,9 @@ async function run(argv: string[]): Promise<Answer> {
       case "mcp": {
         parseOptions(spec, rest);
         // Loaded only here: the other commands needn't pay for the MCP SDK.
+        const mcpUrl = resolveMcpUrl(apiUrl);
         const { runMcpBridge } = await import("./mcp-bridge.ts");
-        await runMcpBridge(apiUrl);
+        await runMcpBridge(mcpUrl, apiUrl);
         return undefined;
       }
     }

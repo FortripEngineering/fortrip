@@ -14,12 +14,14 @@ import { homedir, hostname } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { PUBLIC_ORIGINS } from "@fortrip/agent-contract";
+import { MCP_PATH, PUBLIC_ORIGINS } from "@fortrip/agent-contract";
 
 import { REQUEST_TIMEOUT_MS } from "./api.ts";
 import { CliError, EXIT, usageError } from "./errors.ts";
 
 export const DEFAULT_API_URL: string = PUBLIC_ORIGINS.api;
+/** The hosted MCP server, which `fortrip mcp` connects to by default. */
+export const DEFAULT_MCP_URL: string = `${PUBLIC_ORIGINS.mcp}${MCP_PATH}`;
 
 /** A sign-in with one API URL, as the OAuth token endpoint issued it. */
 export interface Session {
@@ -79,24 +81,56 @@ export function credentialsPath(env: NodeJS.ProcessEnv = process.env): string {
   return join(base, "fortrip", "credentials.json");
 }
 
-/** `FORTRIP_API_URL` or the production API, without a trailing slash. It
- *  may end in a path prefix (`http://localhost:3000/api/public`), which
- *  every request path follows; a query or fragment is dropped. Plain http
- *  is allowed only for localhost so a token never crosses the network
- *  unencrypted. */
-export function resolveApiUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const raw = env.FORTRIP_API_URL?.trim() || DEFAULT_API_URL;
+/** `raw`, the value of the variable `name`, as a URL a token may be sent
+ *  to: plain http is allowed only for localhost so a token never crosses
+ *  the network unencrypted. */
+function vettedUrl(name: string, raw: string): URL {
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
-    throw usageError(`FORTRIP_API_URL is not a valid URL: ${raw}`);
+    throw usageError(`${name} is not a valid URL: ${raw}`);
   }
   const isLocal = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocal)) {
-    throw usageError("FORTRIP_API_URL must use https (http only for localhost)");
+    throw usageError(`${name} must use https (http only for localhost)`);
   }
+  return url;
+}
+
+/** `FORTRIP_API_URL` or the production API, without a trailing slash. It
+ *  may end in a path prefix (`http://localhost:3000/api/public`), which
+ *  every request path follows; a query or fragment is dropped. */
+export function resolveApiUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const url = vettedUrl("FORTRIP_API_URL", env.FORTRIP_API_URL?.trim() || DEFAULT_API_URL);
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+}
+
+/**
+ * `FORTRIP_MCP_URL` or the hosted MCP server, without a query or fragment:
+ * where `fortrip mcp` sends the sign-in saved for `apiUrl` (sessions are
+ * kept per API URL). So it follows the rule for FORTRIP_API_URL, and it
+ * must be that API's own MCP server: the hosted one for the production
+ * API, and one on the API URL's origin for any other. A sign-in is never
+ * sent to another server.
+ */
+export function resolveMcpUrl(apiUrl: string, env: NodeJS.ProcessEnv = process.env): string {
+  const given = env.FORTRIP_MCP_URL?.trim();
+  const url = vettedUrl("FORTRIP_MCP_URL", given || DEFAULT_MCP_URL);
+  const mcpUrl = `${url.origin}${url.pathname}`;
+  if (apiUrl === DEFAULT_API_URL) {
+    if (mcpUrl === DEFAULT_MCP_URL) return mcpUrl;
+    throw usageError(
+      `FORTRIP_MCP_URL must be ${DEFAULT_MCP_URL} while FORTRIP_API_URL is ${DEFAULT_API_URL}: the sign-in with ${DEFAULT_API_URL} is sent to no other server`,
+    );
+  }
+  const { origin } = new URL(apiUrl);
+  if (url.origin === origin) return mcpUrl;
+  throw usageError(
+    given
+      ? `FORTRIP_MCP_URL must be on ${origin}, the origin of FORTRIP_API_URL: the sign-in with ${apiUrl} is sent to no other server`
+      : `FORTRIP_API_URL is set, so set FORTRIP_MCP_URL too, to the MCP server on ${origin}: the sign-in with ${apiUrl} is sent to no other server`,
+  );
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

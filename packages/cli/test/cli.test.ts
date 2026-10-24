@@ -503,6 +503,10 @@ describe("help", () => {
       new RegExp(`^  FORTRIP_DISPLAY_CURRENCY +Default --display-currency for ${typed.join(" and ")}$`, "m"),
     );
     assert.match(stdout, /^  FORTRIP_API_URL +API base URL \(default https:\/\/api\.fortrip\.ai\)$/m);
+    assert.match(
+      stdout,
+      /^  FORTRIP_MCP_URL +MCP server URL for fortrip mcp \(default https:\/\/mcp\.fortrip\.ai\/\)$/m,
+    );
     assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
     assert.doesNotMatch(stdout, /FORTRIP_CURRENCY\b/);
   });

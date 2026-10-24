@@ -9,7 +9,7 @@ import {
   type OptionSpec,
 } from "@fortrip/agent-contract";
 
-import { DEFAULT_API_URL } from "./credentials.ts";
+import { DEFAULT_API_URL, DEFAULT_MCP_URL } from "./credentials.ts";
 import { VERSION } from "./version.ts";
 
 /*
@@ -148,6 +148,7 @@ Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
 Environment:
   FORTRIP_TOKEN             Use this token instead of the saved login (CI, sandboxes)
   FORTRIP_API_URL           API base URL (default ${DEFAULT_API_URL})
+  FORTRIP_MCP_URL           MCP server URL for fortrip mcp (default ${DEFAULT_MCP_URL})
   FORTRIP_DISPLAY_CURRENCY  Default --display-currency for ${CURRENCY_COMMANDS}
 `;
 }
