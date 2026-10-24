@@ -145,7 +145,8 @@ workflow. After a CLI release, run it once npm has the new version.
 
 To deprecate an old version, or make it active again, run **Set an MCP
 Registry version's status** (`.github/workflows/mcp-registry-status.yml`)
-with the version, the status and a message. It has the same `main`-only,
+with the version, the status and, when deprecating, a message (the publisher
+takes none for `active`). It has the same `main`-only,
 approval-gated setup. A personal `mcp-publisher login github` can't do this:
 it only gets `io.github.<user>/*`, so the org namespace comes through this
 repository's OIDC identity.

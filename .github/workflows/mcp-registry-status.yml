@@ -15,7 +15,7 @@ on:
           - deprecated
           - active
       message:
-        description: "Shown to registry users, e.g. what to use instead"
+        description: "For deprecated only: shown to registry users, e.g. what to use instead"
         required: false
         type: string
 
@@ -45,7 +45,12 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           STATUS: ${{ inputs.status }}
+          MESSAGE: ${{ inputs.message }}
         run: |
+          if [ "$STATUS" = active ] && [ -n "$MESSAGE" ]; then
+            echo "::error::mcp-publisher doesn't take a message when restoring a version to active; run again with the message left empty"
+            exit 1
+          fi
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::version must be a semver like 1.0.3, got: $VERSION"
             exit 1
@@ -69,7 +74,7 @@ jobs:
           MESSAGE: ${{ inputs.message }}
         run: |
           name=$(jq -r .name plugins/registry/server.json)
-          if [ -n "$MESSAGE" ]; then
+          if [ "$STATUS" = deprecated ] && [ -n "$MESSAGE" ]; then
             ./mcp-publisher status --status "$STATUS" --message "$MESSAGE" "$name" "$VERSION"
           else
             ./mcp-publisher status --status "$STATUS" "$name" "$VERSION"
