@@ -11,12 +11,7 @@
   "homepage": "https://fortrip.ai",
   "repository": "https://github.com/FortripEngineering/fortrip",
   "license": "Apache-2.0",
-  "keywords": [
-    "hotels",
-    "travel",
-    "booking",
-    "rates"
-  ],
+  "keywords": ["hotels", "travel", "booking", "rates"],
   "icon": "./.claude-plugin/icon.png",
   "documentationUrl": "https://github.com/FortripEngineering/fortrip/blob/main/plugins/claude/README.md",
   "supportUrl": "https://fortrip.ai/faq",
