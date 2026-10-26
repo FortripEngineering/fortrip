@@ -146,6 +146,18 @@ describe("search results", () => {
     assert.match(text, /2 rooms, each 2 adults and 1 child \(age 7\)/);
   });
 
+  it("shows a hotel's cover URL on its line, and nothing without one", () => {
+    const fixture = copy(load("search-shanghai-area")) as ToolFixture;
+    const hotels = (fixture.data as Record<string, any>).data as Record<string, any>[];
+    hotels[0]!.photo = { url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: null };
+    hotels[1]!.photo = null;
+    const lines = render(fixture).split("\n");
+    const first = lines.find((l) => l.startsWith("1. "))!;
+    const second = lines.find((l) => l.startsWith("2. "))!;
+    assert.ok(first.includes("photo https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp"), first);
+    assert.ok(!second.includes("photo "), second);
+  });
+
   it("says a pool-limited price sort is the cheapest within the pool radius", () => {
     const text = render(load("search-pool-limited"));
     assert.ok(text.includes("cheapest within 9.0 km of Shanghai"), text);
@@ -490,6 +502,16 @@ describe("hotel detail", () => {
     const text = render(fixture);
     assert.ok(text.includes(description));
     for (const policy of data.policies.items) assert.ok(text.includes(policy.text));
+  });
+
+  it("shows the first 4 photo URLs and counts the rest", () => {
+    const fixture = copy(load("hotel-long-description")) as ToolFixture;
+    const url = (i: number) => `https://fortrip.ai/hotel-photos/hotels/imgs/1/${i}.webp`;
+    (fixture.data as Record<string, any>).photos = [1, 2, 3, 4, 5, 6].map((i) => ({ url: url(i), caption: null }));
+    const text = render(fixture);
+    assert.ok(text.includes(`Photos: ${[1, 2, 3, 4].map(url).join(" · ")} (+2 more)`), text);
+    (fixture.data as Record<string, any>).photos = null;
+    assert.ok(!render(fixture).includes("Photos:"));
   });
 
   it("writes out what is not listed or unknown", () => {

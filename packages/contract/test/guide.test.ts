@@ -14,7 +14,7 @@ import {
   renderText,
 } from "../src/guide.ts";
 import { LIMITS, SUPPORT_EMAIL } from "../src/limits.ts";
-import { TOOLS } from "../src/tools.ts";
+import { PRESENTATION_HINT, TOOLS } from "../src/tools.ts";
 
 const SURFACES: readonly GuideSurface[] = ["mcp", "claude-skill", "cli"];
 const TOPICS: readonly GuideTopic[] = ["main", "planning"];
@@ -35,6 +35,13 @@ function count(text: string, pattern: RegExp): number {
 }
 
 describe("renderGuide", () => {
+  it("states how to present hotels in the Claude skill; MCP results carry PRESENTATION_HINT instead", () => {
+    assert.match(renderGuide("claude-skill", "main"), /## Presenting hotels/);
+    assert.doesNotMatch(renderGuide("mcp", "main"), /Presenting hotels/);
+    assert.doesNotMatch(renderGuide("cli", "main"), /Presenting hotels/);
+    assert.match(PRESENTATION_HINT, /never invent photos, ratings or prices/);
+  });
+
   for (const { surface, topic, label } of RENDERINGS) {
     it(`${label}: every token and condition is resolved`, () => {
       const text = renderGuide(surface, topic);

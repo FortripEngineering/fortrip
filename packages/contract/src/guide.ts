@@ -44,6 +44,7 @@ const TOPICS: Record<GuideTopic, readonly string[]> = {
     "meals",
     "booking",
     "payment-link",
+    "presentation",
     "errors",
     "support",
   ],

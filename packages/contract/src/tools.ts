@@ -54,6 +54,15 @@ export interface ToolSpec {
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
+/**
+ * How to present hotels (the `presentation` guide, in one line). It rides as
+ * the last paragraph of every MCP `search_hotels`, `get_hotel` and
+ * `get_hotel_offers` result: a rule next to the data is followed far more
+ * reliably than one in the server instructions.
+ */
+export const PRESENTATION_HINT =
+  "Presentation: if your interface can show rich elements, present these hotels as cards (photo, name, stars, area, price with what it covers, cancellation), add a map from their locations when you show two or more, and offer the user's open choices (budget, trip type, dates) as options to pick; otherwise use a short list. Use only what these results contain: never invent photos, ratings or prices.";
+
 const nextStep = z
   .string()
   .optional()
