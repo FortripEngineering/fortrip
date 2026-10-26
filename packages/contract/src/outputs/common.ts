@@ -27,8 +27,8 @@ export const knownLocaleText = openObject({
 });
 
 /**
- * A hotel photo on a first-party URL (3.1). `caption` is in the request's
- * locale when the catalogue has one.
+ * A hotel photo on a first-party URL (3.1). `caption` is the catalogue's,
+ * with its locale; `null` without one.
  */
 export const photo = openObject({
   url: z.string(),

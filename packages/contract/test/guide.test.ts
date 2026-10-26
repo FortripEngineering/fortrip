@@ -39,7 +39,14 @@ describe("renderGuide", () => {
     assert.match(renderGuide("claude-skill", "main"), /## Presenting hotels/);
     assert.doesNotMatch(renderGuide("mcp", "main"), /Presenting hotels/);
     assert.doesNotMatch(renderGuide("cli", "main"), /Presenting hotels/);
-    assert.match(PRESENTATION_HINT, /never invent photos, ratings or prices/);
+    // One rule, one text: the skill's section is the hint's.
+    assert.ok(
+      renderGuide("claude-skill", "main").includes(
+        PRESENTATION_HINT.replace(/^Presentation: /, ""),
+      ),
+    );
+    assert.match(PRESENTATION_HINT, /estimate per room-night/);
+    assert.match(PRESENTATION_HINT, /Never invent photos, ratings, prices, cancellation terms or coordinates/);
   });
 
   for (const { surface, topic, label } of RENDERINGS) {

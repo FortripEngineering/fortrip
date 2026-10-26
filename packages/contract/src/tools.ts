@@ -61,7 +61,7 @@ export const ORDER_NEXT_STEP =
  * reliably than one in the server instructions.
  */
 export const PRESENTATION_HINT =
-  "Presentation: if your interface can show rich elements, present these hotels as cards (photo, name, stars, area, price with what it covers, cancellation), add a map from their locations when you show two or more, and offer the user's open choices (budget, trip type, dates) as options to pick; otherwise use a short list. Use only what these results contain: never invent photos, ratings or prices.";
+  "Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation (photo, name, stars, area, price, and cancellation once you have offers): label a search price as an estimate per room-night and an offer's `price.total` as the whole stay, and draw a map only from returned `location` coordinates. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Never invent photos, ratings, prices, cancellation terms or coordinates.";
 
 const nextStep = z
   .string()
