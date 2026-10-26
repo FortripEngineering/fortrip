@@ -26,6 +26,15 @@ export const knownLocaleText = openObject({
   locale: openEnum(LOCALES),
 });
 
+/**
+ * A hotel photo on a first-party URL (3.1). `caption` is the catalogue's,
+ * with its locale; `null` without one.
+ */
+export const photo = openObject({
+  url: z.string(),
+  caption: knownLocaleText.nullable(),
+});
+
 /** Free text whose language may be unknown (`locale: null`). */
 export const localizedText = openObject({
   text: z.string(),

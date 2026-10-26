@@ -21,6 +21,9 @@ function roomLine(r: RoomType): string {
   return [`- ${r.name.text}`, ...roomFacts(r)].join(" · ");
 }
 
+/** Photo URLs a hotel's text shows; the object holds them all. */
+const PHOTOS_SHOWN = 4;
+
 export function renderHotel(h: Hotel): string {
   const region = h.address.region;
   const lines = [
@@ -46,6 +49,11 @@ export function renderHotel(h: Hotel): string {
     deposit(h.deposit),
     `Phone: ${h.contact.phone ?? "not listed"} · Website: ${h.contact.website ?? "not listed"}`,
   ];
+  if (h.photos?.length) {
+    const shown = h.photos.slice(0, PHOTOS_SHOWN).map((p) => p.url);
+    const more = h.photos.length - shown.length;
+    lines.push(`Photos: ${shown.join(" · ")}${more > 0 ? ` (+${more} more)` : ""}`);
+  }
 
   if (!h.amenities.listed) {
     lines.push('Amenities: not listed (unknown, not "none")');

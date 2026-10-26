@@ -3785,6 +3785,63 @@
           }
         ]
       },
+      "photos": {
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "caption": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "locale": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "en",
+                                "zh"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "locale"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "url",
+                "caption"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "checkInTimes": {
         "type": "object",
         "properties": {
@@ -10486,6 +10543,60 @@
                     "fromPerRoomNight",
                     "fromPerRoomStay",
                     "approx"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "photo": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "caption": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "locale": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "en",
+                                    "zh"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "text",
+                            "locale"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "caption"
                   ],
                   "additionalProperties": {}
                 },

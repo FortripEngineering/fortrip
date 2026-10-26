@@ -54,6 +54,15 @@ export interface ToolSpec {
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
+/**
+ * How to present hotels (the `presentation` guide, in one line). It rides as
+ * the last paragraph of every MCP `search_hotels`, `get_hotel` and
+ * `get_hotel_offers` result: a rule next to the data is followed far more
+ * reliably than one in the server instructions.
+ */
+export const PRESENTATION_HINT =
+  "Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's `price.fromPerRoomNight` as an estimate per room-night and an offer's `price.total` as the whole stay for all rooms, in USD, and draw a map only from returned `location` coordinates. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Keep hotel names as returned, and never invent photos, ratings, reviews, prices, terms or coordinates.";
+
 const nextStep = z
   .string()
   .optional()

@@ -68,6 +68,7 @@ export {
   localizedText,
   knownLocaleText,
   names,
+  photo,
   stayEcho,
 } from "./outputs/common.ts";
 export {
@@ -142,6 +143,7 @@ export { ERROR_CODES, type ErrorCode } from "./errors.ts";
 export {
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
+  PRESENTATION_HINT,
   TOOLS,
   type ToolName,
   type ToolSpec,

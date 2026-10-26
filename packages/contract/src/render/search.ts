@@ -184,6 +184,7 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
     r.pricing.mode === "none" ? "" : priceWords(h, r.pricing.status),
     h.address.line ? h.address.line.text : "address not listed",
     where,
+    h.photo ? `photo ${h.photo.url}` : "",
     h.hotelId,
   ]
     .filter(Boolean)

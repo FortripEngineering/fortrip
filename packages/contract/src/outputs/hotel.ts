@@ -5,7 +5,7 @@ import { money } from "../conventions/money.ts";
 import { openEnum, openObject } from "../conventions/open.ts";
 import { localTime } from "../conventions/time.ts";
 import { AMENITY_CODES } from "../vocabulary.ts";
-import { knownLocaleText, latLng, localizedText, names } from "./common.ts";
+import { knownLocaleText, latLng, localizedText, names, photo } from "./common.ts";
 import { hotelSummary } from "./search.ts";
 
 /* `GET /v1/hotels/{hotelId}` (spec §8). */
@@ -54,6 +54,9 @@ export const hotel = openObject({
   location: latLng.nullable(),
   timeZone: z.string().nullable(),
   description: knownLocaleText.nullable(),
+  /** Up to 8 hotel photos, the cover first; `null` when the catalogue lists
+   *  none (unknown is not no). Absent from servers before 3.1. */
+  photos: z.array(photo).nullable().optional(),
   checkInTimes: timeRange,
   checkOutTimes: timeRange,
   policies: openObject({

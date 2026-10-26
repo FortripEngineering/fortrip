@@ -501,7 +501,7 @@ describe("shape rules", () => {
 const PUBLIC_KEYS = new Set([
   "address", "adults", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
   "basis", "beds", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
-  "cancellation", "candidates", "candidatesTotal", "center", "changes", "chargeCurrency",
+  "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
   "coverage", "createdAt", "currency", "current", "data", "deposit", "description", "destination",
@@ -514,7 +514,7 @@ const PUBLIC_KEYS = new Set([
   "manageUrl", "mandatory", "match", "matched", "max", "maxOccupancy", "meals", "members",
   "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
-  "payAtProperty", "payment", "penalties", "perNightAllRooms", "phone", "place", "placeId",
+  "payAtProperty", "payment", "penalties", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
   "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
