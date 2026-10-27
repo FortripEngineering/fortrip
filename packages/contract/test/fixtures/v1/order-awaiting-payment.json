@@ -86,6 +86,12 @@
       "localCurrencyAtCheckout": true,
       "localCharge": null
     },
+    "cancel": {
+      "available": false,
+      "reason": "not_confirmed",
+      "penalty": null,
+      "refund": null
+    },
     "manageUrl": "https://fortrip.ai/orders/ord_BundAwaiting00000000"
   }
 }

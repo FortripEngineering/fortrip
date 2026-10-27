@@ -141,6 +141,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels book` | Order an offer: an unpaid order with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
+| `orders cancel <orderId>` | Cancel an order under its terms, for the penalty the user agreed to |
 | `login` | Sign in through the browser (device code) |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
@@ -165,6 +166,14 @@ same.
 Nothing is charged until the person pays on the page the link opens. Orders
 are paid in USD whatever `--display-currency` shows.
 
+`orders get` and `orders list` say of each order whether it can be cancelled
+now and, if so, the penalty under its terms and the refund.
+`orders cancel <orderId> --max-penalty <amount>` cancels it, with the penalty
+the person agreed to exactly as shown; if the penalty has gone up since,
+nothing changes and the command exits 1 with `cancellation_changed`. Without
+`--max-penalty` it cancels nothing: it prints the order's penalty and refund
+and exits 2.
+
 ## For AI agents
 
 ```bash
@@ -186,9 +195,9 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has seven tools:
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
 `get_planning_guide`, `search_hotels`, `get_hotel`, `get_hotel_offers`,
-`book_hotel`, `get_order` and `list_orders`.
+`book_hotel`, `get_order`, `list_orders` and `cancel_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the

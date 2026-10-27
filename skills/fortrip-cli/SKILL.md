@@ -1,11 +1,11 @@
 ---
 name: fortrip-cli
-description: Searches hotels, compares live offers and creates a hotel order with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_offers, book_hotel) aren't available. Not for flights, activities or changing an existing booking.
+description: Searches hotels, compares live offers, creates a hotel order with a payment link and cancels an order through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price, book or cancel a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_offers, book_hotel) aren't available. Not for flights, activities or changing an existing booking.
 ---
 
 # Fortrip hotel stays
 
-Fortrip: hotel search, live offers and orders with a payment link. Not for flights, activities, or changing or cancelling an existing order.
+Fortrip: hotel search, live offers and orders with a payment link. Not for flights, activities, or changing an existing order.
 
 The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user and prints each answer as compact text (`--json` prints its JSON):
 
@@ -17,6 +17,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip hotels book` | An unpaid order for one offer, with its terms and a payment link |
 | `fortrip orders get` | One order and its status, including whether the hotel confirmed it |
 | `fortrip orders list` | The user's orders, newest first, including those made on the Fortrip website |
+| `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
 
@@ -204,6 +205,16 @@ Any code:
 - `service_unavailable` (503) and `supplier_unavailable` (503 or 504): wait `retryAfterSeconds`, then retry once with the same details; if it fails again, tell the user.
 - Any other code: read `message`. If `retryable` is true, wait `retryAfterSeconds` and retry once; otherwise tell the user instead of guessing.
 
+## Cancelling an order
+
+`fortrip orders get` and `fortrip orders list` say of each order whether the user can cancel it now (`cancel.available`), and then the penalty under its terms (`cancel.penalty`) and the refund, what was paid less the penalty (`cancel.refund`), both in the charge currency; otherwise `cancel.reason` says why not.
+
+1. Show the user the stay (hotel, dates), `cancel.penalty` and `cancel.refund` (amount and currency). A refund of 0 means nothing is paid back: say so plainly.
+2. End that reply by asking the user to confirm the cancellation, and wait for a clear yes.
+3. Then run `fortrip orders cancel` with `--max-penalty` set to `cancel.penalty.amount` as shown. Never state a refund the order didn't return, and never choose or work out an amount yourself.
+
+The order is then `cancelling`, and `cancelled` once the hotel has cancelled and the refund is issued: check it with `fortrip orders get`. If the hotel refuses, the order is `confirmed` again with `cancel.reason` `refused`. `cancellation_changed` (409) means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` (409) says why in `reason`. Without `--max-penalty`, `fortrip orders cancel` cancels nothing: it prints the penalty and the refund and exits 2.
+
 ## Changes and support
 
-The CLI can't change or cancel an order: for changes, cancellations, refunds or other problems, the user emails info@fortrip.ai with the order's `reference` (never `payment.url`).
+The CLI can't change an order: for changes, a cancellation that `fortrip orders cancel` can't make, or other problems, the user emails info@fortrip.ai with the order's `reference` (never `payment.url`).

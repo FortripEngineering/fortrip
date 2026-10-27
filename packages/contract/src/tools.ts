@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  cancelOrderInput,
   createOrderInput,
   getHotelInput,
   getOrderInput,
@@ -28,7 +29,8 @@ export type ToolName =
   | "get_hotel_offers"
   | "book_hotel"
   | "get_order"
-  | "list_orders";
+  | "list_orders"
+  | "cancel_order";
 
 export interface ToolSpec {
   name: ToolName;
@@ -55,6 +57,15 @@ export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
 /**
+ * The consent rule of a cancellation (spec §5.7, C11). It rides as the last
+ * paragraph of the text of every MCP `get_order` and `list_orders` result
+ * that holds an order with `cancel.available`, after `ORDER_NEXT_STEP` when
+ * both apply, and never as `nextStep`, which keeps its payment-only meaning.
+ */
+export const CANCEL_NEXT_STEP =
+  "Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty exactly as cancel.penalty.amount. Never state a refund the order did not return.";
+
+/**
  * How to present hotels (the `presentation` guide, in one line). It rides as
  * the last paragraph of every MCP `search_hotels`, `get_hotel` and
  * `get_hotel_offers` result: a rule next to the data is followed far more
@@ -70,14 +81,16 @@ const nextStep = z
     "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
   );
 
-/** The answers over MCP that can hold a `payment.url`: the HTTP answer plus
- *  `nextStep`, which only MCP declares. */
+/** The answers over MCP that are orders. Those that can hold a
+ *  `payment.url` are the HTTP answer plus `nextStep`, which only MCP
+ *  declares; `cancel_order`'s never holds one, so it is the HTTP answer. */
 export const MCP_OUTPUT = {
   book_hotel: order.extend({ nextStep }),
   get_order: order.extend({ nextStep }),
   list_orders: orderList.extend({ nextStep }),
+  cancel_order: order,
 } as const satisfies Record<
-  "book_hotel" | "get_order" | "list_orders",
+  "book_hotel" | "get_order" | "list_orders" | "cancel_order",
   z.ZodType
 >;
 
@@ -130,7 +143,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "book_hotel",
     title: "Create hotel order and payment link",
-    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page where the user pays. Nothing is charged until the user pays there; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. This tool can't change or cancel an order: for changes, cancellations or refunds the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page where the user pays. Nothing is charged until the user pays there; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: false,
@@ -157,5 +170,18 @@ export const TOOLS: readonly ToolSpec[] = [
     annotations: READ_OWN,
     input: listOrdersInput,
     output: MCP_OUTPUT.list_orders,
+  },
+  {
+    name: "cancel_order",
+    title: "Cancel order",
+    description: `Cancel one of the user's orders by orderId under its cancellation terms, when its cancel.available is true: the hotel booking is cancelled and cancel.refund, what was paid less cancel.penalty, is refunded. ${CANCEL_NEXT_STEP} If the penalty is now higher than maximumPenalty, the answer is cancellation_changed and nothing changes: read the order again and ask the user again. Answers the order: status cancelling, then cancelled once the hotel cancels and the refund is issued; poll get_order. If the hotel refuses, the order goes back to confirmed with cancel.reason refused. Calling it again for the same order answers the order as it is.`,
+    annotations: {
+      readOnlyHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+      destructiveHint: true,
+    },
+    input: cancelOrderInput,
+    output: MCP_OUTPUT.cancel_order,
   },
 ];

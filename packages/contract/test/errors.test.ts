@@ -23,6 +23,8 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   order_exists: [[409], false],
   order_in_progress: [[409], true],
   order_attempts_exhausted: [[409], false],
+  cancellation_changed: [[409], false],
+  order_not_cancellable: [[409], false],
   destination_ambiguous: [[422], false],
   destination_not_found: [[422], false],
   search_too_broad: [[422], false],
@@ -108,6 +110,8 @@ describe("v1 paths", () => {
     assert.equal(API.hotel("htl_x", { locale: "en" }), "/v1/hotels/htl_x?locale=en");
     assert.equal(API.order("ord_x"), "/v1/orders/ord_x");
     assert.equal(API.order("ord_x", { locale: "zh" }), "/v1/orders/ord_x?locale=zh");
+    assert.equal(API.orderCancel("ord_x"), "/v1/orders/ord_x/cancel");
+    assert.equal(API.orderCancel("ord/x"), "/v1/orders/ord%2Fx/cancel");
   });
 
   it("never exposes a /api/ path", () => {
@@ -117,6 +121,7 @@ describe("v1 paths", () => {
       ...Object.values(API).filter((v) => typeof v === "string"),
       API.hotel("htl_x", { rooms: true, locale: "zh" }),
       API.order("ord_x", { locale: "en" }),
+      API.orderCancel("ord_x"),
     ];
     for (const v of values) assert.ok(!v.includes("/api/"), v);
   });

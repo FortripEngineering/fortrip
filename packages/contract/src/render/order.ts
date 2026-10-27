@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from "../limits.ts";
 import type { Order, OrderList } from "../outputs/order.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, feesText, mealsWithLabel } from "./offers.ts";
@@ -25,6 +26,22 @@ const PAYMENT_WORDS: Record<string, string> = {
   released: "released (the hold was let go)",
   refund_pending: "refund pending",
   refunded: "refunded",
+};
+
+const SUPPORT = `for help, the user emails ${SUPPORT_EMAIL} with the order's reference`;
+
+/** Why an order can't be cancelled now, in words; the error
+ *  `order_not_cancellable` words its reason the same way. */
+export const CANCEL_REASON_WORDS: Record<string, string> = {
+  cancellable: "it can be cancelled",
+  already_cancelled: "it is already cancelled",
+  in_progress: "a cancellation is in progress",
+  not_confirmed: "only a confirmed order that is paid can be cancelled",
+  stay_started: `the stay has started; ${SUPPORT}`,
+  non_refundable: "this rate can't be cancelled",
+  refused: "the hotel refused the cancellation; the booking stands",
+  terms_unknown: `its cancellation terms are not on record; ${SUPPORT}`,
+  needs_attention: `Fortrip is looking into this order; ${SUPPORT}`,
 };
 
 function itemLines(item: Item): string[] {
@@ -67,8 +84,20 @@ function paymentLines(o: Order): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
+  if (o.cancel) lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
+}
+
+/** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
+ *  only ever the order's own. */
+function cancelLine(c: NonNullable<Order["cancel"]>): string {
+  const figure = (name: string, m: typeof c.penalty) =>
+    `${name} ${m ? money(m) : "not stated"}`;
+  const figures = `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;
+  if (c.available) return `Cancel: can cancel now: ${figures}`;
+  const why = `Cancel: not available: ${label(CANCEL_REASON_WORDS, c.reason)}`;
+  return c.penalty || c.refund ? `${why} · ${figures}` : why;
 }
 
 export function orderLines(o: Order): string[] {

@@ -17,7 +17,7 @@ import {
   mealsText,
   offerLine,
 } from "./offers.ts";
-import { ORDER_STATUS_WORDS } from "./order.ts";
+import { CANCEL_REASON_WORDS, ORDER_STATUS_WORDS } from "./order.ts";
 import { localitiesLines } from "./search.ts";
 
 /*
@@ -166,6 +166,8 @@ function detailLines(e: KnownErrorBody): string[] {
       return [`Order ${e.details.orderId}.`];
     case "order_exists":
       return [`Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}.`];
+    case "order_not_cancellable":
+      return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
     case "destination_ambiguous":
       return ambiguous(e.details);
     case "destination_not_found":

@@ -2323,6 +2323,102 @@
             "properties": {
               "code": {
                 "type": "string",
+                "const": "cancellation_changed"
+              },
+              "message": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "retryAfterSeconds": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "requestId"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "const": "order_not_cancellable"
+              },
+              "message": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "retryAfterSeconds": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "cancellable",
+                          "already_cancelled",
+                          "in_progress",
+                          "not_confirmed",
+                          "stay_started",
+                          "non_refundable",
+                          "refused",
+                          "terms_unknown",
+                          "needs_attention"
+                        ]
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": {}
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "requestId"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
                 "const": "destination_ambiguous"
               },
               "message": {
@@ -3353,7 +3449,8 @@
                           "offers",
                           "hotel",
                           "orders_read",
-                          "orders_create"
+                          "orders_create",
+                          "orders_cancel"
                         ]
                       },
                       {
@@ -6030,11 +6127,951 @@
         ],
         "additionalProperties": {}
       },
+      "cancel": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cancellable",
+                  "already_cancelled",
+                  "in_progress",
+                  "not_confirmed",
+                  "stay_started",
+                  "non_refundable",
+                  "refused",
+                  "terms_unknown",
+                  "needs_attention"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "penalty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "penalty",
+          "refund"
+        ],
+        "additionalProperties": {}
+      },
       "manageUrl": {
         "type": "string"
       },
       "nextStep": {
         "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "orderId",
+      "reference",
+      "status",
+      "createdAt",
+      "updatedAt",
+      "items",
+      "price",
+      "payment",
+      "manageUrl"
+    ],
+    "additionalProperties": {}
+  },
+  "MCP_OUTPUT.cancel_order": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "orderId": {
+        "type": "string",
+        "pattern": "^ord_[0-9A-Za-z]{20}$"
+      },
+      "reference": {
+        "type": "string",
+        "pattern": "^FT-[2-9A-HJ-NP-Z]{6}$"
+      },
+      "status": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "awaiting_payment",
+              "expired",
+              "confirming",
+              "confirmed",
+              "failed",
+              "cancelling",
+              "cancelled",
+              "needs_attention"
+            ]
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "createdAt": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+      },
+      "updatedAt": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+      },
+      "items": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "hotel"
+                },
+                "hotel": {
+                  "type": "object",
+                  "properties": {
+                    "hotelId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^htl_[0-9A-Za-z]{20}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "names": {
+                      "type": "object",
+                      "properties": {
+                        "en": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "zh": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "en",
+                        "zh"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "checkIn": {
+                      "type": "string"
+                    },
+                    "checkOut": {
+                      "type": "string"
+                    },
+                    "timeZone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rooms": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "adults": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "childrenAges": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          }
+                        },
+                        "required": [
+                          "adults",
+                          "childrenAges"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "room": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "locale": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "en",
+                                            "zh"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "locale"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "beds": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "locale": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "en",
+                                            "zh"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "locale"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "beds"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "meals": {
+                      "type": "object",
+                      "properties": {
+                        "known": {
+                          "type": "boolean"
+                        },
+                        "included": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "breakfast",
+                                      "lunch",
+                                      "dinner"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "unspecifiedMainMeals": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "allInclusive": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "guestsCoveredPerRoom": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "label": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "locale": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "en",
+                                            "zh"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "text",
+                                "locale"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "known",
+                        "included",
+                        "unspecifiedMainMeals",
+                        "allInclusive",
+                        "guestsCoveredPerRoom",
+                        "label"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "cancellation": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "free",
+                                "partial_penalty",
+                                "non_refundable",
+                                "unknown"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "asOf": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        },
+                        "freeCancellationEndsAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "penalties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "startsAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "amount": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^\\d+(\\.\\d+)?$"
+                                  },
+                                  "currency": {
+                                    "type": "string",
+                                    "pattern": "^[A-Z]{3}$"
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "currency"
+                                ],
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "startsAt",
+                              "amount"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "timeZone": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "asOf",
+                        "freeCancellationEndsAt",
+                        "penalties",
+                        "timeZone"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "payAtProperty": {
+                      "type": "object",
+                      "properties": {
+                        "disclosure": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "complete",
+                                "incomplete"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "label": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "text": {
+                                        "type": "string"
+                                      },
+                                      "locale": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "enum": [
+                                                  "en",
+                                                  "zh"
+                                                ]
+                                              },
+                                              {
+                                                "type": "string"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "text",
+                                      "locale"
+                                    ],
+                                    "additionalProperties": {}
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "amount": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^\\d+(\\.\\d+)?$"
+                                      },
+                                      "currency": {
+                                        "type": "string",
+                                        "pattern": "^[A-Z]{3}$"
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "currency"
+                                    ],
+                                    "additionalProperties": {}
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "mandatory": {
+                                "type": "boolean"
+                              },
+                              "basis": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "per_stay",
+                                      "per_night",
+                                      "per_person",
+                                      "per_person_per_night",
+                                      "unknown"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "collectedAt": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "property",
+                                      "unknown"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "label",
+                              "amount",
+                              "mandatory",
+                              "basis",
+                              "collectedAt"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        }
+                      },
+                      "required": [
+                        "disclosure",
+                        "items"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "confirmationNumber": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "hotelId",
+                    "name",
+                    "names",
+                    "checkIn",
+                    "checkOut",
+                    "timeZone",
+                    "rooms",
+                    "room",
+                    "meals",
+                    "cancellation",
+                    "payAtProperty",
+                    "confirmationNumber"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "type",
+                "hotel"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "additionalProperties": {}
+            }
+          ]
+        }
+      },
+      "price": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "total"
+        ],
+        "additionalProperties": {}
+      },
+      "payment": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unpaid",
+                  "authorized",
+                  "paid",
+                  "released",
+                  "refund_pending",
+                  "refunded"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requiresSignIn": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chargeCurrency": {
+            "type": "string"
+          },
+          "localCurrencyAtCheckout": {
+            "type": "boolean"
+          },
+          "localCharge": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "url",
+          "requiresSignIn",
+          "expiresAt",
+          "chargeCurrency",
+          "localCurrencyAtCheckout",
+          "localCharge"
+        ],
+        "additionalProperties": {}
+      },
+      "cancel": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cancellable",
+                  "already_cancelled",
+                  "in_progress",
+                  "not_confirmed",
+                  "stay_started",
+                  "non_refundable",
+                  "refused",
+                  "terms_unknown",
+                  "needs_attention"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "penalty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "penalty",
+          "refund"
+        ],
+        "additionalProperties": {}
+      },
+      "manageUrl": {
         "type": "string"
       }
     },
@@ -6799,6 +7836,92 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge"
+        ],
+        "additionalProperties": {}
+      },
+      "cancel": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cancellable",
+                  "already_cancelled",
+                  "in_progress",
+                  "not_confirmed",
+                  "stay_started",
+                  "non_refundable",
+                  "refused",
+                  "terms_unknown",
+                  "needs_attention"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "penalty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "penalty",
+          "refund"
         ],
         "additionalProperties": {}
       },
@@ -7576,6 +8699,92 @@
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
                 "localCharge"
+              ],
+              "additionalProperties": {}
+            },
+            "cancel": {
+              "type": "object",
+              "properties": {
+                "available": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "cancellable",
+                        "already_cancelled",
+                        "in_progress",
+                        "not_confirmed",
+                        "stay_started",
+                        "non_refundable",
+                        "refused",
+                        "terms_unknown",
+                        "needs_attention"
+                      ]
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "penalty": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+)?$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "pattern": "^[A-Z]{3}$"
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "currency"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "refund": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+)?$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "pattern": "^[A-Z]{3}$"
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "currency"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "available",
+                "reason",
+                "penalty",
+                "refund"
               ],
               "additionalProperties": {}
             },
@@ -8404,6 +9613,92 @@
         ],
         "additionalProperties": {}
       },
+      "cancel": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cancellable",
+                  "already_cancelled",
+                  "in_progress",
+                  "not_confirmed",
+                  "stay_started",
+                  "non_refundable",
+                  "refused",
+                  "terms_unknown",
+                  "needs_attention"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "penalty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{3}$"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "penalty",
+          "refund"
+        ],
+        "additionalProperties": {}
+      },
       "manageUrl": {
         "type": "string"
       }
@@ -9174,6 +10469,92 @@
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
                 "localCharge"
+              ],
+              "additionalProperties": {}
+            },
+            "cancel": {
+              "type": "object",
+              "properties": {
+                "available": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "cancellable",
+                        "already_cancelled",
+                        "in_progress",
+                        "not_confirmed",
+                        "stay_started",
+                        "non_refundable",
+                        "refused",
+                        "terms_unknown",
+                        "needs_attention"
+                      ]
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "penalty": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+)?$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "pattern": "^[A-Z]{3}$"
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "currency"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "refund": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^\\d+(\\.\\d+)?$"
+                        },
+                        "currency": {
+                          "type": "string",
+                          "pattern": "^[A-Z]{3}$"
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "currency"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "available",
+                "reason",
+                "penalty",
+                "refund"
               ],
               "additionalProperties": {}
             },

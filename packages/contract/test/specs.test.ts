@@ -13,6 +13,7 @@ import {
 } from "../src/commands.ts";
 import { ERROR_CODES } from "../src/errors.ts";
 import {
+  cancelOrderInput,
   createOrderInput,
   getHotelInput,
   getOrderInput,
@@ -26,6 +27,7 @@ import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
+  CANCEL_NEXT_STEP,
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
   TOOLS,
@@ -197,10 +199,11 @@ const TOOL_NAMES = [
   "book_hotel",
   "get_order",
   "list_orders",
+  "cancel_order",
 ] as const;
 
 describe("TOOLS", () => {
-  it("lists the seven tools in call order", () => {
+  it("lists the eight tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
       [...TOOL_NAMES],
@@ -219,6 +222,7 @@ describe("TOOLS", () => {
         book_hotel: "Create hotel order and payment link",
         get_order: "Get order",
         list_orders: "List orders",
+        cancel_order: "Cancel order",
       },
     );
   });
@@ -243,6 +247,7 @@ describe("TOOLS", () => {
     assert.equal(tool("book_hotel").input, createOrderInput);
     assert.equal(tool("get_order").input, getOrderInput);
     assert.equal(tool("list_orders").input, listOrdersInput);
+    assert.equal(tool("cancel_order").input, cancelOrderInput);
   });
 
   it("every tool but the planning guide has an output schema", () => {
@@ -253,19 +258,24 @@ describe("TOOLS", () => {
     assert.equal(tool("book_hotel").output, MCP_OUTPUT.book_hotel);
     assert.equal(tool("get_order").output, MCP_OUTPUT.get_order);
     assert.equal(tool("list_orders").output, MCP_OUTPUT.list_orders);
+    assert.equal(tool("cancel_order").output, MCP_OUTPUT.cancel_order);
   });
 
-  it("states all four hints on every tool, and only book_hotel writes", () => {
+  it("states all four hints on every tool; only book_hotel and cancel_order write, and only cancel_order destroys", () => {
     for (const spec of TOOLS) {
       assert.deepEqual(
         Object.keys(spec.annotations).sort(),
         ["destructiveHint", "idempotentHint", "openWorldHint", "readOnlyHint"],
         spec.name,
       );
-      assert.equal(spec.annotations.destructiveHint, false, spec.name);
+      assert.equal(
+        spec.annotations.destructiveHint,
+        spec.name === "cancel_order",
+        spec.name,
+      );
       assert.equal(
         spec.annotations.readOnlyHint,
-        spec.name !== "book_hotel",
+        spec.name !== "book_hotel" && spec.name !== "cancel_order",
         spec.name,
       );
       assert.equal(
@@ -286,6 +296,7 @@ describe("TOOLS", () => {
         book_hotel: true,
         get_order: false,
         list_orders: false,
+        cancel_order: true,
       },
     );
   });
@@ -295,6 +306,16 @@ describe("TOOLS", () => {
     assert.equal(annotations.destructiveHint, false);
     assert.equal(annotations.idempotentHint, false);
     assert.equal(annotations.openWorldHint, true);
+  });
+
+  // C6: a replay answers the current order, so cancel_order is idempotent.
+  it("cancel_order's hints are destructive, idempotent, open world", () => {
+    assert.deepEqual(tool("cancel_order").annotations, {
+      readOnlyHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+      destructiveHint: true,
+    });
   });
 
   it("get_hotel_offers names the hotel limit and the default offers per hotel from the code", () => {
@@ -312,6 +333,18 @@ describe("TOOLS", () => {
     assert.match(description, /unpaid order/);
     assert.match(description, /payment link/);
     assert.ok(description.includes(SUPPORT_EMAIL), description);
+    // Spec §5.7: book_hotel points to cancel_order instead.
+    assert.doesNotMatch(description, /can't change or cancel/);
+    assert.match(description, /cancel_order/);
+  });
+
+  it("cancel_order carries the consent rule, says what it answers and what a refusal leaves", () => {
+    const { description } = tool("cancel_order");
+    assert.ok(description.includes(CANCEL_NEXT_STEP), description);
+    assert.match(description, /status cancelling, then cancelled/);
+    assert.match(description, /poll get_order/);
+    assert.match(description, /back to confirmed with cancel\.reason refused/);
+    assert.match(description, /cancellation_changed/);
   });
 
   it("a description names only tools there are", () => {
@@ -335,9 +368,10 @@ describe("TOOLS", () => {
         ),
       ),
       ORDER_NEXT_STEP,
+      CANCEL_NEXT_STEP,
     ];
     for (const text of texts) {
-      for (const [word] of text.matchAll(/\b(get|search|book|list)_[a-z_]+\b/g)) {
+      for (const [word] of text.matchAll(/\b(get|search|book|list|cancel)_[a-z_]+\b/g)) {
         assert.ok(names.has(word) || vocabulary.has(word), `${word} in: ${text}`);
       }
     }
@@ -367,13 +401,34 @@ describe("ORDER_NEXT_STEP", () => {
   });
 });
 
+describe("CANCEL_NEXT_STEP", () => {
+  // Spec §5.7: the consent rule of a cancellation, shaped like the payment one.
+  it("tells the model to show the stay, the penalty and the refund, ask, and wait for a yes", () => {
+    assert.match(
+      CANCEL_NEXT_STEP,
+      /^Before you call cancel_order, show the user [^.]*stay[^.]*cancel\.penalty and cancel\.refund \(amount and currency\)/,
+    );
+    assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
+    assert.match(CANCEL_NEXT_STEP, /Pass maximumPenalty exactly as cancel\.penalty\.amount\./);
+    assert.match(CANCEL_NEXT_STEP, /Never state a refund the order did not return\.$/);
+  });
+});
+
 describe("MCP_OUTPUT", () => {
-  it("covers the tools whose answer can carry a payment.url", () => {
+  it("covers the tools that answer an order or orders", () => {
     assert.deepEqual(Object.keys(MCP_OUTPUT), [
       "book_hotel",
       "get_order",
       "list_orders",
+      "cancel_order",
     ]);
+  });
+
+  // C11: the cancel rule rides only in the text; nextStep keeps its
+  // payment-only meaning, and cancel_order's answer never holds a payment.url.
+  it("cancel_order answers the HTTP order, without nextStep", () => {
+    assert.equal(MCP_OUTPUT.cancel_order, order);
+    assert.equal(jsonOf(MCP_OUTPUT.cancel_order, "output").properties?.nextStep, undefined);
   });
 
   it("accepts an order with and without nextStep", () => {
@@ -463,7 +518,7 @@ describe("COMMAND_GROUPS", () => {
 });
 
 describe("COMMANDS", () => {
-  it("lists the eleven commands, as typed, each with the tool it mirrors", () => {
+  it("lists the twelve commands, as typed, each with the tool it mirrors", () => {
     const tools: Record<string, ToolName | null> = {
       "hotels search": "search_hotels",
       "hotels get": "get_hotel",
@@ -471,6 +526,7 @@ describe("COMMANDS", () => {
       "hotels book": "book_hotel",
       "orders get": "get_order",
       "orders list": "list_orders",
+      "orders cancel": "cancel_order",
       login: null,
       logout: null,
       whoami: null,
@@ -562,6 +618,7 @@ describe("COMMANDS", () => {
       limit: "limit",
       locale: "locale",
     });
+    assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
     for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -583,6 +640,7 @@ describe("COMMANDS", () => {
       "hotels book": [],
       "orders get": ["<orderId> orderId"],
       "orders list": [],
+      "orders cancel": ["<orderId> orderId"],
       login: [],
       logout: [],
       whoami: [],
@@ -793,6 +851,7 @@ describe("COMMANDS", () => {
     assert.equal(placeholder("hotels offers", "room"), "<adults[:age,…]>");
     assert.equal(placeholder("hotels book", "offer"), "<off_>");
     assert.equal(placeholder("hotels book", "guest"), "<room>:<first>:<last>");
+    assert.equal(placeholder("orders cancel", "max-penalty"), "<amount>");
   });
 
   it("no flag or positional description names an MCP tool", () => {
@@ -858,7 +917,9 @@ describe("CLI-only options", () => {
     );
   });
 
-  it("--body is taken by the commands that send a body, --no-browser by login", () => {
+  // `orders cancel` sends one field, the penalty the user agreed to, and only
+  // from its flag (C7).
+  it("--body is taken by the commands that send a body, but cancel, --no-browser by login", () => {
     const options = Object.fromEntries(
       COMMANDS.map((spec) => [typed(spec), all(spec.options ?? [])]),
     );
@@ -869,6 +930,7 @@ describe("CLI-only options", () => {
       "hotels book": ["body"],
       "orders get": [],
       "orders list": [],
+      "orders cancel": [],
       login: ["no-browser"],
       logout: [],
       whoami: [],
@@ -924,6 +986,7 @@ describe("the specs", () => {
       ...strings(COMMAND_GROUPS),
       ...strings(GLOBAL_FLAGS),
       ORDER_NEXT_STEP,
+      CANCEL_NEXT_STEP,
     ];
     assert.ok(everything.length > 100, "the walk found the specs' text");
     assert.deepEqual(everything.filter((text) => SUPPLIER.test(text)), []);

@@ -65,6 +65,7 @@ export const PUBLISHED_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
   "MCP_OUTPUT.book_hotel": MCP_OUTPUT.book_hotel,
   "MCP_OUTPUT.get_order": MCP_OUTPUT.get_order,
   "MCP_OUTPUT.list_orders": MCP_OUTPUT.list_orders,
+  "MCP_OUTPUT.cancel_order": MCP_OUTPUT.cancel_order,
 };
 
 export type JsonSchema = Record<string, unknown>;

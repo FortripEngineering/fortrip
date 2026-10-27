@@ -7,6 +7,7 @@ Terms: meals not stated by the supplier — not known to be room only, may inclu
 Hotel confirmation number: none yet
 Total: EUR 410.00 · payment unpaid · charged in EUR
 Payment link (expires 2026-11-02 10:30 UTC; the user signs in to Fortrip to pay): https://fortrip.ai/stays/book/sb_9f3k2Lx
+Cancel: not available: only a confirmed order that is paid can be cancelled
 Manage: https://fortrip.ai/stays/book/sb_9f3k2Lx
 
 Order ord_KataNoLink0000000000 · reference FT-N4V6TB · awaiting payment · created 2026-11-01 11:00 UTC · updated 2026-11-01 11:00 UTC
@@ -16,6 +17,7 @@ Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free canc
 Hotel confirmation number: none yet
 Total: USD 1235.50 · payment unpaid · charged in USD (the user's card may pay in its local currency at checkout)
 Payment link: could not be read this time; read this order again for it.
+Cancel: not available: only a confirmed order that is paid can be cancelled
 Manage: https://fortrip.ai/orders/ord_KataNoLink0000000000
 
 Order ord_BundAwaiting00000000 · reference FT-7KQ2MX · awaiting payment · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:05 UTC
@@ -25,6 +27,7 @@ Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free canc
 Hotel confirmation number: none yet
 Total: USD 365.00 · payment unpaid · charged in USD (the user's card may pay in its local currency at checkout)
 Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4
+Cancel: not available: only a confirmed order that is paid can be cancelled
 Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
 
 Order ord_LakeConfirmed0000000 · reference FT-H3W9PA · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
@@ -33,8 +36,11 @@ Room: Deluxe King Room · beds not listed
 Terms: room only · partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · fees not in the total: Resort fee CNY 80.00, per night, mandatory, at the property
 Hotel confirmation number: LGR-449120
 Total: USD 366.00 · payment paid · charged in USD (the user's card may pay in its local currency at checkout) · card charged EUR 339.80
+Cancel: can cancel now: penalty USD 120.00, refund USD 246.00
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000
 
 Next page: call again with { cursor: "c_orders_page_2" }.
 
 Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.
+
+Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty exactly as cancel.penalty.amount. Never state a refund the order did not return.

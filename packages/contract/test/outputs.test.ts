@@ -279,6 +279,8 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   order_exists: { orderId: ORD, status: "confirmed" },
   order_in_progress: { orderId: ORD },
   order_attempts_exhausted: { orderId: ORD },
+  cancellation_changed: undefined,
+  order_not_cancellable: { reason: "stay_started" },
   destination_ambiguous: {
     name: "Suzhou",
     countryCode: "CN",
@@ -348,6 +350,22 @@ describe("v1 response fixtures parse, open and strict", () => {
   it("order and the order list", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
+  });
+  it("an order's cancel quote, cancellable or not (3.3)", () => {
+    const cancellable = {
+      ...orderFixture,
+      status: "confirmed",
+      cancel: { available: true, reason: "cancellable", penalty: usd("66.20"), refund: usd("66.20") },
+    };
+    parsesBoth(order, cancellable);
+    parsesBoth(order, {
+      ...orderFixture,
+      cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
+    });
+    // An unknown reason stays open; a server before 3.3 sends no cancel.
+    assert.ok(order.safeParse({ ...cancellable, cancel: { ...cancellable.cancel, reason: "later" } }).success);
+    assert.ok(order.safeParse(orderFixture).success);
+    assert.equal(order.safeParse({ ...cancellable, cancel: { available: true } }).success, false);
   });
   it("every change field", () => {
     for (const [field, value] of [
@@ -500,8 +518,8 @@ describe("shape rules", () => {
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
   "address", "adults", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
-  "basis", "beds", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
-  "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
+  "basis", "beds", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
+  "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
   "coverage", "createdAt", "currency", "current", "data", "deposit", "description", "destination",
@@ -514,9 +532,9 @@ const PUBLIC_KEYS = new Set([
   "manageUrl", "mandatory", "match", "matched", "max", "maxOccupancy", "meals", "members",
   "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
-  "payAtProperty", "payment", "penalties", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
+  "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
-  "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference",
+  "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "scope", "scopes", "share",
   "sort", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",

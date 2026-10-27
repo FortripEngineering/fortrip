@@ -570,3 +570,21 @@ export const listOrdersInput = strictInput({
 });
 
 export type ListOrdersInput = z.input<typeof listOrdersInput>;
+
+const maximumPenaltyError =
+  "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50";
+
+/** `POST /v1/orders/{orderId}/cancel` and the MCP `cancel_order` arguments:
+ *  the order, and the penalty the user agreed to as a ceiling. The server
+ *  computes the refund; a higher penalty now answers `cancellation_changed`. */
+export const cancelOrderInput = strictInput({
+  orderId: orderId.describe("orderId of the order to cancel, from get order or list orders."),
+  maximumPenalty: z
+    .number({ error: maximumPenaltyError })
+    .min(0, { error: maximumPenaltyError })
+    .describe(
+      "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
+    ),
+});
+
+export type CancelOrderInput = z.input<typeof cancelOrderInput>;

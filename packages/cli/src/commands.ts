@@ -41,7 +41,8 @@ const locale = (input: Body) => input.locale as "en" | "zh" | undefined;
 
 /** Where each command sends its request, by the tool it mirrors, from its
  *  input once the contract has accepted it. A POST sends the input as its
- *  body; a GET carries it in its path and query. */
+ *  body, but for the fields in its path; a GET carries it in its path and
+ *  query. */
 const ROUTES: Partial<Record<ToolName, { method: "GET" | "POST"; path: (input: Body) => string }>> = {
   search_hotels: { method: "POST", path: () => API.hotelSearch },
   get_hotel: {
@@ -66,9 +67,10 @@ const ROUTES: Partial<Record<ToolName, { method: "GET" | "POST"; path: (input: B
       return text ? `${API.orders}?${text}` : API.orders;
     },
   },
+  cancel_order: { method: "POST", path: (input) => API.orderCancel(input.orderId as string) },
 };
 
-/** Fields of a GET's input that are in its path; the others are its query. */
+/** Fields of an input that are in its path; a GET's others are its query. */
 const PATH_FIELDS = new Set(["hotelId", "orderId"]);
 
 /**
@@ -150,12 +152,31 @@ export function parseCommand(
 
   check(spec, input, route.method === "GET", fromEnv);
   const path = route.path(input);
-  return route.method === "POST" ? { method: "POST", path, body: input } : { method: "GET", path };
+  if (route.method === "GET") return { method: "GET", path };
+  const body = Object.fromEntries(Object.entries(input).filter(([field]) => !PATH_FIELDS.has(field)));
+  return { method: "POST", path, body };
+}
+
+/**
+ * `orders cancel` without its penalty flag cancels nothing (C7): the read of
+ * the order it makes instead, so the penalty and the refund can be shown,
+ * and the flag. `null` for any other command, or when the flag is given. A
+ * bad order id exits 2 as `orders cancel`'s own, and nothing is sent.
+ */
+export function cancelPreview(spec: CommandSpec, argv: string[]): (ApiRequest & { flag: string }) | null {
+  const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
+  if (!flag) return null;
+  const { values, positionals } = parseOptions(spec, argv);
+  if (values[flag.flag] !== undefined) return null;
+  if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
+  const input = { orderId: positionals[0] };
+  check({ ...spec, tool: "get_order" }, input, true, new Map());
+  return { method: "GET", path: API.order(input.orderId as string), flag: `--${flag.flag}` };
 }
 
 /** Refuses an input the contract's schema doesn't accept, with the issues
  *  the API's `invalid_request` would list (pointers into the body, or
- *  `/path/<name>` and `/query/<name>` for a GET). An issue with a value an
+ *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an
  *  environment variable set (`fromEnv`, by pointer) names the variable. */
 function check(spec: CommandSpec, input: Body, isGet: boolean, fromEnv: Map<string, string>): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
@@ -163,7 +184,8 @@ function check(spec: CommandSpec, input: Body, isGet: boolean, fromEnv: Map<stri
   if (!result || result.success) return;
   const pointer = (path: readonly PropertyKey[]) => {
     const keys = path.map((key) => String(key).replaceAll("~", "~0").replaceAll("/", "~1"));
-    const where = isGet && keys[0] !== undefined ? [PATH_FIELDS.has(keys[0]) ? "path" : "query"] : [];
+    const where =
+      keys[0] === undefined ? [] : PATH_FIELDS.has(keys[0]) ? ["path"] : isGet ? ["query"] : [];
     return [...where, ...keys].map((key) => `/${key}`).join("");
   };
   const issues = result.error.issues.flatMap((issue) =>

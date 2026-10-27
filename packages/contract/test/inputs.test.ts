@@ -7,6 +7,7 @@ import { CARD_NUMBER_MESSAGE } from "../src/card-number.ts";
 import { addIsoDateDays } from "../src/dates.ts";
 import { GUEST_NAME_MESSAGE } from "../src/guest-name.ts";
 import {
+  cancelOrderInput,
   createOrderInput,
   createSearchHotelsInput,
   destination,
@@ -104,6 +105,7 @@ describe("every request field has a description", () => {
     ["createOrderInput", createOrderInput],
     ["getOrderInput", getOrderInput],
     ["listOrdersInput", listOrdersInput],
+    ["cancelOrderInput", cancelOrderInput],
     ["stay", stay],
     ["destination", destination],
   ] as const) {
@@ -852,6 +854,31 @@ describe("getOrderInput and listOrdersInput", () => {
     assert.equal(
       refusalOf(listOrdersInput, { status: "confirmed" })[0]?.message,
       "Unknown argument(s): status",
+    );
+  });
+});
+
+describe("cancelOrderInput", () => {
+  const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
+
+  it("takes an order id and the penalty the user agreed to, 0 or more", () => {
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 0 });
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 12.5 });
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: -1 }, "maximumPenalty");
+    assertRefusedAt(cancelOrderInput, { orderId }, "maximumPenalty");
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: "12.50" }, "maximumPenalty");
+    assertRefusedAt(cancelOrderInput, { orderId: hotel, maximumPenalty: 0 }, "orderId");
+    assert.equal(
+      refusalOf(cancelOrderInput, { orderId, maximumPenalty: 0, refund: 1 })[0]?.message,
+      "Unknown argument(s): refund",
+    );
+  });
+
+  it("describes maximumPenalty as the order's cancel.penalty.amount", () => {
+    const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
+    assert.equal(
+      json.properties?.maximumPenalty?.description,
+      "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
     );
   });
 });

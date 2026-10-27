@@ -38,6 +38,7 @@ export {
 } from "./guest-name.ts";
 export { renderGuide, type GuideSurface, type GuideTopic } from "./guide.ts";
 export {
+  cancelOrderInput,
   createOrderInput,
   createSearchHotelsInput,
   destination,
@@ -47,6 +48,7 @@ export {
   listOrdersInput,
   searchHotelsInput,
   stay,
+  type CancelOrderInput,
   type CreateOrderInput,
   type Destination,
   type GetHotelInput,
@@ -100,12 +102,14 @@ export {
   type Omitted,
 } from "./outputs/offer.ts";
 export {
+  CANCEL_REASONS,
   offerChange,
   order,
   orderList,
   orderReference,
   ORDER_STATUSES,
   PAYMENT_STATUSES,
+  type CancelReason,
   type OfferChange,
   type Order,
   type OrderList,
@@ -141,6 +145,7 @@ export {
 } from "./render/index.ts";
 export { ERROR_CODES, type ErrorCode } from "./errors.ts";
 export {
+  CANCEL_NEXT_STEP,
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
   PRESENTATION_HINT,

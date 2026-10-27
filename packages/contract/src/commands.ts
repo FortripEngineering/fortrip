@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  cancelOrderInput,
   createOrderInput,
   getHotelInput,
   getOrderInput,
@@ -102,6 +103,7 @@ export interface CommandSpec {
     | "offers"
     | "book"
     | "list"
+    | "cancel"
     | "login"
     | "logout"
     | "whoami"
@@ -407,6 +409,17 @@ const ordersListFlags = flagsOf(listOrdersInput, [
   localeFlag,
 ]);
 
+const cancelFlags = flagsOf(cancelOrderInput, [
+  {
+    flag: "max-penalty",
+    field: "maximumPenalty",
+    type: "number",
+    placeholder: "<amount>",
+    description:
+      "The penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it, the command cancels nothing: it shows the penalty and the refund.",
+  },
+]);
+
 /** The request body, which the flags then override field by field. */
 const BODY_OPTION: OptionSpec = {
   flag: "body",
@@ -418,7 +431,7 @@ const BODY_OPTION: OptionSpec = {
 
 export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
   { name: "hotels", summary: "Search hotels, get offers and order one" },
-  { name: "orders", summary: "Your orders and their status" },
+  { name: "orders", summary: "Your orders, their status, and cancelling one" },
 ];
 
 export const COMMANDS: readonly CommandSpec[] = [
@@ -468,6 +481,14 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "List your orders, newest first",
     tool: "list_orders",
     flags: ordersListFlags,
+  },
+  {
+    group: "orders",
+    name: "cancel",
+    summary: "Cancel an order under its terms, for the penalty the user agreed to",
+    tool: "cancel_order",
+    flags: cancelFlags,
+    positionals: [positional(cancelOrderInput, "orderId")],
   },
   {
     group: null,

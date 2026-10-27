@@ -72,6 +72,12 @@
           "localCurrencyAtCheckout": false,
           "localCharge": null
         },
+        "cancel": {
+          "available": false,
+          "reason": "not_confirmed",
+          "penalty": null,
+          "refund": null
+        },
         "manageUrl": "https://fortrip.ai/stays/book/sb_9f3k2Lx"
       },
       {
@@ -168,6 +174,12 @@
           "localCurrencyAtCheckout": true,
           "localCharge": null
         },
+        "cancel": {
+          "available": false,
+          "reason": "not_confirmed",
+          "penalty": null,
+          "refund": null
+        },
         "manageUrl": "https://fortrip.ai/orders/ord_KataNoLink0000000000"
       },
       {
@@ -255,6 +267,12 @@
           "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": null
+        },
+        "cancel": {
+          "available": false,
+          "reason": "not_confirmed",
+          "penalty": null,
+          "refund": null
         },
         "manageUrl": "https://fortrip.ai/orders/ord_BundAwaiting00000000"
       },
@@ -361,6 +379,18 @@
           "localCharge": {
             "amount": "339.80",
             "currency": "EUR"
+          }
+        },
+        "cancel": {
+          "available": true,
+          "reason": "cancellable",
+          "penalty": {
+            "amount": "120.00",
+            "currency": "USD"
+          },
+          "refund": {
+            "amount": "246.00",
+            "currency": "USD"
           }
         },
         "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"

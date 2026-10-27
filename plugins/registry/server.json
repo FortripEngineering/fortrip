@@ -3,7 +3,7 @@
   "name": "io.github.FortripEngineering/fortrip",
   "title": "Fortrip",
   "description": "Search hotels worldwide, compare live room rates, and create booking payment links.",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "websiteUrl": "https://fortrip.ai",
   "repository": {
     "url": "https://github.com/FortripEngineering/fortrip",
@@ -14,7 +14,7 @@
     {
       "registryType": "npm",
       "identifier": "fortrip",
-      "version": "3.2.0",
+      "version": "3.3.0",
       "transport": {
         "type": "stdio"
       },

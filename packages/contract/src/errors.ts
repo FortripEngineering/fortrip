@@ -12,6 +12,8 @@ export type ErrorCode =
   | "order_exists"
   | "order_in_progress"
   | "order_attempts_exhausted"
+  | "cancellation_changed"
+  | "order_not_cancellable"
   | "destination_ambiguous"
   | "destination_not_found"
   | "search_too_broad"
@@ -40,6 +42,8 @@ export const ERROR_CODES: Readonly<
   order_exists: { status: [409], retryable: false },
   order_in_progress: { status: [409], retryable: true },
   order_attempts_exhausted: { status: [409], retryable: false },
+  cancellation_changed: { status: [409], retryable: false },
+  order_not_cancellable: { status: [409], retryable: false },
   destination_ambiguous: { status: [422], retryable: false },
   destination_not_found: { status: [422], retryable: false },
   search_too_broad: { status: [422], retryable: false },
