@@ -122,7 +122,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "get_hotel_offers",
     title: "Get live hotel offers",
-    description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room, the meals included, price.total in USD for the whole stay and every room (what is charged), fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for book_hotel that expires at expiresAt. Hotels with nothing to offer are listed under unavailable with the reason. Up to limitPerHotel offers per hotel, default ${LIMITS.offersPerHotelDefault}, cheapest first.`,
+    description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room, the meals included, price.total in USD for the whole stay and every room (what is charged), fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for book_hotel that expires at expiresAt. Hotels with nothing to offer are listed under unavailable with the reason. Up to limitPerHotel offers per hotel, default ${LIMITS.offersPerHotelDefault}: a spread of choices that always includes the cheapest offer, the cheapest that can be cancelled free and the cheapest with breakfast, then other rooms, listed cheapest first.`,
     annotations: READ,
     input: hotelOffersInput,
     output: hotelOffersResult,

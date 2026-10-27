@@ -134,7 +134,7 @@ export function offerLine(o: Offer): string {
 const OMITTED: Record<string, string> = {
   byNationality: "restricted by nationality",
   byFilters: "removed by the filters",
-  dominated: "beaten by another offer for the same room",
+  dominated: "beaten by or the same as another offer for the same room",
   unreadable: "unreadable",
 };
 
