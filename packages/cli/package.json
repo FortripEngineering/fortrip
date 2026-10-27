@@ -1,6 +1,6 @@
 {
   "name": "fortrip",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "license": "Apache-2.0",
   "description": "Search, price and book Fortrip hotels from the terminal or an AI agent.",
   "mcpName": "io.github.FortripEngineering/fortrip",
