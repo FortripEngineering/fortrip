@@ -1,6 +1,6 @@
 ---
 name: fortrip-cli
-description: Searches hotels, compares live offers and creates a hotel order with a payment link through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price or book a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_offers, book_hotel) aren't available. Not for flights, activities or changing an existing booking.
+description: Searches hotels, compares live offers, creates a hotel order with a payment link and cancels an order through the Fortrip command-line tool (npx fortrip). Use when the user wants to find, compare, price, book or cancel a hotel stay through Fortrip, you can run shell commands, and Fortrip's MCP tools (search_hotels, get_hotel_offers, book_hotel) aren't available. Not for flights, activities or changing an existing booking.
 ---
 
 # Fortrip hotel stays

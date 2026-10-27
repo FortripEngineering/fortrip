@@ -9,11 +9,13 @@ conversation with Claude.
 - **The Fortrip connector**, Fortrip's hosted MCP server at
   `https://mcp.fortrip.ai/`. Its tools search hotels, read a hotel's
   details, get live offers for up to 15 hotels at a time, create an order
-  with a payment link, and check an order's status or list your orders.
+  with a payment link, check an order's status or list your orders, and
+  cancel an order under its cancellation terms.
 - **The `fortrip` skill**, which tells Claude the order to use the tools in,
   how to read prices, meal plans and cancellation terms, how to plan trips
   with flexible dates, budgets or several stops, and to show you the price
-  and terms and wait for your confirmation before giving you a payment link.
+  and terms and wait for your confirmation before giving you a payment link
+  or cancelling an order.
 
 ## Sign in
 
@@ -44,8 +46,20 @@ token into the chat.
 
 Stays are 1 to 15 nights, with 1 to 8 rooms per order and the same number of
 adults and children in each room. After you pay, Claude can check the order's
-status, including whether the hotel has confirmed it. Flights, activities, and
-changes to or cancellations of existing orders aren't supported.
+status, including whether the hotel has confirmed it.
+
+## Cancelling an order
+
+Claude can cancel a confirmed order under its cancellation terms. It first
+shows you the stay, the penalty those terms charge now and the refund (what
+you paid less the penalty), and waits for you to confirm. You're charged no
+more than the penalty you agreed to: if it has gone up since, nothing is
+cancelled and Claude asks you again. The order shows as cancelling until the
+hotel has cancelled it and the refund is issued. Once the stay has started,
+or when the terms don't allow a cancellation here, email info@fortrip.ai with
+the order's reference.
+
+Flights, activities and changes to existing orders aren't supported.
 
 ## Example prompts
 
@@ -90,8 +104,8 @@ bookings are subject to its [terms](https://fortrip.ai/terms).
 - **Supplier unavailable:** the hotel supplier didn't respond. Claude retries
   once; if it still fails, try again in a few minutes.
 - **Too many requests:** Claude waits the time Fortrip asks for, then retries.
-- **Changing or cancelling an order:** email info@fortrip.ai with the order's
-  reference.
+- **Changing an order, or a cancellation Claude can't make:** email
+  info@fortrip.ai with the order's reference.
 
 ## Support
 

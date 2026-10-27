@@ -11,7 +11,7 @@ import {
 
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
-import { parseCommand, parseOptions } from "./commands.ts";
+import { cancelPreview, parseCommand, parseOptions } from "./commands.ts";
 import { resolveApiUrl, resolveMcpUrl } from "./credentials.ts";
 import {
   CliError,
@@ -153,9 +153,31 @@ async function run(argv: string[]): Promise<Answer> {
       }
     }
   }
+  const preview = cancelPreview(spec, rest);
+  if (preview) {
+    const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
+    throw usageError(notCancelled(spec, preview.flag, order));
+  }
   const { method, path, body } = parseCommand(spec, rest, process.env);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
   return { data, text: renderToolResult(spec.tool as RenderedTool, data) };
+}
+
+/** What `orders cancel` without its penalty flag says instead of
+ *  cancelling: the order's Cancel line and, when it can be cancelled now,
+ *  the flag with the order's own penalty. */
+function notCancelled(spec: CommandSpec, flag: string, order: unknown): string {
+  const line = renderToolResult("get_order", order)
+    .split("\n")
+    .find((text) => text.startsWith("Cancel: "));
+  const cancel = (order as { cancel?: { available?: unknown; penalty?: { amount?: unknown } | null } } | null)
+    ?.cancel;
+  const amount = cancel?.available === true ? cancel.penalty?.amount : undefined;
+  return [
+    `Not cancelled: ${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`,
+    line ?? "Cancel: not stated for this order.",
+    ...(typeof amount === "string" ? [`Pass ${flag} ${amount} to cancel.`] : []),
+  ].join("\n");
 }
 
 /** `whoami`, and `login` once signed in: the account as 2.0 printed it,

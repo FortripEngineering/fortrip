@@ -157,6 +157,23 @@ export function parseCommand(
   return { method: "POST", path, body };
 }
 
+/**
+ * `orders cancel` without its penalty flag cancels nothing (C7): the read of
+ * the order it makes instead, so the penalty and the refund can be shown,
+ * and the flag. `null` for any other command, or when the flag is given. A
+ * bad order id exits 2 as `orders cancel`'s own, and nothing is sent.
+ */
+export function cancelPreview(spec: CommandSpec, argv: string[]): (ApiRequest & { flag: string }) | null {
+  const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
+  if (!flag) return null;
+  const { values, positionals } = parseOptions(spec, argv);
+  if (values[flag.flag] !== undefined) return null;
+  if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
+  const input = { orderId: positionals[0] };
+  check({ ...spec, tool: "get_order" }, input, true, new Map());
+  return { method: "GET", path: API.order(input.orderId as string), flag: `--${flag.flag}` };
+}
+
 /** Refuses an input the contract's schema doesn't accept, with the issues
  *  the API's `invalid_request` would list (pointers into the body, or
  *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an

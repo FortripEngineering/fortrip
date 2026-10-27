@@ -1,6 +1,6 @@
 ---
 name: fortrip
-description: Finds, compares, prices and orders hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price or book a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing or cancelling an existing booking, or coding work.
+description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
 ---
 
 # Fortrip hotel stays

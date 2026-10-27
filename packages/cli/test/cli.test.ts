@@ -129,6 +129,66 @@ describe("requests", () => {
     assert.deepEqual(requests[0]?.body, { maximumPenalty: 12.5 });
   });
 
+  // C7: never a cancellation without the penalty the user agreed to.
+  it("orders cancel without --max-penalty reads the order, prints its Cancel line and exits 2", async () => {
+    const { data } = await fixture("order-confirmed");
+    reply = { status: 200, body: data };
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.equal(
+      stderr,
+      [
+        "Error: Not cancelled: fortrip orders cancel needs --max-penalty, the penalty the user agreed to.",
+        "Cancel: can cancel now: penalty USD 120.00, refund USD 246.00",
+        "Pass --max-penalty 120.00 to cancel.",
+        "",
+      ].join("\n"),
+    );
+    assert.deepEqual(
+      requests.map((r) => `${r.method} ${r.url}`),
+      [`GET ${API.order(ORDER)}`],
+    );
+    const json = JSON.parse((await cli(["orders", "cancel", ORDER, "--json"])).stderr);
+    assert.equal(json.error.code, "invalid_request");
+    assert.match(json.error.message, /\nPass --max-penalty 120\.00 to cancel\.$/);
+    assert.ok(requests.every((r) => r.method === "GET"));
+  });
+
+  it("orders cancel without --max-penalty on an order that can't be cancelled says why, and nothing else", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    reply = { status: 200, body: data };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
+    assert.equal(code, 2);
+    assert.equal(
+      stderr,
+      [
+        "Error: Not cancelled: fortrip orders cancel needs --max-penalty, the penalty the user agreed to.",
+        "Cancel: not available: only a confirmed order that is paid can be cancelled",
+        "",
+      ].join("\n"),
+    );
+    // A server before 3.3 says nothing about cancelling.
+    const { cancel: _, ...older } = data as Record<string, unknown>;
+    reply = { status: 200, body: older };
+    assert.match((await cli(["orders", "cancel", ORDER])).stderr, /\nCancel: not stated for this order\.\n$/);
+    assert.ok(requests.every((r) => r.method === "GET"));
+  });
+
+  it("orders cancel without --max-penalty sends nothing for a bad order id, and passes on the read's error", async () => {
+    const bad = await cli(["orders", "cancel", "ao_1"]);
+    assert.equal(bad.code, 2);
+    assert.match(bad.stderr, /\/path\/orderId/);
+    assert.equal(requests.length, 0);
+    reply = {
+      status: 404,
+      body: { error: { code: "not_found", message: "No such order.", retryable: false, requestId: "req_1" } },
+    };
+    const missing = await cli(["orders", "cancel", ORDER]);
+    assert.equal(missing.code, 1);
+    assert.match(missing.stderr, /^Error not_found/);
+  });
+
   it("hotels search posts the contract's body", async () => {
     await cli(SEARCH);
     assert.equal(requests[0]?.url, API.hotelSearch);
