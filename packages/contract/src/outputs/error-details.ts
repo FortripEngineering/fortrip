@@ -12,7 +12,12 @@ import { instant, localDate } from "../conventions/time.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
 import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
-import { ORDER_STATUSES, offerChange, orderReference } from "./order.ts";
+import {
+  CANCEL_REASONS,
+  ORDER_STATUSES,
+  offerChange,
+  orderReference,
+} from "./order.ts";
 import { center, place, placeRef } from "./place.ts";
 import { localities } from "./search.ts";
 
@@ -45,6 +50,8 @@ export const ERROR_DETAILS = {
   order_exists: openObject({ orderId, status: openEnum(ORDER_STATUSES) }),
   order_in_progress: openObject({ orderId }),
   order_attempts_exhausted: openObject({ orderId }),
+  cancellation_changed: null,
+  order_not_cancellable: openObject({ reason: openEnum(CANCEL_REASONS) }),
   destination_ambiguous: openObject({
     name: z.string(),
     countryCode: z.string(),
@@ -97,7 +104,14 @@ export const ERROR_DETAILS = {
     reason: openEnum(["sold_out", "refused"]),
   }),
   rate_limited: openObject({
-    scope: openEnum(["search", "offers", "hotel", "orders_read", "orders_create"]),
+    scope: openEnum([
+      "search",
+      "offers",
+      "hotel",
+      "orders_read",
+      "orders_create",
+      "orders_cancel",
+    ]),
   }),
   ordering_paused: null,
   service_unavailable: null,

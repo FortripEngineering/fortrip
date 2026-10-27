@@ -91,6 +91,8 @@ const CASES: {
   method: "GET" | "POST";
   path: string;
   body?: Record<string, unknown>;
+  /** The input fields the path carries, which the body leaves out. */
+  inPath?: Record<string, unknown>;
 }[] = [
   {
     name: "hotels search",
@@ -256,19 +258,35 @@ const CASES: {
     method: "GET",
     path: "/v1/orders",
   },
+  {
+    name: "orders cancel",
+    argv: [ORDER, "--max-penalty", "12.50"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/cancel`,
+    body: { maximumPenalty: 12.5 },
+    inPath: { orderId: ORDER },
+  },
+  {
+    name: "orders cancel",
+    argv: [ORDER, "--max-penalty", "0"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/cancel`,
+    body: { maximumPenalty: 0 },
+    inPath: { orderId: ORDER },
+  },
 ];
 
 const SENDING = COMMANDS.filter((spec) => spec.group !== null);
 
 describe("every command builds the request the contract accepts", () => {
-  for (const { name, argv, method, path, body: expected } of CASES) {
+  for (const { name, argv, method, path, body: expected, inPath } of CASES) {
     it(`${name} ${argv.join(" ")}`, () => {
       const request = parse(name, argv);
       assert.equal(request.method, method);
       assert.equal(request.path, path);
       assert.deepEqual(request.body, expected);
       if (expected) {
-        const parsed = inputOf(command(name)).safeParse(expected);
+        const parsed = inputOf(command(name)).safeParse({ ...inPath, ...expected });
         assert.ok(parsed.success, JSON.stringify(parsed.error?.issues));
       }
     });
@@ -282,6 +300,7 @@ describe("every command builds the request the contract accepts", () => {
       "hotels book",
       "orders get",
       "orders list",
+      "orders cancel",
     ]);
     for (const spec of SENDING) {
       const argvs = CASES.filter((c) => c.name === typed(spec)).map((c) => c.argv);
@@ -299,6 +318,7 @@ describe("every command builds the request the contract accepts", () => {
     assert.equal(parse("hotels get", [HOTEL, "--rooms"]).path, API.hotel(HOTEL, { rooms: true }));
     assert.equal(parse("orders get", [ORDER]).path, API.order(ORDER));
     assert.ok(parse("orders list", []).path.startsWith(API.orders));
+    assert.equal(parse("orders cancel", [ORDER, "--max-penalty", "1"]).path, API.orderCancel(ORDER));
   });
 
   it("a command that sends no request has nothing to parse", () => {
@@ -357,6 +377,20 @@ describe("a request the contract refuses is not sent", () => {
       issuesOf(() => parse("orders list", ["--limit", "0"])).map((issue) => issue.pointer),
       ["/query/limit"],
     );
+  });
+
+  it("a POST's path fields point into its path, its other fields into its body", () => {
+    assert.deepEqual(
+      issuesOf(() => parse("orders cancel", ["ao_1", "--max-penalty", "1"])).map((issue) => issue.pointer),
+      ["/path/orderId"],
+    );
+    assert.deepEqual(issuesOf(() => parse("orders cancel", [ORDER, "--max-penalty=-1"])), [
+      {
+        pointer: "/maximumPenalty",
+        message:
+          "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50",
+      },
+    ]);
   });
 
   it("a check-in in the past, and mixed rooms in offers", () => {

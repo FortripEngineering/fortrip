@@ -33,6 +33,24 @@ export const PAYMENT_STATUSES = [
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/** Why an order can or can't be cancelled now (3.3): `cancellable` when it
+ *  can, else the first reason that holds. `non_refundable` is a rate the
+ *  hotel takes no cancellation for; `refused`, a cancellation the hotel
+ *  refused, the booking standing as it was. */
+export const CANCEL_REASONS = [
+  "cancellable",
+  "already_cancelled",
+  "in_progress",
+  "not_confirmed",
+  "stay_started",
+  "non_refundable",
+  "refused",
+  "terms_unknown",
+  "needs_attention",
+] as const;
+
+export type CancelReason = (typeof CANCEL_REASONS)[number];
+
 /** `FT-` and six characters with no 0, 1, I or O. */
 export const orderReference = z.string().regex(/^FT-[2-9A-HJ-NP-Z]{6}$/);
 
@@ -74,6 +92,16 @@ export const order = openObject({
     localCurrencyAtCheckout: z.boolean(),
     localCharge: money.nullable(),
   }),
+  /** Whether the user can cancel the order now and, when they can, its
+   *  penalty under the accepted terms (read a minute ahead) and the refund,
+   *  what was paid less the penalty, both in the charge currency. Absent
+   *  from servers before 3.3. */
+  cancel: openObject({
+    available: z.boolean(),
+    reason: openEnum(CANCEL_REASONS),
+    penalty: money.nullable(),
+    refund: money.nullable(),
+  }).optional(),
   manageUrl: z.string(),
 });
 

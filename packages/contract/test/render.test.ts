@@ -5,7 +5,8 @@ import { describe, it } from "node:test";
 import { strictOutput } from "../src/conventions/open.ts";
 import { strictErrorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
-import { ORDER_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
+import { CANCEL_REASONS } from "../src/outputs/order.ts";
+import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
 
 /*
  * Goldens: each fixture in fixtures/v1 is synthetic (no supplier names or
@@ -33,6 +34,7 @@ const GOLDENS = [
   "order-awaiting-payment",
   "order-confirmed",
   "list-orders",
+  "cancel-order",
 ] as const;
 type Golden = (typeof GOLDENS)[number];
 
@@ -465,6 +467,22 @@ describe("other errors", () => {
     assert.match(text, /12\.3 %/);
   });
 
+  it("order_not_cancellable words its reason as the order's Cancel line does", () => {
+    const envelope = {
+      error: {
+        code: "order_not_cancellable",
+        message: "This order can't be cancelled now.",
+        retryable: false,
+        details: { reason: "refused" },
+        requestId: "req_1",
+      },
+    };
+    const text = renderError(envelope, 409);
+    assert.match(text, /^Not cancellable: the hotel refused the cancellation; the booking stands\.$/m);
+    envelope.error.details.reason = "later";
+    assert.match(renderError(envelope, 409), /^Not cancellable: later\.$/m);
+  });
+
   it("offer_changed lists every change and the new offer", () => {
     const offers = load("offers-two-hotels-one-unavailable") as ToolFixture;
     const offer = (offers.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers[1]!;
@@ -623,11 +641,83 @@ describe("meals", () => {
 
 describe("orders and the consent rule", () => {
   it("ends with ORDER_NEXT_STEP when payment.url is set", () => {
-    for (const name of ["order-awaiting-payment", "list-orders"] as const) {
-      const text = render(load(name));
-      assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`), name);
-      assert.equal(text.split(ORDER_NEXT_STEP).length, 2, name);
+    const text = render(load("order-awaiting-payment"));
+    assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`));
+    assert.equal(text.split(ORDER_NEXT_STEP).length, 2);
+  });
+
+  it("puts CANCEL_NEXT_STEP after ORDER_NEXT_STEP when both apply, each once", () => {
+    const text = render(load("list-orders"));
+    assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`));
+    assert.equal(text.split(ORDER_NEXT_STEP).length, 2);
+    assert.equal(text.split(CANCEL_NEXT_STEP).length, 2);
+  });
+
+  it("ends with CANCEL_NEXT_STEP when the order can be cancelled now, with the penalty and refund", () => {
+    const text = render(load("order-confirmed"));
+    assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
+    assert.equal(text.split(CANCEL_NEXT_STEP).length, 2);
+    assert.match(text, /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00$/m);
+  });
+
+  it("leaves CANCEL_NEXT_STEP out when no order can be cancelled now", () => {
+    const fixture = copy(load("order-confirmed")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    data.cancel = { available: false, reason: "stay_started", penalty: null, refund: null };
+    for (const tool of ["get_order", "cancel_order"] as const) {
+      const text = renderToolResult(tool, data);
+      assert.ok(!text.includes(CANCEL_NEXT_STEP), tool);
+      assert.match(text, /^Cancel: not available: the stay has started/m, tool);
     }
+    const list = copy(load("list-orders")) as ToolFixture;
+    for (const o of list.data.data as Record<string, any>[]) o.cancel.available = false;
+    assert.ok(!renderToolResult("list_orders", list.data).includes(CANCEL_NEXT_STEP));
+  });
+
+  it("cancel_order renders the order with no consent paragraph", () => {
+    const fixture = load("cancel-order") as ToolFixture;
+    const text = render(fixture);
+    assert.match(text.split("\n")[0]!, / · cancelling · /);
+    assert.match(text, /^Cancel: not available: a cancellation is in progress/m);
+    assert.ok(!text.includes(CANCEL_NEXT_STEP));
+    assert.ok(!text.includes(ORDER_NEXT_STEP));
+    // Even an answer that could still be cancelled carries no rule: it is
+    // the cancellation's own answer.
+    const data = copy(load("order-confirmed")) as ToolFixture;
+    assert.ok(!renderToolResult("cancel_order", data.data).includes(CANCEL_NEXT_STEP));
+  });
+
+  it("words every reason, and shows an unknown one as it came", () => {
+    const fixture = copy(load("order-confirmed")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    const lines = new Set<string>();
+    for (const reason of CANCEL_REASONS.filter((r) => r !== "cancellable")) {
+      data.cancel = { available: false, reason, penalty: null, refund: null };
+      const line = renderToolResult("get_order", data).split("\n").find((l) => l.startsWith("Cancel: "));
+      assert.ok(line, reason);
+      assert.notEqual(line, `Cancel: not available: ${reason}`, `${reason} is worded`);
+      lines.add(line);
+    }
+    assert.equal(lines.size, CANCEL_REASONS.length - 1);
+    data.cancel.reason = "non_refundable";
+    assert.match(renderToolResult("get_order", data), /^Cancel: not available: this rate can't be cancelled$/m);
+    data.cancel.reason = "refused";
+    assert.match(
+      renderToolResult("get_order", data),
+      /^Cancel: not available: the hotel refused the cancellation; the booking stands$/m,
+    );
+    data.cancel.reason = "teleported";
+    const text = renderToolResult("get_order", data);
+    assert.match(text, /^Cancel: not available: teleported$/m);
+    assertClean(text);
+  });
+
+  it("an order from a server before 3.3 has no Cancel line and no cancel rule", () => {
+    const fixture = copy(load("order-confirmed")) as ToolFixture;
+    delete (fixture.data as Record<string, any>).cancel;
+    const text = renderToolResult("get_order", fixture.data);
+    assert.doesNotMatch(text, /^Cancel:/m);
+    assert.ok(!text.includes(CANCEL_NEXT_STEP));
   });
 
   it("leaves ORDER_NEXT_STEP out when no payment.url is set", () => {
@@ -659,7 +749,7 @@ describe("orders and the consent rule", () => {
 
 describe("renderToolResult on malformed data", () => {
   it("never throws, and shows the raw value", () => {
-    for (const tool of ["search_hotels", "get_hotel", "get_hotel_offers", "book_hotel", "get_order", "list_orders"] as const) {
+    for (const tool of ["search_hotels", "get_hotel", "get_hotel_offers", "book_hotel", "get_order", "list_orders", "cancel_order"] as const) {
       for (const value of [undefined, null, 1, "x", { data: "nope" }]) {
         const text = renderToolResult(tool, value);
         assert.equal(typeof text, "string");
@@ -679,7 +769,22 @@ describe("renderToolResult on malformed data", () => {
     }
     const list = copy(load("list-orders")) as ToolFixture;
     (list.data.data as Record<string, any>[])[3]!.createdAt = "yesterday";
-    assert.ok(renderToolResult("list_orders", list.data).endsWith(`\n\n${ORDER_NEXT_STEP}`));
+    assert.ok(
+      renderToolResult("list_orders", list.data).endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`),
+    );
+  });
+
+  it("keeps the cancel rule when a cancellable order does not parse, for get_order and list_orders only", () => {
+    const order = copy(load("order-confirmed")) as ToolFixture;
+    (order.data as Record<string, any>).createdAt = "yesterday";
+    const text = renderToolResult("get_order", order.data);
+    assert.match(text, /not in the expected shape/);
+    assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
+    for (const tool of ["book_hotel", "cancel_order"] as const) {
+      assert.ok(!renderToolResult(tool, order.data).includes(CANCEL_NEXT_STEP), tool);
+    }
+    (order.data as Record<string, any>).cancel.available = false;
+    assert.ok(!renderToolResult("get_order", order.data).includes(CANCEL_NEXT_STEP));
   });
 
   it("adds no consent rule to a malformed result without a payment.url", () => {

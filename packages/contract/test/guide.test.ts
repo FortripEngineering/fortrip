@@ -258,6 +258,32 @@ describe("consent before the payment link, on every surface", () => {
   }
 });
 
+describe("consent before cancelling an order", () => {
+  for (const surface of ["claude-skill", "cli"] as const) {
+    const cancel = renderText("{{tool:orders cancel}}", surface);
+    const penalty = renderText("{{arg:maximumPenalty}}", surface);
+
+    it(`${surface} main: show the stay, the penalty and the refund, ask, wait, then pass the penalty shown`, () => {
+      const text = flat(renderGuide(surface, "main"));
+      assert.match(text, /Show the user the stay[^.]*`cancel\.penalty` and `cancel\.refund` \(amount and currency\)/);
+      assert.ok(
+        text.includes("End that reply by asking the user to confirm the cancellation, and wait for a clear yes"),
+      );
+      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty.amount\` as shown`));
+      assert.match(text, /Never state a refund the order didn't return, and never choose or work out an amount yourself/);
+      assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
+    });
+  }
+
+  // C7: the CLI never cancels without the penalty the user agreed to.
+  it("the CLI guide says orders cancel without --max-penalty cancels nothing", () => {
+    assert.match(
+      flat(renderGuide("cli", "main")),
+      /Without `--max-penalty`, `fortrip orders cancel` cancels nothing/,
+    );
+  });
+});
+
 describe("the MCP instructions", () => {
   const text = flat(renderGuide("mcp", "main"));
 
@@ -279,7 +305,7 @@ describe("the MCP instructions", () => {
   });
 
   it("name every tool as the server does", () => {
-    assert.equal(TOOLS.length, 7);
+    assert.equal(TOOLS.length, 8);
     for (const { name } of TOOLS) {
       assert.match(text, new RegExp(`\`${name}\``), name);
     }

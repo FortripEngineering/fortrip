@@ -5,7 +5,7 @@ description: Finds, compares, prices and orders hotel stays with Fortrip's MCP t
 
 # Fortrip hotel stays
 
-Fortrip: hotel search, live offers and orders with a payment link. Not for flights, activities, or changing or cancelling an existing order.
+Fortrip: hotel search, live offers and orders with a payment link. Not for flights, activities, or changing an existing order.
 
 The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip connector added on claude.ai can show under its own name). They're written `fortrip:<tool>` below:
 
@@ -17,6 +17,7 @@ The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip
 | `fortrip:book_hotel` | An unpaid order for one offer, with its terms and a payment link |
 | `fortrip:get_order` | One order and its status, including whether the hotel confirmed it |
 | `fortrip:list_orders` | The user's orders, newest first, including those made on the Fortrip website |
+| `fortrip:cancel_order` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
@@ -162,6 +163,16 @@ Any code:
 - `service_unavailable` (503) and `supplier_unavailable` (503 or 504): wait `retryAfterSeconds`, then retry once with the same details; if it fails again, tell the user.
 - Any other code: read `message`. If `retryable` is true, wait `retryAfterSeconds` and retry once; otherwise tell the user instead of guessing.
 
+## Cancelling an order
+
+`fortrip:get_order` and `fortrip:list_orders` say of each order whether the user can cancel it now (`cancel.available`), and then the penalty under its terms (`cancel.penalty`) and the refund, what was paid less the penalty (`cancel.refund`), both in the charge currency; otherwise `cancel.reason` says why not.
+
+1. Show the user the stay (hotel, dates), `cancel.penalty` and `cancel.refund` (amount and currency). A refund of 0 means nothing is paid back: say so plainly.
+2. End that reply by asking the user to confirm the cancellation, and wait for a clear yes.
+3. Then call `fortrip:cancel_order` with `maximumPenalty` set to `cancel.penalty.amount` as shown. Never state a refund the order didn't return, and never choose or work out an amount yourself.
+
+The order is then `cancelling`, and `cancelled` once the hotel has cancelled and the refund is issued: check it with `fortrip:get_order`. If the hotel refuses, the order is `confirmed` again with `cancel.reason` `refused`. `cancellation_changed` (409) means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` (409) says why in `reason`.
+
 ## Changes and support
 
-These tools can't change or cancel an order: for changes, cancellations, refunds or other problems, the user emails info@fortrip.ai with the order's `reference` (never `payment.url`).
+These tools can't change an order: for changes, a cancellation that `fortrip:cancel_order` can't make, or other problems, the user emails info@fortrip.ai with the order's `reference` (never `payment.url`).

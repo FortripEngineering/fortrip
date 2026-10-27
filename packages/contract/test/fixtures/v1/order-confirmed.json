@@ -105,6 +105,18 @@
         "currency": "EUR"
       }
     },
+    "cancel": {
+      "available": true,
+      "reason": "cancellable",
+      "penalty": {
+        "amount": "120.00",
+        "currency": "USD"
+      },
+      "refund": {
+        "amount": "246.00",
+        "currency": "USD"
+      }
+    },
     "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"
   }
 }

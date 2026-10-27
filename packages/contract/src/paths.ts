@@ -20,6 +20,9 @@ export const API = {
   order(id: string, opts?: { locale?: "en" | "zh" }): string {
     return `/v1/orders/${encodeURIComponent(id)}${opts?.locale ? `?locale=${opts.locale}` : ""}`;
   },
+  orderCancel(id: string): string {
+    return `/v1/orders/${encodeURIComponent(id)}/cancel`;
+  },
 } as const;
 
 /** The MCP server answers at the root of `PUBLIC_ORIGINS.mcp`. */

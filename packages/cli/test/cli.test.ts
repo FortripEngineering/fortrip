@@ -109,6 +109,7 @@ describe("requests", () => {
       [BOOK, "POST", "/v1/orders"],
       [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
       [["orders", "list", "--limit", "5"], "GET", "/v1/orders?limit=5"],
+      [["orders", "cancel", ORDER, "--max-penalty", "12.5"], "POST", `/v1/orders/${ORDER}/cancel`],
     ] as const) {
       requests = [];
       const { code, stderr } = await cli([...args]);
@@ -119,6 +120,13 @@ describe("requests", () => {
       assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
       assert.equal(requests[0]?.body === undefined, method === "GET", args.join(" "));
     }
+  });
+
+  it("orders cancel posts only the penalty the user agreed to, the order in the path", async () => {
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.5"]);
+    assert.equal(code, 0, stderr);
+    assert.equal(requests[0]?.url, API.orderCancel(ORDER));
+    assert.deepEqual(requests[0]?.body, { maximumPenalty: 12.5 });
   });
 
   it("hotels search posts the contract's body", async () => {
@@ -184,6 +192,7 @@ describe("output", () => {
       [BOOK, "order-awaiting-payment"],
       [["orders", "get", ORDER], "order-confirmed"],
       [["orders", "list"], "list-orders"],
+      [["orders", "cancel", ORDER, "--max-penalty", "120.00"], "cancel-order"],
     ] as const) {
       const { tool, data } = await fixture(name);
       reply = { status: 200, body: data };
@@ -574,7 +583,7 @@ describe("renamed commands", () => {
     for (const [group, name] of [
       ["hotels", "nope"],
       ["hotels", "login"],
-      ["orders", "cancel"],
+      ["orders", "refund"],
     ]) {
       const { code, stderr } = await cli([group as string, name as string]);
       assert.equal(code, 2, `${group} ${name}`);

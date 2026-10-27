@@ -23,14 +23,14 @@ It exports:
   `SEARCH_SORTS` and `FILTERABLE_AMENITIES`: paths, hosts, limits, error codes
   and vocabularies;
 - `searchHotelsInput`, `getHotelInput`, `hotelOffersInput`,
-  `createOrderInput`, `getOrderInput` and `listOrdersInput`, the zod schemas
-  of the requests, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
+  `createOrderInput`, `getOrderInput`, `listOrdersInput` and
+  `cancelOrderInput`, the zod schemas of the requests, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
   `orderList` and `errorEnvelope`, the open schemas of the responses, with
   `parseOpen`, a parser that keeps unknown fields and values;
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
   command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools, with `MCP_OUTPUT` and `ORDER_NEXT_STEP`;
+  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP` and `CANCEL_NEXT_STEP`;
 - `renderToolResult(tool, data)` and `renderError(envelope)`, the compact
   text of a result or an error, and `renderGuide(surface, topic)`, the agent
   guide as Markdown for `"mcp"`, `"claude-skill"` or `"cli"`;
