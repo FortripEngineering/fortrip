@@ -74,7 +74,7 @@ export const CANCEL_NEXT_STEP =
  * the description of `pay_order`; never as `nextStep`.
  */
 export const PAY_NEXT_STEP =
-  "To pay without the link, when the order has payment.handlers and the user's wallet can grant a Stripe shared payment token: first show and ask exactly as for payment.url, and wait for a clear yes. Then request the token for this order from the user's wallet with the handler's network_id and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once pay_order succeeds, payment.url stops working.";
+  "To pay without the link, when the order has payment.handlers and the user's wallet can grant a Stripe shared payment token: first show and ask exactly as for payment.url, and wait for a clear yes. Then request the token for this order from the user's wallet with the handler's networkId and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once pay_order succeeds, payment.url stops working.";
 
 /**
  * How to present hotels (the `presentation` guide, in one line). It rides as
@@ -201,7 +201,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order with a shared payment token",
     description:
-      "Pay an order awaiting payment without its link, with a Stripe shared payment token, when the order has payment.handlers. First show and ask exactly as for payment.url, and wait for a clear yes. Then request the token from the user's wallet with the handler's network_id and payment.credentialLimits, and pass it with the order's price.total. The charge is in USD. Once it succeeds, payment.url stops working; a payment that fails leaves the link open. Answers the order: status confirming, the payment authorized (held, charged once the hotel confirms); poll get_order. payment_total_changed: show details.total and ask again, for a new token. payment_declined: the user picks another payment method in their wallet, or pays by link. payment_action_required: the card needs a verification this can't give; pay by link. payment_credential_invalid: request a new token. A token pays one order only; the same token again answers as before.",
+      "Pay an order awaiting payment without its link, with a Stripe shared payment token, when the order has payment.handlers. First show and ask exactly as for payment.url, and wait for a clear yes. Then request the token from the user's wallet with the handler's networkId and payment.credentialLimits, and pass it with the order's price.total. The charge is in USD. Once it succeeds, payment.url stops working; a payment that fails leaves the link open. Answers the order: status confirming, the payment authorized (held, charged once the hotel confirms); poll get_order. payment_total_changed: show details.total and ask again, for a new token. payment_declined: the user picks another payment method in their wallet, or pays by link. payment_action_required: the card needs a verification this can't give; pay by link. payment_credential_invalid: request a new token. A token pays one order only; the same token again answers as before.",
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

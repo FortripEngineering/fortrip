@@ -6483,11 +6483,30 @@
                 },
                 "type": {
                   "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": "string"
+                },
+                "networkId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "id",
-                "type"
+                "type",
+                "version",
+                "spec",
+                "networkId"
               ],
               "additionalProperties": {}
             }
@@ -7383,11 +7402,30 @@
                 },
                 "type": {
                   "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": "string"
+                },
+                "networkId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "id",
-                "type"
+                "type",
+                "version",
+                "spec",
+                "networkId"
               ],
               "additionalProperties": {}
             }
@@ -8279,11 +8317,30 @@
                 },
                 "type": {
                   "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": "string"
+                },
+                "networkId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "id",
-                "type"
+                "type",
+                "version",
+                "spec",
+                "networkId"
               ],
               "additionalProperties": {}
             }
@@ -9184,11 +9241,30 @@
                       },
                       "type": {
                         "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "spec": {
+                        "type": "string"
+                      },
+                      "networkId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
                       "id",
-                      "type"
+                      "type",
+                      "version",
+                      "spec",
+                      "networkId"
                     ],
                     "additionalProperties": {}
                   }
@@ -10102,11 +10178,30 @@
                 },
                 "type": {
                   "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": "string"
+                },
+                "networkId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "id",
-                "type"
+                "type",
+                "version",
+                "spec",
+                "networkId"
               ],
               "additionalProperties": {}
             }
@@ -11033,11 +11128,30 @@
                 },
                 "type": {
                   "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "spec": {
+                  "type": "string"
+                },
+                "networkId": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
                 "id",
-                "type"
+                "type",
+                "version",
+                "spec",
+                "networkId"
               ],
               "additionalProperties": {}
             }
@@ -11934,11 +12048,30 @@
                       },
                       "type": {
                         "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "spec": {
+                        "type": "string"
+                      },
+                      "networkId": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
                       "id",
-                      "type"
+                      "type",
+                      "version",
+                      "spec",
+                      "networkId"
                     ],
                     "additionalProperties": {}
                   }

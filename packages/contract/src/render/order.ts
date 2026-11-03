@@ -91,20 +91,14 @@ function paymentLines(o: Order): string[] {
 }
 
 /** "Pay without the link: …": each handler by type, its Link wallet's
- *  network_id when it declares one, and the credential's limits. */
+ *  networkId when it names one, and the credential's limits. */
 function handlersLine(
   handlers: NonNullable<Order["payment"]["handlers"]>,
   limits: Order["payment"]["credentialLimits"],
 ): string {
-  const shown = handlers.map((h) => {
-    const instruments = (h as { available_instruments?: unknown }).available_instruments;
-    const ids = Array.isArray(instruments)
-      ? instruments
-          .map((i) => (i as { config?: { network_id?: unknown } })?.config?.network_id)
-          .filter((id): id is string => typeof id === "string")
-      : [];
-    return `${h.type} (handler ${h.id}${ids.length ? `, network_id ${ids.join(", ")}` : ""})`;
-  });
+  const shown = handlers.map(
+    (h) => `${h.type} (handler ${h.id}${h.networkId ? `, networkId ${h.networkId}` : ""})`,
+  );
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";

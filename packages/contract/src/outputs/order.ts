@@ -64,12 +64,17 @@ export const CREDENTIAL_INVALID_REASONS = [
 
 export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number];
 
-/** A way to pay an order other than its link, as the Universal Commerce
- *  Protocol declares a payment handler: `id`, `type` and the rest of the
- *  handler's own fields, passed through in its snake_case. */
+/** A way to pay an order other than its link, after the Universal Commerce
+ *  Protocol's payment handlers: `type` names it (`com.stripe.payments`),
+ *  `version` and `spec` the handler specification it follows, and
+ *  `networkId` the seller's id a wallet grants a payment credential for
+ *  (Stripe's business profile), null when the handler names none. */
 export const paymentHandler = openObject({
   id: z.string(),
   type: z.string(),
+  version: z.string(),
+  spec: z.string(),
+  networkId: z.string().nullable(),
 });
 
 export type PaymentHandler = z.infer<typeof paymentHandler>;
