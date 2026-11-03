@@ -179,7 +179,7 @@ An order with `payment.handlers` can also be paid with a Stripe shared payment t
 2. Request the token from the user's wallet with the handler's `network_id` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
 3. Run `fortrip orders pay` with the token and the order's `price.total` (`--token`, `--total`). The order is then `confirming`, its payment `authorized`: check it as after payment.
 
-The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once `fortrip orders pay` is called, `payment.url` stops working; for a new link, order the same details again with `fortrip hotels book`. `payment_total_changed` means the total changed: show the new total and ask again, for a new token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. A token pays one order only.
+The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once `fortrip orders pay` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total changed: show the new total and ask again, for a new token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. A token pays one order only.
 
 ## After payment
 

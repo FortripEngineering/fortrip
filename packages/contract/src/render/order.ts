@@ -81,10 +81,6 @@ function paymentLines(o: Order): string[] {
       p.requiresSignIn ? "the user signs in to Fortrip to pay" : "no sign-in needed",
     ].filter(Boolean);
     lines.push(`Payment link (${about.join("; ")}): ${p.url}`);
-  } else if (o.status === "awaiting_payment" && p.handlers?.length) {
-    lines.push(
-      "Payment link: closed, as pay_order was called; for a new link, call book_hotel again with the same details.",
-    );
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
