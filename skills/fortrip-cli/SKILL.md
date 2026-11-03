@@ -166,6 +166,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
+- Ordering the stay with none of an unpaid order's guests, a corrected name included, makes a second order with its own link. Tell the user to pay only the new one; the earlier link expires unpaid.
 - An order `awaiting_payment` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip orders get`.
 - Never ask for, accept or pass on payment card details; payment happens only on the payment page. A card number in a guest name, the contact or the special requests is rejected with exit 2.
 
@@ -189,7 +190,7 @@ An error on stderr carries `code`, `message` and `retryable`, and `retryAfterSec
 | `offer_unavailable` (422) | The offer is sold out or was refused: get offers again and let the user choose again |
 | `order_in_progress` (409) | The same order is still being created: wait `retryAfterSeconds`, then run the command again with identical flags |
 | `offer_already_ordered` (409) | This offer was already ordered with other details: show that order (`orderId`) instead. An offer is ordered once |
-| `order_exists` (409) | This stay already has an order (`orderId`, `status`): show it instead of ordering again. This also blocks ordering the same offer, dates and rooms again for another party, ordering a stay again after it was cancelled, ordering while the user's own website checkout for the stay is open (up to 3 hours 45 minutes) and ordering again a stay whose earlier order failed at the hotel. For those, the user emails info@fortrip.ai |
+| `order_exists` (409) | This stay already has an open order for one of these guests (`orderId`, `status`): show it instead of ordering again. A party with none of its guests gets an order of its own, and so does the stay ordered again once its order is confirmed, cancelled or refused by the hotel. It also answers when the stay's earlier order failed at the hotel with its outcome unknown, or the stay has had 20 orders; for those, the user emails info@fortrip.ai |
 | `order_attempts_exhausted` (409) | This order can't be tried again: the user emails info@fortrip.ai with its `reference` |
 | `order_removed` (410) | The order was never completed and no payment is held: get offers again and order the new offer (the order keeps its `orderId`) |
 | `stay_unsupported` (422) | `mixed_occupancy`: order once per party; `max_nights`: at most `max` nights per order |
