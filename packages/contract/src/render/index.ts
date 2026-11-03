@@ -6,6 +6,7 @@ import type { SearchResult } from "../outputs/search.ts";
 import {
   CANCEL_NEXT_STEP,
   ORDER_NEXT_STEP,
+  PAY_NEXT_STEP,
   TOOLS,
   type ToolName,
 } from "../tools.ts";
@@ -30,7 +31,9 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * open output schema: unknown fields are ignored and unknown values shown
  * as they came. A result that does not parse is shown as JSON, never thrown.
  * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
- * result holds a non-null `payment.url`; the cancel rule (`CANCEL_NEXT_STEP`)
+ * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
+ * follows it when a result holds an order with `payment.handlers`; the
+ * cancel rule (`CANCEL_NEXT_STEP`)
  * follows it when a `get_order` or `list_orders` result holds an order with
  * `cancel.available`.
  */
@@ -45,6 +48,7 @@ export function renderToolResult(tool: RenderedTool, data: unknown): string {
     return [
       text,
       ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",
+      ORDER_TOOLS.has(tool) && holdsHandlers(data) ? PAY_NEXT_STEP : "",
       CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? CANCEL_NEXT_STEP : "",
     ]
       .filter(Boolean)
@@ -67,6 +71,7 @@ export function renderToolResult(tool: RenderedTool, data: unknown): string {
       return withConsent(tool, renderOrderList(list), list.data);
     }
     case "cancel_order":
+    case "pay_order":
       return renderOrder(parsed as Order);
   }
 }
@@ -92,6 +97,22 @@ function holdsPaymentUrl(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsPaymentUrl(v, seen));
 }
 
+/** Whether a raw value holds a non-empty `payment.handlers` anywhere inside it. */
+function holdsHandlers(value: unknown, seen = new Set<unknown>()): boolean {
+  if (typeof value !== "object" || value === null || seen.has(value)) return false;
+  seen.add(value);
+  const payment = (value as { payment?: unknown }).payment;
+  if (
+    typeof payment === "object" &&
+    payment !== null &&
+    Array.isArray((payment as { handlers?: unknown }).handlers) &&
+    (payment as { handlers: unknown[] }).handlers.length > 0
+  ) {
+    return true;
+  }
+  return Object.values(value).some((v) => holdsHandlers(v, seen));
+}
+
 /** Whether a raw value holds an order whose `cancel.available` is true. */
 function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
@@ -111,6 +132,7 @@ function withConsent(tool: RenderedTool, text: string, orders: Order[]): string 
   return [
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
+    orders.some((o) => (o.payment.handlers?.length ?? 0) > 0) ? PAY_NEXT_STEP : "",
     CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel?.available === true)
       ? CANCEL_NEXT_STEP
       : "",

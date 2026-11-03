@@ -84,9 +84,25 @@ function paymentLines(o: Order): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
+  if (p.handlers?.length) lines.push(handlersLine(p.handlers, p.credentialLimits));
   if (o.cancel) lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
+}
+
+/** "Pay without the link: …": each handler by type, its Link wallet's
+ *  networkId when it names one, and the credential's limits. */
+function handlersLine(
+  handlers: NonNullable<Order["payment"]["handlers"]>,
+  limits: Order["payment"]["credentialLimits"],
+): string {
+  const shown = handlers.map(
+    (h) => `${h.type} (handler ${h.id}${h.networkId ? `, networkId ${h.networkId}` : ""})`,
+  );
+  const limit = limits
+    ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
+    : "";
+  return `Pay without the link: pay_order with a shared payment token via ${shown.join(", ")}${limit}`;
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are

@@ -110,6 +110,7 @@ describe("requests", () => {
       [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
       [["orders", "list", "--limit", "5"], "GET", "/v1/orders?limit=5"],
       [["orders", "cancel", ORDER, "--max-penalty", "12.5"], "POST", `/v1/orders/${ORDER}/cancel`],
+      [["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"], "POST", `/v1/orders/${ORDER}/pay`],
     ] as const) {
       requests = [];
       const { code, stderr } = await cli([...args]);

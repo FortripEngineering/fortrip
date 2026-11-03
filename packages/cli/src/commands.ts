@@ -68,6 +68,7 @@ const ROUTES: Partial<Record<ToolName, { method: "GET" | "POST"; path: (input: B
     },
   },
   cancel_order: { method: "POST", path: (input) => API.orderCancel(input.orderId as string) },
+  pay_order: { method: "POST", path: (input) => API.orderPay(input.orderId as string) },
 };
 
 /** Fields of an input that are in its path; a GET's others are its query. */
@@ -321,6 +322,7 @@ function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>): unknown {
     case "stay.rooms":
       return given.map(parseRoom);
     case "filters.price.maxPerRoomNight":
+    case "total":
       return { amount: (given[0] as string).trim(), currency: "USD" };
   }
   const parsed = given.map((value) => {

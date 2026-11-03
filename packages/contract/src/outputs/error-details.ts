@@ -12,8 +12,10 @@ import { instant, localDate } from "../conventions/time.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
 import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
+import { money } from "../conventions/money.ts";
 import {
   CANCEL_REASONS,
+  CREDENTIAL_INVALID_REASONS,
   ORDER_STATUSES,
   offerChange,
   orderReference,
@@ -52,6 +54,15 @@ export const ERROR_DETAILS = {
   order_attempts_exhausted: openObject({ orderId }),
   cancellation_changed: null,
   order_not_cancellable: openObject({ reason: openEnum(CANCEL_REASONS) }),
+  order_not_payable: openObject({ orderId, status: openEnum(ORDER_STATUSES) }),
+  payment_in_progress: openObject({ orderId }),
+  payment_total_changed: openObject({ orderId, total: money }),
+  payment_credential_invalid: openObject({
+    reason: openEnum(CREDENTIAL_INVALID_REASONS),
+  }),
+  payment_declined: openObject({ declineCode: z.string().nullable() }),
+  payment_action_required: null,
+  payment_method_unavailable: null,
   destination_ambiguous: openObject({
     name: z.string(),
     countryCode: z.string(),
@@ -111,6 +122,7 @@ export const ERROR_DETAILS = {
       "orders_read",
       "orders_create",
       "orders_cancel",
+      "orders_pay",
     ]),
   }),
   ordering_paused: null,

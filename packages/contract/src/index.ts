@@ -46,6 +46,7 @@ export {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
+  payOrderInput,
   searchHotelsInput,
   stay,
   type CancelOrderInput,
@@ -55,6 +56,7 @@ export {
   type GetOrderInput,
   type HotelOffersInput,
   type ListOrdersInput,
+  type PayOrderInput,
   type SearchHotelsInput,
   type Stay,
 } from "./inputs.ts";
@@ -103,17 +105,21 @@ export {
 } from "./outputs/offer.ts";
 export {
   CANCEL_REASONS,
+  CREDENTIAL_INVALID_REASONS,
   offerChange,
   order,
   orderList,
   orderReference,
   ORDER_STATUSES,
   PAYMENT_STATUSES,
+  paymentHandler,
   type CancelReason,
+  type CredentialInvalidReason,
   type OfferChange,
   type Order,
   type OrderList,
   type OrderStatus,
+  type PaymentHandler,
   type PaymentStatus,
 } from "./outputs/order.ts";
 export {
@@ -148,6 +154,7 @@ export {
   CANCEL_NEXT_STEP,
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
+  PAY_NEXT_STEP,
   PRESENTATION_HINT,
   TOOLS,
   type ToolName,

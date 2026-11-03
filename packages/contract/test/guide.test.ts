@@ -305,7 +305,7 @@ describe("the MCP instructions", () => {
   });
 
   it("name every tool as the server does", () => {
-    assert.equal(TOOLS.length, 8);
+    assert.equal(TOOLS.length, 9);
     for (const { name } of TOOLS) {
       assert.match(text, new RegExp(`\`${name}\``), name);
     }

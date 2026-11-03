@@ -6,7 +6,7 @@ import { strictOutput } from "../src/conventions/open.ts";
 import { strictErrorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { CANCEL_REASONS } from "../src/outputs/order.ts";
-import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
+import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, PAY_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
 
 /*
  * Goldens: each fixture in fixtures/v1 is synthetic (no supplier names or
@@ -710,6 +710,35 @@ describe("orders and the consent rule", () => {
     const text = renderToolResult("get_order", data);
     assert.match(text, /^Cancel: not available: teleported$/m);
     assertClean(text);
+  });
+
+  it("an order with payment.handlers shows how to pay without the link, and the pay rule", () => {
+    const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    data.payment.handlers = [
+      {
+        id: "stripe_payments",
+        type: "com.stripe.payments",
+        version: "2026-06-25",
+        spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+        networkId: "profile_test_1",
+      },
+    ];
+    data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
+    strictOutput(TOOLS.find((t) => t.name === "get_order")!.output!).parse(data);
+    for (const tool of ["book_hotel", "get_order", "pay_order"] as const) {
+      const text = renderToolResult(tool, data);
+      assert.match(
+        text,
+        /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, networkId profile_test_1\); token limits: maxAmount 36600 \(cents\), currency usd, expiresAt /m,
+        tool,
+      );
+      assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
+      assertClean(text);
+    }
+    const plain = render(load("order-awaiting-payment"));
+    assert.doesNotMatch(plain, /^Pay without the link/m);
+    assert.ok(!plain.includes(PAY_NEXT_STEP));
   });
 
   it("an order from a server before 3.3 has no Cancel line and no cancel rule", () => {

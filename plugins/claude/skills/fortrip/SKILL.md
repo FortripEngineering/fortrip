@@ -1,6 +1,6 @@
 ---
 name: fortrip
-description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
+description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
 ---
 
 # Fortrip hotel stays
@@ -18,6 +18,7 @@ The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip
 | `fortrip:get_order` | One order and its status, including whether the hotel confirmed it |
 | `fortrip:list_orders` | The user's orders, newest first, including those made on the Fortrip website |
 | `fortrip:cancel_order` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
+| `fortrip:pay_order` | Pays an order without its link, with a shared payment token from the user's wallet |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
@@ -26,7 +27,7 @@ For flexible dates, a budget, split stays, several destinations or "find me the 
 Sign-in happens only in the browser. Never ask the user to paste a token.
 
 If none of these tools are available, Fortrip isn't connected: tell the user to add the Fortrip connector or plugin and sign in.
-If a tool says the user isn't signed in, ask them to reconnect Fortrip.
+If a tool says the user isn't signed in, ask them to reconnect.
 
 ## Workflow
 
@@ -108,7 +109,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - Call `fortrip:book_hotel` only for the offer the user picked, with at least one guest per room, named as the user gave them; never invent guests. Room 1 is the offer's first room, and a room takes no more guests than it sleeps.
 - Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–60 characters each.
 - The contact's first and last name (up to 59 characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
-- `fortrip:book_hotel` can take up to about two minutes. If it times out, call it again with the same details: it returns the same order.
+- `fortrip:book_hotel` can take about two minutes. If it times out, call it again with the same details: it returns the same order.
 
 ## Before giving the payment link
 
@@ -123,6 +124,16 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid.
 - An order `awaiting_payment` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip:get_order`.
 - Never ask for, accept or pass on payment card details; payment happens only on the payment page. A card number in a guest name, the contact or the special requests is rejected.
+
+## Paying without the link
+
+An order with `payment.handlers` can also be paid with a Stripe shared payment token that the user's wallet (Link) grants for it, through `fortrip:pay_order`:
+
+1. Show and ask exactly as before giving the payment link, and wait for a clear yes. The token comes from the user's wallet, never from card details.
+2. Request the token from the user's wallet with the handler's `networkId` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
+3. Call `fortrip:pay_order` with the token and the order's `price.total`. The order is then `confirming`, its payment `authorized`: check it as after payment.
+
+The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once `fortrip:pay_order` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total changed: show the new total and ask again, for a new token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. `service_unavailable`: call `fortrip:pay_order` again with the same token, never a new one. A token pays one order only.
 
 ## After payment
 

@@ -588,3 +588,25 @@ export const cancelOrderInput = strictInput({
 });
 
 export type CancelOrderInput = z.input<typeof cancelOrderInput>;
+
+const sharedPaymentTokenError =
+  "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
+
+/** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
+ *  order, a Stripe shared payment token granted for it, and the total the
+ *  user approved. A total other than the order's answers
+ *  `payment_total_changed` and charges nothing. */
+export const payOrderInput = strictInput({
+  orderId: orderId.describe("orderId of the order to pay, from create order or get order."),
+  sharedPaymentToken: z
+    .string({ error: sharedPaymentTokenError })
+    .regex(/^spt_[A-Za-z0-9]{1,250}$/, { error: sharedPaymentTokenError })
+    .describe(
+      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits.",
+    ),
+  total: usdMoney.describe(
+    "The total the user approved: the order's price.total, exactly as returned.",
+  ),
+});
+
+export type PayOrderInput = z.input<typeof payOrderInput>;

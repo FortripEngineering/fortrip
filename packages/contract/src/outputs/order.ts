@@ -51,6 +51,34 @@ export const CANCEL_REASONS = [
 
 export type CancelReason = (typeof CANCEL_REASONS)[number];
 
+/** Why a shared payment token can't pay an order (3.4). */
+export const CREDENTIAL_INVALID_REASONS = [
+  "not_found",
+  "currency",
+  "amount",
+  "expired",
+  "deactivated",
+  "used",
+  "other_seller",
+] as const;
+
+export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number];
+
+/** A way to pay an order other than its link, after the Universal Commerce
+ *  Protocol's payment handlers: `type` names it (`com.stripe.payments`),
+ *  `version` and `spec` the handler specification it follows, and
+ *  `networkId` the seller's id a wallet grants a payment credential for
+ *  (Stripe's business profile), null when the handler names none. */
+export const paymentHandler = openObject({
+  id: z.string(),
+  type: z.string(),
+  version: z.string(),
+  spec: z.string(),
+  networkId: z.string().nullable(),
+});
+
+export type PaymentHandler = z.infer<typeof paymentHandler>;
+
 /** `FT-` and six characters with no 0, 1, I or O. */
 export const orderReference = z.string().regex(/^FT-[2-9A-HJ-NP-Z]{6}$/);
 
@@ -91,6 +119,19 @@ export const order = openObject({
     chargeCurrency: z.string(),
     localCurrencyAtCheckout: z.boolean(),
     localCharge: money.nullable(),
+    /** The ways to pay other than `url`, while the order can be paid that
+     *  way (3.4): a `com.stripe.payments` handler takes a shared payment
+     *  token through `pay_order`. Absent when there is none. */
+    handlers: z.array(paymentHandler).optional(),
+    /** What a payment credential for `pay_order` must allow, present with
+     *  `handlers` (3.4): `maxAmount` in minor units (cents) of `currency`,
+     *  lowercase as Stripe takes it, and `expiresAt`, past which the order
+     *  can't be paid. */
+    credentialLimits: openObject({
+      maxAmount: z.number().int(),
+      currency: z.string(),
+      expiresAt: instant,
+    }).optional(),
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,
