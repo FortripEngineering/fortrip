@@ -18,6 +18,16 @@ import {
   offerLine,
 } from "./offers.ts";
 import { CANCEL_REASON_WORDS, ORDER_STATUS_WORDS } from "./order.ts";
+
+const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
+  not_found: "was not found",
+  currency: "is for another currency than USD",
+  amount: "allows less than the order's total",
+  expired: "expires before it can be charged",
+  deactivated: "was revoked",
+  used: "was already used, or is held for another order",
+  other_seller: "was granted to another seller",
+};
 import { localitiesLines } from "./search.ts";
 
 /*
@@ -168,6 +178,24 @@ function detailLines(e: KnownErrorBody): string[] {
       return [`Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}.`];
     case "order_not_cancellable":
       return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
+    case "order_not_payable":
+      return [
+        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with get_order; nothing was charged.`,
+      ];
+    case "payment_in_progress":
+      return [`Order ${e.details.orderId}: read it with get_order in a few seconds.`];
+    case "payment_total_changed":
+      return [
+        `Order ${e.details.orderId} now totals ${money(e.details.total)}: show the user the new total and ask again, then request a new token for it. Nothing was charged.`,
+      ];
+    case "payment_credential_invalid":
+      return [
+        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the order's payment.credentialLimits. Nothing was charged.`,
+      ];
+    case "payment_declined":
+      return [
+        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link (call book_hotel again with the same details for a new payment.url).`,
+      ];
     case "destination_ambiguous":
       return ambiguous(e.details);
     case "destination_not_found":

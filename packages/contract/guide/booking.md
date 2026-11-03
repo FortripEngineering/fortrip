@@ -7,7 +7,7 @@
 {{#if claude-skill cli}}
 - The contact's first and last name (up to {{limit:contactFirstName}} characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
 {{/if}}
-- `{{tool:hotels book}}` can take up to about two minutes{{#if cli}}: allow the command at least 3 minutes{{/if}}. If it times out, {{#if cli}}run it again with identical flags{{/if}}{{#if mcp claude-skill}}call it again with the same details{{/if}}: it returns the same order.
+- `{{tool:hotels book}}` can take about two minutes{{#if cli}}: allow the command at least 3 minutes{{/if}}. If it times out, {{#if cli}}run it again with identical flags{{/if}}{{#if mcp claude-skill}}call it again with the same details{{/if}}: it returns the same order.
 {{#if mcp}}
 - On `offer_changed`, show the user every change and ask again before ordering the new offer.
 {{/if}}

@@ -18,6 +18,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip orders get` | One order and its status, including whether the hotel confirmed it |
 | `fortrip orders list` | The user's orders, newest first, including those made on the Fortrip website |
 | `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
+| `fortrip orders pay` | Pays an order without its link, with a shared payment token from the user's wallet |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
 
@@ -153,7 +154,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - Call `fortrip hotels book` only for the offer the user picked, with at least one guest per room, named as the user gave them; never invent guests. Room 1 is the offer's first room, and a room takes no more guests than it sleeps.
 - Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–60 characters each, as `--guest 1:John:Smith` (room 1, first name, last name).
 - The contact's first and last name (up to 59 characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
-- `fortrip hotels book` can take up to about two minutes: allow the command at least 3 minutes. If it times out, run it again with identical flags: it returns the same order.
+- `fortrip hotels book` can take about two minutes: allow the command at least 3 minutes. If it times out, run it again with identical flags: it returns the same order.
 - `fortrip hotels book` takes only these fields: a `--body` with any other field (such as `nationality`) is rejected with exit 2.
 
 ## Before giving the payment link
@@ -169,6 +170,16 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid.
 - An order `awaiting_payment` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip orders get`.
 - Never ask for, accept or pass on payment card details; payment happens only on the payment page. A card number in a guest name, the contact or the special requests is rejected with exit 2.
+
+## Paying without the link
+
+An order with `payment.handlers` can also be paid with a Stripe shared payment token that the user's wallet (Link) grants for it, through `fortrip orders pay`:
+
+1. Show and ask exactly as before giving the payment link, and wait for a clear yes. The token comes from the user's wallet, never from card details.
+2. Request the token from the user's wallet with the handler's `network_id` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
+3. Run `fortrip orders pay` with the token and the order's `price.total` (`--token`, `--total`). The order is then `confirming`, its payment `authorized`: check it as after payment.
+
+The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once `fortrip orders pay` is called, `payment.url` stops working; for a new link, order the same details again with `fortrip hotels book`. `payment_total_changed` means the total changed: show the new total and ask again, for a new token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. A token pays one order only.
 
 ## After payment
 

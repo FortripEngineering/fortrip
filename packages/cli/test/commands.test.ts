@@ -274,6 +274,14 @@ const CASES: {
     body: { maximumPenalty: 0 },
     inPath: { orderId: ORDER },
   },
+  {
+    name: "orders pay",
+    argv: [ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/pay`,
+    body: { sharedPaymentToken: "spt_1TestToken0123456789", total: { amount: "125.00", currency: "USD" } },
+    inPath: { orderId: ORDER },
+  },
 ];
 
 const SENDING = COMMANDS.filter((spec) => spec.group !== null);
@@ -301,6 +309,7 @@ describe("every command builds the request the contract accepts", () => {
       "orders get",
       "orders list",
       "orders cancel",
+      "orders pay",
     ]);
     for (const spec of SENDING) {
       const argvs = CASES.filter((c) => c.name === typed(spec)).map((c) => c.argv);

@@ -14,6 +14,13 @@ export type ErrorCode =
   | "order_attempts_exhausted"
   | "cancellation_changed"
   | "order_not_cancellable"
+  | "order_not_payable"
+  | "payment_in_progress"
+  | "payment_total_changed"
+  | "payment_credential_invalid"
+  | "payment_declined"
+  | "payment_action_required"
+  | "payment_method_unavailable"
   | "destination_ambiguous"
   | "destination_not_found"
   | "search_too_broad"
@@ -44,6 +51,13 @@ export const ERROR_CODES: Readonly<
   order_attempts_exhausted: { status: [409], retryable: false },
   cancellation_changed: { status: [409], retryable: false },
   order_not_cancellable: { status: [409], retryable: false },
+  order_not_payable: { status: [409], retryable: false },
+  payment_in_progress: { status: [409], retryable: true },
+  payment_total_changed: { status: [409], retryable: false },
+  payment_credential_invalid: { status: [422], retryable: false },
+  payment_declined: { status: [402], retryable: false },
+  payment_action_required: { status: [402], retryable: false },
+  payment_method_unavailable: { status: [403], retryable: false },
   destination_ambiguous: { status: [422], retryable: false },
   destination_not_found: { status: [422], retryable: false },
   search_too_broad: { status: [422], retryable: false },

@@ -33,6 +33,7 @@ export const UNKNOWN_IS_NOT_NO_EXEMPTIONS: Readonly<Record<string, string>> = {
   requiresSignIn: `${API_DECIDES} (whether the payment link needs a website sign-in).`,
   localCurrencyAtCheckout: `${API_DECIDES} (whether checkout may charge in the card's currency).`,
   "cancel.available": `${API_DECIDES} (whether an order can be cancelled now).`,
+  "payment.handlers": `${RESULT_LIST} (the ways to pay an order other than its link; absent when there is none).`,
   bookable: `${API_DECIDES} (whether the hotel is still in the index).`,
   cityLike: `${API_DECIDES} (frozen per gazetteer release; null where not computed).`,
   known: `${THE_FLAG} (meals).`,

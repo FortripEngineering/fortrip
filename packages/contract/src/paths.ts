@@ -23,6 +23,9 @@ export const API = {
   orderCancel(id: string): string {
     return `/v1/orders/${encodeURIComponent(id)}/cancel`;
   },
+  orderPay(id: string): string {
+    return `/v1/orders/${encodeURIComponent(id)}/pay`;
+  },
 } as const;
 
 /** The MCP server answers at the root of `PUBLIC_ORIGINS.mcp`. */

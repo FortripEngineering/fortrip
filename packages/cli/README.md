@@ -142,6 +142,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
 | `orders cancel <orderId>` | Cancel an order under its terms, for the penalty the user agreed to |
+| `orders pay <orderId>` | Pay an order with a shared payment token instead of its link |
 | `login` | Sign in through the browser (device code) |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |

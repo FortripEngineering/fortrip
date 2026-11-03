@@ -81,12 +81,38 @@ function paymentLines(o: Order): string[] {
       p.requiresSignIn ? "the user signs in to Fortrip to pay" : "no sign-in needed",
     ].filter(Boolean);
     lines.push(`Payment link (${about.join("; ")}): ${p.url}`);
+  } else if (o.status === "awaiting_payment" && p.handlers?.length) {
+    lines.push(
+      "Payment link: closed, as pay_order was called; for a new link, call book_hotel again with the same details.",
+    );
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
+  if (p.handlers?.length) lines.push(handlersLine(p.handlers, p.credentialLimits));
   if (o.cancel) lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
+}
+
+/** "Pay without the link: …": each handler by type, its Link wallet's
+ *  network_id when it declares one, and the credential's limits. */
+function handlersLine(
+  handlers: NonNullable<Order["payment"]["handlers"]>,
+  limits: Order["payment"]["credentialLimits"],
+): string {
+  const shown = handlers.map((h) => {
+    const instruments = (h as { available_instruments?: unknown }).available_instruments;
+    const ids = Array.isArray(instruments)
+      ? instruments
+          .map((i) => (i as { config?: { network_id?: unknown } })?.config?.network_id)
+          .filter((id): id is string => typeof id === "string")
+      : [];
+    return `${h.type} (handler ${h.id}${ids.length ? `, network_id ${ids.join(", ")}` : ""})`;
+  });
+  const limit = limits
+    ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
+    : "";
+  return `Pay without the link: pay_order with a shared payment token via ${shown.join(", ")}${limit}`;
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are

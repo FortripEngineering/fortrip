@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   cancelOrderInput,
+  payOrderInput,
   createOrderInput,
   getHotelInput,
   getOrderInput,
@@ -104,6 +105,7 @@ export interface CommandSpec {
     | "book"
     | "list"
     | "cancel"
+    | "pay"
     | "login"
     | "logout"
     | "whoami"
@@ -420,6 +422,25 @@ const cancelFlags = flagsOf(cancelOrderInput, [
   },
 ]);
 
+const payFlags = flagsOf(payOrderInput, [
+  {
+    flag: "token",
+    field: "sharedPaymentToken",
+    type: "string",
+    placeholder: "<spt_…>",
+    description:
+      "The shared payment token the user's wallet granted for this order, with the order's credential limits.",
+  },
+  {
+    flag: "total",
+    field: "total",
+    type: "string",
+    placeholder: "<USD decimal>",
+    description:
+      "The total the user approved, exactly as `orders get` shows it, in USD, e.g. `125.00`.",
+  },
+]);
+
 /** The request body, which the flags then override field by field. */
 const BODY_OPTION: OptionSpec = {
   flag: "body",
@@ -431,7 +452,7 @@ const BODY_OPTION: OptionSpec = {
 
 export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
   { name: "hotels", summary: "Search hotels, get offers and order one" },
-  { name: "orders", summary: "Your orders, their status, and cancelling one" },
+  { name: "orders", summary: "Your orders, their status, paying and cancelling one" },
 ];
 
 export const COMMANDS: readonly CommandSpec[] = [
@@ -489,6 +510,14 @@ export const COMMANDS: readonly CommandSpec[] = [
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],
+  },
+  {
+    group: "orders",
+    name: "pay",
+    summary: "Pay an order with a shared payment token instead of its link",
+    tool: "pay_order",
+    flags: payFlags,
+    positionals: [positional(payOrderInput, "orderId")],
   },
   {
     group: null,

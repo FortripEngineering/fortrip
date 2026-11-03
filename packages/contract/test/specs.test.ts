@@ -19,6 +19,7 @@ import {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
+  payOrderInput,
   searchHotelsInput,
 } from "../src/inputs.ts";
 import { LIMITS, SUPPORT_EMAIL } from "../src/limits.ts";
@@ -200,10 +201,11 @@ const TOOL_NAMES = [
   "get_order",
   "list_orders",
   "cancel_order",
+  "pay_order",
 ] as const;
 
 describe("TOOLS", () => {
-  it("lists the eight tools in call order", () => {
+  it("lists the nine tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
       [...TOOL_NAMES],
@@ -223,6 +225,7 @@ describe("TOOLS", () => {
         get_order: "Get order",
         list_orders: "List orders",
         cancel_order: "Cancel order",
+        pay_order: "Pay order with a shared payment token",
       },
     );
   });
@@ -256,6 +259,7 @@ describe("TOOLS", () => {
     assert.equal(tool("get_order").input, getOrderInput);
     assert.equal(tool("list_orders").input, listOrdersInput);
     assert.equal(tool("cancel_order").input, cancelOrderInput);
+    assert.equal(tool("pay_order").input, payOrderInput);
   });
 
   it("every tool but the planning guide has an output schema", () => {
@@ -267,9 +271,10 @@ describe("TOOLS", () => {
     assert.equal(tool("get_order").output, MCP_OUTPUT.get_order);
     assert.equal(tool("list_orders").output, MCP_OUTPUT.list_orders);
     assert.equal(tool("cancel_order").output, MCP_OUTPUT.cancel_order);
+    assert.equal(tool("pay_order").output, MCP_OUTPUT.pay_order);
   });
 
-  it("states all four hints on every tool; only book_hotel and cancel_order write, and only cancel_order destroys", () => {
+  it("states all four hints on every tool; only book_hotel, cancel_order and pay_order write, and only cancel_order destroys", () => {
     for (const spec of TOOLS) {
       assert.deepEqual(
         Object.keys(spec.annotations).sort(),
@@ -283,7 +288,7 @@ describe("TOOLS", () => {
       );
       assert.equal(
         spec.annotations.readOnlyHint,
-        spec.name !== "book_hotel" && spec.name !== "cancel_order",
+        !["book_hotel", "cancel_order", "pay_order"].includes(spec.name),
         spec.name,
       );
       assert.equal(
@@ -305,6 +310,7 @@ describe("TOOLS", () => {
         get_order: false,
         list_orders: false,
         cancel_order: true,
+        pay_order: true,
       },
     );
   });
@@ -429,6 +435,7 @@ describe("MCP_OUTPUT", () => {
       "get_order",
       "list_orders",
       "cancel_order",
+      "pay_order",
     ]);
   });
 
@@ -526,7 +533,7 @@ describe("COMMAND_GROUPS", () => {
 });
 
 describe("COMMANDS", () => {
-  it("lists the twelve commands, as typed, each with the tool it mirrors", () => {
+  it("lists the thirteen commands, as typed, each with the tool it mirrors", () => {
     const tools: Record<string, ToolName | null> = {
       "hotels search": "search_hotels",
       "hotels get": "get_hotel",
@@ -535,6 +542,7 @@ describe("COMMANDS", () => {
       "orders get": "get_order",
       "orders list": "list_orders",
       "orders cancel": "cancel_order",
+      "orders pay": "pay_order",
       login: null,
       logout: null,
       whoami: null,
@@ -627,6 +635,7 @@ describe("COMMANDS", () => {
       locale: "locale",
     });
     assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", total: "total" });
     for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -649,6 +658,7 @@ describe("COMMANDS", () => {
       "orders get": ["<orderId> orderId"],
       "orders list": [],
       "orders cancel": ["<orderId> orderId"],
+      "orders pay": ["<orderId> orderId"],
       login: [],
       logout: [],
       whoami: [],
@@ -752,6 +762,7 @@ describe("COMMANDS", () => {
       "hotels search point",
       "hotels search room",
       "hotels search price-max-per-room-night",
+      "orders pay total",
       "hotels offers room",
       "hotels book guest",
     ]);
@@ -939,6 +950,7 @@ describe("CLI-only options", () => {
       "orders get": [],
       "orders list": [],
       "orders cancel": [],
+      "orders pay": [],
       login: ["no-browser"],
       logout: [],
       whoami: [],
