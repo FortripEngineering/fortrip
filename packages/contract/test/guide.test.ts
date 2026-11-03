@@ -457,7 +457,7 @@ describe("the full guides", () => {
         new RegExp(`check the order with \`${order}\``),
         // Purchases the protocol blocks (§10.1).
         /`order_exists`.{0,300}?open order for one of these guests.{0,300}?none of its guests.{0,300}?cancelled.{0,300}?failed/,
-        /none of an unpaid order's guests.{0,200}?pay only the new one/,
+        /[Aa]nother order of the stay.{0,200}?get offers again.{0,200}?pay only the new link/,
         /`offer_already_ordered`/,
         /`order_removed`.{0,120}?get offers again and order the new offer/,
         /`order_in_progress`/,
