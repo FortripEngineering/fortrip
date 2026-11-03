@@ -227,6 +227,14 @@ describe("TOOLS", () => {
     );
   });
 
+  it("book_hotel says another order of a stay needs a new offer, and which link to pay", () => {
+    const book = TOOLS.find((t) => t.name === "book_hotel");
+    assert.match(
+      book?.description ?? "",
+      /An offer is ordered once.{0,200}?get offers again.{0,200}?pay only the new link/,
+    );
+  });
+
   it("gives every tool a title and a description of at most 1,024 characters", () => {
     for (const spec of TOOLS) {
       assert.ok(spec.title.trim(), `${spec.name} title`);
