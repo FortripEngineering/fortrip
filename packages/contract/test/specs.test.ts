@@ -246,8 +246,9 @@ describe("TOOLS", () => {
     const pay = TOOLS.find((t) => t.name === "pay_order");
     assert.match(pay?.description ?? "", /method alipay_wechat_pay/);
     assert.match(pay?.description ?? "", /payment\.wallets/);
-    assert.match(pay?.description ?? "", /the WeChat code as an image if you can, both links/);
-    assert.match(pay?.description ?? "", /ask them to confirm, and wait for a clear yes/);
+    assert.match(pay?.description ?? "", /WeChat code as an image if you can, both links/);
+    assert.match(pay?.description ?? "", /ask them to confirm and wait for a clear yes/);
+    assert.match(pay?.description ?? "", /a code lasts 120 minutes/);
     assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /pay_order \(or Alipay\/WeChat Pay\)/);
   });
 

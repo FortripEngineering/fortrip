@@ -139,7 +139,7 @@ function walletLines(w: NonNullable<Order["payment"]["wallets"]>, surface: Rende
   }
   if (w.alipay) lines.push(`Alipay: ${w.alipay.url}`);
   lines.push(
-    `Show the user the WeChat Pay code as an image if you can, and both links. They pay once, by either. Then ${c.get} until the order isn't awaiting_payment.`,
+    `Show the user the WeChat Pay code as an image if you can, and both links. They pay once, by either; the code lasts 120 minutes. Then ${c.get} until the order isn't awaiting_payment.`,
   );
   return lines;
 }
