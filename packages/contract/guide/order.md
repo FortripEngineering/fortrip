@@ -79,5 +79,5 @@
 {{#if mcp}}
 - A place name needs its `countryCode` (ask the user if unclear) and matches exactly (accents and periods count). On `destination_ambiguous`, ask the user which they mean, then search its `placeId`; never pick one yourself.
 - On `search_too_broad`, show its `localities` and ask the user which, unless they already named one; search it as `{ kind: "locality", placeId }`, never by name.
-- `text` matches whole words of hotel names and addresses: use a distinctive name, brand or landmark. A typo finds nothing.
+- `text` matches whole words of hotel names and addresses: use a distinctive name, brand or landmark.
 {{/if}}

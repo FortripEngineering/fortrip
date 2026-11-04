@@ -12,6 +12,8 @@ import {
   ORDER_NEXT_STEP,
   PAY_NEXT_STEP,
   payNextStep,
+  WALLET_NEXT_STEP,
+  walletNextStep,
   TOOLS,
   type ToolName,
 } from "../src/tools.ts";
@@ -41,6 +43,7 @@ const GOLDENS = [
   "offers-two-hotels-one-unavailable",
   "order-awaiting-payment",
   "order-confirmed",
+  "order-wallets-open",
   "list-orders",
   "cancel-order",
 ] as const;
@@ -53,6 +56,31 @@ function load(name: Golden): Fixture {
 /** A deep copy to change in a test. */
 function copy<T>(value: T): T {
   return structuredClone(value);
+}
+
+function withHandlers(): Record<string, any> {
+  const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
+  data.payment.handlers = [
+    {
+      id: "stripe_payments",
+      type: "com.stripe.payments",
+      version: "2026-06-25",
+      spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+      schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+      available_instruments: [{ type: "card" }],
+      config: { environment: "testmode", business_profile: "profile_test_1" },
+    },
+  ];
+  data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
+  return data;
+}
+
+function withWallets(open: boolean): Record<string, any> {
+  const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
+  data.payment.wallets = open
+    ? (copy(load("order-wallets-open") as ToolFixture).data as Record<string, any>).payment.wallets
+    : { open: false, current: null, wechatPay: null, alipay: null };
+  return data;
 }
 
 function render(fixture: Fixture): string {
@@ -720,6 +748,69 @@ describe("orders and the consent rule", () => {
     assertClean(text);
   });
 
+  it("an order offering wallets shows how to open them, and the wallet rule", () => {
+    const data = withWallets(false);
+    strictOutput(TOOLS.find((t) => t.name === "get_order")!.output!).parse(data);
+    for (const tool of ["book_hotel", "get_order", "list_orders", "pay_order"] as const) {
+      const text = renderToolResult(tool, tool === "list_orders" ? { data: [data], nextCursor: null } : data);
+      assert.match(
+        text,
+        /^Pay with Alipay or WeChat Pay: call pay_order with method alipay_wechat_pay and the order's price\.total\.$/m,
+        tool,
+      );
+      assert.equal(text.split(WALLET_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
+      if (tool !== "pay_order") assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${WALLET_NEXT_STEP}`), tool);
+      assertClean(text);
+    }
+    // After the pay paragraph when both apply.
+    const both = withHandlers();
+    both.payment.wallets = data.payment.wallets;
+    assert.ok(renderToolResult("get_order", both).endsWith(`${PAY_NEXT_STEP}\n\n${WALLET_NEXT_STEP}`));
+    // No wallets, or already open: no rule.
+    for (const wallets of [null, withWallets(true).payment.wallets]) {
+      const plain = copy(data);
+      plain.payment.wallets = wallets;
+      assert.ok(!renderToolResult("get_order", plain).includes(WALLET_NEXT_STEP));
+    }
+    assert.match(WALLET_NEXT_STEP, /^Before you call pay_order with method alipay_wechat_pay, show the user/);
+    assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
+  });
+
+  it("an open wallet payment shows the code and both links", () => {
+    const data = withWallets(true);
+    strictOutput(TOOLS.find((t) => t.name === "get_order")!.output!).parse(data);
+    const { wechatPay, alipay } = data.payment.wallets;
+    for (const tool of ["book_hotel", "get_order", "list_orders", "pay_order"] as const) {
+      const text = renderToolResult(tool, tool === "list_orders" ? { data: [data], nextCursor: null } : data);
+      assert.ok(
+        text.includes(`\nWeChat Pay: ![WeChat Pay QR code](${wechatPay.qrImageUrl}), or a full-size code at ${wechatPay.url}\n`),
+        tool,
+      );
+      assert.ok(text.includes(`\nAlipay: ${alipay.url}\n`), tool);
+      assert.ok(
+        text.includes(
+          "\nShow the user the WeChat Pay code as an image if you can, and both links. They pay once, by either. Then call get_order until the order isn't awaiting_payment.\n",
+        ),
+        tool,
+      );
+      assert.ok(!text.includes("Pay with Alipay or WeChat Pay:"), tool);
+      assertClean(text);
+    }
+    // No live code: only the link.
+    data.payment.wallets.wechatPay.qrData = null;
+    data.payment.wallets.wechatPay.qrImageUrl = null;
+    const text = renderToolResult("get_order", data);
+    assert.ok(text.includes(`\nWeChat Pay: a new code at ${wechatPay.url}\n`));
+    assert.ok(!text.includes("![WeChat Pay QR code]"));
+  });
+
+  it("the raw fallback adds the wallet rule for an order that offers wallets", () => {
+    const text = renderToolResult("get_order", { payment: { wallets: { open: false } }, junk: 1 });
+    assert.match(text, /^This get_order result is not in the expected shape/);
+    assert.ok(text.endsWith(`\n\n${WALLET_NEXT_STEP}`));
+    assert.ok(!renderToolResult("get_order", { payment: { wallets: { open: true } } }).includes(WALLET_NEXT_STEP));
+  });
+
   it("an order with payment handlers shows how to pay without the link, and the pay rule", () => {
     const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
@@ -856,22 +947,6 @@ describe("the CLI surface", () => {
       : renderError(fixture.envelope, fixture.status, "cli");
   }
 
-  function withHandlers(): Record<string, any> {
-    const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
-    data.payment.handlers = [
-      {
-        id: "stripe_payments",
-        type: "com.stripe.payments",
-        version: "2026-06-25",
-        spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-        schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
-        available_instruments: [{ type: "card" }],
-        config: { environment: "testmode", business_profile: "profile_test_1" },
-      },
-    ];
-    data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
-    return data;
-  }
 
   it("MCP is the default surface", () => {
     for (const name of GOLDENS) {
@@ -911,6 +986,23 @@ describe("the CLI surface", () => {
     assert.match(payNextStep("cli"), /run `fortrip orders pay <orderId> --token <spt_…> --total <total>`/);
     assert.notEqual(payNextStep("cli"), PAY_NEXT_STEP);
     assert.equal(payNextStep("mcp"), PAY_NEXT_STEP);
+  });
+
+  it("the wallet lines and rule run fortrip orders pay --wallet", () => {
+    const offer = renderToolResult("get_order", withWallets(false), "cli");
+    assert.match(offer, /^Pay with Alipay or WeChat Pay: run `fortrip orders pay <orderId> --wallet --total <total>`\.$/m);
+    assert.ok(offer.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${walletNextStep("cli")}`));
+    assert.match(walletNextStep("cli"), /^Before you run `fortrip orders pay` with --wallet, show the user/);
+    assert.match(walletNextStep("cli"), /Then poll it with `fortrip orders get <orderId>`\.$/);
+    assert.notEqual(walletNextStep("cli"), WALLET_NEXT_STEP);
+    assert.equal(walletNextStep("mcp"), WALLET_NEXT_STEP);
+    const open = renderToolResult("get_order", withWallets(true), "cli");
+    assert.match(open, /^WeChat Pay: open https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat$/m);
+    assert.doesNotMatch(open, /!\[/);
+    assert.match(open, /^Alipay: https:/m);
+    assert.match(open, /Then run `fortrip orders get <orderId>` until the order isn't awaiting_payment\.$/m);
+    assert.doesNotMatch(offer, MCP_ONLY);
+    assert.doesNotMatch(open, MCP_ONLY);
   });
 
   it("the cancel rule runs fortrip orders cancel with --max-penalty", () => {

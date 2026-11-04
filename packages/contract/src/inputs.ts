@@ -681,10 +681,11 @@ function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) 
 }
 
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
- *  order, a Stripe shared payment token granted for it, and the total the
- *  user approved. The token is `sharedPaymentToken` or, as UCP's Complete
- *  Checkout sends it, the credential of `payment`'s selected instrument:
- *  exactly one of the two. A total other than the order's answers
+ *  order, how to pay it, and the total the user approved. The way is a
+ *  Stripe shared payment token granted for the order, or `method`
+ *  (Alipay or WeChat Pay); with a token it is `sharedPaymentToken` or, as UCP's Complete
+ *  Checkout sends it, the credential of `payment`'s selected instrument.
+ *  Exactly one of `sharedPaymentToken`, `payment` and `method`. A total other than the order's answers
  *  `payment_total_changed` and charges nothing. */
 export const payOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to pay."),
@@ -693,7 +694,7 @@ export const payOrderInput = strictInput({
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
     .optional()
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. Exactly one of sharedPaymentToken and payment.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. Exactly one of sharedPaymentToken, payment and method.",
     ),
   payment: strictInput({
     instruments: z
@@ -740,19 +741,33 @@ export const payOrderInput = strictInput({
     })
     .optional()
     .describe(
-      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken and payment.",
+      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken, payment and method.",
+    ),
+  method: oneOf("method", ["alipay_wechat_pay"] as const)
+    .optional()
+    .describe(
+      "Pay with Alipay or WeChat Pay instead of a token: opens the payment and returns payment.wallets. Exactly one of sharedPaymentToken, payment and method.",
     ),
   total: usdMoney.describe(
     "The total the user approved: the order's price.total, exactly as returned.",
   ),
 }).superRefine((input, ctx) => {
-  if (input.sharedPaymentToken !== undefined && input.payment !== undefined) {
+  // Of the three ways to pay, in order: the last one given is the extra.
+  const given = (
+    [
+      ["sharedPaymentToken", input.sharedPaymentToken],
+      ["payment", input.payment],
+      ["method", input.method],
+    ] as const
+  ).filter(([, value]) => value !== undefined);
+  const extra = given.length > 1 ? given.at(-1) : undefined;
+  if (extra) {
     ctx.addIssue({
       code: "custom",
-      path: ["payment"],
-      message: "Send sharedPaymentToken or payment, not both",
+      path: [extra[0]],
+      message: "Send exactly one of sharedPaymentToken, payment and method",
     });
-  } else if (input.sharedPaymentToken === undefined && input.payment === undefined) {
+  } else if (given.length === 0) {
     ctx.addIssue({
       code: "custom",
       path: ["sharedPaymentToken"],

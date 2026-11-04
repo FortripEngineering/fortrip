@@ -1015,12 +1015,28 @@ describe("payOrderInput", () => {
     assertAccepted(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...phone }] }, total });
   });
 
-  it("takes exactly one of the two", () => {
-    assert.equal(
-      refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, payment: { instruments: [card(true)] }, total })
-        .find((i) => i.path === "payment")?.message,
-      "Send sharedPaymentToken or payment, not both",
+  it("takes method alipay_wechat_pay with the total", () => {
+    assertAccepted(payOrderInput, { orderId, method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
+  });
+
+  it("refuses an unknown method", () => {
+    const issues = refusalOf(payOrderInput, { orderId, method: "card", total });
+    assert.deepEqual(
+      issues.map((i) => [i.path, i.message]),
+      [["method", "method must be one of: alipay_wechat_pay"]],
     );
+  });
+
+  it("takes exactly one of the three", () => {
+    const both = "Send exactly one of sharedPaymentToken, payment and method";
+    const payment = { instruments: [card(true)] };
+    const method = "alipay_wechat_pay";
+    const messageAt = (input: object, at: string) =>
+      refusalOf(payOrderInput, { orderId, total, ...input }).find((i) => i.path === at)?.message;
+    assert.equal(messageAt({ sharedPaymentToken: token, payment }, "payment"), both);
+    assert.equal(messageAt({ sharedPaymentToken: token, method }, "method"), both);
+    assert.equal(messageAt({ payment, method }, "method"), both);
+    assert.equal(messageAt({ sharedPaymentToken: token, payment, method }, "method"), both);
     assert.deepEqual(refusalOf(payOrderInput, { orderId, total }), [
       {
         path: "sharedPaymentToken",

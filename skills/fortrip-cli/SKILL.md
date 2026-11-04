@@ -18,7 +18,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip orders get` | One order and its status, including whether the hotel confirmed it |
 | `fortrip orders list` | The user's orders, newest first, including those made on the Fortrip website |
 | `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
-| `fortrip orders pay` | Pays an order without its link, with a shared payment token from the user's wallet |
+| `fortrip orders pay` | Pays an order without its link, by a shared payment token from the user's wallet, or with Alipay or WeChat Pay |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
 
@@ -180,6 +180,18 @@ An order whose `payment.handlers` isn't empty (in the text output, the line "Pay
 3. Run `fortrip orders pay` with the token and the order's `price.total` (`--token`, `--total`). The order is then `confirming`, its payment `authorized`: check it as after payment.
 
 The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give `payment.url` or run `fortrip orders pay`. Once `fortrip orders pay` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then run `fortrip orders pay` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. `service_unavailable`: call `fortrip orders pay` again with the same token, never a new one. A token pays one order only.
+
+## Paying with Alipay or WeChat Pay
+
+An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token: it is for users who have a mainland-China wallet. Run `fortrip orders pay` the way that line shows and the order's `price.total`, only after the user has confirmed.
+
+1. Show the user the order's total in USD, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. Pay one way only: `payment.url` or this.
+2. Then show `payment.wallets`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in US dollars, and the wallets show it in yuan at their rate.
+3. Check the order with `fortrip orders get` until it isn't `awaiting_payment`.
+
+A code goes dead when the user opens the Alipay link instead, or when it expires. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or run `fortrip orders pay` again for a new code.
+
+WeChat can't scan a code shown on the same phone's screen. Offer both ways, since you can't tell which device the user is on: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat link on another screen; on a phone, the Alipay link opens the Alipay app.
 
 ## After payment
 

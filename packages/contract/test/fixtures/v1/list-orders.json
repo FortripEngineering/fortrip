@@ -72,7 +72,8 @@
           "localCurrencyAtCheckout": false,
           "localCharge": null,
           "handlers": [],
-          "credentialLimits": null
+          "credentialLimits": null,
+          "wallets": null
         },
         "cancel": {
           "available": false,
@@ -176,7 +177,8 @@
           "localCurrencyAtCheckout": true,
           "localCharge": null,
           "handlers": [],
-          "credentialLimits": null
+          "credentialLimits": null,
+          "wallets": null
         },
         "cancel": {
           "available": false,
@@ -272,7 +274,8 @@
           "localCurrencyAtCheckout": true,
           "localCharge": null,
           "handlers": [],
-          "credentialLimits": null
+          "credentialLimits": null,
+          "wallets": null
         },
         "cancel": {
           "available": false,
@@ -387,7 +390,8 @@
             "currency": "EUR"
           },
           "handlers": [],
-          "credentialLimits": null
+          "credentialLimits": null,
+          "wallets": null
         },
         "cancel": {
           "available": true,

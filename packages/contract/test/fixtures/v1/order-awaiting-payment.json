@@ -86,7 +86,8 @@
       "localCurrencyAtCheckout": true,
       "localCharge": null,
       "handlers": [],
-      "credentialLimits": null
+      "credentialLimits": null,
+      "wallets": null
     },
     "cancel": {
       "available": false,

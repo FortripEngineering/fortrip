@@ -128,6 +128,15 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "MCP_OUTPUT.pay_order.payment.handlers",
     "MCP_OUTPUT.list_orders.data.payment.handlers",
   ],
+  "payment.wallets.open": [
+    "order.payment.wallets.open",
+    "orderList.data.payment.wallets.open",
+    "MCP_OUTPUT.book_hotel.payment.wallets.open",
+    "MCP_OUTPUT.get_order.payment.wallets.open",
+    "MCP_OUTPUT.cancel_order.payment.wallets.open",
+    "MCP_OUTPUT.pay_order.payment.wallets.open",
+    "MCP_OUTPUT.list_orders.data.payment.wallets.open",
+  ],
   available_instruments: [
     "order.payment.handlers.available_instruments",
     "orderList.data.payment.handlers.available_instruments",
@@ -257,6 +266,7 @@ describe("the exemption list", () => {
       "localCurrencyAtCheckout",
       "cancel.available",
       "payment.handlers",
+      "payment.wallets.open",
       "available_instruments",
       "bookable",
       "cityLike",

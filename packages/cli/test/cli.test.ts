@@ -302,6 +302,18 @@ describe("output", () => {
     assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
   });
 
+  it("orders pay --wallet prints the links and, on a wide TTY, the code", async () => {
+    const { data } = await fixture("order-wallets-open");
+    reply = { status: 200, body: data };
+    // The spawned CLI has no TTY, so the code stays out and the links stay in.
+    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(requests[0]?.body, { method: "alipay_wechat_pay", total: { amount: "365.00", currency: "USD" } });
+    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
+    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/alipay/);
+    assert.ok(!stdout.includes("█"));
+  });
+
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 200, body: data };

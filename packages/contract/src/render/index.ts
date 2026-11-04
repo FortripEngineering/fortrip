@@ -11,6 +11,7 @@ import {
   type RenderSurface,
   TOOLS,
   type ToolName,
+  walletNextStep,
 } from "../tools.ts";
 import { raw } from "./format.ts";
 import { renderHotel } from "./hotel.ts";
@@ -36,6 +37,8 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
  * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
  * follows it when a result holds an order with non-empty `payment.handlers`;
+ * the wallet rule (`WALLET_NEXT_STEP`) follows that when it holds an order
+ * whose `payment.wallets` is offered and not open;
  * the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order` or
  * `list_orders` result holds an order with `cancel.available`. `surface`
  * names the next calls: tools (`mcp`, the default) or commands (`cli`).
@@ -58,6 +61,7 @@ export function renderToolResult(
       text,
       ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",
       ORDER_TOOLS.has(tool) && holdsHandlers(data) ? payNextStep(surface) : "",
+      ORDER_TOOLS.has(tool) && holdsWalletOffer(data) ? walletNextStep(surface) : "",
       CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? cancelNextStep(surface) : "",
     ]
       .filter(Boolean)
@@ -122,6 +126,20 @@ function holdsHandlers(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsHandlers(v, seen));
 }
 
+/** Whether a raw value holds a `payment.wallets` that is offered but not open. */
+function holdsWalletOffer(value: unknown, seen = new Set<unknown>()): boolean {
+  if (typeof value !== "object" || value === null || seen.has(value)) return false;
+  seen.add(value);
+  const payment = (value as { payment?: unknown }).payment;
+  if (typeof payment === "object" && payment !== null) {
+    const wallets = (payment as { wallets?: unknown }).wallets;
+    if (typeof wallets === "object" && wallets !== null && (wallets as { open?: unknown }).open === false) {
+      return true;
+    }
+  }
+  return Object.values(value).some((v) => holdsWalletOffer(v, seen));
+}
+
 /** Whether a raw value holds an order whose `cancel.available` is true. */
 function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
@@ -147,6 +165,7 @@ function withConsent(
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
     orders.some((o) => o.payment.handlers.length > 0) ? payNextStep(surface) : "",
+    orders.some((o) => o.payment.wallets?.open === false) ? walletNextStep(surface) : "",
     CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
       ? cancelNextStep(surface)
       : "",

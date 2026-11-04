@@ -105,7 +105,8 @@
         "currency": "EUR"
       },
       "handlers": [],
-      "credentialLimits": null
+      "credentialLimits": null,
+      "wallets": null
     },
     "cancel": {
       "available": false,

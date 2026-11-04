@@ -438,8 +438,14 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
-    required: "always",
-    description: "The spt_… token the user's Link wallet issued for this order.",
+    description: "Required unless --wallet. The spt_… token the user's Link wallet issued for this order.",
+  },
+  {
+    flag: "wallet",
+    field: "method",
+    type: "boolean",
+    value: "alipay_wechat_pay",
+    description: "Pay with Alipay or WeChat Pay instead of a token: prints the WeChat Pay code and both links.",
   },
   {
     flag: "total",
@@ -525,7 +531,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "orders",
     name: "pay",
-    summary: "Pay an order from the user's Link wallet (US and Canada) instead of its payment link",
+    summary: "Pay an order with a Link wallet token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link",
     tool: "pay_order",
     flags: payFlags,
     positionals: [positional(payOrderInput, "orderId")],
