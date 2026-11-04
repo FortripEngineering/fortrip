@@ -173,7 +173,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 ## Paying without the link
 
-An order with `payment.handlers` can also be paid with a Stripe shared payment token that the user's wallet (Link) grants for it, through `fortrip orders pay`:
+An order whose `payment.handlers` isn't empty can also be paid with a Stripe shared payment token that the user's wallet (Link) grants for it, through `fortrip orders pay`:
 
 1. Show and ask exactly as before giving the payment link, and wait for a clear yes. The token comes from the user's wallet, never from card details.
 2. Request the token from the user's wallet with the handler's `config.business_profile` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.

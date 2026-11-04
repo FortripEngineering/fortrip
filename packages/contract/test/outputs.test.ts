@@ -254,6 +254,8 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
+    handlers: [],
+    credentialLimits: null,
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
@@ -398,6 +400,11 @@ describe("v1 response fixtures parse, open and strict", () => {
     ]) {
       assert.ok(order.safeParse(withHandler(leaked)).success);
       assert.equal(strictOutput(order).safeParse(withHandler(leaked)).success, false);
+    }
+    // An order always says how else it can be paid: no handlers and no limits when it can't.
+    for (const field of ["handlers", "credentialLimits"] as const) {
+      const { [field]: _gone, ...without } = orderFixture.payment;
+      assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false, field);
     }
     for (const field of ["schema", "available_instruments", "config"] as const) {
       const { [field]: _gone, ...without } = handler;

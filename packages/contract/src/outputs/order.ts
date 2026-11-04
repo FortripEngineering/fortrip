@@ -130,18 +130,18 @@ export const order = openObject({
     localCurrencyAtCheckout: z.boolean(),
     localCharge: money.nullable(),
     /** The ways to pay other than `url`, while the order can be paid that
-     *  way (3.4): a `com.stripe.payments` handler takes a shared payment
-     *  token through `pay_order`. Absent when there is none. */
-    handlers: z.array(paymentHandler).optional(),
-    /** What a payment credential for `pay_order` must allow, present with
-     *  `handlers` (3.4): `maxAmount` in minor units (cents) of `currency`,
+     *  way: a `com.stripe.payments` handler takes a shared payment token
+     *  through `pay_order`. Empty when there is none. */
+    handlers: z.array(paymentHandler),
+    /** What a payment credential for `pay_order` must allow, with
+     *  `handlers`: `maxAmount` in minor units (cents) of `currency`,
      *  lowercase as Stripe takes it, and `expiresAt`, past which the order
-     *  can't be paid. */
+     *  can't be paid. `null` when `handlers` is empty. */
     credentialLimits: openObject({
       maxAmount: z.number().int(),
       currency: z.string(),
       expiresAt: instant,
-    }).optional(),
+    }).nullable(),
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,

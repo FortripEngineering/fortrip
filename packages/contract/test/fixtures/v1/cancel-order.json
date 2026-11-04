@@ -103,7 +103,9 @@
       "localCharge": {
         "amount": "339.80",
         "currency": "EUR"
-      }
+      },
+      "handlers": [],
+      "credentialLimits": null
     },
     "cancel": {
       "available": false,

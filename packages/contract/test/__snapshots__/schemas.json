@@ -6581,27 +6581,34 @@
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -6611,7 +6618,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -7545,27 +7554,34 @@
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -7575,7 +7591,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -8505,27 +8523,34 @@
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -8535,7 +8560,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -9474,27 +9501,34 @@
                   }
                 },
                 "credentialLimits": {
-                  "type": "object",
-                  "properties": {
-                    "maxAmount": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {}
                     },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "maxAmount",
-                    "currency",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": {}
+                  ]
                 }
               },
               "required": [
@@ -9504,7 +9538,9 @@
                 "expiresAt",
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
-                "localCharge"
+                "localCharge",
+                "handlers",
+                "credentialLimits"
               ],
               "additionalProperties": {}
             },
@@ -10456,27 +10492,34 @@
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -10486,7 +10529,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -11451,27 +11496,34 @@
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -11481,7 +11533,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -12416,27 +12470,34 @@
                   }
                 },
                 "credentialLimits": {
-                  "type": "object",
-                  "properties": {
-                    "maxAmount": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {}
                     },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "maxAmount",
-                    "currency",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": {}
+                  ]
                 }
               },
               "required": [
@@ -12446,7 +12507,9 @@
                 "expiresAt",
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
-                "localCharge"
+                "localCharge",
+                "handlers",
+                "credentialLimits"
               ],
               "additionalProperties": {}
             },

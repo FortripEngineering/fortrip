@@ -32,10 +32,9 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * as they came. A result that does not parse is shown as JSON, never thrown.
  * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
  * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
- * follows it when a result holds an order with `payment.handlers`; the
- * cancel rule (`CANCEL_NEXT_STEP`)
- * follows it when a `get_order` or `list_orders` result holds an order with
- * `cancel.available`.
+ * follows it when a result holds an order with non-empty `payment.handlers`;
+ * the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order` or
+ * `list_orders` result holds an order with `cancel.available`.
  */
 export function renderToolResult(tool: RenderedTool, data: unknown): string {
   const schema = TOOLS.find((t) => t.name === tool)?.output;
@@ -132,7 +131,7 @@ function withConsent(tool: RenderedTool, text: string, orders: Order[]): string 
   return [
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
-    orders.some((o) => (o.payment.handlers?.length ?? 0) > 0) ? PAY_NEXT_STEP : "",
+    orders.some((o) => o.payment.handlers.length > 0) ? PAY_NEXT_STEP : "",
     CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
       ? CANCEL_NEXT_STEP
       : "",

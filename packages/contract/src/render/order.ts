@@ -84,7 +84,7 @@ function paymentLines(o: Order): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
-  if (p.handlers?.length) lines.push(handlersLine(p.handlers, p.credentialLimits));
+  if (p.handlers.length > 0) lines.push(handlersLine(p.handlers, p.credentialLimits));
   lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
@@ -93,7 +93,7 @@ function paymentLines(o: Order): string[] {
 /** "Pay without the link: …": each handler by type with the business
  *  profile its token is granted for, and the credential's limits. */
 function handlersLine(
-  handlers: NonNullable<Order["payment"]["handlers"]>,
+  handlers: Order["payment"]["handlers"],
   limits: Order["payment"]["credentialLimits"],
 ): string {
   const shown = handlers.map(

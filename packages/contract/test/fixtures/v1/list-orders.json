@@ -70,7 +70,9 @@
           "expiresAt": "2026-11-02T10:30:00Z",
           "chargeCurrency": "EUR",
           "localCurrencyAtCheckout": false,
-          "localCharge": null
+          "localCharge": null,
+          "handlers": [],
+          "credentialLimits": null
         },
         "cancel": {
           "available": false,
@@ -172,7 +174,9 @@
           "expiresAt": null,
           "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
-          "localCharge": null
+          "localCharge": null,
+          "handlers": [],
+          "credentialLimits": null
         },
         "cancel": {
           "available": false,
@@ -266,7 +270,9 @@
           "expiresAt": "2026-11-01T12:50:00Z",
           "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
-          "localCharge": null
+          "localCharge": null,
+          "handlers": [],
+          "credentialLimits": null
         },
         "cancel": {
           "available": false,
@@ -379,7 +385,9 @@
           "localCharge": {
             "amount": "339.80",
             "currency": "EUR"
-          }
+          },
+          "handlers": [],
+          "credentialLimits": null
         },
         "cancel": {
           "available": true,

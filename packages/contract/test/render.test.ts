@@ -712,7 +712,7 @@ describe("orders and the consent rule", () => {
     assertClean(text);
   });
 
-  it("an order with payment.handlers shows how to pay without the link, and the pay rule", () => {
+  it("an order with payment handlers shows how to pay without the link, and the pay rule", () => {
     const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
     data.payment.handlers = [
@@ -738,9 +738,17 @@ describe("orders and the consent rule", () => {
       assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
       assertClean(text);
     }
-    const plain = render(load("order-awaiting-payment"));
-    assert.doesNotMatch(plain, /^Pay without the link/m);
-    assert.ok(!plain.includes(PAY_NEXT_STEP));
+    // An order that can't be paid by token: no handlers, no limits.
+    const unpayable = load("order-awaiting-payment") as ToolFixture;
+    const { payment } = unpayable.data as Record<string, any>;
+    assert.deepEqual([payment.handlers, payment.credentialLimits], [[], null]);
+    for (const tool of ["book_hotel", "get_order", "list_orders"] as const) {
+      const data = tool === "list_orders" ? { data: [unpayable.data], nextCursor: null } : unpayable.data;
+      const plain = renderToolResult(tool, data);
+      assert.doesNotMatch(plain, /^Pay without the link/m, tool);
+      assert.ok(!plain.includes(PAY_NEXT_STEP), tool);
+      assert.ok(plain.includes(ORDER_NEXT_STEP), tool);
+    }
   });
 
   it("leaves ORDER_NEXT_STEP out when no payment.url is set", () => {
