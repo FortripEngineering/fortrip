@@ -21,6 +21,13 @@ in with OAuth in the browser.
   `npx -y fortrip mcp`. The [CLI's README](packages/cli/README.md#mcp-server)
   has the config for Claude Desktop, Cursor, Codex and Claude Code. The Claude
   and OpenAI plugins use the hosted server.
+- **In Claude Code, as a plugin** (the hosted server plus Fortrip's skill):
+
+  ```
+  /plugin marketplace add FortripEngineering/fortrip
+  /plugin install fortrip@fortrip
+  ```
+
 - **As a skill, for agents that can run shell commands but don't have
   Fortrip's MCP tools:**
 
