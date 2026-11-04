@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { strictOutput } from "../src/conventions/open.ts";
-import { strictErrorEnvelope } from "../src/outputs/error-details.ts";
+import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { CANCEL_REASONS } from "../src/outputs/order.ts";
 import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, PAY_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
@@ -99,7 +99,7 @@ describe("render fixtures", () => {
         if ("tool" in fixture) {
           strictOutput(outputOf(fixture.tool)).parse(fixture.data);
         } else {
-          strictErrorEnvelope().parse(fixture.envelope);
+          strictOutput(errorEnvelope).parse(fixture.envelope);
         }
       });
 
@@ -712,7 +712,7 @@ describe("orders and the consent rule", () => {
     assertClean(text);
   });
 
-  it("an order with payment.handlers shows how to pay without the link, and the pay rule", () => {
+  it("an order with payment handlers shows how to pay without the link, and the pay rule", () => {
     const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
     data.payment.handlers = [
@@ -721,7 +721,9 @@ describe("orders and the consent rule", () => {
         type: "com.stripe.payments",
         version: "2026-06-25",
         spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-        networkId: "profile_test_1",
+        schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+        available_instruments: [{ type: "card" }, { type: "link", config: { business_profile: "profile_test_1" } }],
+        config: { environment: "testmode", business_profile: "profile_test_1" },
       },
     ];
     data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
@@ -736,48 +738,17 @@ describe("orders and the consent rule", () => {
       assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
       assertClean(text);
     }
-    const plain = render(load("order-awaiting-payment"));
-    assert.doesNotMatch(plain, /^Pay without the link/m);
-    assert.ok(!plain.includes(PAY_NEXT_STEP));
-  });
-
-  it("a 3.5 handler shows its config.business_profile, else networkId", () => {
-    const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
-    const data = fixture.data as Record<string, any>;
-    const handler = {
-      id: "stripe_payments",
-      type: "com.stripe.payments",
-      version: "2026-06-25",
-      spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-      schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
-      available_instruments: [{ type: "card" }, { type: "link", config: { business_profile: "profile_test_2" } }],
-      config: { environment: "testmode", business_profile: "profile_test_2" },
-      networkId: "profile_test_1",
-    };
-    data.payment.handlers = [handler];
-    data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
-    strictOutput(TOOLS.find((t) => t.name === "get_order")!.output!).parse(data);
-    const text = renderToolResult("get_order", data);
-    assert.match(
-      text,
-      /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, business_profile profile_test_2\); token limits: /m,
-    );
-    assert.equal(text.split(PAY_NEXT_STEP).length, 2);
-    assertClean(text);
-    for (const config of [undefined, { environment: "testmode" }, { business_profile: 7 }]) {
-      data.payment.handlers = [{ ...handler, config }];
-      assert.match(renderToolResult("get_order", data), /\(handler stripe_payments, business_profile profile_test_1\)/);
+    // An order that can't be paid by token: no handlers, no limits.
+    const unpayable = load("order-awaiting-payment") as ToolFixture;
+    const { payment } = unpayable.data as Record<string, any>;
+    assert.deepEqual([payment.handlers, payment.credentialLimits], [[], null]);
+    for (const tool of ["book_hotel", "get_order", "list_orders"] as const) {
+      const data = tool === "list_orders" ? { data: [unpayable.data], nextCursor: null } : unpayable.data;
+      const plain = renderToolResult(tool, data);
+      assert.doesNotMatch(plain, /^Pay without the link/m, tool);
+      assert.ok(!plain.includes(PAY_NEXT_STEP), tool);
+      assert.ok(plain.includes(ORDER_NEXT_STEP), tool);
     }
-    data.payment.handlers = [{ ...handler, config: undefined, networkId: null }];
-    assert.match(renderToolResult("get_order", data), /via com\.stripe\.payments \(handler stripe_payments\); token limits/);
-  });
-
-  it("an order from a server before 3.3 has no Cancel line and no cancel rule", () => {
-    const fixture = copy(load("order-confirmed")) as ToolFixture;
-    delete (fixture.data as Record<string, any>).cancel;
-    const text = renderToolResult("get_order", fixture.data);
-    assert.doesNotMatch(text, /^Cancel:/m);
-    assert.ok(!text.includes(CANCEL_NEXT_STEP));
   });
 
   it("leaves ORDER_NEXT_STEP out when no payment.url is set", () => {

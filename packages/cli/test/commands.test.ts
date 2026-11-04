@@ -402,8 +402,8 @@ describe("a request the contract refuses is not sent", () => {
     ]);
   });
 
-  // The contract takes the token as sharedPaymentToken or as UCP's payment
-  // (3.5); the CLI sends only --token, and still needs it.
+  // The contract takes the token as sharedPaymentToken or as UCP's payment;
+  // the CLI sends only --token, and needs it.
   it("orders pay needs --token", () => {
     const token = {
       pointer: "/sharedPaymentToken",
@@ -667,8 +667,7 @@ describe("display currency", () => {
     );
   });
 
-  it("FORTRIP_CURRENCY is no longer read, and a blank variable sets nothing", () => {
-    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_CURRENCY: "CNY" }), false);
+  it("a blank FORTRIP_DISPLAY_CURRENCY sets nothing", () => {
     assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
   });
 

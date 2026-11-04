@@ -173,6 +173,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -230,6 +231,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -380,6 +382,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -431,6 +434,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2109,6 +2113,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2155,6 +2160,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2222,6 +2228,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2268,6 +2275,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2314,6 +2322,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2410,6 +2419,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2477,6 +2487,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2523,6 +2534,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2588,6 +2600,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2649,6 +2662,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -2701,6 +2715,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3063,6 +3078,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3251,6 +3267,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3559,7 +3576,8 @@
                 "required": [
                   "matched",
                   "poolLimit",
-                  "localities"
+                  "localities",
+                  "center"
                 ],
                 "additionalProperties": {}
               },
@@ -3571,6 +3589,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3652,6 +3671,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3708,6 +3728,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3769,6 +3790,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3830,6 +3852,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -3952,6 +3975,7 @@
               "code",
               "message",
               "retryable",
+              "details",
               "requestId"
             ],
             "additionalProperties": {}
@@ -4779,6 +4803,7 @@
       "location",
       "timeZone",
       "description",
+      "photos",
       "checkInTimes",
       "checkOutTimes",
       "policies",
@@ -6517,20 +6542,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -6538,33 +6573,42 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -6574,7 +6618,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -6681,6 +6727,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -7468,20 +7515,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -7489,33 +7546,42 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -7525,7 +7591,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -7628,6 +7696,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -8415,20 +8484,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -8436,33 +8515,42 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -8472,7 +8560,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -8579,6 +8669,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -9371,20 +9462,30 @@
                       },
                       "config": {
                         "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      },
-                      "networkId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
+                        "properties": {
+                          "environment": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "livemode",
+                                  "testmode"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
                           },
-                          {
-                            "type": "null"
+                          "business_profile": {
+                            "type": "string"
                           }
-                        ]
+                        },
+                        "required": [
+                          "environment",
+                          "business_profile"
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "required": [
@@ -9392,33 +9493,42 @@
                       "type",
                       "version",
                       "spec",
-                      "networkId"
+                      "schema",
+                      "available_instruments",
+                      "config"
                     ],
                     "additionalProperties": {}
                   }
                 },
                 "credentialLimits": {
-                  "type": "object",
-                  "properties": {
-                    "maxAmount": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {}
                     },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "maxAmount",
-                    "currency",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": {}
+                  ]
                 }
               },
               "required": [
@@ -9428,7 +9538,9 @@
                 "expiresAt",
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
-                "localCharge"
+                "localCharge",
+                "handlers",
+                "credentialLimits"
               ],
               "additionalProperties": {}
             },
@@ -9531,6 +9643,7 @@
             "items",
             "price",
             "payment",
+            "cancel",
             "manageUrl"
           ],
           "additionalProperties": {}
@@ -10340,20 +10453,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -10361,33 +10484,42 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -10397,7 +10529,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -10500,6 +10634,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -11322,20 +11457,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -11343,33 +11488,42 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
           },
           "credentialLimits": {
-            "type": "object",
-            "properties": {
-              "maxAmount": {
-                "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "maxAmount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                  }
+                },
+                "required": [
+                  "maxAmount",
+                  "currency",
+                  "expiresAt"
+                ],
+                "additionalProperties": {}
               },
-              "currency": {
-                "type": "string"
-              },
-              "expiresAt": {
-                "type": "string",
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "maxAmount",
-              "currency",
-              "expiresAt"
-            ],
-            "additionalProperties": {}
+            ]
           }
         },
         "required": [
@@ -11379,7 +11533,9 @@
           "expiresAt",
           "chargeCurrency",
           "localCurrencyAtCheckout",
-          "localCharge"
+          "localCharge",
+          "handlers",
+          "credentialLimits"
         ],
         "additionalProperties": {}
       },
@@ -11482,6 +11638,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -12274,20 +12431,30 @@
                       },
                       "config": {
                         "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      },
-                      "networkId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
+                        "properties": {
+                          "environment": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "livemode",
+                                  "testmode"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
                           },
-                          {
-                            "type": "null"
+                          "business_profile": {
+                            "type": "string"
                           }
-                        ]
+                        },
+                        "required": [
+                          "environment",
+                          "business_profile"
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "required": [
@@ -12295,33 +12462,42 @@
                       "type",
                       "version",
                       "spec",
-                      "networkId"
+                      "schema",
+                      "available_instruments",
+                      "config"
                     ],
                     "additionalProperties": {}
                   }
                 },
                 "credentialLimits": {
-                  "type": "object",
-                  "properties": {
-                    "maxAmount": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {}
                     },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "expiresAt": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "maxAmount",
-                    "currency",
-                    "expiresAt"
-                  ],
-                  "additionalProperties": {}
+                  ]
                 }
               },
               "required": [
@@ -12331,7 +12507,9 @@
                 "expiresAt",
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
-                "localCharge"
+                "localCharge",
+                "handlers",
+                "credentialLimits"
               ],
               "additionalProperties": {}
             },
@@ -12434,6 +12612,7 @@
             "items",
             "price",
             "payment",
+            "cancel",
             "manageUrl"
           ],
           "additionalProperties": {}
@@ -13859,7 +14038,8 @@
             "location",
             "timeZone",
             "distanceMeters",
-            "price"
+            "price",
+            "photo"
           ],
           "additionalProperties": {}
         }

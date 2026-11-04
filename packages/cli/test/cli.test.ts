@@ -15,11 +15,13 @@ import {
   COMMANDS,
   commandInvocation,
   type CommandSpec,
+  ERROR_CODES,
   errorEnvelope,
   GLOBAL_FLAGS,
   type RenderedTool,
   renderError,
   renderToolResult,
+  strictOutput,
 } from "@fortrip/agent-contract";
 
 const run = promisify(execFile);
@@ -169,10 +171,17 @@ describe("requests", () => {
         "",
       ].join("\n"),
     );
-    // A server before 3.3 says nothing about cancelling.
-    const { cancel: _, ...older } = data as Record<string, unknown>;
-    reply = { status: 200, body: older };
-    assert.match((await cli(["orders", "cancel", ORDER])).stderr, /\nCancel: not stated for this order\.\n$/);
+    assert.ok(requests.every((r) => r.method === "GET"));
+  });
+
+  it("orders cancel without --max-penalty on an order not in the contract's shape still refuses, and offers no flag", async () => {
+    const { data } = await fixture("order-confirmed");
+    const { cancel: _, ...noCancel } = data as Record<string, unknown>;
+    reply = { status: 200, body: noCancel };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
+    assert.equal(code, 2);
+    assert.match(stderr, /^Error: Not cancelled: fortrip orders cancel needs --max-penalty/);
+    assert.doesNotMatch(stderr, /Pass --max-penalty/);
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
@@ -377,30 +386,32 @@ describe("errors", () => {
     assert.equal(json.tokenSource, "FORTRIP_TOKEN");
   });
 
-  it("the CLI's own error is text on stderr, or { error: { code, message, retryable } } with --json", async () => {
+  it("the CLI's own error is text on stderr, or { error: { code, message, retryable, requestId, details } } with --json", async () => {
     const text = await cli(["hotels", "search", "--nope"]);
     assert.equal(text.code, 2);
     assert.match(text.stderr, /^Error: Unknown option '--nope'/);
     const json = await cli(["hotels", "search", "--nope", "--json"]);
     assert.equal(json.code, 2);
     const { error } = JSON.parse(json.stderr);
-    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId"]);
+    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId", "details"]);
     assert.match(error.requestId, /^local_[0-9a-f]{20}$/);
     assert.equal(error.code, "invalid_request");
     assert.match(error.message, /Unknown option '--nope'/);
     assert.equal(error.retryable, false);
+    assert.deepEqual(error.details, { issues: [] });
     assert.equal(requests.length, 0);
   });
 
   it("with --json, the CLI's own errors are envelope-shaped, its facts beside the error", async () => {
-    const usage = JSON.parse((await cli(["hotels", "rates", "--json"])).stderr);
+    const usage = JSON.parse((await cli(["hotels", "nope", "--json"])).stderr);
     assert.match(usage.error.requestId, /^local_[0-9a-f]{20}$/);
     assert.deepEqual(usage, {
       error: {
         code: "invalid_request",
-        message: 'Unknown command "hotels rates". Did you mean `fortrip hotels offers`?',
+        message: 'Unknown command "hotels nope". Run `fortrip hotels --help`.',
         retryable: false,
         requestId: usage.error.requestId,
+        details: { issues: [] },
       },
     });
     const unsendable = await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" });
@@ -420,18 +431,37 @@ describe("errors", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("every local --json error parses with the contract's errorEnvelope", async () => {
+  it("every local --json error is the contract's envelope, closed for a code the contract knows", async () => {
     const runs = [
       await cli(["hotels", "search", "--nope", "--json"]),
-      await cli(["hotels", "rates", "--json"]),
+      await cli(["hotels", "nope", "--json"]),
+      await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"]),
       await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" }),
       await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" }),
       await cli(["orders", "list", "--json"], { FORTRIP_TOKEN: "", XDG_CONFIG_HOME: "/dev/null/nope" }),
     ];
+    // Answers that aren't Fortrip's envelope.
+    for (const status of [400, 401, 429, 502]) {
+      reply = { status, body: { error: "not the envelope" }, headers: { "retry-after": "7" } };
+      runs.push(await cli([...SEARCH, "--json"]));
+    }
     for (const { stderr } of runs) {
       const { error } = JSON.parse(stderr);
-      assert.ok(errorEnvelope.safeParse({ error }).success, stderr);
+      const schema = Object.hasOwn(ERROR_CODES, error.code) ? strictOutput(errorEnvelope) : errorEnvelope;
+      const parsed = schema.safeParse({ error });
+      assert.ok(parsed.success, `${stderr}${JSON.stringify(parsed.error?.issues)}`);
     }
+  });
+
+  it("a 429 that isn't Fortrip's envelope exits 4 as service_unavailable, retryable after Retry-After", async () => {
+    reply = { status: 429, body: null, headers: { "retry-after": "7" } };
+    const { code, stderr } = await cli([...SEARCH, "--json"]);
+    assert.equal(code, 4);
+    const { error } = JSON.parse(stderr);
+    assert.equal(error.code, "service_unavailable");
+    assert.equal(error.retryable, true);
+    assert.equal(error.retryAfterSeconds, 7);
+    assert.equal(error.details, undefined);
   });
 
   it("an unreachable API is retryable, said in the error", async () => {
@@ -479,7 +509,7 @@ describe("FORTRIP_TOKEN", () => {
 });
 
 describe("whoami", () => {
-  it("prints the account as text, or as 2.0's JSON with --json", async () => {
+  it("prints the account as text, or as JSON with --json", async () => {
     reply = { status: 200, body: { userId: "user_1", email: "a@b.c", name: null } };
     const text = await cli(["whoami"]);
     assert.equal(text.code, 0);
@@ -611,7 +641,6 @@ describe("help", () => {
       /^  FORTRIP_MCP_URL +MCP server URL for fortrip mcp \(default https:\/\/mcp\.fortrip\.ai\/\)$/m,
     );
     assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
-    assert.doesNotMatch(stdout, /FORTRIP_CURRENCY\b/);
   });
 
   it("no help names an API path", async () => {
@@ -621,28 +650,18 @@ describe("help", () => {
   });
 });
 
-describe("renamed commands", () => {
-  it("2.x hotels rates is gone: exit 2, naming hotels offers", async () => {
-    const { code, stdout, stderr } = await cli(["hotels", "rates", "--hotel", "1"]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.equal(stderr, 'Error: Unknown command "hotels rates". Did you mean `fortrip hotels offers`?\n');
-    assert.equal(requests.length, 0);
-  });
-
-  it("1.x commands typed without their group name the 3.0 command", async () => {
-    for (const [old, now] of [
+describe("unknown commands", () => {
+  it("a group's command typed without its group names the command", async () => {
+    for (const [typed, meant] of [
       ["search", "`fortrip hotels search`"],
-      ["hotel", "`fortrip hotels get`"],
-      ["rates", "`fortrip hotels offers`"],
       ["book", "`fortrip hotels book`"],
       ["get", "`fortrip hotels get` or `fortrip orders get`"],
       ["list", "`fortrip orders list`"],
     ]) {
-      const { code, stdout, stderr } = await cli([old as string, "x"]);
-      assert.equal(code, 2, old);
-      assert.equal(stdout, "", old);
-      assert.equal(stderr, `Error: Unknown command "${old}". Did you mean ${now}?\n`);
+      const { code, stdout, stderr } = await cli([typed as string, "x"]);
+      assert.equal(code, 2, typed);
+      assert.equal(stdout, "", typed);
+      assert.equal(stderr, `Error: Unknown command "${typed}". Did you mean ${meant}?\n`);
     }
     assert.equal(requests.length, 0);
   });

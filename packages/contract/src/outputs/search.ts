@@ -58,8 +58,8 @@ export const hotelSummary = openObject({
   timeZone: z.string().nullable(),
   distanceMeters: z.number().nullable(),
   price: indicativePrice.nullable(),
-  /** The cover photo; `null` without one. Absent from servers before 3.1. */
-  photo: photo.nullable().optional(),
+  /** The cover photo; `null` without one. */
+  photo: photo.nullable(),
 });
 
 export type HotelSummary = z.infer<typeof hotelSummary>;

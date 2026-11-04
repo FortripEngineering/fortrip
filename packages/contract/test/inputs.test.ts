@@ -898,7 +898,7 @@ describe("payOrderInput", () => {
     credential: { type: "stripe_payment_token", token: spt },
   });
 
-  it("takes the token as sharedPaymentToken (3.4)", () => {
+  it("takes the token as sharedPaymentToken", () => {
     assertAccepted(payOrderInput, { orderId, sharedPaymentToken: token, total });
     assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: "tok_1", total }, "sharedPaymentToken");
     assert.equal(
@@ -913,7 +913,7 @@ describe("payOrderInput", () => {
     );
   });
 
-  it("takes it as UCP's payment instead, the selected instrument's credential (3.5)", () => {
+  it("takes it as UCP's payment instead, the selected instrument's credential", () => {
     assertAccepted(payOrderInput, { orderId, payment: { instruments: [card(true)] }, total });
     assertAccepted(payOrderInput, {
       orderId,
@@ -929,7 +929,7 @@ describe("payOrderInput", () => {
     assert.equal(sharedPaymentTokenOf(payOrderInput.parse({ orderId, sharedPaymentToken: token, total })), token);
   });
 
-  it("passes UCP's other fields and handlers through: only the selected one is checked (3.5)", () => {
+  it("passes UCP's other fields and handlers through: only the selected one is checked", () => {
     const pays = (instruments: unknown[]) =>
       sharedPaymentTokenOf(payOrderInput.parse({ orderId, payment: { instruments }, total }));
     const billing_address = { street_address: "1 Main St", postal_code: "94107", address_country: "US" };

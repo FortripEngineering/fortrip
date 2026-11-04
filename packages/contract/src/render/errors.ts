@@ -143,7 +143,7 @@ function notFound(d: Details<"destination_not_found">): string[] {
 }
 
 function detailLines(e: KnownErrorBody): string[] {
-  if (!("details" in e) || e.details === undefined) return [];
+  if (!("details" in e)) return [];
   switch (e.code) {
     case "invalid_request": {
       const d = e.details;

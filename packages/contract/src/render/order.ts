@@ -84,25 +84,21 @@ function paymentLines(o: Order): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
-  if (p.handlers?.length) lines.push(handlersLine(p.handlers, p.credentialLimits));
-  if (o.cancel) lines.push(cancelLine(o.cancel));
+  if (p.handlers.length > 0) lines.push(handlersLine(p.handlers, p.credentialLimits));
+  lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
 
-/** "Pay without the link: …": each handler by type, its Link wallet's
- *  business profile (`config.business_profile` (3.5), else `networkId`)
- *  when it names one, and the credential's limits. */
+/** "Pay without the link: …": each handler by type with the business
+ *  profile its token is granted for, and the credential's limits. */
 function handlersLine(
-  handlers: NonNullable<Order["payment"]["handlers"]>,
+  handlers: Order["payment"]["handlers"],
   limits: Order["payment"]["credentialLimits"],
 ): string {
-  const shown = handlers.map((h) => {
-    const profile = h.config?.business_profile;
-    const businessProfile =
-      typeof profile === "string" ? profile : h.networkId;
-    return `${h.type} (handler ${h.id}${businessProfile ? `, business_profile ${businessProfile}` : ""})`;
-  });
+  const shown = handlers.map(
+    (h) => `${h.type} (handler ${h.id}, business_profile ${h.config.business_profile})`,
+  );
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";
@@ -111,7 +107,7 @@ function handlersLine(
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
  *  only ever the order's own. */
-function cancelLine(c: NonNullable<Order["cancel"]>): string {
+function cancelLine(c: Order["cancel"]): string {
   const figure = (name: string, m: typeof c.penalty) =>
     `${name} ${m ? money(m) : "not stated"}`;
   const figures = `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;

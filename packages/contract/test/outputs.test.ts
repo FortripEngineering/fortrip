@@ -6,11 +6,7 @@ import { z } from "zod";
 import { strictOutput } from "../src/conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
 import { authConfig, meResult } from "../src/outputs/account.ts";
-import {
-  ERROR_DETAILS,
-  errorEnvelope,
-  strictErrorEnvelope,
-} from "../src/outputs/error-details.ts";
+import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs/hotel.ts";
 import { hotelOffersResult, offer } from "../src/outputs/offer.ts";
 import { offerChange, order, orderList } from "../src/outputs/order.ts";
@@ -104,6 +100,7 @@ const searchFixture = {
           rateDate: "2026-10-23",
         },
       },
+      photo: { url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: null },
     },
   ],
   nextCursor: "c1",
@@ -136,6 +133,7 @@ const hotelFixture = {
   location: { lat: 31.2, lng: 121.4 },
   timeZone: "Asia/Shanghai",
   description: { text: "A hotel.", locale: "en" },
+  photos: [{ url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: { text: "Lobby", locale: "en" } }],
   checkInTimes: { from: "14:00", until: null },
   checkOutTimes: { from: null, until: "12:00" },
   policies: { listed: true, items: [{ topic: "pets", text: "No pets.", locale: "en" }] },
@@ -256,7 +254,10 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
+    handlers: [],
+    credentialLimits: null,
   },
+  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
@@ -344,11 +345,20 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(searchResult, searchFixture);
     parsesBoth(searchResult, pointSearchFixture);
     parsesBoth(searchResult, { ...searchFixture, destination: null });
+    // A hotel always says whether it has a cover photo.
+    const [summary] = searchFixture.data;
+    parsesBoth(searchResult, { ...searchFixture, data: [{ ...summary, photo: null }] });
+    const { photo: _photo, ...noPhoto } = summary!;
+    assert.equal(searchResult.safeParse({ ...searchFixture, data: [noPhoto] }).success, false);
   });
   it("hotel, with and without rooms", () => {
     parsesBoth(hotel, hotelFixture);
     const { rooms: _rooms, ...noRooms } = hotelFixture;
     parsesBoth(hotel, noRooms);
+    // Photos aren't asked for: always there, null when none are listed.
+    parsesBoth(hotel, { ...hotelFixture, photos: null });
+    const { photos: _photos, ...noPhotos } = hotelFixture;
+    assert.equal(hotel.safeParse(noPhotos).success, false);
   });
   it("offer and the offers response", () => {
     parsesBoth(offer, offerFixture);
@@ -358,17 +368,13 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
   });
-  it("an order's payment handler, as 3.4 sent it and with UCP's fields (3.5)", () => {
+  it("an order's payment handler, in UCP's shape", () => {
     const limits = { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" };
-    const v34 = {
+    const handler = {
       id: "stripe_payments",
       type: "com.stripe.payments",
       version: "2026-06-25",
       spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-      networkId: "profile_test_1",
-    };
-    const ucp = {
-      ...v34,
       schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
       available_instruments: [
         { type: "card" },
@@ -376,22 +382,41 @@ describe("v1 response fixtures parse, open and strict", () => {
       ],
       config: { environment: "testmode", business_profile: "profile_test_1" },
     };
-    const withHandler = (handler: unknown) => ({
+    const withHandler = (h: unknown) => ({
       ...orderFixture,
-      payment: { ...orderFixture.payment, handlers: [handler], credentialLimits: limits },
+      payment: { ...orderFixture.payment, handlers: [h], credentialLimits: limits },
     });
-    parsesBoth(order, withHandler(v34));
-    parsesBoth(order, withHandler(ucp));
-    // A handler's config is UCP's: the strict copy keeps fields it doesn't know.
-    parsesBoth(order, withHandler({ ...ucp, config: { ...ucp.config, wallet_hint: { any: ["thing"] } } }));
-    // But an instrument stays an object the contract closes.
-    const leaked = withHandler({ ...ucp, available_instruments: [{ type: "card", extra: 1 }] });
-    assert.ok(order.safeParse(leaked).success);
-    assert.equal(strictOutput(order).safeParse(leaked).success, false);
-    assert.equal(order.safeParse(withHandler({ ...ucp, config: "testmode" })).success, false);
-    assert.equal(order.safeParse(withHandler({ ...ucp, networkId: undefined })).success, false);
+    parsesBoth(order, withHandler(handler));
+    // An instrument's config is UCP's: the strict copy keeps what it doesn't know.
+    const hinted = { ...handler, available_instruments: [{ type: "link", config: { hint: { any: ["thing"] } } }] };
+    parsesBoth(order, withHandler(hinted));
+    // An environment this contract doesn't know reads, as an open enum.
+    assert.ok(order.safeParse(withHandler({ ...handler, config: { ...handler.config, environment: "staging" } })).success);
+    // What the contract closes stays closed in the strict copy.
+    for (const leaked of [
+      { ...handler, available_instruments: [{ type: "card", extra: 1 }] },
+      { ...handler, config: { ...handler.config, extra: 1 } },
+      { ...handler, networkId: "profile_test_1" },
+    ]) {
+      assert.ok(order.safeParse(withHandler(leaked)).success);
+      assert.equal(strictOutput(order).safeParse(withHandler(leaked)).success, false);
+    }
+    // An order always says how else it can be paid: no handlers and no limits when it can't.
+    for (const field of ["handlers", "credentialLimits"] as const) {
+      const { [field]: _gone, ...without } = orderFixture.payment;
+      assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false, field);
+    }
+    for (const field of ["schema", "available_instruments", "config"] as const) {
+      const { [field]: _gone, ...without } = handler;
+      assert.equal(order.safeParse(withHandler(without)).success, false, field);
+    }
+    assert.equal(
+      order.safeParse(withHandler({ ...handler, config: { environment: "testmode" } })).success,
+      false,
+    );
   });
-  it("an order's cancel quote, cancellable or not (3.3)", () => {
+
+  it("an order's cancel quote, cancellable or not", () => {
     const cancellable = {
       ...orderFixture,
       status: "confirmed",
@@ -402,9 +427,10 @@ describe("v1 response fixtures parse, open and strict", () => {
       ...orderFixture,
       cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
     });
-    // An unknown reason stays open; a server before 3.3 sends no cancel.
+    // An unknown reason stays open; an order always says whether it can be cancelled.
     assert.ok(order.safeParse({ ...cancellable, cancel: { ...cancellable.cancel, reason: "later" } }).success);
-    assert.ok(order.safeParse(orderFixture).success);
+    const { cancel: _cancel, ...withoutCancel } = cancellable;
+    assert.equal(order.safeParse(withoutCancel).success, false);
     assert.equal(order.safeParse({ ...cancellable, cancel: { available: true } }).success, false);
   });
   it("every change field", () => {
@@ -432,8 +458,6 @@ describe("v1 response fixtures parse, open and strict", () => {
   it("an error envelope for every code", () => {
     for (const [code, details] of Object.entries(ERROR_FIXTURES)) {
       parsesBoth(errorEnvelope, envelope(code, details));
-      const strict = strictErrorEnvelope().safeParse(envelope(code, details));
-      assert.ok(strict.success, `${code}: ${JSON.stringify(strict.error?.issues)}`);
     }
     parsesBoth(errorEnvelope, envelope("destination_not_found", { reason: "no_match", name: "Atlantis", countryCode: "GR", nameAsText: 0 }));
     parsesBoth(errorEnvelope, envelope("destination_not_found", { reason: "unknown_id", placeId: "plc_9" }));
@@ -478,20 +502,13 @@ describe("open where the spec says, strict in server tests", () => {
     );
   });
 
-  it("lets a client read an envelope without details (ruling A)", () => {
-    for (const code of Object.keys(ERROR_FIXTURES)) {
-      assert.ok(errorEnvelope.safeParse(envelope(code, undefined)).success, code);
-    }
-  });
-
-  it("holds the server to §11's details per code, in the strict envelope", () => {
-    const strict = strictErrorEnvelope();
+  it("holds every code to §11's details: required where listed, none where the row shows –", () => {
+    const strict = strictOutput(errorEnvelope);
     for (const [code, details] of Object.entries(ERROR_FIXTURES)) {
       if (details === undefined) {
         assert.equal(strict.safeParse(envelope(code, { x: 1 })).success, false, `${code} with details`);
-        assert.equal(strictOutput(errorEnvelope).safeParse(envelope(code, { x: 1 })).success, false, code);
       } else {
-        assert.equal(strict.safeParse(envelope(code, undefined)).success, false, `${code} without details`);
+        assert.equal(errorEnvelope.safeParse(envelope(code, undefined)).success, false, `${code} without details`);
       }
     }
     assert.ok(errorEnvelope.safeParse(envelope("internal", { x: 1 })).success);
@@ -499,15 +516,10 @@ describe("open where the spec says, strict in server tests", () => {
   });
 
   it("search_too_broad carries the area's center: required, null for text-only searches", () => {
-    const strict = strictErrorEnvelope();
     const details = ERROR_FIXTURES.search_too_broad as Record<string, unknown>;
     const { center: _center, ...withoutCenter } = details;
-    assert.equal(strict.safeParse(envelope("search_too_broad", withoutCenter)).success, false);
-    const textOnly = { ...details, center: null };
-    assert.ok(strict.safeParse(envelope("search_too_broad", textOnly)).success);
-    parsesBoth(errorEnvelope, envelope("search_too_broad", textOnly));
-    // A client still reads the localities from a server that sends no center.
-    assert.ok(errorEnvelope.safeParse(envelope("search_too_broad", withoutCenter)).success);
+    assert.equal(errorEnvelope.safeParse(envelope("search_too_broad", withoutCenter)).success, false);
+    parsesBoth(errorEnvelope, envelope("search_too_broad", { ...details, center: null }));
   });
 });
 
@@ -558,19 +570,19 @@ describe("shape rules", () => {
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
   "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
-  "basis", "beds", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
+  "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
   "coverage", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
-  "en", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
+  "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
   "guestsCoveredPerRoom", "handlers", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
   "issuer", "issues", "items", "kind", "known", "label", "lat", "line", "listed", "listedShare",
   "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
   "manageUrl", "mandatory", "match", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
-  "message", "min", "mode", "more", "name", "nameAsText", "names", "networkId", "nextCursor", "nextStep",
+  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
   "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",

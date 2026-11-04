@@ -8,7 +8,7 @@ apart.
 
 It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
 ES2023 does. Its major version changes when the contract breaks, not with
-the API: `3.x` serves Fortrip API v1.
+the API: `4.x` serves Fortrip API v1.
 
 ```ts
 import { API, LIMITS, PUBLIC_ORIGINS, containsCardNumber } from "@fortrip/agent-contract";

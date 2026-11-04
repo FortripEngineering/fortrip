@@ -197,32 +197,10 @@ describe("credentials", () => {
     assert.deepEqual((await read()).futureKey, { a: 1 });
   });
 
-  it("a file from 0.3.x (no version) counts as empty and is replaced on the next write", async () => {
-    const path = credentialsPath(env);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(
-      path,
-      JSON.stringify({
-        tokens: { "https://fortrip.ai": { accessToken: "fth_old", createdAt: "x" } },
-        pending: { "https://fortrip.ai": login(1) },
-        pendingLogins: { "https://fortrip.ai": [login(1)] },
-      }),
-    );
-    assert.equal(await loadSession("https://fortrip.ai", env), null);
-    assert.deepEqual(await loadPendingLogins("https://fortrip.ai", env), []);
-
-    await saveSession("https://fortrip.ai", session("prod"), env);
-    assert.deepEqual(await read(), {
-      version: 2,
-      sessions: { "https://fortrip.ai": session("prod") },
-      pendingLogins: {},
-    });
-  });
-
   it("never overwrites a file it can't read, and says to move it", async () => {
     const path = credentialsPath(env);
     await mkdir(dirname(path), { recursive: true });
-    for (const text of ['{"version": 2, "sessions": {"https://keep', "[]", '{"version": 3}']) {
+    for (const text of ['{"version": 2, "sessions": {"https://keep', "[]", '{"version": 3}', '{"sessions": {}}']) {
       await writeFile(path, text);
       await assert.rejects(
         deleteSession("https://fortrip.ai", env),

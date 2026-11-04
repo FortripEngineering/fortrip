@@ -184,11 +184,11 @@ export function unwrap(response: ApiResponse): unknown {
     );
   }
   // Not the API's answer: a proxy's error page, or nothing. A 5xx is a
-  // platform hiccup, and a 429 may still say how long to wait.
+  // platform hiccup, and a 429 is worth a retry once Retry-After has passed.
   const retryAfter = Number(headers.get("retry-after"));
   throw new CliError(`Unexpected ${status} answer from the API`, exitCodeFor(undefined, status), {
     status,
-    ...(status >= 500 ? { retryable: true } : {}),
+    ...(status >= 500 || status === 429 ? { retryable: true } : {}),
     ...(Number.isFinite(retryAfter) && retryAfter > 0 ? { retryAfterSeconds: retryAfter } : {}),
     ...(raw ? { raw } : {}),
   });

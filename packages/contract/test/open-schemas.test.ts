@@ -177,7 +177,7 @@ describe("strictOutput on cloned and wrapped schemas", () => {
   });
 });
 
-describe("strictOutput keeps a protocol object as it is (3.5)", () => {
+describe("strictOutput keeps a protocol object as it is", () => {
   it("passes any fields inside it, and still closes the object around it", () => {
     const s = strictOutput(openObject({ config: protocolObject().optional(), n: z.number() }));
     assert.ok(s.safeParse({ config: { business_profile: "p", deep: { list: [1, null] } }, n: 1 }).success);

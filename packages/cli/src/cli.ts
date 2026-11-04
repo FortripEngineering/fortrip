@@ -5,6 +5,7 @@ import {
   commandInvocation,
   type CommandSpec,
   GLOBAL_FLAGS,
+  order as orderSchema,
   type RenderedTool,
   renderToolResult,
 } from "@fortrip/agent-contract";
@@ -36,16 +37,6 @@ const HELP_FLAGS = globalFlag("help");
 const VERSION_FLAGS = globalFlag("version");
 const JSON_FLAG = "--json";
 
-/** Commands of earlier versions that were renamed, not only moved into a
- *  group, and what each became: 1.x's, typed on their own, and 2.x's, typed
- *  after their group. One that kept its name in a group (1.x `search`, now
- *  `hotels search`) is found without an entry. */
-const RENAMED = new Map<string, Pick<CommandSpec, "group" | "name">>([
-  ["hotel", { group: "hotels", name: "get" }],
-  ["rates", { group: "hotels", name: "offers" }],
-  ["hotels rates", { group: "hotels", name: "offers" }],
-]);
-
 /** The command `argv` names and the arguments after its name, or the group
  *  whose help it asks for. A group's commands are typed after it
  *  (`hotels search`); a command without a group on its own (`login`). */
@@ -63,11 +54,8 @@ function findCommand(
       (candidate) => candidate.group === group.name && candidate.name === name,
     );
     if (!spec) {
-      const renamed = RENAMED.get(`${group.name} ${name}`);
       throw usageError(
-        renamed
-          ? `Unknown command "${group.name} ${name}". Did you mean \`${commandInvocation(renamed)}\`?`
-          : `Unknown command "${group.name} ${name}". Run \`fortrip ${group.name} --help\`.`,
+        `Unknown command "${group.name} ${name}". Run \`fortrip ${group.name} --help\`.`,
       );
     }
     return { spec, rest };
@@ -76,13 +64,10 @@ function findCommand(
     (candidate) => candidate.group === null && candidate.name === word,
   );
   if (spec) return { spec, rest: afterWord };
-  // A group's command typed without its group (`search` for
-  // `hotels search`), or under its 1.x name (`hotel` for `hotels get`).
-  const renamed = RENAMED.get(word ?? "");
-  const meant = [
-    ...COMMANDS.filter((candidate) => candidate.group !== null && candidate.name === word),
-    ...(renamed ? [renamed] : []),
-  ].map((candidate) => `\`${commandInvocation(candidate)}\``);
+  // A group's command typed without its group (`search` for `hotels search`).
+  const meant = COMMANDS.filter(
+    (candidate) => candidate.group !== null && candidate.name === word,
+  ).map((candidate) => `\`${commandInvocation(candidate)}\``);
   throw usageError(
     meant.length
       ? `Unknown command "${word}". Did you mean ${meant.join(" or ")}?`
@@ -167,20 +152,19 @@ async function run(argv: string[]): Promise<Answer> {
  *  cancelling: the order's Cancel line and, when it can be cancelled now,
  *  the flag with the order's own penalty. */
 function notCancelled(spec: CommandSpec, flag: string, order: unknown): string {
-  const line = renderToolResult("get_order", order)
+  const cancelLine = renderToolResult("get_order", order)
     .split("\n")
-    .find((text) => text.startsWith("Cancel: "));
-  const cancel = (order as { cancel?: { available?: unknown; penalty?: { amount?: unknown } | null } } | null)
-    ?.cancel;
-  const amount = cancel?.available === true ? cancel.penalty?.amount : undefined;
+    .filter((text) => text.startsWith("Cancel: "));
+  const parsed = orderSchema.safeParse(order);
+  const cancel = parsed.success ? parsed.data.cancel : undefined;
   return [
     `Not cancelled: ${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`,
-    line ?? "Cancel: not stated for this order.",
-    ...(typeof amount === "string" ? [`Pass ${flag} ${amount} to cancel.`] : []),
+    ...cancelLine,
+    ...(cancel?.available && cancel.penalty ? [`Pass ${flag} ${cancel.penalty.amount} to cancel.`] : []),
   ].join("\n");
 }
 
-/** `whoami`, and `login` once signed in: the account as 2.0 printed it,
+/** `whoami`, and `login` once signed in: the account,
  *  `{ userId, email, name, apiUrl }`. */
 function account(data: unknown): Answer {
   const { apiUrl, userId, email, name } = data as Record<string, unknown>;

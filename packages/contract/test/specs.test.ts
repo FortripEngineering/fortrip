@@ -188,7 +188,10 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
+    handlers: [],
+    credentialLimits: null,
   },
+  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
@@ -393,8 +396,7 @@ describe("TOOLS", () => {
 });
 
 describe("ORDER_NEXT_STEP", () => {
-  // The consent phrases 2.0's BOOKING_NEXT_STEP was pinned to, reworded
-  // for an order's `payment.url`.
+  // The consent phrases, for an order's `payment.url`.
   it("tells the model to show the order, ask, and give the link only after a yes", () => {
     assert.match(
       ORDER_NEXT_STEP,
@@ -740,7 +742,7 @@ describe("COMMANDS", () => {
   });
 
   // `orders pay` sends its token as `--token`: `payment` is UCP's form of
-  // the same token (3.5), for agents that speak UCP.
+  // the same token, for agents that speak UCP.
   const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
 
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {

@@ -238,7 +238,8 @@
             },
             "rateDate": "2026-11-01"
           }
-        }
+        },
+        "photo": null
       },
       {
         "hotelId": "htl_JinganCourt000000000",
@@ -291,7 +292,8 @@
             },
             "rateDate": "2026-11-01"
           }
-        }
+        },
+        "photo": null
       },
       {
         "hotelId": "htl_NoAddress00000000000",
@@ -316,7 +318,8 @@
         "location": null,
         "timeZone": "Asia/Shanghai",
         "distanceMeters": null,
-        "price": null
+        "price": null,
+        "photo": null
       },
       {
         "hotelId": "htl_ZhOnlyName0000000000",
@@ -369,7 +372,8 @@
             },
             "rateDate": "2026-11-01"
           }
-        }
+        },
+        "photo": null
       }
     ],
     "nextCursor": "c_shanghai_area_page_2",

@@ -106,27 +106,4 @@ describe("README", () => {
     assert.match(afterToolCall, /-32001/);
     assert.doesNotMatch(paragraph.replace(/any other request[\s\S]*/, ""), /-32001/);
   });
-
-  it("says nothing the 2.x CLI said and 3.0 no longer does", async () => {
-    const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
-    // The Upgrading section is where 2.x names are shown, by name only.
-    const outsideUpgrade = readme.replace(/^## Upgrading from 2\.x\n[\s\S]*?(?=^## )/m, "");
-    for (const stale of ["--query", "FORTRIP_CURRENCY", "/api/mcp", "/api/agent", "hotels rates"]) {
-      assert.ok(!outsideUpgrade.includes(stale), stale);
-    }
-    assert.match(readme, /^## Upgrading from 2\.x$/m);
-  });
-
-  it("accounts for every 2.x flag in the Upgrading section", async () => {
-    const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
-    const section = readme.match(/^## Upgrading from 2\.x\n([\s\S]*?)(?=^## )/m)?.[1] ?? "";
-    const flags2x = [
-      "--query", "--city-code", "--near", "--star-min", "--star-max", "--facility", "--price-min",
-      "--price-max", "--page", "--page-size", "--currency", "--with-rooms", "--rooms", "--adults",
-      "--child-age", "--nationality", "--board", "--free-cancellation", "--include-unbookable",
-      "--max-rooms", "--room-id", "--rate-plan", "--contact-name", "--contact-phone", "--contact-email",
-    ];
-    for (const flag of flags2x) assert.ok(section.includes(`\`${flag}\``), flag);
-    assert.match(section, /replaced[^.]*cursor|cursor[^.]*\bnot renamed\b|not renamed but replaced/);
-  });
 });

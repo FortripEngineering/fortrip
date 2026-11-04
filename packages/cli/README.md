@@ -27,65 +27,6 @@ npm install --global fortrip
 commands, `fortrip <command> --help` one command's flags, and
 `fortrip --version` prints the version.
 
-## Upgrading from 2.x
-
-3.0 moves the CLI to Fortrip API v1. A 2.x CLI and the 2.x MCP server stop
-working when 3.0 is released, so upgrade the CLI and, if you added it, the
-hosted MCP server's address (see [MCP server](#mcp-server)).
-
-- **Sign in again.** The CLI keeps one sign-in per API URL. 2.x saved yours
-  under `https://fortrip.ai`; 3.0's API is `https://api.fortrip.ai`, so run
-  `fortrip login` once. The old sign-in is not revoked and is left in the file;
-  `fortrip logout` removes only the new one.
-- **`hotels rates` is now `hotels offers`.** It prices up to 15 hotels with
-  live, bookable offers. `hotels book` orders an offer by its `offerId`
-  (`--offer`), and the guests are given per room (`--guest room:first:last`),
-  instead of by room and rate plan. `hotels search`, `hotels get`, `login`,
-  `logout`, `whoami`, `guide` and `mcp` keep their names; `orders get` and
-  `orders list` are new.
-- **Flags changed with the API.** Run `fortrip <command> --help` for the flags
-  of 3.0; these are the 2.x ones that moved.
-  - Search: `--query` and `--city-code` are replaced by `--place-name` with its
-    `--country` (or `--place`, `--locality`, `--point`, `--country-only`);
-    `--text` matches a hotel name, brand or area. `--near` is
-    `--point lat,lng` with `--radius-meters` (meters, where `--near` took km). `--star-min` and `--star-max`
-    are `--stars-min` and `--stars-max`, `--facility` is `--amenity` and
-    `--price-max` is `--price-max-per-room-night`. `--price-min` and the short `-q` are gone.
-  - Paging: `--page` and `--page-size` are not renamed but replaced. Results
-    are paged with a cursor: pass the `nextCursor` of the previous page to
-    `--cursor`, and set the page size with `--limit`. There is no page number.
-  - Rooms: `--rooms`, `--adults` and `--child-age` are replaced by
-    `--room <adults[:age,…]>`, once per room, in `hotels search` and
-    `hotels offers`. `hotels book` no longer takes the stay at all: the offer
-    carries it.
-  - `hotels get`: `--with-rooms` is `--rooms`.
-  - `hotels offers` (was `hotels rates`): `--board` is `--require-breakfast`,
-    `--free-cancellation` is `--require-free-cancellation`, and `--max-rooms`
-    (rooms per hotel) is `--limit-per-hotel` (offers per hotel, 5 by default).
-    `--nationality` and `--include-unbookable` are gone.
-  - `hotels book`: `--hotel`, `--room-id` and `--rate-plan` are replaced by
-    `--offer`, the `offerId` from `hotels offers`. `--guest "First Last:2"` is
-    `--guest 2:First:Last` (room, first name, last name). `--contact-name` is
-    `--first-name` and `--last-name`, `--contact-phone` is `--phone` and
-    `--contact-email` is `--email`.
-  - `--currency` is `--display-currency`, which only changes the currency
-    prices are shown in: orders are paid in USD.
-  - Ids are strings (`htl_…`, `off_…`, `ord_…`, `plc_…`) that you pass back as
-    they were returned.
-- **New output.** A result is compact text by default, written for people and
-  for models; `--json` prints the API's JSON instead (see
-  [Output and exit codes](#output-and-exit-codes)). 2.x printed JSON.
-- **New environment names.** `FORTRIP_CURRENCY` is now
-  `FORTRIP_DISPLAY_CURRENCY`, and the default `FORTRIP_API_URL` is
-  `https://api.fortrip.ai`. `FORTRIP_MCP_URL` is new. See
-  [Environment variables](#environment-variables).
-- **MCP.** The hosted MCP server is `https://mcp.fortrip.ai/`; its address on
-  `fortrip.ai` is retired. `get_hotel_rates` is now `get_hotel_offers`, and
-  `get_order` and `list_orders` are new.
-
-Commands of 1.x and earlier that were renamed (`hotel`, `rates`) are answered
-with the command to type instead.
-
 ## Sign in
 
 ```bash

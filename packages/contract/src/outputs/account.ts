@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { openObject } from "../conventions/open.ts";
 
-/* `GET /v1/me` and `GET /v1/auth/config`, with 2.0's semantics (spec §6, Auth). */
+/* `GET /v1/me` and `GET /v1/auth/config` (spec §6, Auth). */
 
 /** The signed-in user. */
 export const meResult = openObject({

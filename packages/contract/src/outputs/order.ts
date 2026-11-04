@@ -33,7 +33,7 @@ export const PAYMENT_STATUSES = [
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Why an order can or can't be cancelled now (3.3): `cancellable` when it
+/** Why an order can or can't be cancelled now: `cancellable` when it
  *  can, else the first reason that holds. `non_refundable` is a rate the
  *  hotel takes no cancellation for; `refused`, a cancellation the hotel
  *  refused, the booking standing as it was. */
@@ -51,7 +51,7 @@ export const CANCEL_REASONS = [
 
 export type CancelReason = (typeof CANCEL_REASONS)[number];
 
-/** Why a shared payment token can't pay an order (3.4). */
+/** Why a shared payment token can't pay an order. */
 export const CREDENTIAL_INVALID_REASONS = [
   "not_found",
   "currency",
@@ -64,27 +64,27 @@ export const CREDENTIAL_INVALID_REASONS = [
 
 export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number];
 
-/** A way to pay an order other than its link, after the Universal Commerce
- *  Protocol's payment handlers, its fields named as UCP and Stripe name
- *  them (snake case): `type` names it (`com.stripe.payments`, which takes a
- *  Stripe shared payment token), `version` and `spec` the handler
- *  specification it follows, and, from 3.5, `schema` that specification's
- *  JSON Schema, `config` its settings, whose `business_profile` is the
- *  seller's id a wallet grants a payment credential for (Stripe's business
- *  profile), and `available_instruments` the instruments it takes.
- *  `networkId` is deprecated (3.5): the same as `config.business_profile`,
- *  null when the handler names none. */
+/** A way to pay an order other than its link: one of the Universal
+ *  Commerce Protocol's payment handlers, its fields named as UCP and Stripe
+ *  name them (snake case). `type` names it (`com.stripe.payments`, which
+ *  takes a Stripe shared payment token); `version`, `spec` and `schema` the
+ *  handler specification it follows; `available_instruments` the
+ *  instruments it takes; `config` its settings, whose `business_profile`
+ *  is the seller's id a wallet grants the token for (Stripe's business
+ *  profile). */
 export const paymentHandler = openObject({
   id: z.string(),
   type: z.string(),
   version: z.string(),
   spec: z.string(),
-  schema: z.string().optional(),
-  available_instruments: z
-    .array(openObject({ type: z.string(), config: protocolObject().optional() }))
-    .optional(),
-  config: protocolObject().optional(),
-  networkId: z.string().nullable(),
+  schema: z.string(),
+  available_instruments: z.array(
+    openObject({ type: z.string(), config: protocolObject().optional() }),
+  ),
+  config: openObject({
+    environment: openEnum(["livemode", "testmode"]),
+    business_profile: z.string(),
+  }),
 });
 
 export type PaymentHandler = z.infer<typeof paymentHandler>;
@@ -130,29 +130,28 @@ export const order = openObject({
     localCurrencyAtCheckout: z.boolean(),
     localCharge: money.nullable(),
     /** The ways to pay other than `url`, while the order can be paid that
-     *  way (3.4): a `com.stripe.payments` handler takes a shared payment
-     *  token through `pay_order`. Absent when there is none. */
-    handlers: z.array(paymentHandler).optional(),
-    /** What a payment credential for `pay_order` must allow, present with
-     *  `handlers` (3.4): `maxAmount` in minor units (cents) of `currency`,
+     *  way: a `com.stripe.payments` handler takes a shared payment token
+     *  through `pay_order`. Empty when there is none. */
+    handlers: z.array(paymentHandler),
+    /** What a payment credential for `pay_order` must allow, with
+     *  `handlers`: `maxAmount` in minor units (cents) of `currency`,
      *  lowercase as Stripe takes it, and `expiresAt`, past which the order
-     *  can't be paid. */
+     *  can't be paid. `null` when `handlers` is empty. */
     credentialLimits: openObject({
       maxAmount: z.number().int(),
       currency: z.string(),
       expiresAt: instant,
-    }).optional(),
+    }).nullable(),
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,
-   *  what was paid less the penalty, both in the charge currency. Absent
-   *  from servers before 3.3. */
+   *  what was paid less the penalty, both in the charge currency. */
   cancel: openObject({
     available: z.boolean(),
     reason: openEnum(CANCEL_REASONS),
     penalty: money.nullable(),
     refund: money.nullable(),
-  }).optional(),
+  }),
   manageUrl: z.string(),
 });
 

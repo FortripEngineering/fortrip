@@ -35,8 +35,6 @@ describe("unwrap", () => {
   it("returns a 2xx body as it is: the resource", () => {
     assert.deepEqual(unwrap(response(200, { a: 1 })), { a: 1 });
     assert.deepEqual(unwrap(response(201, { orderId: "ord_1" })), { orderId: "ord_1" });
-    // A field named like 2.0's envelope is just a field.
-    assert.deepEqual(unwrap(response(200, { success: true, data: 1 })), { success: true, data: 1 });
   });
 
   it("maps error codes onto the exit codes", () => {

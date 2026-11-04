@@ -84,7 +84,9 @@
       "expiresAt": "2026-11-01T12:50:00Z",
       "chargeCurrency": "USD",
       "localCurrencyAtCheckout": true,
-      "localCharge": null
+      "localCharge": null,
+      "handlers": [],
+      "credentialLimits": null
     },
     "cancel": {
       "available": false,

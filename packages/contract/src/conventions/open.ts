@@ -26,9 +26,9 @@ export function openObject<T extends z.ZodRawShape>(shape: T): z.ZodObject<T> {
 }
 
 /**
- * An object another protocol defines (a UCP handler's `config`), passed on
+ * An object another protocol defines (a UCP instrument's `config`), passed on
  * as that protocol has it: any fields, any values. Its fields are not the
- * contract's to close, so `strictOutput` keeps it as it is (3.5).
+ * contract's to close, so `strictOutput` keeps it as it is.
  */
 export function protocolObject(): z.ZodType<Record<string, unknown>> {
   const schema = z.record(z.string(), z.unknown());

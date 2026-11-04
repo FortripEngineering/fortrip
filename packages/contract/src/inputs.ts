@@ -602,8 +602,8 @@ const instrumentsError = "payment.instruments must be a list of 1 to 8 instrumen
 const instrumentCardError =
   "payment.instruments must not hold card details: pay with the shared payment token alone";
 
-/** One instrument of UCP's Complete Checkout payment (3.5), as UCP defines
- *  it: UCP's other fields (`billing_address`, `network`, …) pass through and
+/** One instrument of UCP's Complete Checkout payment, as UCP defines it:
+ *  UCP's other fields (`billing_address`, `network`, …) pass through and
  *  aren't used to pay, and an instrument may be another handler's. Only the
  *  selected one is held to `selectedCard`. UCP's own names, in snake case. */
 const ucpInstrument = z
@@ -681,8 +681,8 @@ function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) 
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
  *  order, a Stripe shared payment token granted for it, and the total the
  *  user approved. The token is `sharedPaymentToken` or, as UCP's Complete
- *  Checkout sends it, the credential of `payment`'s selected instrument
- *  (3.5): exactly one of the two. A total other than the order's answers
+ *  Checkout sends it, the credential of `payment`'s selected instrument:
+ *  exactly one of the two. A total other than the order's answers
  *  `payment_total_changed` and charges nothing. */
 export const payOrderInput = strictInput({
   orderId: orderId.describe("orderId of the order to pay, from create order or get order."),
@@ -762,7 +762,7 @@ export const payOrderInput = strictInput({
 export type PayOrderInput = z.input<typeof payOrderInput>;
 
 /** The shared payment token a `pay_order` call pays with: `sharedPaymentToken`,
- *  or the credential of `payment`'s selected instrument (3.5). Takes what
+ *  or the credential of `payment`'s selected instrument. Takes what
  *  `payOrderInput` parsed, which holds exactly one. */
 export function sharedPaymentTokenOf(
   input: Pick<z.output<typeof payOrderInput>, "sharedPaymentToken" | "payment">,

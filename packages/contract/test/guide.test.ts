@@ -213,7 +213,7 @@ describe("the settled rules (design §3.4)", () => {
     }
   });
 
-  it("no 2.0 vocabulary or fields", () => {
+  it("speaks of offers, orders and the API's own fields", () => {
     for (const { surface, topic, label } of RENDERINGS) {
       const text = flat(renderGuide(surface, topic));
       assert.doesNotMatch(
@@ -378,7 +378,7 @@ describe("the CLI guide", () => {
     }
   });
 
-  it("is the guide of CLI 3.0: fortrip guide, browser sign-in, no paths", () => {
+  it("names no API path, token or flag the CLI doesn't have", () => {
     for (const text of [main, planning]) {
       assert.doesNotMatch(text, /fortrip skill|fth_|\/api\//);
     }
