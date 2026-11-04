@@ -4779,6 +4779,7 @@
       "location",
       "timeZone",
       "description",
+      "photos",
       "checkInTimes",
       "checkOutTimes",
       "policies",
@@ -13950,7 +13951,8 @@
             "location",
             "timeZone",
             "distanceMeters",
-            "price"
+            "price",
+            "photo"
           ],
           "additionalProperties": {}
         }

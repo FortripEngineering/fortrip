@@ -128,7 +128,8 @@
             "currency": "USD"
           },
           "approx": null
-        }
+        },
+        "photo": null
       },
       {
         "hotelId": "htl_KaronHill00000000000",
@@ -171,7 +172,8 @@
             "currency": "USD"
           },
           "approx": null
-        }
+        },
+        "photo": null
       },
       {
         "hotelId": "htl_KataBeach00000000000",
@@ -214,7 +216,8 @@
             "currency": "USD"
           },
           "approx": null
-        }
+        },
+        "photo": null
       }
     ],
     "nextCursor": null,

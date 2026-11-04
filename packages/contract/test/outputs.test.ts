@@ -104,6 +104,7 @@ const searchFixture = {
           rateDate: "2026-10-23",
         },
       },
+      photo: { url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: null },
     },
   ],
   nextCursor: "c1",
@@ -136,6 +137,7 @@ const hotelFixture = {
   location: { lat: 31.2, lng: 121.4 },
   timeZone: "Asia/Shanghai",
   description: { text: "A hotel.", locale: "en" },
+  photos: [{ url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: { text: "Lobby", locale: "en" } }],
   checkInTimes: { from: "14:00", until: null },
   checkOutTimes: { from: null, until: "12:00" },
   policies: { listed: true, items: [{ topic: "pets", text: "No pets.", locale: "en" }] },
@@ -345,11 +347,20 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(searchResult, searchFixture);
     parsesBoth(searchResult, pointSearchFixture);
     parsesBoth(searchResult, { ...searchFixture, destination: null });
+    // A hotel always says whether it has a cover photo.
+    const [summary] = searchFixture.data;
+    parsesBoth(searchResult, { ...searchFixture, data: [{ ...summary, photo: null }] });
+    const { photo: _photo, ...noPhoto } = summary!;
+    assert.equal(searchResult.safeParse({ ...searchFixture, data: [noPhoto] }).success, false);
   });
   it("hotel, with and without rooms", () => {
     parsesBoth(hotel, hotelFixture);
     const { rooms: _rooms, ...noRooms } = hotelFixture;
     parsesBoth(hotel, noRooms);
+    // Photos aren't asked for: always there, null when none are listed.
+    parsesBoth(hotel, { ...hotelFixture, photos: null });
+    const { photos: _photos, ...noPhotos } = hotelFixture;
+    assert.equal(hotel.safeParse(noPhotos).success, false);
   });
   it("offer and the offers response", () => {
     parsesBoth(offer, offerFixture);

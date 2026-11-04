@@ -55,8 +55,8 @@ export const hotel = openObject({
   timeZone: z.string().nullable(),
   description: knownLocaleText.nullable(),
   /** Up to 8 hotel photos, the cover first; `null` when the catalogue lists
-   *  none (unknown is not no). Absent from servers before 3.1. */
-  photos: z.array(photo).nullable().optional(),
+   *  none (unknown is not no). */
+  photos: z.array(photo).nullable(),
   checkInTimes: timeRange,
   checkOutTimes: timeRange,
   policies: openObject({
