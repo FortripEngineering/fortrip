@@ -54,9 +54,7 @@ export interface PendingLogin {
  * - `sessions`: per API URL, so a token is never sent to another server.
  * - `pendingLogins`: every unexpired pending login per API URL, since the
  *   user may approve any link they were shown.
- * Other top-level keys are written back as they were read. A file without a
- * `version` is 0.3.x's, whose tokens this version can't use: it counts as
- * empty, and the next write replaces it.
+ * Other top-level keys are written back as they were read.
  */
 interface Credentials {
   sessions: Record<string, Session>;
@@ -167,7 +165,6 @@ function parse(text: string): Credentials | null {
   }
   if (!isObject(raw)) return null;
   const { version, sessions, pendingLogins, ...other } = raw;
-  if (version === undefined) return emptyCredentials();
   if (version !== 2) return null;
   const credentials: Credentials = { sessions: {}, logins: {}, other };
   for (const [apiUrl, session] of Object.entries(isObject(sessions) ? sessions : {})) {

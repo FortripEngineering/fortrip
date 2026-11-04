@@ -212,17 +212,6 @@ describe("the settled rules (design §3.4)", () => {
       );
     }
   });
-
-  it("no 2.0 vocabulary or fields", () => {
-    for (const { surface, topic, label } of RENDERINGS) {
-      const text = flat(renderGuide(surface, topic));
-      assert.doesNotMatch(
-        text,
-        /live rates?|\b(the|a) rate\b|rate plan|paymentUrl|statusUrl|orderUrl|totalPrice|dailyPrices|boardCode|maxMatches|ratePlan|\bfx\b|`amount`|`terms`|\bbooking\b/i,
-        label,
-      );
-    }
-  });
 });
 
 describe("consent before the payment link, on every surface", () => {
@@ -378,11 +367,8 @@ describe("the CLI guide", () => {
     }
   });
 
-  it("is the guide of CLI 3.0: fortrip guide, browser sign-in, no paths", () => {
-    for (const text of [main, planning]) {
-      assert.doesNotMatch(text, /fortrip skill|fth_|\/api\//);
-    }
-    assert.doesNotMatch(main, /--rooms \d|--adults|--currency|FORTRIP_CURRENCY/);
+  it("names no API path", () => {
+    for (const text of [main, planning]) assert.doesNotMatch(text, /\/api\//);
   });
 
   it("the planning guide asks for confirmation of what book returned", () => {

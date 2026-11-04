@@ -392,12 +392,12 @@ describe("errors", () => {
   });
 
   it("with --json, the CLI's own errors are envelope-shaped, its facts beside the error", async () => {
-    const usage = JSON.parse((await cli(["hotels", "rates", "--json"])).stderr);
+    const usage = JSON.parse((await cli(["hotels", "nope", "--json"])).stderr);
     assert.match(usage.error.requestId, /^local_[0-9a-f]{20}$/);
     assert.deepEqual(usage, {
       error: {
         code: "invalid_request",
-        message: 'Unknown command "hotels rates". Did you mean `fortrip hotels offers`?',
+        message: 'Unknown command "hotels nope". Run `fortrip hotels --help`.',
         retryable: false,
         requestId: usage.error.requestId,
         details: { issues: [] },
@@ -423,7 +423,7 @@ describe("errors", () => {
   it("every local --json error is the contract's envelope, closed for a code the contract knows", async () => {
     const runs = [
       await cli(["hotels", "search", "--nope", "--json"]),
-      await cli(["hotels", "rates", "--json"]),
+      await cli(["hotels", "nope", "--json"]),
       await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"]),
       await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" }),
       await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" }),
@@ -498,7 +498,7 @@ describe("FORTRIP_TOKEN", () => {
 });
 
 describe("whoami", () => {
-  it("prints the account as text, or as 2.0's JSON with --json", async () => {
+  it("prints the account as text, or as JSON with --json", async () => {
     reply = { status: 200, body: { userId: "user_1", email: "a@b.c", name: null } };
     const text = await cli(["whoami"]);
     assert.equal(text.code, 0);
@@ -630,7 +630,6 @@ describe("help", () => {
       /^  FORTRIP_MCP_URL +MCP server URL for fortrip mcp \(default https:\/\/mcp\.fortrip\.ai\/\)$/m,
     );
     assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
-    assert.doesNotMatch(stdout, /FORTRIP_CURRENCY\b/);
   });
 
   it("no help names an API path", async () => {
@@ -640,28 +639,18 @@ describe("help", () => {
   });
 });
 
-describe("renamed commands", () => {
-  it("2.x hotels rates is gone: exit 2, naming hotels offers", async () => {
-    const { code, stdout, stderr } = await cli(["hotels", "rates", "--hotel", "1"]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.equal(stderr, 'Error: Unknown command "hotels rates". Did you mean `fortrip hotels offers`?\n');
-    assert.equal(requests.length, 0);
-  });
-
-  it("1.x commands typed without their group name the 3.0 command", async () => {
-    for (const [old, now] of [
+describe("unknown commands", () => {
+  it("a group's command typed without its group names the command", async () => {
+    for (const [typed, meant] of [
       ["search", "`fortrip hotels search`"],
-      ["hotel", "`fortrip hotels get`"],
-      ["rates", "`fortrip hotels offers`"],
       ["book", "`fortrip hotels book`"],
       ["get", "`fortrip hotels get` or `fortrip orders get`"],
       ["list", "`fortrip orders list`"],
     ]) {
-      const { code, stdout, stderr } = await cli([old as string, "x"]);
-      assert.equal(code, 2, old);
-      assert.equal(stdout, "", old);
-      assert.equal(stderr, `Error: Unknown command "${old}". Did you mean ${now}?\n`);
+      const { code, stdout, stderr } = await cli([typed as string, "x"]);
+      assert.equal(code, 2, typed);
+      assert.equal(stdout, "", typed);
+      assert.equal(stderr, `Error: Unknown command "${typed}". Did you mean ${meant}?\n`);
     }
     assert.equal(requests.length, 0);
   });

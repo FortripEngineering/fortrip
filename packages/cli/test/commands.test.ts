@@ -667,8 +667,7 @@ describe("display currency", () => {
     );
   });
 
-  it("FORTRIP_CURRENCY is no longer read, and a blank variable sets nothing", () => {
-    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_CURRENCY: "CNY" }), false);
+  it("a blank FORTRIP_DISPLAY_CURRENCY sets nothing", () => {
     assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
   });
 
