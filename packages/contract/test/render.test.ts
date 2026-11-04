@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { strictOutput } from "../src/conventions/open.ts";
-import { strictErrorEnvelope } from "../src/outputs/error-details.ts";
+import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { CANCEL_REASONS } from "../src/outputs/order.ts";
 import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, PAY_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
@@ -99,7 +99,7 @@ describe("render fixtures", () => {
         if ("tool" in fixture) {
           strictOutput(outputOf(fixture.tool)).parse(fixture.data);
         } else {
-          strictErrorEnvelope().parse(fixture.envelope);
+          strictOutput(errorEnvelope).parse(fixture.envelope);
         }
       });
 

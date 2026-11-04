@@ -15,11 +15,13 @@ import {
   COMMANDS,
   commandInvocation,
   type CommandSpec,
+  ERROR_CODES,
   errorEnvelope,
   GLOBAL_FLAGS,
   type RenderedTool,
   renderError,
   renderToolResult,
+  strictOutput,
 } from "@fortrip/agent-contract";
 
 const run = promisify(execFile);
@@ -373,18 +375,19 @@ describe("errors", () => {
     assert.equal(json.tokenSource, "FORTRIP_TOKEN");
   });
 
-  it("the CLI's own error is text on stderr, or { error: { code, message, retryable } } with --json", async () => {
+  it("the CLI's own error is text on stderr, or { error: { code, message, retryable, requestId, details } } with --json", async () => {
     const text = await cli(["hotels", "search", "--nope"]);
     assert.equal(text.code, 2);
     assert.match(text.stderr, /^Error: Unknown option '--nope'/);
     const json = await cli(["hotels", "search", "--nope", "--json"]);
     assert.equal(json.code, 2);
     const { error } = JSON.parse(json.stderr);
-    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId"]);
+    assert.deepEqual(Object.keys(error), ["code", "message", "retryable", "requestId", "details"]);
     assert.match(error.requestId, /^local_[0-9a-f]{20}$/);
     assert.equal(error.code, "invalid_request");
     assert.match(error.message, /Unknown option '--nope'/);
     assert.equal(error.retryable, false);
+    assert.deepEqual(error.details, { issues: [] });
     assert.equal(requests.length, 0);
   });
 
@@ -397,6 +400,7 @@ describe("errors", () => {
         message: 'Unknown command "hotels rates". Did you mean `fortrip hotels offers`?',
         retryable: false,
         requestId: usage.error.requestId,
+        details: { issues: [] },
       },
     });
     const unsendable = await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" });
@@ -416,18 +420,37 @@ describe("errors", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("every local --json error parses with the contract's errorEnvelope", async () => {
+  it("every local --json error is the contract's envelope, closed for a code the contract knows", async () => {
     const runs = [
       await cli(["hotels", "search", "--nope", "--json"]),
       await cli(["hotels", "rates", "--json"]),
+      await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"]),
       await cli(["whoami", "--json"], { FORTRIP_TOKEN: "a\nb" }),
       await cli(["orders", "list", "--json"], { FORTRIP_API_URL: "http://127.0.0.1:1" }),
       await cli(["orders", "list", "--json"], { FORTRIP_TOKEN: "", XDG_CONFIG_HOME: "/dev/null/nope" }),
     ];
+    // Answers that aren't Fortrip's envelope.
+    for (const status of [400, 401, 429, 502]) {
+      reply = { status, body: { error: "not the envelope" }, headers: { "retry-after": "7" } };
+      runs.push(await cli([...SEARCH, "--json"]));
+    }
     for (const { stderr } of runs) {
       const { error } = JSON.parse(stderr);
-      assert.ok(errorEnvelope.safeParse({ error }).success, stderr);
+      const schema = Object.hasOwn(ERROR_CODES, error.code) ? strictOutput(errorEnvelope) : errorEnvelope;
+      const parsed = schema.safeParse({ error });
+      assert.ok(parsed.success, `${stderr}${JSON.stringify(parsed.error?.issues)}`);
     }
+  });
+
+  it("a 429 that isn't Fortrip's envelope exits 4 as service_unavailable, retryable after Retry-After", async () => {
+    reply = { status: 429, body: null, headers: { "retry-after": "7" } };
+    const { code, stderr } = await cli([...SEARCH, "--json"]);
+    assert.equal(code, 4);
+    const { error } = JSON.parse(stderr);
+    assert.equal(error.code, "service_unavailable");
+    assert.equal(error.retryable, true);
+    assert.equal(error.retryAfterSeconds, 7);
+    assert.equal(error.details, undefined);
   });
 
   it("an unreachable API is retryable, said in the error", async () => {

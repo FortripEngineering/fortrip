@@ -80,7 +80,6 @@ export {
 export {
   ERROR_DETAILS,
   errorEnvelope,
-  strictErrorEnvelope,
   type ErrorBody,
   type ErrorEnvelope,
   type KnownErrorBody,

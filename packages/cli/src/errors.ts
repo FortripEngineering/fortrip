@@ -62,15 +62,14 @@ const ERROR_FIELDS = new Set(["retryable", "retryAfterSeconds", "details"]);
 
 /** The code of a CLI's own error, by its exit code: Fortrip's code for the
  *  same kind of failure, `service_unavailable` for a retryable one (no
- *  answer, a lock held), and `cli_error` for anything else. */
+ *  answer, a lock held, a 429 that isn't Fortrip's `rate_limited`, which
+ *  would name the limit), and `cli_error` for anything else. */
 function localCode(failure: CliError): string {
   switch (failure.exitCode) {
     case EXIT.usage:
       return "invalid_request";
     case EXIT.unauthenticated:
       return "unauthenticated";
-    case EXIT.rateLimited:
-      return "rate_limited";
     default:
       return failure.details.retryable === true ? "service_unavailable" : "cli_error";
   }
@@ -94,18 +93,22 @@ function issueLines(details: unknown): string[] | null {
  * With `--json`, one line: `{ error, ...facts, ...notices }`, where `error`
  * is Fortrip's error object, or one shaped like it for the CLI's own
  * (`{ code, message, retryable, requestId, retryAfterSeconds?, details? }`,
- * the request id a `local_…` one); the other facts sit beside it, as in 2.0.
+ * the request id a `local_…` one, and `details` as the contract requires for
+ * the code: an `invalid_request` lists its issues, none for an error of the
+ * command line itself); the other facts sit beside it.
  */
 export function formatError(failure: CliError, json: boolean): string {
   const fromApi = failure.envelope?.error;
   const inError = (name: string) => (fromApi ? Object.hasOwn(fromApi, name) : ERROR_FIELDS.has(name));
   const own = Object.entries(failure.details);
   if (json) {
+    const code = localCode(failure);
     const error = fromApi ?? {
-      code: localCode(failure),
+      code,
       message: failure.message,
       retryable: failure.details.retryable === true,
       requestId: localRequestId(),
+      ...(code === "invalid_request" ? { details: { issues: [] } } : {}),
       ...Object.fromEntries(own.filter(([n]) => inError(n) && n !== "retryable")),
     };
     return JSON.stringify({ error, ...Object.fromEntries(own.filter(([n]) => !inError(n))), ...notices });
