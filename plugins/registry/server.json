@@ -5,6 +5,15 @@
   "description": "Search hotels worldwide, compare live room rates, create booking payment links and cancel orders.",
   "version": "1.4.8",
   "websiteUrl": "https://fortrip.ai",
+  "icons": [
+    {
+      "src": "https://fortrip.ai/icon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
+  ],
   "repository": {
     "url": "https://github.com/FortripEngineering/fortrip",
     "source": "github",
