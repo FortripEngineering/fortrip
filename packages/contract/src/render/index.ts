@@ -1,12 +1,14 @@
+import { COMMANDS, commandInvocation } from "../commands.ts";
 import { parseOpen } from "../conventions/open.ts";
 import type { Hotel } from "../outputs/hotel.ts";
 import type { HotelOffersResult } from "../outputs/offer.ts";
 import type { Order, OrderList } from "../outputs/order.ts";
 import type { SearchResult } from "../outputs/search.ts";
 import {
-  CANCEL_NEXT_STEP,
+  cancelNextStep,
   ORDER_NEXT_STEP,
-  PAY_NEXT_STEP,
+  payNextStep,
+  type RenderSurface,
   TOOLS,
   type ToolName,
 } from "../tools.ts";
@@ -21,7 +23,8 @@ export { renderError } from "./errors.ts";
 /*
  * The compact text of a tool result (spec §12): what MCP sends as
  * `content[0]` and what the CLI prints by default. Pure functions of the
- * public object.
+ * public object and the surface: a next call is a tool's arguments over
+ * MCP, a command and its flags on the CLI.
  */
 
 export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
@@ -34,44 +37,51 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
  * follows it when a result holds an order with non-empty `payment.handlers`;
  * the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order` or
- * `list_orders` result holds an order with `cancel.available`.
+ * `list_orders` result holds an order with `cancel.available`. `surface`
+ * names the next calls: tools (`mcp`, the default) or commands (`cli`).
  */
-export function renderToolResult(tool: RenderedTool, data: unknown): string {
+export function renderToolResult(
+  tool: RenderedTool,
+  data: unknown,
+  surface: RenderSurface = "mcp",
+): string {
   const schema = TOOLS.find((t) => t.name === tool)?.output;
   let parsed: unknown;
   try {
     if (!schema) throw new Error(`no output schema for ${tool}`);
     parsed = parseOpen(schema, data);
   } catch {
-    const text = `This ${tool} result is not in the expected shape; as JSON:\n${raw(data)}`;
+    const spec = COMMANDS.find((command) => command.tool === tool);
+    const name = surface === "cli" && spec ? commandInvocation(spec) : tool;
+    const text = `This ${name} result is not in the expected shape; as JSON:\n${raw(data)}`;
     return [
       text,
       ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",
-      ORDER_TOOLS.has(tool) && holdsHandlers(data) ? PAY_NEXT_STEP : "",
-      CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? CANCEL_NEXT_STEP : "",
+      ORDER_TOOLS.has(tool) && holdsHandlers(data) ? payNextStep(surface) : "",
+      CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? cancelNextStep(surface) : "",
     ]
       .filter(Boolean)
       .join("\n\n");
   }
   switch (tool) {
     case "search_hotels":
-      return renderSearch(parsed as SearchResult);
+      return renderSearch(parsed as SearchResult, surface);
     case "get_hotel":
       return renderHotel(parsed as Hotel);
     case "get_hotel_offers":
-      return renderOffers(parsed as HotelOffersResult);
+      return renderOffers(parsed as HotelOffersResult, surface);
     case "book_hotel":
     case "get_order": {
       const order = parsed as Order;
-      return withConsent(tool, renderOrder(order), [order]);
+      return withConsent(tool, surface, renderOrder(order, surface), [order]);
     }
     case "list_orders": {
       const list = parsed as OrderList;
-      return withConsent(tool, renderOrderList(list), list.data);
+      return withConsent(tool, surface, renderOrderList(list, surface), list.data);
     }
     case "cancel_order":
     case "pay_order":
-      return renderOrder(parsed as Order);
+      return renderOrder(parsed as Order, surface);
   }
 }
 
@@ -127,13 +137,18 @@ function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsCancellable(v, seen));
 }
 
-function withConsent(tool: RenderedTool, text: string, orders: Order[]): string {
+function withConsent(
+  tool: RenderedTool,
+  surface: RenderSurface,
+  text: string,
+  orders: Order[],
+): string {
   return [
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
-    orders.some((o) => o.payment.handlers.length > 0) ? PAY_NEXT_STEP : "",
+    orders.some((o) => o.payment.handlers.length > 0) ? payNextStep(surface) : "",
     CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
-      ? CANCEL_NEXT_STEP
+      ? cancelNextStep(surface)
       : "",
   ]
     .filter(Boolean)

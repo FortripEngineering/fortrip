@@ -6,7 +6,15 @@ import { strictOutput } from "../src/conventions/open.ts";
 import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { CANCEL_REASONS } from "../src/outputs/order.ts";
-import { CANCEL_NEXT_STEP, ORDER_NEXT_STEP, PAY_NEXT_STEP, TOOLS, type ToolName } from "../src/tools.ts";
+import {
+  CANCEL_NEXT_STEP,
+  cancelNextStep,
+  ORDER_NEXT_STEP,
+  PAY_NEXT_STEP,
+  payNextStep,
+  TOOLS,
+  type ToolName,
+} from "../src/tools.ts";
 
 /*
  * Goldens: each fixture in fixtures/v1 is synthetic (no supplier names or
@@ -834,5 +842,123 @@ describe("renderToolResult on malformed data", () => {
     data.createdAt = "yesterday";
     const text = renderToolResult("get_order", data);
     for (const id of stringsAt(data, "orderId")) assert.ok(text.includes(id));
+  });
+});
+
+describe("the CLI surface", () => {
+  /** What only an MCP client can call: tool names and JSON arguments. */
+  const MCP_ONLY =
+    /\b(search_hotels|get_hotel|get_hotel_offers|book_hotel|get_order|list_orders|cancel_order|pay_order|maximumPenalty|radiusMeters|limitPerHotel|requireBreakfast|place_name)\b|\{ (cursor|kind):/;
+
+  function cli(fixture: Fixture): string {
+    return "tool" in fixture
+      ? renderToolResult(fixture.tool, fixture.data, "cli")
+      : renderError(fixture.envelope, fixture.status, "cli");
+  }
+
+  function withHandlers(): Record<string, any> {
+    const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
+    data.payment.handlers = [
+      {
+        id: "stripe_payments",
+        type: "com.stripe.payments",
+        version: "2026-06-25",
+        spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+        schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+        available_instruments: [{ type: "card" }],
+        config: { environment: "testmode", business_profile: "profile_test_1" },
+      },
+    ];
+    data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
+    return data;
+  }
+
+  it("MCP is the default surface", () => {
+    for (const name of GOLDENS) {
+      const fixture = load(name);
+      const explicit =
+        "tool" in fixture
+          ? renderToolResult(fixture.tool, fixture.data, "mcp")
+          : renderError(fixture.envelope, fixture.status, "mcp");
+      assert.equal(explicit, render(fixture), name);
+    }
+  });
+
+  it("names commands and flags, never a tool or JSON arguments, in every fixture", () => {
+    for (const name of GOLDENS) {
+      const fixture = load(name);
+      // A search note's message is the server's own text.
+      const notes = "tool" in fixture ? stringsAt(fixture.data.notes ?? [], "message") : [];
+      const text = notes.reduce((t, message) => t.replace(message, ""), cli(fixture));
+      assert.doesNotMatch(text, MCP_ONLY, name);
+      assertClean(text);
+    }
+    for (const tool of ["book_hotel", "get_order", "list_orders"] as const) {
+      const data = tool === "list_orders" ? { data: [withHandlers()], nextCursor: "c_2" } : withHandlers();
+      assert.doesNotMatch(renderToolResult(tool, data, "cli"), MCP_ONLY, tool);
+    }
+    assert.doesNotMatch(renderToolResult("get_order", { unexpected: true }, "cli"), MCP_ONLY);
+    assert.match(renderToolResult("get_order", { unexpected: true }, "cli"), /^This fortrip orders get result/);
+  });
+
+  it("the pay line and the pay rule run fortrip orders pay", () => {
+    const text = renderToolResult("get_order", withHandlers(), "cli");
+    assert.match(
+      text,
+      /^Pay without the link: `fortrip orders pay <orderId> --token <spt_…> --total <total>` with a shared payment token via com\.stripe\.payments/m,
+    );
+    assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${payNextStep("cli")}`));
+    assert.match(payNextStep("cli"), /run `fortrip orders pay <orderId> --token <spt_…> --total <total>`/);
+    assert.notEqual(payNextStep("cli"), PAY_NEXT_STEP);
+    assert.equal(payNextStep("mcp"), PAY_NEXT_STEP);
+  });
+
+  it("the cancel rule runs fortrip orders cancel with --max-penalty", () => {
+    const text = cli(load("order-confirmed"));
+    assert.ok(text.endsWith(`\n\n${cancelNextStep("cli")}`));
+    assert.match(cancelNextStep("cli"), /^Before you run `fortrip orders cancel <orderId> --max-penalty <n>`, show the user/);
+    assert.equal(cancelNextStep("mcp"), CANCEL_NEXT_STEP);
+  });
+
+  it("a next page is --cursor", () => {
+    assert.match(cli(load("list-orders")), /^Next page: run again with --cursor c_orders_page_2\.$/m);
+    const search = copy(load("search-shanghai-area")) as ToolFixture;
+    search.data.nextCursor = "c_search_2";
+    assert.match(
+      renderToolResult("search_hotels", search.data, "cli"),
+      /^Next page: run again with only --cursor c_search_2 and, optionally, --limit\.$/m,
+    );
+  });
+
+  it("destinations are --locality, --place, --place-name and --radius-meters", () => {
+    const broad = cli(load("error-search-too-broad-bali"));
+    assert.ok(broad.includes("then search again with --locality <id> and the same text"), broad);
+    assert.ok(broad.includes("Localities: pass one back as --locality <placeId>, never the name."), broad);
+    assert.ok(broad.includes("name one with --place-name."), broad);
+    assert.ok(broad.includes("the same destination with --radius-meters (up to"), broad);
+    assert.match(cli(load("error-destination-ambiguous-suzhou")), /then search with --place <id>:/);
+    const patong = cli(load("error-not-a-locality-patong"));
+    assert.match(patong, /Search --locality plc_\d+ for those, or --place plc_\d+ for an 8 km circle/);
+  });
+
+  it("errors that lead to an order read run fortrip orders get", () => {
+    const order = "ord_BundAwaiting00000000";
+    const error = (code: string, details: unknown) =>
+      renderError({ error: { code, message: "m", retryable: false, requestId: "req_1", details } }, undefined, "cli");
+    assert.match(error("order_not_payable", { orderId: order, status: "confirmed" }), new RegExp(`read it with \`fortrip orders get ${order}\`; this call charged nothing`));
+    assert.match(error("payment_in_progress", { orderId: order }), new RegExp(`read it with \`fortrip orders get ${order}\` in a few seconds`));
+    assert.match(error("payment_declined", { declineCode: null }), /read the order with `fortrip orders get <orderId>` and give its payment\.url/);
+    assert.match(
+      error("payment_total_changed", { orderId: order, total: { amount: "365.00", currency: "USD" } }),
+      new RegExp(`then run \`fortrip orders pay ${order} --token <spt_…> --total 365\\.00\` again with it and the same token\\. Nothing was charged\\.`),
+    );
+  });
+
+  it("offers cut by the limit name the CLI's flags", () => {
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const hotels = fixture.data.hotels as Record<string, any>[];
+    hotels[0]!.omitted.byLimit = 3;
+    const text = renderToolResult("get_hotel_offers", fixture.data, "cli");
+    assert.match(text, /not shown \(--limit-per-hotel\); a filtered request \(--require-breakfast \/ --require-free-cancellation\)/);
   });
 });

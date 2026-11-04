@@ -58,23 +58,59 @@ export interface ToolSpec {
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
-/**
- * The consent rule of a cancellation (spec §5.7, C11). It rides as the last
- * paragraph of the text of every MCP `get_order` and `list_orders` result
- * that holds an order with `cancel.available`, after `ORDER_NEXT_STEP` when
- * both apply, and never as `nextStep`, which keeps its payment-only meaning.
- */
-export const CANCEL_NEXT_STEP =
-  "Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty as the number in cancel.penalty.amount (\"120.00\" → 120). Never state a refund the order did not return.";
+/** Where a rendered result is read: an MCP client, which calls tools with
+ *  JSON arguments, or the CLI, which runs commands with flags. */
+export type RenderSurface = "mcp" | "cli";
+
+/** How each next step names the call it leads to. */
+const CALLS = {
+  mcp: {
+    cancel: "call cancel_order",
+    penalty:
+      'Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
+    pay: "call pay_order",
+    payWith: "call pay_order with it and the order's price.total",
+    paid: "pay_order",
+  },
+  cli: {
+    cancel: "run `fortrip orders cancel <orderId> --max-penalty <n>`",
+    penalty:
+      "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
+    pay: "run `fortrip orders pay`",
+    payWith:
+      "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with it and the order's total",
+    paid: "`fortrip orders pay`",
+  },
+} as const satisfies Record<RenderSurface, Record<string, string>>;
 
 /**
- * How to pay without the link. It rides as the last paragraph of the text
- * of every MCP `book_hotel`, `get_order` and `list_orders` result that holds
- * an order with non-empty `payment.handlers`, after `ORDER_NEXT_STEP`, and in
- * the description of `pay_order`; never as `nextStep`.
+ * The consent rule of a cancellation (spec §5.7, C11), as `surface` names
+ * the call. It rides as the last paragraph of the text of every `get_order`
+ * and `list_orders` result that holds an order with `cancel.available`,
+ * after `ORDER_NEXT_STEP` when both apply, and never as `nextStep`, which
+ * keeps its payment-only meaning.
  */
-export const PAY_NEXT_STEP =
-  "To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.handlers isn't empty. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you call pay_order, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or call pay_order. Once pay_order succeeds, payment.url stops working; a failed payment leaves it open.";
+export function cancelNextStep(surface: RenderSurface): string {
+  const c = CALLS[surface];
+  return `Before you ${c.cancel}, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. ${c.penalty} Never state a refund the order did not return.`;
+}
+
+/** `cancelNextStep` over MCP, also in the `cancel_order` description. */
+export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
+
+/**
+ * How to pay without the link, as `surface` names the call. It rides as the
+ * last paragraph of the text of every `book_hotel`, `get_order` and
+ * `list_orders` result that holds an order with non-empty
+ * `payment.handlers`, after `ORDER_NEXT_STEP`; never as `nextStep`.
+ */
+export function payNextStep(surface: RenderSurface): string {
+  const c = CALLS[surface];
+  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.handlers isn't empty. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
+}
+
+/** `payNextStep` over MCP. */
+export const PAY_NEXT_STEP = payNextStep("mcp");
 
 /**
  * How to present hotels (the `presentation` guide, in one line). It rides as

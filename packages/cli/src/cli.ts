@@ -141,27 +141,32 @@ async function run(argv: string[]): Promise<Answer> {
   const preview = cancelPreview(spec, rest);
   if (preview) {
     const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
-    throw usageError(notCancelled(spec, preview.flag, order));
+    throw usageError(notCancelled(spec, preview.flag, preview.orderId, order));
   }
   const { method, path, body } = parseCommand(spec, rest, process.env);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
-  return { data, text: renderToolResult(spec.tool as RenderedTool, data) };
+  return { data, text: renderToolResult(spec.tool as RenderedTool, data, "cli") };
 }
 
 /** What `orders cancel` without its penalty flag says instead of
- *  cancelling: the order's Cancel line and, when it can be cancelled now,
- *  the flag with the order's own penalty. */
-function notCancelled(spec: CommandSpec, flag: string, order: unknown): string {
-  const cancelLine = renderToolResult("get_order", order)
+ *  cancelling: the order's hotel and Cancel lines and, when it can be
+ *  cancelled now, the consent step and the command with the order's own
+ *  penalty. */
+function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
+  const lines = renderToolResult("get_order", order, "cli")
     .split("\n")
-    .filter((text) => text.startsWith("Cancel: "));
+    .filter((text) => text.startsWith("Hotel: ") || text.startsWith("Cancel: "));
   const parsed = orderSchema.safeParse(order);
   const cancel = parsed.success ? parsed.data.cancel : undefined;
-  return [
-    `Not cancelled: ${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`,
-    ...cancelLine,
-    ...(cancel?.available && cancel.penalty ? [`Pass ${flag} ${cancel.penalty.amount} to cancel.`] : []),
-  ].join("\n");
+  const next =
+    cancel?.available && cancel.penalty
+      ? [
+          `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
+        ]
+      : cancel
+        ? []
+        : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
+  return ["Not cancelled: nothing was sent.", ...lines, ...next].join("\n");
 }
 
 /** `whoami`, and `login` once signed in: the account,

@@ -1,4 +1,5 @@
 import type { HotelSummary, SearchResult } from "../outputs/search.ts";
+import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
 
 /* `search_hotels` (spec §12, §7.6, §7.8). */
@@ -126,9 +127,15 @@ function countsLine(r: SearchResult): string {
  * The localities block (§12), for a search and for `search_too_broad`.
  * `areaName` labels a hub named like the searched area.
  */
-export function localitiesLines(loc: Localities, areaName: string | null): string[] {
+export function localitiesLines(
+  loc: Localities,
+  areaName: string | null,
+  surface: RenderSurface = "mcp",
+): string[] {
+  const back =
+    surface === "cli" ? "--locality <placeId>" : 'destination { kind: "locality", placeId }';
   const lines = [
-    'Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").',
+    `Localities: pass one back as ${back}, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").`,
   ];
   for (const item of loc.items) {
     let line = `- ${item.place.name} ${item.place.placeId} ${num(item.count)}`;
@@ -151,7 +158,9 @@ export function localitiesLines(loc: Localities, areaName: string | null): strin
     lines.push(`${plural(loc.unassigned, "hotel")} in this search belong to no locality.`);
   }
   if (loc.more > 0) {
-    lines.push(`${num(loc.more)} more localities; name one with place_name.`);
+    lines.push(
+      `${num(loc.more)} more localities; name one with ${surface === "cli" ? "--place-name" : "place_name"}.`,
+    );
   }
   return lines;
 }
@@ -191,7 +200,7 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
     .join(" · ");
 }
 
-export function renderSearch(r: SearchResult): string {
+export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): string {
   const lines = [header(r)];
   lines.push(
     [
@@ -223,7 +232,7 @@ export function renderSearch(r: SearchResult): string {
   if (r.coverage.localities) {
     const areaName =
       r.destination?.kind === "place" ? (r.destination as PlaceDestination).place.name : null;
-    lines.push("", ...localitiesLines(r.coverage.localities, areaName));
+    lines.push("", ...localitiesLines(r.coverage.localities, areaName, surface));
   }
 
   lines.push("");
@@ -237,7 +246,9 @@ export function renderSearch(r: SearchResult): string {
     "",
     r.nextCursor === null
       ? "Last page."
-      : `Next page: call again with only the cursor and, optionally, limit: { cursor: "${r.nextCursor}" }.`,
+      : surface === "cli"
+        ? `Next page: run again with only --cursor ${r.nextCursor} and, optionally, --limit.`
+        : `Next page: call again with only the cursor and, optionally, limit: { cursor: "${r.nextCursor}" }.`,
   );
   return lines.join("\n");
 }

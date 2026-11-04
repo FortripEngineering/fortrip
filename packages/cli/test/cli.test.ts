@@ -133,18 +133,23 @@ describe("requests", () => {
   });
 
   // C7: never a cancellation without the penalty the user agreed to.
-  it("orders cancel without --max-penalty reads the order, prints its Cancel line and exits 2", async () => {
+  it("orders cancel without --max-penalty reads the order, prints its stay and Cancel lines, the consent step, and exits 2", async () => {
     const { data } = await fixture("order-confirmed");
     reply = { status: 200, body: data };
+    const hotelLine = renderToolResult("get_order", data, "cli")
+      .split("\n")
+      .find((line) => line.startsWith("Hotel: "));
+    assert.ok(hotelLine);
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER]);
     assert.equal(code, 2);
     assert.equal(stdout, "");
     assert.equal(
       stderr,
       [
-        "Error: Not cancelled: fortrip orders cancel needs --max-penalty, the penalty the user agreed to.",
+        "Error: Not cancelled: nothing was sent.",
+        hotelLine,
         "Cancel: can cancel now: penalty USD 120.00, refund USD 246.00",
-        "Pass --max-penalty 120.00 to cancel.",
+        `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`fortrip orders cancel ${ORDER} --max-penalty 120.00\`.`,
         "",
       ].join("\n"),
     );
@@ -154,7 +159,7 @@ describe("requests", () => {
     );
     const json = JSON.parse((await cli(["orders", "cancel", ORDER, "--json"])).stderr);
     assert.equal(json.error.code, "invalid_request");
-    assert.match(json.error.message, /\nPass --max-penalty 120\.00 to cancel\.$/);
+    assert.match(json.error.message, /Only after a clear yes, run `fortrip orders cancel ord_\w+ --max-penalty 120\.00`\.$/);
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
@@ -166,7 +171,8 @@ describe("requests", () => {
     assert.equal(
       stderr,
       [
-        "Error: Not cancelled: fortrip orders cancel needs --max-penalty, the penalty the user agreed to.",
+        "Error: Not cancelled: nothing was sent.",
+        renderToolResult("get_order", data, "cli").split("\n").find((line) => line.startsWith("Hotel: ")),
         "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC",
         "",
       ].join("\n"),
@@ -180,8 +186,9 @@ describe("requests", () => {
     reply = { status: 200, body: noCancel };
     const { code, stderr } = await cli(["orders", "cancel", ORDER]);
     assert.equal(code, 2);
-    assert.match(stderr, /^Error: Not cancelled: fortrip orders cancel needs --max-penalty/);
-    assert.doesNotMatch(stderr, /Pass --max-penalty/);
+    assert.match(stderr, /^Error: Not cancelled: nothing was sent\.\n/);
+    assert.match(stderr, /fortrip orders cancel needs --max-penalty, the penalty the user agreed to\./);
+    assert.doesNotMatch(stderr, /Only after a clear yes/);
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
@@ -283,7 +290,7 @@ describe("output", () => {
       reply = { status: 200, body: data };
       const { code, stdout, stderr } = await cli([...args]);
       assert.equal(code, 0, stderr);
-      assert.equal(stdout, `${renderToolResult(tool, data)}\n`, name);
+      assert.equal(stdout, `${renderToolResult(tool, data, "cli")}\n`, name);
       assert.equal(stderr, "", name);
     }
   });
@@ -316,7 +323,7 @@ describe("output", () => {
     reply = { status: 200, body: { unexpected: true } };
     const { code, stdout } = await cli(["orders", "get", ORDER]);
     assert.equal(code, 0);
-    assert.equal(stdout, `${renderToolResult("get_order", { unexpected: true })}\n`);
+    assert.equal(stdout, `${renderToolResult("get_order", { unexpected: true }, "cli")}\n`);
   });
 });
 
@@ -332,7 +339,7 @@ describe("errors", () => {
       const { code, stdout, stderr } = await cli(SEARCH);
       assert.equal(code, exit, name);
       assert.equal(stdout, "", name);
-      assert.equal(stderr, `${renderError(envelope)}\n`, name);
+      assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`, name);
     }
   });
 

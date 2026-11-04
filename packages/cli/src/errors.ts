@@ -117,7 +117,7 @@ export function formatError(failure: CliError, json: boolean): string {
   if (fromApi) {
     const status = failure.details.status;
     const known = Object.hasOwn(ERROR_CODES, fromApi.code);
-    lines.push(renderError(failure.envelope, known || typeof status !== "number" ? undefined : status));
+    lines.push(renderError(failure.envelope, known || typeof status !== "number" ? undefined : status, "cli"));
     // What the CLI adds to Fortrip's message, such as what to do next.
     if (failure.message !== fromApi.message) lines.push(failure.message);
     lines.push(...fieldLines(Object.fromEntries(own.filter(([n]) => !inError(n) && n !== "status"))));
