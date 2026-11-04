@@ -236,6 +236,21 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
+  it("orders pay without --token exits 2 and sends nothing", async () => {
+    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--total", "125.00"]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.equal(
+      stderr,
+      [
+        "Error: Not sent: fortrip orders pay was given an invalid request.",
+        "- /sharedPaymentToken: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+        "",
+      ].join("\n"),
+    );
+    assert.equal(requests.length, 0);
+  });
+
   it("flags that pick different destinations exit 2 and send nothing", async () => {
     const { code, stderr } = await cli([...SEARCH, "--place", "plc_1"]);
     assert.equal(code, 2);

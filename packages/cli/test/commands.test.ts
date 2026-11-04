@@ -402,6 +402,17 @@ describe("a request the contract refuses is not sent", () => {
     ]);
   });
 
+  // The contract takes the token as sharedPaymentToken or as UCP's payment
+  // (3.5); the CLI sends only --token, and still needs it.
+  it("orders pay needs --token", () => {
+    const token = {
+      pointer: "/sharedPaymentToken",
+      message: "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+    };
+    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--total", "125.00"])), [token]);
+    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--token", "tok_1", "--total", "125.00"])), [token]);
+  });
+
   it("a check-in in the past, and mixed rooms in offers", () => {
     const yesterday = addIsoDateDays(today, -2);
     assert.deepEqual(
