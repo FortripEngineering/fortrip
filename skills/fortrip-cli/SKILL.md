@@ -189,7 +189,7 @@ An order whose result text has the line "Pay with Alipay or WeChat Pay" can be p
 2. Then show `payment.wallets`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in US dollars, and the wallets show it in yuan at their rate.
 3. Check the order with `fortrip orders get` until it isn't `awaiting_payment`.
 
-A code goes dead when the user opens the Alipay link instead, or when it expires. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or run `fortrip orders pay` again for a new code.
+A WeChat Pay code expires 120 minutes after it is made, and goes dead earlier if the user opens the Alipay link instead. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or run `fortrip orders pay` again for a new code.
 
 WeChat can't scan a code shown on the same phone's screen. Offer both ways, since you can't tell which device the user is on: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat link on another screen; on a phone, the Alipay link opens the Alipay app.
 

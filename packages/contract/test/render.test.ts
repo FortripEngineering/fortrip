@@ -789,7 +789,7 @@ describe("orders and the consent rule", () => {
       assert.ok(text.includes(`\nAlipay: ${alipay.url}\n`), tool);
       assert.ok(
         text.includes(
-          "\nShow the user the WeChat Pay code as an image if you can, and both links. They pay once, by either. Then call get_order until the order isn't awaiting_payment.\n",
+          "\nShow the user the WeChat Pay code as an image if you can, and both links. They pay once, by either; the code lasts 120 minutes. Then call get_order until the order isn't awaiting_payment.\n",
         ),
         tool,
       );
