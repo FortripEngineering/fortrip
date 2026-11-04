@@ -72,7 +72,7 @@ Flights, activities and changes to existing orders aren't supported.
   best options."
 - "Book the cheapest free-cancellation room at Anantara Riverside Bangkok
   Resort for 1 adult, 2 nights starting 60 days from today. Guest: John
-  Smith, phone +1 415 555 0100."
+  Smith, email john.smith@example.com, phone +1 415 555 0100."
 
 ## Your data
 
@@ -83,10 +83,11 @@ Flights, activities and changes to existing orders aren't supported.
 - **Orders** go to Fortrip, which passes them to its hotel supplier and the
   hotel to make the reservation: the stay you chose, guest names, the contact
   name, phone and email, and any special requests.
-- **Payment** happens on Stripe's checkout page, or, if you pay without the
-  link, through your Link wallet, which grants Claude a one-time token you
-  approve there. Claude never sees your card details; don't paste them into
-  the chat.
+- **Payment** happens on Stripe's checkout page: in Claude you'll usually
+  pay by link. Paying without the link needs a one-time token you approve in
+  your Link wallet, which only works for US and Canadian Link accounts and up
+  to $500 per payment, and only where Claude has a tool that can request one.
+  Claude never sees your card details; don't paste them into the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip
 handles your data as described in its [privacy policy](https://fortrip.ai/privacy);

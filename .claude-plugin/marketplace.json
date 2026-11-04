@@ -5,7 +5,7 @@
     "email": "info@fortrip.ai"
   },
   "metadata": {
-    "description": "Fortrip's Claude plugin: hotel search, live rates and booking payment links."
+    "description": "Fortrip's Claude plugin: hotel search, live rates, booking payment links and order cancellation."
   },
   "plugins": [
     {

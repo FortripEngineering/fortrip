@@ -23,16 +23,23 @@ It exports:
   `SEARCH_SORTS` and `FILTERABLE_AMENITIES`: paths, hosts, limits, error codes
   and vocabularies;
 - `searchHotelsInput`, `getHotelInput`, `hotelOffersInput`,
-  `createOrderInput`, `getOrderInput`, `listOrdersInput` and
-  `cancelOrderInput`, the zod schemas of the requests, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
-  `orderList` and `errorEnvelope`, the open schemas of the responses, with
+  `createOrderInput`, `getOrderInput`, `listOrdersInput`,
+  `cancelOrderInput` and `payOrderInput`, the zod schemas of the requests,
+  with `sharedPaymentTokenOf(input)`, the token a parsed `payOrderInput`
+  pays with, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
+  `orderList`, `paymentHandler` and `errorEnvelope`, the open schemas of the
+  responses, with `ERROR_DETAILS`, each error code's `details`, and
   `parseOpen`, a parser that keeps unknown fields and values;
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
   command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP` and `CANCEL_NEXT_STEP`;
-- `renderToolResult(tool, data)` and `renderError(envelope)`, the compact
-  text of a result or an error, and `renderGuide(surface, topic)`, the agent
+  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP`, `CANCEL_NEXT_STEP` and
+  `PAY_NEXT_STEP` (`cancelNextStep(surface)` and `payNextStep(surface)`
+  word the last two for `"mcp"` or `"cli"`);
+- `renderToolResult(tool, data, surface?)` and
+  `renderError(envelope, status?, surface?)`, the compact text of a result or
+  an error, naming tools (`"mcp"`, the default) or commands and flags
+  (`"cli"`), and `renderGuide(surface, topic)`, the agent
   guide as Markdown for `"mcp"`, `"claude-skill"` or `"cli"`;
 - field rules such as `containsCardNumber`, the guest-name rule and the date
   helpers, and `CONTRACT_VERSION`.

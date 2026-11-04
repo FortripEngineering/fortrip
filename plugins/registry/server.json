@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.FortripEngineering/fortrip",
   "title": "Fortrip",
-  "description": "Search hotels worldwide, compare live room rates, and create booking payment links.",
-  "version": "1.4.7",
+  "description": "Search hotels worldwide, compare live room rates, create booking payment links and cancel orders.",
+  "version": "1.4.8",
   "websiteUrl": "https://fortrip.ai",
   "repository": {
     "url": "https://github.com/FortripEngineering/fortrip",
