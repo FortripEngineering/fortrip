@@ -9,7 +9,7 @@
 
 {{/if}}
 {{#if mcp}}
-- Before you give `payment.url` or call `{{tool:orders pay}}`, show the user the order's total and currency, the stay and every term, end that reply by asking the user to confirm, and wait for a clear yes. Then give `payment.url` exactly as returned, to this user only: anyone holding it can pay.
+- Pay one way only: give `payment.url` or call `{{tool:orders pay}}`. First show the order's total and currency, the stay and every term, end that reply by asking the user to confirm, and wait for a clear yes. Then give `payment.url` exactly as returned, to this user only: anyone holding it can pay.
 {{/if}}
 {{#if claude-skill cli}}
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
