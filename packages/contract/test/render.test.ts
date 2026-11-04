@@ -730,7 +730,7 @@ describe("orders and the consent rule", () => {
       const text = renderToolResult(tool, data);
       assert.match(
         text,
-        /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, networkId profile_test_1\); token limits: maxAmount 36600 \(cents\), currency usd, expiresAt /m,
+        /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, business_profile profile_test_1\); token limits: maxAmount 36600 \(cents\), currency usd, expiresAt /m,
         tool,
       );
       assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
@@ -760,13 +760,13 @@ describe("orders and the consent rule", () => {
     const text = renderToolResult("get_order", data);
     assert.match(
       text,
-      /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, networkId profile_test_2\); token limits: /m,
+      /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, business_profile profile_test_2\); token limits: /m,
     );
     assert.equal(text.split(PAY_NEXT_STEP).length, 2);
     assertClean(text);
     for (const config of [undefined, { environment: "testmode" }, { business_profile: 7 }]) {
       data.payment.handlers = [{ ...handler, config }];
-      assert.match(renderToolResult("get_order", data), /\(handler stripe_payments, networkId profile_test_1\)/);
+      assert.match(renderToolResult("get_order", data), /\(handler stripe_payments, business_profile profile_test_1\)/);
     }
     data.payment.handlers = [{ ...handler, config: undefined, networkId: null }];
     assert.match(renderToolResult("get_order", data), /via com\.stripe\.payments \(handler stripe_payments\); token limits/);

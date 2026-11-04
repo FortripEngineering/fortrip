@@ -99,8 +99,9 @@ function handlersLine(
 ): string {
   const shown = handlers.map((h) => {
     const profile = h.config?.business_profile;
-    const networkId = typeof profile === "string" ? profile : h.networkId;
-    return `${h.type} (handler ${h.id}${networkId ? `, networkId ${networkId}` : ""})`;
+    const businessProfile =
+      typeof profile === "string" ? profile : h.networkId;
+    return `${h.type} (handler ${h.id}${businessProfile ? `, business_profile ${businessProfile}` : ""})`;
   });
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
