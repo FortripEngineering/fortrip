@@ -18,7 +18,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip orders get` | One order and its status, including whether the hotel confirmed it |
 | `fortrip orders list` | The user's orders, newest first, including those made on the Fortrip website |
 | `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
-| `fortrip orders pay` | Pays an order without its link, with a shared payment token from the user's wallet |
+| `fortrip orders pay` | Pays an order without its link, by a shared payment token from the user's wallet, or with Alipay or WeChat Pay |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
 
@@ -189,7 +189,7 @@ An order whose result text has the line "Pay with Alipay or WeChat Pay" can be p
 2. Then show `payment.wallets`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in US dollars, and the wallets show it in yuan at their rate.
 3. Check the order with `fortrip orders get` until it isn't `awaiting_payment`.
 
-A code goes dead when the user opens the Alipay link instead, or when it expires (within about an hour, and never after 23:45 Beijing time). Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or run `fortrip orders pay` again for a new code.
+A code goes dead when the user opens the Alipay link instead, or when it expires. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or run `fortrip orders pay` again for a new code.
 
 WeChat can't scan a code shown on the same phone's screen. Offer both ways, since you can't tell which device the user is on: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat link on another screen; on a phone, the Alipay link opens the Alipay app.
 
