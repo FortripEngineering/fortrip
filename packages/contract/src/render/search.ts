@@ -159,7 +159,7 @@ export function localitiesLines(
   }
   if (loc.more > 0) {
     lines.push(
-      `${num(loc.more)} more localities; name one with ${surface === "cli" ? "--place-name" : "place_name"}.`,
+      `${num(loc.more)} more localities; name one with ${surface === "cli" ? "--place-name and --country" : "place_name"}.`,
     );
   }
   return lines;

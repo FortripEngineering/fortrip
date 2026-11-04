@@ -163,8 +163,9 @@ function fieldDescription(
 
 type FlagDef = Omit<FlagSpec, "description"> & {
   description?: string;
-  /** The command needs it: its help starts with "Required." */
-  required?: true;
+  /** The command needs it: its help starts with "Required." or, for a
+   *  field `--body` can give instead, "Required unless --body gives it." */
+  required?: "always" | "unless-body";
 };
 
 /** The flags of a command that sends `input`, each with its field's
@@ -176,7 +177,13 @@ function flagsOf(
   const json = z.toJSONSchema(input, { io: "input" }) as JsonSchema;
   return defs.map(({ required, ...def }) => {
     const description = def.description ?? fieldDescription(json, def.field, def.sets);
-    return { ...def, description: required ? `Required. ${description}` : description };
+    const prefix =
+      required === "always"
+        ? "Required. "
+        : required === "unless-body"
+          ? "Required unless --body gives it. "
+          : "";
+    return { ...def, description: `${prefix}${description}` };
   });
 }
 
@@ -394,10 +401,10 @@ const bookFlags = flagsOf(createOrderInput, [
     description:
       "A guest, as `room:first:last`, e.g. `1:John:Smith` for room 1. Repeat for each guest: at least one per room of the offer, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
   },
-  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>", required: true },
-  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>", required: true },
-  { flag: "email", field: "contact.email", type: "string", placeholder: "<email>", required: true },
-  { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>", required: true },
+  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>", required: "unless-body" },
+  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>", required: "unless-body" },
+  { flag: "email", field: "contact.email", type: "string", placeholder: "<email>", required: "unless-body" },
+  { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>", required: "unless-body" },
   {
     flag: "special-requests",
     field: "items.hotel.specialRequests",
@@ -431,7 +438,7 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
-    required: true,
+    required: "always",
     description: "The spt_… token the user's Link wallet issued for this order.",
   },
   {
@@ -439,7 +446,7 @@ const payFlags = flagsOf(payOrderInput, [
     field: "total",
     type: "string",
     placeholder: "<USD decimal>",
-    required: true,
+    required: "always",
     description:
       "The total the user approved, exactly as `orders get` shows it, in USD, e.g. `125.00`.",
   },

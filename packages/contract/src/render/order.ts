@@ -85,7 +85,7 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
-  if (p.handlers.length > 0) lines.push(handlersLine(p.handlers, p.credentialLimits, surface));
+  if (p.handlers.length > 0) lines.push(handlersLine(o, surface));
   lines.push(cancelLine(o));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
@@ -94,14 +94,11 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
 /** "Pay without the link: …": each handler by type with the business
  *  profile its token is granted for, the credential's limits, and when to
  *  use it at all. */
-function handlersLine(
-  handlers: Order["payment"]["handlers"],
-  limits: Order["payment"]["credentialLimits"],
-  surface: RenderSurface,
-): string {
+function handlersLine(o: Order, surface: RenderSurface): string {
+  const { handlers, credentialLimits: limits } = o.payment;
   const pay =
     surface === "cli"
-      ? "`fortrip orders pay <orderId> --token <spt_…> --total <total>`"
+      ? `\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.price.total.amount}\``
       : "pay_order";
   const shown = handlers.map(
     (h) => `${h.type} (handler ${h.id}, business_profile ${h.config.business_profile})`,

@@ -905,7 +905,7 @@ describe("the CLI surface", () => {
     const text = renderToolResult("get_order", withHandlers(), "cli");
     assert.match(
       text,
-      /^Pay without the link: `fortrip orders pay <orderId> --token <spt_…> --total <total>` with a shared payment token via com\.stripe\.payments/m,
+      /^Pay without the link: `fortrip orders pay ord_BundAwaiting00000000 --token <spt_…> --total 365\.00` with a shared payment token via com\.stripe\.payments/m,
     );
     assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${payNextStep("cli")}`));
     assert.match(payNextStep("cli"), /run `fortrip orders pay <orderId> --token <spt_…> --total <total>`/);
@@ -934,7 +934,7 @@ describe("the CLI surface", () => {
     const broad = cli(load("error-search-too-broad-bali"));
     assert.ok(broad.includes("then search again with --locality <id> and the same text"), broad);
     assert.ok(broad.includes("Localities: pass one back as --locality <placeId>, never the name."), broad);
-    assert.ok(broad.includes("name one with --place-name."), broad);
+    assert.ok(broad.includes("name one with --place-name and --country."), broad);
     assert.ok(broad.includes("the same destination with --radius-meters (up to"), broad);
     assert.match(cli(load("error-destination-ambiguous-suzhou")), /then search with --place <id>:/);
     const patong = cli(load("error-not-a-locality-patong"));
@@ -950,7 +950,7 @@ describe("the CLI surface", () => {
     assert.match(error("payment_declined", { declineCode: null }), /read the order with `fortrip orders get <orderId>` and give its payment\.url/);
     assert.match(
       error("payment_total_changed", { orderId: order, total: { amount: "365.00", currency: "USD" } }),
-      new RegExp(`then run \`fortrip orders pay ${order} --token <spt_…> --total 365\\.00\` again with it and the same token\\. Nothing was charged\\.`),
+      new RegExp(`then run \`fortrip orders pay ${order} --token <spt_…> --total 365\\.00\` again with the same token\\. Nothing was charged\\.`),
     );
   });
 

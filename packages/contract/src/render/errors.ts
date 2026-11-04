@@ -193,9 +193,9 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       return [
         `Order ${e.details.orderId} totals ${money(e.details.total)}, not the total sent: confirm this total with the user, then ${
           surface === "cli"
-            ? `run \`fortrip orders pay ${e.details.orderId} --token <spt_…> --total ${e.details.total.amount}\``
-            : "call pay_order"
-        } again with it and the same token. Nothing was charged.`,
+            ? `run \`fortrip orders pay ${e.details.orderId} --token <spt_…> --total ${e.details.total.amount}\` again with the same token`
+            : "call pay_order again with it and the same token"
+        }. Nothing was charged.`,
       ];
     case "payment_credential_invalid":
       return [
