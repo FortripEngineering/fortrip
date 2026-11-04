@@ -6453,7 +6453,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -6581,7 +6581,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -6592,7 +6592,7 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991,
-                    "description": "The most the token may allow, in cents of currency."
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
                     "type": "string",
@@ -6601,7 +6601,7 @@
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "When the token must expire by: past it, the order can't be paid."
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -7437,7 +7437,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -7565,7 +7565,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -7576,7 +7576,7 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991,
-                    "description": "The most the token may allow, in cents of currency."
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
                     "type": "string",
@@ -7585,7 +7585,7 @@
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "When the token must expire by: past it, the order can't be paid."
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -8417,7 +8417,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -8545,7 +8545,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -8556,7 +8556,7 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991,
-                    "description": "The most the token may allow, in cents of currency."
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
                     "type": "string",
@@ -8565,7 +8565,7 @@
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "When the token must expire by: past it, the order can't be paid."
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -9406,7 +9406,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+                  "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -9534,7 +9534,7 @@
                     ],
                     "additionalProperties": {}
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -9545,7 +9545,7 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991,
-                          "description": "The most the token may allow, in cents of currency."
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                         },
                         "currency": {
                           "type": "string",
@@ -9554,7 +9554,7 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                          "description": "When the token must expire by: past it, the order can't be paid."
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
                         }
                       },
                       "required": [
@@ -10409,7 +10409,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -10537,7 +10537,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -10548,7 +10548,7 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991,
-                    "description": "The most the token may allow, in cents of currency."
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
                     "type": "string",
@@ -10557,7 +10557,7 @@
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "When the token must expire by: past it, the order can't be paid."
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -11424,7 +11424,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -11552,7 +11552,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -11563,7 +11563,7 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991,
-                    "description": "The most the token may allow, in cents of currency."
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
                     "type": "string",
@@ -11572,7 +11572,7 @@
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "When the token must expire by: past it, the order can't be paid."
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -12409,7 +12409,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
+                  "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -12537,7 +12537,7 @@
                     ],
                     "additionalProperties": {}
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried."
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -12548,7 +12548,7 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991,
-                          "description": "The most the token may allow, in cents of currency."
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                         },
                         "currency": {
                           "type": "string",
@@ -12557,7 +12557,7 @@
                         "expiresAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                          "description": "When the token must expire by: past it, the order can't be paid."
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
                         }
                       },
                       "required": [

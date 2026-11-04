@@ -127,7 +127,7 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai, which continues to Stripe Checkout; anyone holding it can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again.",
+        "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again.",
       ),
     requiresSignIn: z.boolean(),
     expiresAt: instant.nullable(),
@@ -140,16 +140,22 @@ export const order = openObject({
     handlers: z
       .array(paymentHandler)
       .describe(
-        "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, not a hosted-page order, a negotiated price, under 15 minutes left, or 5 tokens tried.",
+        "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order.",
       ),
     /** What a payment credential for `pay_order` must allow, with
-     *  `handlers`: `maxAmount` in minor units (cents) of `currency`,
-     *  lowercase as Stripe takes it, and `expiresAt`, past which the order
-     *  can't be paid. `null` when `handlers` is empty. */
+     *  `handlers`: at least `maxAmount`, in minor units (cents) of
+     *  `currency`, lowercase as Stripe takes it, and valid until at least
+     *  `expiresAt`, past which the order can't be paid. `null` when
+     *  `handlers` is empty. */
     credentialLimits: openObject({
-      maxAmount: z.number().int().describe("The most the token may allow, in cents of currency."),
+      maxAmount: z
+        .number()
+        .int()
+        .describe("Request the token for at least this amount, in cents; a token that allows less can't pay."),
       currency: z.string().describe("The token's currency, lowercase as Stripe takes it: usd."),
-      expiresAt: instant.describe("When the token must expire by: past it, the order can't be paid."),
+      expiresAt: instant.describe(
+        "Request the token valid until at least this time; the order can't be paid after it.",
+      ),
     })
       .nullable()
       .describe(

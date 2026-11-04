@@ -48,14 +48,14 @@ const cursor = nonEmpty("cursor");
 // Stay
 
 const nightsError = (name: string) =>
-  `${name} must be after the check-in date and at most ${LIMITS.nightsSupplier} nights later`;
+  `${name} must be after the check-in date and at most ${LIMITS.nightsFortrip} nights later`;
 
 export const stay = strictInput({
   checkIn: localDate.describe(
     "Check-in date in the hotel's calendar, yyyy-MM-dd.",
   ),
   checkOut: localDate.describe(
-    `Check-out date in the hotel's calendar, yyyy-MM-dd. Stays are 1 to ${LIMITS.nightsSupplier} nights: for a longer stay, ask the user whether to split it into consecutive stays.`,
+    `Check-out date in the hotel's calendar, yyyy-MM-dd. A stay longer than ${LIMITS.nightsSupplier} nights answers stay_unsupported (max_nights): ask the user whether to split it into consecutive stays.`,
   ),
   rooms: z
     .array(
@@ -86,7 +86,7 @@ export const stay = strictInput({
 }).superRefine((value, ctx) => {
   if (!isIsoDate(value.checkIn) || !isIsoDate(value.checkOut)) return;
   const nights = countIsoDateDays(value.checkIn, value.checkOut);
-  if (nights < 1 || nights > LIMITS.nightsSupplier) {
+  if (nights < 1 || nights > LIMITS.nightsFortrip) {
     ctx.addIssue({
       code: "custom",
       path: ["checkOut"],
@@ -614,7 +614,7 @@ const ucpInstrument = z
         "The id of the handler the instrument pays through: the order's stripe_payments for the selected one.",
       ),
       type: nonEmpty("type").describe(
-        "The instrument type: card for the selected one, also when the token came from Link (Link is the wallet that grants the token; the payment completes as a card).",
+        "The instrument type: card for the selected one. A Link token is presented as a card instrument, whatever Link funds it with.",
       ),
       selected: flag("selected")
         .optional()
