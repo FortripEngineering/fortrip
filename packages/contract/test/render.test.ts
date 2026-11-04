@@ -997,7 +997,7 @@ describe("the CLI surface", () => {
     assert.notEqual(walletNextStep("cli"), WALLET_NEXT_STEP);
     assert.equal(walletNextStep("mcp"), WALLET_NEXT_STEP);
     const open = renderToolResult("get_order", withWallets(true), "cli");
-    assert.match(open, /^WeChat Pay: scan the code below, or open https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat$/m);
+    assert.match(open, /^WeChat Pay: open https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat$/m);
     assert.doesNotMatch(open, /!\[/);
     assert.match(open, /^Alipay: https:/m);
     assert.match(open, /Then run `fortrip orders get <orderId>` until the order isn't awaiting_payment\.$/m);

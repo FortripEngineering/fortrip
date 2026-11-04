@@ -225,7 +225,7 @@ async function main(): Promise<ExitCode> {
       } else {
         process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
         const code = walletCode(argv, data);
-        if (code) process.stdout.write(`${code}\n`);
+        if (code) process.stdout.write(`Or scan this WeChat Pay code:\n${code}\n`);
       }
     }
     return EXIT.ok;

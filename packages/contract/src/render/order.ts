@@ -133,7 +133,7 @@ function walletLines(w: NonNullable<Order["payment"]["wallets"]>, surface: Rende
       !live
         ? `WeChat Pay: a new code at ${wechat.url}`
         : surface === "cli"
-          ? `WeChat Pay: scan the code below, or open ${wechat.url}`
+          ? `WeChat Pay: open ${wechat.url}`
           : `WeChat Pay: ![WeChat Pay QR code](${wechat.qrImageUrl}), or a full-size code at ${wechat.url}`,
     );
   }
