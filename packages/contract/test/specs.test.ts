@@ -647,7 +647,7 @@ describe("COMMANDS", () => {
       locale: "locale",
     });
     assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
-    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", total: "total" });
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", wallet: "method", total: "total" });
     for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -752,9 +752,8 @@ describe("COMMANDS", () => {
   });
 
   // `orders pay` sends its token as `--token`: `payment` is UCP's form of
-  // the same token, for agents that speak UCP. `method` pays with Alipay or
-  // WeChat Pay; its flag lands with the CLI change.
-  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment", "method"] };
+  // the same token, for agents that speak UCP.
+  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
 
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {
     for (const spec of COMMANDS) {
@@ -810,13 +809,13 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("only --rooms sends a value instead of true", () => {
+  it("only --rooms and --wallet send a value instead of true", () => {
     const valued = COMMANDS.flatMap((spec) =>
       spec.flags
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=rooms"]);
+    assert.deepEqual(valued, ["hotels get --rooms=rooms", "orders pay --wallet=alipay_wechat_pay"]);
   });
 
   it("every flag description is non-empty", () => {

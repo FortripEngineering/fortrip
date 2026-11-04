@@ -13,7 +13,12 @@
   "bin": {
     "fortrip": "dist/cli.js"
   },
-  "files": ["dist", "README.md", "NOTICE", "THIRD-PARTY-NOTICES"],
+  "files": [
+    "dist",
+    "README.md",
+    "NOTICE",
+    "THIRD-PARTY-NOTICES"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -34,6 +39,7 @@
     "tsup": "^8.5.1",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
+    "uqr": "0.1.3",
     "zod": "4.4.3"
   }
 }

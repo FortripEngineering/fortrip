@@ -83,7 +83,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
 | `orders cancel <orderId>` | Cancel an order under its terms, for the penalty the user agreed to |
-| `orders pay <orderId>` | Pay an order from the user's Link wallet (US and Canada) instead of its payment link |
+| `orders pay <orderId>` | Pay an order with a Link wallet token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
@@ -106,7 +106,9 @@ same.
 
 `hotels book` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens, or
-approves a shared payment token for `orders pay` in their wallet. Orders
+approves a shared payment token for `orders pay` in their wallet, or
+scans the WeChat Pay code or opens the Alipay link that `orders pay --wallet`
+prints. Orders
 are paid in USD whatever `--display-currency` shows.
 
 `orders get` and `orders list` say of each order whether it can be cancelled

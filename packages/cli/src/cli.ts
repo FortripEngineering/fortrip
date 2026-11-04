@@ -25,6 +25,7 @@ import {
 } from "./errors.ts";
 import { readGuide } from "./guide.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
+import { terminalQr } from "./qr.ts";
 import { VERSION } from "./version.ts";
 
 /** A global flag as typed: `--help` and `-h`. */
@@ -202,6 +203,15 @@ function takeJson(argv: string[]): { json: boolean; argv: string[] } {
   return { json: kept.length < before.length, argv: [...kept, ...after] };
 }
 
+/** The WeChat Pay code of an `orders pay` answer, drawn for the terminal;
+ *  null when it isn't one, there is no code, or it doesn't fit. */
+function walletCode(argv: string[], data: unknown): string | null {
+  if (argv[0] !== "orders" || argv[1] !== "pay" || !process.stdout.isTTY) return null;
+  const wallets = (data as { payment?: { wallets?: { wechatPay?: { qrData?: unknown } } } } | null)?.payment?.wallets;
+  const qrData = wallets?.wechatPay?.qrData;
+  return typeof qrData === "string" ? terminalQr(qrData, process.stdout.columns) : null;
+}
+
 async function main(): Promise<ExitCode> {
   const { json, argv } = takeJson(process.argv.slice(2));
   try {
@@ -214,6 +224,8 @@ async function main(): Promise<ExitCode> {
         process.stdout.write(`${JSON.stringify(output)}\n`);
       } else {
         process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
+        const code = walletCode(argv, data);
+        if (code) process.stdout.write(`${code}\n`);
       }
     }
     return EXIT.ok;

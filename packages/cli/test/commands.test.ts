@@ -282,6 +282,14 @@ const CASES: {
     body: { sharedPaymentToken: "spt_1TestToken0123456789", total: { amount: "125.00", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
+  {
+    name: "orders pay",
+    argv: [ORDER, "--wallet", "--total", "125.00"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/pay`,
+    body: { method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
+    inPath: { orderId: ORDER },
+  },
 ];
 
 const SENDING = COMMANDS.filter((spec) => spec.group !== null);
