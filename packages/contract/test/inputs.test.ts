@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import { z } from "zod";
 
-import { CARD_NUMBER_MESSAGE } from "../src/card-number.ts";
+import { CARD_NUMBER_MESSAGE, containsCardNumber } from "../src/card-number.ts";
 import { addIsoDateDays } from "../src/dates.ts";
 import { GUEST_NAME_MESSAGE } from "../src/guest-name.ts";
 import {
@@ -962,6 +962,14 @@ describe("payOrderInput", () => {
     const { selected: _s, ...lone } = card(true);
     refused([lone, lone], "payment.instruments");
     refused([card(false), { ...card(true), handler_id: "google_pay" }], "payment.instruments.1.handler_id");
+    // One mistake, one refusal.
+    for (const wrong of [{ handler_id: "" }, { credential: { type: "stripe_payment_token", token: 5 } }]) {
+      assert.equal(
+        refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...wrong }] }, total }).length,
+        1,
+        JSON.stringify(wrong),
+      );
+    }
     refused([{ ...card(true), type: "link" }], "payment.instruments.0.type");
     refused(
       [{ ...card(true), credential: { type: "network_token", token } }],
@@ -984,14 +992,26 @@ describe("payOrderInput", () => {
   });
 
   it("never takes card details in an instrument", () => {
-    for (const extra of [{ number: "4242424242424242" }, { display: { pan: "4242 4242 4242 4242" } }]) {
-      assert.equal(
-        refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...extra }] }, total })[0]
-          ?.message,
-        CARD_NUMBER_MESSAGE,
+    for (const extra of [
+      { number: "4242424242424242" },
+      { display: { pan: "4242 4242 4242 4242" } },
+      { display: { number: "378282246310005" } },
+      { network_token: "4222222222222" },
+    ]) {
+      assert.deepEqual(
+        refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...extra }] }, total }),
+        [
+          {
+            path: "payment.instruments",
+            message: "payment.instruments must not hold card details: pay with the shared payment token alone",
+          },
+        ],
+        JSON.stringify(extra),
       );
     }
-    const phone = { billing_address: { phone_number: "+14155550123" } };
+    // A phone without its +, 13 digits that pass Luhn and start like a card.
+    assert.ok(containsCardNumber("4915123456787"));
+    const phone = { billing_address: { phone_number: "4915123456787" } };
     assertAccepted(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...phone }] }, total });
   });
 

@@ -599,6 +599,9 @@ const instrumentTokenError =
 
 const instrumentsError = "payment.instruments must be a list of 1 to 8 instruments";
 
+const instrumentCardError =
+  "payment.instruments must not hold card details: pay with the shared payment token alone";
+
 /** One instrument of UCP's Complete Checkout payment (3.5), as UCP defines
  *  it: UCP's other fields (`billing_address`, `network`, …) pass through and
  *  aren't used to pay, and an instrument may be another handler's. Only the
@@ -700,10 +703,16 @@ export const payOrderInput = strictInput({
     .superRefine((payment, ctx) => {
       // The list's own length error stands alone.
       if (payment.instruments.length < 1 || payment.instruments.length > 8) return;
-      // What passes through is never card details (16 digits on, so a
-      // billing address's phone isn't one).
-      if (containsCardNumber(JSON.stringify(payment.instruments), 16)) {
-        ctx.addIssue({ code: "custom", path: ["instruments"], message: CARD_NUMBER_MESSAGE });
+      // What passes through is never card details. A phone number counts
+      // only from 16 digits, so a billing address's phone isn't one.
+      const phones: unknown[] = [];
+      const rest = JSON.stringify(payment.instruments, (key, value) => {
+        if (key !== "phone_number") return value;
+        phones.push(value);
+        return undefined;
+      });
+      if (containsCardNumber(rest) || containsCardNumber(JSON.stringify(phones), 16)) {
+        ctx.addIssue({ code: "custom", path: ["instruments"], message: instrumentCardError });
         return;
       }
       const chosen = selectedOf(payment.instruments);
@@ -716,6 +725,8 @@ export const payOrderInput = strictInput({
         });
         return;
       }
+      // An instrument that isn't even a UCP one has its refusal already.
+      if (!ucpInstrument.safeParse(only.i).success) return;
       const card = selectedCard.safeParse(only.i);
       for (const issue of card.success ? [] : card.error.issues) {
         ctx.addIssue({
