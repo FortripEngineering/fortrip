@@ -1,7 +1,7 @@
 # fortrip
 
-Search hotels, check live offers and order one with a payment link, from the
-terminal or an AI agent. Hotels only for now. The npm package and the command
+Search hotels, compare live rates, book and pay securely, and cancel
+bookings, from the terminal or an AI agent. Hotels only for now. The npm package and the command
 are both `fortrip`; they talk to Fortrip API v1, `https://api.fortrip.ai/v1`.
 
 ```bash
