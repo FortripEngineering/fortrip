@@ -163,7 +163,7 @@ function notCancelled(spec: CommandSpec, flag: string, order: Order): string {
   ].join("\n");
 }
 
-/** `whoami`, and `login` once signed in: the account as 2.0 printed it,
+/** `whoami`, and `login` once signed in: the account,
  *  `{ userId, email, name, apiUrl }`. */
 function account(data: unknown): Answer {
   const { apiUrl, userId, email, name } = data as Record<string, unknown>;

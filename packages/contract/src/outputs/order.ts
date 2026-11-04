@@ -33,7 +33,7 @@ export const PAYMENT_STATUSES = [
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Why an order can or can't be cancelled now (3.3): `cancellable` when it
+/** Why an order can or can't be cancelled now: `cancellable` when it
  *  can, else the first reason that holds. `non_refundable` is a rate the
  *  hotel takes no cancellation for; `refused`, a cancellation the hotel
  *  refused, the booking standing as it was. */
@@ -51,7 +51,7 @@ export const CANCEL_REASONS = [
 
 export type CancelReason = (typeof CANCEL_REASONS)[number];
 
-/** Why a shared payment token can't pay an order (3.4). */
+/** Why a shared payment token can't pay an order. */
 export const CREDENTIAL_INVALID_REASONS = [
   "not_found",
   "currency",

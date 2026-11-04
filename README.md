@@ -101,9 +101,9 @@ repository as a marketplace.
 
 Claude Code keeps users on the `version` in `plugin.json`, so bump it whenever
 anything in `plugins/claude` changes, regenerated skill text included: patch
-for wording, minor for new behaviour or components (1.1.0 moved the plugin to
-the hosted MCP server), major for changes that break how people use it. The
-directory takes the listing icon from the first submission only.
+for wording, minor for new behaviour or components, major for changes that
+break how people use it. The directory takes the listing icon from the first
+submission only.
 
 ### CLI skill
 

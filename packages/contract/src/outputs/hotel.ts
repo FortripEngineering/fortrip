@@ -10,7 +10,7 @@ import { hotelSummary } from "./search.ts";
 
 /* `GET /v1/hotels/{hotelId}` (spec §8). */
 
-/** 2.0's 14 policy topics in snake_case, plus `other`. */
+/** The 14 policy topics, in snake_case, plus `other`. */
 export const POLICY_TOPICS = [
   "check_in",
   "important_notices",
