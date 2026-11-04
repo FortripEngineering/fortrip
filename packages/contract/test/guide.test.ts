@@ -212,6 +212,17 @@ describe("the settled rules (design §3.4)", () => {
       );
     }
   });
+
+  it("speaks of offers, orders and the API's own fields", () => {
+    for (const { surface, topic, label } of RENDERINGS) {
+      const text = flat(renderGuide(surface, topic));
+      assert.doesNotMatch(
+        text,
+        /live rates?|\b(the|a) rate\b|rate plan|paymentUrl|statusUrl|orderUrl|totalPrice|dailyPrices|boardCode|maxMatches|ratePlan|\bfx\b|`amount`|`terms`|\bbooking\b/i,
+        label,
+      );
+    }
+  });
 });
 
 describe("consent before the payment link, on every surface", () => {
@@ -367,8 +378,11 @@ describe("the CLI guide", () => {
     }
   });
 
-  it("names no API path", () => {
-    for (const text of [main, planning]) assert.doesNotMatch(text, /\/api\//);
+  it("names no API path, token or flag the CLI doesn't have", () => {
+    for (const text of [main, planning]) {
+      assert.doesNotMatch(text, /fortrip skill|fth_|\/api\//);
+    }
+    assert.doesNotMatch(main, /--rooms \d|--adults|--currency|FORTRIP_CURRENCY/);
   });
 
   it("the planning guide asks for confirmation of what book returned", () => {

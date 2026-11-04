@@ -174,6 +174,17 @@ describe("requests", () => {
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
+  it("orders cancel without --max-penalty on an order not in the contract's shape still refuses, and offers no flag", async () => {
+    const { data } = await fixture("order-confirmed");
+    const { cancel: _, ...noCancel } = data as Record<string, unknown>;
+    reply = { status: 200, body: noCancel };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
+    assert.equal(code, 2);
+    assert.match(stderr, /^Error: Not cancelled: fortrip orders cancel needs --max-penalty/);
+    assert.doesNotMatch(stderr, /Pass --max-penalty/);
+    assert.ok(requests.every((r) => r.method === "GET"));
+  });
+
   it("orders cancel without --max-penalty sends nothing for a bad order id, and passes on the read's error", async () => {
     const bad = await cli(["orders", "cancel", "ao_1"]);
     assert.equal(bad.code, 2);
