@@ -17,6 +17,17 @@ from a conversation with Claude.
   and terms and wait for your confirmation before giving you a payment link
   or cancelling an order.
 
+## Install
+
+In Claude Code, run:
+
+```
+/plugin marketplace add FortripEngineering/fortrip
+/plugin install fortrip@fortrip
+```
+
+Then start a new session and sign in as described below.
+
 ## Sign in
 
 You need a Fortrip account. On claude.ai and in Cowork, connect Fortrip from
