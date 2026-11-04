@@ -78,7 +78,7 @@ const CALLS = {
       "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
     pay: "run `fortrip orders pay`",
     payWith:
-      "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with it and the order's total",
+      "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with the token and the order's total",
     paid: "`fortrip orders pay`",
   },
 } as const satisfies Record<RenderSurface, Record<string, string>>;
@@ -237,7 +237,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order with a shared payment token",
     description:
-      "Pay an order with a Stripe shared payment token, not its link, when payment.handlers isn't empty. Only if you have a tool to request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give payment.url, and never ask the user to create, type or paste a token. First show the user the total and currency, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm, and wait for a clear yes. Then request the token with the handler's config.business_profile and payment.credentialLimits, and pass it with price.total. Pay one way only: payment.url or pay_order. Once this succeeds, payment.url stops working; a failure leaves it open. Then poll get_order. payment_total_changed: confirm details.total with the user, then retry with it. payment_declined: another wallet method or the link. payment_action_required: give the user payment.url. payment_credential_invalid: a new token. service_unavailable: retry with the same token. A token pays one order only.",
+      "Pay an order with a Stripe shared payment token, not its link, when payment.handlers isn't empty. Only if you have a tool to request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give payment.url, and never ask the user to create, type or paste a token. First show the user the USD total, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm, and wait for a clear yes. Then request the token with the handler's config.business_profile and payment.credentialLimits, and pass it with price.total. Pay one way only: payment.url or pay_order. Once this succeeds, payment.url stops working; a failure leaves it open. Then poll get_order. payment_total_changed: confirm details.total with the user, then retry with it. payment_declined: another wallet method or the link. payment_action_required: give the user payment.url. payment_credential_invalid: a new token. service_unavailable: retry with the same token. A token pays one order only.",
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

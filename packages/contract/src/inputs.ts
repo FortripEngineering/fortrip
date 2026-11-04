@@ -55,7 +55,7 @@ export const stay = strictInput({
     "Check-in date in the hotel's calendar, yyyy-MM-dd.",
   ),
   checkOut: localDate.describe(
-    `Check-out date in the hotel's calendar, yyyy-MM-dd. A stay longer than ${LIMITS.nightsSupplier} nights answers stay_unsupported (max_nights): ask the user whether to split it into consecutive stays.`,
+    `Check-out date in the hotel's calendar, yyyy-MM-dd. Stays are 1 to ${LIMITS.nightsSupplier} nights; a longer one answers stay_unsupported (max_nights), and past ${LIMITS.nightsFortrip} nights invalid_request: ask the user whether to split it into consecutive stays.`,
   ),
   rooms: z
     .array(
