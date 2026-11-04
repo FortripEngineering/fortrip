@@ -74,7 +74,7 @@ export const CANCEL_NEXT_STEP =
  * the description of `pay_order`; never as `nextStep`.
  */
 export const PAY_NEXT_STEP =
-  "To pay without the link, when the order has payment.handlers and the user's wallet can grant a Stripe shared payment token: first show and ask exactly as for payment.url, and wait for a clear yes. Then request the token for this order from the user's wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total, the token as sharedPaymentToken or in UCP's payment.instruments. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once pay_order succeeds, payment.url stops working.";
+  "To pay without the link, when the order has payment.handlers and the user's wallet can grant a Stripe shared payment token: first show and ask exactly as for payment.url, and wait for a clear yes. Then request the token for this order from the user's wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once pay_order succeeds, payment.url stops working.";
 
 /**
  * How to present hotels (the `presentation` guide, in one line). It rides as
