@@ -1,6 +1,6 @@
 import { SUPPORT_EMAIL } from "../limits.ts";
 import type { Order, OrderList } from "../outputs/order.ts";
-import type { RenderSurface } from "../tools.ts";
+import { CALLS, type RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, feesText, mealsWithLabel } from "./offers.ts";
 
@@ -86,6 +86,7 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
   if (p.handlers.length > 0) lines.push(handlersLine(o, surface));
+  if (p.wallets) lines.push(...walletLines(p.wallets, surface));
   lines.push(cancelLine(o));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
@@ -111,6 +112,36 @@ function handlersLine(o: Order, surface: RenderSurface): string {
     "Only if you have a tool that can request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give the payment link, and never ask the user to create, type or paste a token.",
     `First show the user the total and currency, the stay and every term, and wait for a clear yes. Pay one way only: the link or ${surface === "cli" ? "`fortrip orders pay`" : "pay_order"}.`,
   ].join(" ");
+}
+
+/** Paying with Alipay or WeChat Pay: how to open it, or, once open, the
+ *  code and both links. */
+function walletLines(w: NonNullable<Order["payment"]["wallets"]>, surface: RenderSurface): string[] {
+  const c = CALLS[surface];
+  if (!w.open) {
+    const pay =
+      surface === "cli"
+        ? "run `fortrip orders pay <orderId> --wallet --total <total>`"
+        : "call pay_order with method alipay_wechat_pay and the order's price.total";
+    return [`Pay with Alipay or WeChat Pay: ${pay}.`];
+  }
+  const lines: string[] = [];
+  const wechat = w.wechatPay;
+  if (wechat) {
+    const live = wechat.qrData !== null && wechat.qrImageUrl !== null;
+    lines.push(
+      !live
+        ? `WeChat Pay: a new code at ${wechat.url}`
+        : surface === "cli"
+          ? `WeChat Pay: scan the code below, or open ${wechat.url}`
+          : `WeChat Pay: ![WeChat Pay QR code](${wechat.qrImageUrl}), or a full-size code at ${wechat.url}`,
+    );
+  }
+  if (w.alipay) lines.push(`Alipay: ${w.alipay.url}`);
+  lines.push(
+    `Show the user the WeChat Pay code as an image if you can, and both links. They pay once, by either. Then ${c.get} until the order isn't awaiting_payment.`,
+  );
+  return lines;
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are

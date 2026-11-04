@@ -163,6 +163,8 @@ export {
   TOOLS,
   type ToolName,
   type ToolSpec,
+  WALLET_NEXT_STEP,
+  walletNextStep,
 } from "./tools.ts";
 export {
   AMENITY_CODES,
