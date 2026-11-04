@@ -694,7 +694,7 @@ export const payOrderInput = strictInput({
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
     .optional()
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. Exactly one of sharedPaymentToken and payment.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. Exactly one of sharedPaymentToken, payment and method.",
     ),
   payment: strictInput({
     instruments: z
@@ -741,7 +741,7 @@ export const payOrderInput = strictInput({
     })
     .optional()
     .describe(
-      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken and payment.",
+      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken, payment and method.",
     ),
   method: oneOf("method", ["alipay_wechat_pay"] as const)
     .optional()
