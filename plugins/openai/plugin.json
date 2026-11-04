@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
   "version": "1.4.0",
-  "description": "Search hotels worldwide, check live room rates, pay for bookings by payment link (or a Link wallet token where the assistant supports it), and cancel orders with Fortrip.",
+  "description": "Search hotels worldwide, compare live room rates, book and pay securely (by payment link, or a Link wallet token where the assistant supports it), and cancel bookings with Fortrip.",
   "author": {
     "name": "Fortrip",
     "email": "info@fortrip.ai",
@@ -22,7 +22,7 @@
           "Search hotels",
           "Hotel details",
           "Live hotel offers",
-          "Booking payment links",
+          "Book and pay by secure link",
           "Pay with a Link wallet token",
           "Order status and history",
           "Order cancellation"
