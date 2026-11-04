@@ -7,6 +7,7 @@ import {
   openObject,
   openUnion,
   parseOpen,
+  protocolObject,
   strictOutput,
 } from "../src/conventions/open.ts";
 
@@ -173,6 +174,17 @@ describe("strictOutput on cloned and wrapped schemas", () => {
       () => strictOutput(z.intersection(z.object({ a: z.string() }), z.object({ b: z.string() }))),
       /cannot close/,
     );
+  });
+});
+
+describe("strictOutput keeps a protocol object as it is (3.5)", () => {
+  it("passes any fields inside it, and still closes the object around it", () => {
+    const s = strictOutput(openObject({ config: protocolObject().optional(), n: z.number() }));
+    assert.ok(s.safeParse({ config: { business_profile: "p", deep: { list: [1, null] } }, n: 1 }).success);
+    assert.ok(s.safeParse({ n: 1 }).success);
+    assert.equal(s.safeParse({ config: "p", n: 1 }).success, false);
+    assert.equal(s.safeParse({ config: {}, n: 1, extra: true }).success, false);
+    assert.ok(strictOutput(strictOutput(protocolObject())).safeParse({ a: 1 }).success);
   });
 });
 

@@ -164,7 +164,8 @@ differ; `hotels offers` takes one party per call, so every room must be the
 same.
 
 `hotels book` creates an unpaid order and prints a payment link for it.
-Nothing is charged until the person pays on the page the link opens. Orders
+Nothing is charged until the person pays on the page the link opens, or
+approves a shared payment token for `orders pay` in their wallet. Orders
 are paid in USD whatever `--display-currency` shows.
 
 `orders get` and `orders list` say of each order whether it can be cancelled

@@ -739,6 +739,10 @@ describe("COMMANDS", () => {
     );
   });
 
+  // `orders pay` sends its token as `--token`: `payment` is UCP's form of
+  // the same token (3.5), for agents that speak UCP.
+  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
+
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {
     for (const spec of COMMANDS) {
       if (!spec.tool || !tool(spec.tool).input) continue;
@@ -746,6 +750,7 @@ describe("COMMANDS", () => {
       const reachable = new Set([
         ...spec.flags.map((flag) => flag.field.split(".")[0]),
         ...(spec.positionals ?? []).map((p) => p.field),
+        ...(OTHER_FORMS[typed(spec)] ?? []),
       ]);
       assert.deepEqual(
         Object.keys(json.properties ?? {}).filter((key) => !reachable.has(key)),

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { hotelId, orderId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
-import { openEnum, openObject, openUnion } from "../conventions/open.ts";
+import { openEnum, openObject, openUnion, protocolObject } from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
 import { localizedText, names, stayEcho } from "./common.ts";
 import { cancellation, confirmation, meals, payAtProperty } from "./offer.ts";
@@ -65,15 +65,25 @@ export const CREDENTIAL_INVALID_REASONS = [
 export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number];
 
 /** A way to pay an order other than its link, after the Universal Commerce
- *  Protocol's payment handlers: `type` names it (`com.stripe.payments`),
- *  `version` and `spec` the handler specification it follows, and
- *  `networkId` the seller's id a wallet grants a payment credential for
- *  (Stripe's business profile), null when the handler names none. */
+ *  Protocol's payment handlers, its fields named as UCP and Stripe name
+ *  them (snake case): `type` names it (`com.stripe.payments`, which takes a
+ *  Stripe shared payment token), `version` and `spec` the handler
+ *  specification it follows, and, from 3.5, `schema` that specification's
+ *  JSON Schema, `config` its settings, whose `business_profile` is the
+ *  seller's id a wallet grants a payment credential for (Stripe's business
+ *  profile), and `available_instruments` the instruments it takes.
+ *  `networkId` is deprecated (3.5): the same as `config.business_profile`,
+ *  null when the handler names none. */
 export const paymentHandler = openObject({
   id: z.string(),
   type: z.string(),
   version: z.string(),
   spec: z.string(),
+  schema: z.string().optional(),
+  available_instruments: z
+    .array(openObject({ type: z.string(), config: protocolObject().optional() }))
+    .optional(),
+  config: protocolObject().optional(),
   networkId: z.string().nullable(),
 });
 

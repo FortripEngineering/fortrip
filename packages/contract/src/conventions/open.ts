@@ -8,13 +8,13 @@ import { z } from "zod";
  */
 
 /**
- * Marks the def of an open enum or open union. The marker is an own symbol
- * property of the def, so it survives `.describe()`/`.meta()` (which clone the
- * schema around the same def) and any `{ ...def }` copy, unlike a registry
- * keyed by schema identity.
+ * Marks the def of an open enum, an open union or a protocol object. The
+ * marker is an own symbol property of the def, so it survives
+ * `.describe()`/`.meta()` (which clone the schema around the same def) and
+ * any `{ ...def }` copy, unlike a registry keyed by schema identity.
  */
 const OPEN = Symbol("fortrip.open");
-type OpenMark = "enum" | "union";
+type OpenMark = "enum" | "union" | "protocol";
 
 function mark(schema: z.ZodType, kind: OpenMark): void {
   (schema._zod.def as unknown as Record<symbol, OpenMark>)[OPEN] = kind;
@@ -23,6 +23,17 @@ function mark(schema: z.ZodType, kind: OpenMark): void {
 /** An object that keeps fields it does not know. */
 export function openObject<T extends z.ZodRawShape>(shape: T): z.ZodObject<T> {
   return z.looseObject(shape) as unknown as z.ZodObject<T>;
+}
+
+/**
+ * An object another protocol defines (a UCP handler's `config`), passed on
+ * as that protocol has it: any fields, any values. Its fields are not the
+ * contract's to close, so `strictOutput` keeps it as it is (3.5).
+ */
+export function protocolObject(): z.ZodType<Record<string, unknown>> {
+  const schema = z.record(z.string(), z.unknown());
+  mark(schema, "protocol");
+  return schema;
 }
 
 /** One of `values`, or any string. JSON Schema: `anyOf [enum, string]`. */
@@ -97,8 +108,9 @@ export function parseOpen<T>(schema: z.ZodType<T>, value: unknown): T {
  * no unknown enum values, no fallback union branch. Wrappers (optional,
  * nullable, default, readonly, pipe, lazy) and containers (object, array,
  * tuple, record) are rebuilt around their closed contents, keeping their
- * checks and metadata. A schema type it cannot close (any, unknown,
- * intersection, custom, ...) throws instead of silently staying open.
+ * checks and metadata. A protocol object stays as it is. A schema type it
+ * cannot close (any, unknown, intersection, custom, ...) throws instead of
+ * silently staying open.
  */
 export function strictOutput<T extends z.ZodType>(schema: T): T {
   return strictify(schema) as T;
@@ -143,6 +155,7 @@ function strictify(schema: z.ZodType): z.ZodType {
     return (schema as unknown as { clone(d: unknown): z.ZodType }).clone(next);
   };
 
+  if (kind === "protocol") return schema;
   if (kind === "enum") return strictify((def.options as z.ZodType[])[0]!);
   if (kind === "union") {
     return rebuild({ options: (def.options as z.ZodType[]).slice(0, -1).map(strictify) });

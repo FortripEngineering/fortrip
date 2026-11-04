@@ -358,6 +358,39 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
   });
+  it("an order's payment handler, as 3.4 sent it and with UCP's fields (3.5)", () => {
+    const limits = { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" };
+    const v34 = {
+      id: "stripe_payments",
+      type: "com.stripe.payments",
+      version: "2026-06-25",
+      spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+      networkId: "profile_test_1",
+    };
+    const ucp = {
+      ...v34,
+      schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+      available_instruments: [
+        { type: "card" },
+        { type: "link", config: { business_profile: "profile_test_1" } },
+      ],
+      config: { environment: "testmode", business_profile: "profile_test_1" },
+    };
+    const withHandler = (handler: unknown) => ({
+      ...orderFixture,
+      payment: { ...orderFixture.payment, handlers: [handler], credentialLimits: limits },
+    });
+    parsesBoth(order, withHandler(v34));
+    parsesBoth(order, withHandler(ucp));
+    // A handler's config is UCP's: the strict copy keeps fields it doesn't know.
+    parsesBoth(order, withHandler({ ...ucp, config: { ...ucp.config, wallet_hint: { any: ["thing"] } } }));
+    // But an instrument stays an object the contract closes.
+    const leaked = withHandler({ ...ucp, available_instruments: [{ type: "card", extra: 1 }] });
+    assert.ok(order.safeParse(leaked).success);
+    assert.equal(strictOutput(order).safeParse(leaked).success, false);
+    assert.equal(order.safeParse(withHandler({ ...ucp, config: "testmode" })).success, false);
+    assert.equal(order.safeParse(withHandler({ ...ucp, networkId: undefined })).success, false);
+  });
   it("an order's cancel quote, cancellable or not (3.3)", () => {
     const cancellable = {
       ...orderFixture,
@@ -524,11 +557,11 @@ describe("shape rules", () => {
 /** Every key an output schema declares. A new key fails the test below until it
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
-  "address", "adults", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
+  "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
   "basis", "beds", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
-  "code", "collectedAt", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
+  "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
   "coverage", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
@@ -543,7 +576,7 @@ const PUBLIC_KEYS = new Set([
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
   "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
-  "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "scope", "scopes", "share",
+  "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
   "sort", "spec", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
   "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "website", "window",

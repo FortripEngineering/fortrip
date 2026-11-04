@@ -1048,9 +1048,11 @@ describe("fortrip mcp", () => {
     const exit = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) =>
       child.on("exit", (code, signal) => resolve({ code, signal })),
     );
-    /** Every line of stdout, each of which must be a JSON-RPC message. */
+    /** Every line of stdout, each of which must be a JSON-RPC message. A
+     *  line still arriving (a long one comes in several chunks) waits. */
     const messages = () =>
       stdout
+        .slice(0, stdout.lastIndexOf("\n") + 1)
         .split("\n")
         .filter(Boolean)
         .map((line) => {

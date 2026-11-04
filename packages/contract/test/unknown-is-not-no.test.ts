@@ -128,6 +128,15 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "MCP_OUTPUT.pay_order.payment.handlers",
     "MCP_OUTPUT.list_orders.data.payment.handlers",
   ],
+  available_instruments: [
+    "order.payment.handlers.available_instruments",
+    "orderList.data.payment.handlers.available_instruments",
+    "MCP_OUTPUT.book_hotel.payment.handlers.available_instruments",
+    "MCP_OUTPUT.get_order.payment.handlers.available_instruments",
+    "MCP_OUTPUT.cancel_order.payment.handlers.available_instruments",
+    "MCP_OUTPUT.pay_order.payment.handlers.available_instruments",
+    "MCP_OUTPUT.list_orders.data.payment.handlers.available_instruments",
+  ],
   bookable: ["hotel.bookable"],
   cityLike: [], // nullable wherever it appears
   known: [], // the flag itself: its own sibling
@@ -248,6 +257,7 @@ describe("the exemption list", () => {
       "localCurrencyAtCheckout",
       "cancel.available",
       "payment.handlers",
+      "available_instruments",
       "bookable",
       "cityLike",
       "known",

@@ -83,8 +83,10 @@ Flights, activities and changes to existing orders aren't supported.
 - **Orders** go to Fortrip, which passes them to its hotel supplier and the
   hotel to make the reservation: the stay you chose, guest names, the contact
   name, phone and email, and any special requests.
-- **Payment** happens on Stripe's checkout page. Claude never sees your card
-  details; don't paste them into the chat.
+- **Payment** happens on Stripe's checkout page, or, if you pay without the
+  link, through your Link wallet, which grants Claude a one-time token you
+  approve there. Claude never sees your card details; don't paste them into
+  the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip
 handles your data as described in its [privacy policy](https://fortrip.ai/privacy);
