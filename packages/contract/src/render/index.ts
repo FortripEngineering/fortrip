@@ -133,7 +133,7 @@ function withConsent(tool: RenderedTool, text: string, orders: Order[]): string 
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
     orders.some((o) => (o.payment.handlers?.length ?? 0) > 0) ? PAY_NEXT_STEP : "",
-    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel?.available === true)
+    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
       ? CANCEL_NEXT_STEP
       : "",
   ]

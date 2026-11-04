@@ -5,6 +5,7 @@ import {
   commandInvocation,
   type CommandSpec,
   GLOBAL_FLAGS,
+  type Order,
   type RenderedTool,
   renderToolResult,
 } from "@fortrip/agent-contract";
@@ -156,7 +157,7 @@ async function run(argv: string[]): Promise<Answer> {
   const preview = cancelPreview(spec, rest);
   if (preview) {
     const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
-    throw usageError(notCancelled(spec, preview.flag, order));
+    throw usageError(notCancelled(spec, preview.flag, order as Order));
   }
   const { method, path, body } = parseCommand(spec, rest, process.env);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
@@ -166,17 +167,15 @@ async function run(argv: string[]): Promise<Answer> {
 /** What `orders cancel` without its penalty flag says instead of
  *  cancelling: the order's Cancel line and, when it can be cancelled now,
  *  the flag with the order's own penalty. */
-function notCancelled(spec: CommandSpec, flag: string, order: unknown): string {
-  const line = renderToolResult("get_order", order)
+function notCancelled(spec: CommandSpec, flag: string, order: Order): string {
+  const cancelLine = renderToolResult("get_order", order)
     .split("\n")
-    .find((text) => text.startsWith("Cancel: "));
-  const cancel = (order as { cancel?: { available?: unknown; penalty?: { amount?: unknown } | null } } | null)
-    ?.cancel;
-  const amount = cancel?.available === true ? cancel.penalty?.amount : undefined;
+    .filter((text) => text.startsWith("Cancel: "));
+  const { available, penalty } = order.cancel;
   return [
     `Not cancelled: ${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`,
-    line ?? "Cancel: not stated for this order.",
-    ...(typeof amount === "string" ? [`Pass ${flag} ${amount} to cancel.`] : []),
+    ...cancelLine,
+    ...(available && penalty ? [`Pass ${flag} ${penalty.amount} to cancel.`] : []),
   ].join("\n");
 }
 

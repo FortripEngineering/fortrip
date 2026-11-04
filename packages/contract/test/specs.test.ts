@@ -189,6 +189,7 @@ const orderFixture = {
     localCurrencyAtCheckout: true,
     localCharge: null,
   },
+  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 

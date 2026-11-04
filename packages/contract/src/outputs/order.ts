@@ -145,14 +145,13 @@ export const order = openObject({
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,
-   *  what was paid less the penalty, both in the charge currency. Absent
-   *  from servers before 3.3. */
+   *  what was paid less the penalty, both in the charge currency. */
   cancel: openObject({
     available: z.boolean(),
     reason: openEnum(CANCEL_REASONS),
     penalty: money.nullable(),
     refund: money.nullable(),
-  }).optional(),
+  }),
   manageUrl: z.string(),
 });
 

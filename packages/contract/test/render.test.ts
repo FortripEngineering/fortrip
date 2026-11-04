@@ -743,14 +743,6 @@ describe("orders and the consent rule", () => {
     assert.ok(!plain.includes(PAY_NEXT_STEP));
   });
 
-  it("an order from a server before 3.3 has no Cancel line and no cancel rule", () => {
-    const fixture = copy(load("order-confirmed")) as ToolFixture;
-    delete (fixture.data as Record<string, any>).cancel;
-    const text = renderToolResult("get_order", fixture.data);
-    assert.doesNotMatch(text, /^Cancel:/m);
-    assert.ok(!text.includes(CANCEL_NEXT_STEP));
-  });
-
   it("leaves ORDER_NEXT_STEP out when no payment.url is set", () => {
     const text = render(load("order-confirmed"));
     assert.ok(!text.includes(ORDER_NEXT_STEP));

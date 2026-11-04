@@ -6693,6 +6693,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -7652,6 +7653,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -8615,6 +8617,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -9579,6 +9582,7 @@
             "items",
             "price",
             "payment",
+            "cancel",
             "manageUrl"
           ],
           "additionalProperties": {}
@@ -10560,6 +10564,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -11554,6 +11559,7 @@
       "items",
       "price",
       "payment",
+      "cancel",
       "manageUrl"
     ],
     "additionalProperties": {}
@@ -12518,6 +12524,7 @@
             "items",
             "price",
             "payment",
+            "cancel",
             "manageUrl"
           ],
           "additionalProperties": {}

@@ -85,7 +85,7 @@ function paymentLines(o: Order): string[] {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
   if (p.handlers?.length) lines.push(handlersLine(p.handlers, p.credentialLimits));
-  if (o.cancel) lines.push(cancelLine(o.cancel));
+  lines.push(cancelLine(o.cancel));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
@@ -107,7 +107,7 @@ function handlersLine(
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
  *  only ever the order's own. */
-function cancelLine(c: NonNullable<Order["cancel"]>): string {
+function cancelLine(c: Order["cancel"]): string {
   const figure = (name: string, m: typeof c.penalty) =>
     `${name} ${m ? money(m) : "not stated"}`;
   const figures = `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;

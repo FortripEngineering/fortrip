@@ -257,6 +257,7 @@ const orderFixture = {
     localCurrencyAtCheckout: true,
     localCharge: null,
   },
+  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
@@ -401,7 +402,7 @@ describe("v1 response fixtures parse, open and strict", () => {
     );
   });
 
-  it("an order's cancel quote, cancellable or not (3.3)", () => {
+  it("an order's cancel quote, cancellable or not", () => {
     const cancellable = {
       ...orderFixture,
       status: "confirmed",
@@ -412,9 +413,10 @@ describe("v1 response fixtures parse, open and strict", () => {
       ...orderFixture,
       cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
     });
-    // An unknown reason stays open; a server before 3.3 sends no cancel.
+    // An unknown reason stays open; an order always says whether it can be cancelled.
     assert.ok(order.safeParse({ ...cancellable, cancel: { ...cancellable.cancel, reason: "later" } }).success);
-    assert.ok(order.safeParse(orderFixture).success);
+    const { cancel: _cancel, ...withoutCancel } = cancellable;
+    assert.equal(order.safeParse(withoutCancel).success, false);
     assert.equal(order.safeParse({ ...cancellable, cancel: { available: true } }).success, false);
   });
   it("every change field", () => {

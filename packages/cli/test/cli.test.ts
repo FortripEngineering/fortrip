@@ -169,10 +169,6 @@ describe("requests", () => {
         "",
       ].join("\n"),
     );
-    // A server before 3.3 says nothing about cancelling.
-    const { cancel: _, ...older } = data as Record<string, unknown>;
-    reply = { status: 200, body: older };
-    assert.match((await cli(["orders", "cancel", ORDER])).stderr, /\nCancel: not stated for this order\.\n$/);
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
