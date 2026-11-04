@@ -123,7 +123,12 @@ export const order = openObject({
   price: openObject({ total: money }),
   payment: openObject({
     status: openEnum(PAYMENT_STATUSES),
-    url: z.string().nullable(),
+    url: z
+      .string()
+      .nullable()
+      .describe(
+        "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again.",
+      ),
     requiresSignIn: z.boolean(),
     expiresAt: instant.nullable(),
     chargeCurrency: z.string(),
@@ -132,26 +137,50 @@ export const order = openObject({
     /** The ways to pay other than `url`, while the order can be paid that
      *  way: a `com.stripe.payments` handler takes a shared payment token
      *  through `pay_order`. Empty when there is none. */
-    handlers: z.array(paymentHandler),
+    handlers: z
+      .array(paymentHandler)
+      .describe(
+        "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order.",
+      ),
     /** What a payment credential for `pay_order` must allow, with
-     *  `handlers`: `maxAmount` in minor units (cents) of `currency`,
-     *  lowercase as Stripe takes it, and `expiresAt`, past which the order
-     *  can't be paid. `null` when `handlers` is empty. */
+     *  `handlers`: at least `maxAmount`, in minor units (cents) of
+     *  `currency`, lowercase as Stripe takes it, and valid until at least
+     *  `expiresAt`, past which the order can't be paid. `null` when
+     *  `handlers` is empty. */
     credentialLimits: openObject({
-      maxAmount: z.number().int(),
-      currency: z.string(),
-      expiresAt: instant,
-    }).nullable(),
+      maxAmount: z
+        .number()
+        .int()
+        .describe("Request the token for at least this amount, in cents; a token that allows less can't pay."),
+      currency: z.string().describe("The token's currency, lowercase as Stripe takes it: usd."),
+      expiresAt: instant.describe(
+        "Request the token valid until at least this time; the order can't be paid after it.",
+      ),
+    })
+      .nullable()
+      .describe(
+        "What the shared payment token for pay_order must allow. null exactly when handlers is [].",
+      ),
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,
    *  what was paid less the penalty, both in the charge currency. */
   cancel: openObject({
-    available: z.boolean(),
-    reason: openEnum(CANCEL_REASONS),
-    penalty: money.nullable(),
-    refund: money.nullable(),
-  }),
+    available: z.boolean().describe("Whether the user can cancel the order now."),
+    reason: openEnum(CANCEL_REASONS).describe(
+      "cancellable when it can be cancelled now; otherwise why not.",
+    ),
+    penalty: money
+      .nullable()
+      .describe(
+        "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated.",
+      ),
+    refund: money
+      .nullable()
+      .describe(
+        "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated.",
+      ),
+  }).describe("Whether the order can be cancelled now, and for what penalty and refund."),
   manageUrl: z.string(),
 });
 
@@ -160,7 +189,10 @@ export type Order = z.infer<typeof order>;
 /** `GET /v1/orders`: newest first. */
 export const orderList = openObject({
   data: z.array(order),
-  nextCursor: z.string().nullable(),
+  nextCursor: z
+    .string()
+    .nullable()
+    .describe("Pass it back as cursor for the next page; null on the last page."),
 });
 
 export type OrderList = z.infer<typeof orderList>;

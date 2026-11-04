@@ -1,7 +1,7 @@
 # fortrip
 
-Search hotels, check live offers and order one with a payment link, from the
-terminal or an AI agent. Hotels only for now. The npm package and the command
+Search hotels, compare live rates, book and pay securely, and cancel
+bookings, from the terminal or an AI agent. Hotels only for now. The npm package and the command
 are both `fortrip`; they talk to Fortrip API v1, `https://api.fortrip.ai/v1`.
 
 ```bash
@@ -83,11 +83,11 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
 | `orders cancel <orderId>` | Cancel an order under its terms, for the penalty the user agreed to |
-| `orders pay <orderId>` | Pay an order with a shared payment token instead of its link |
-| `login` | Sign in through the browser (device code) |
+| `orders pay <orderId>` | Pay an order from the user's Link wallet (US and Canada) instead of its payment link |
+| `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
-| `guide [topic]` | Print the guide for AI agents (Markdown) |
+| `guide [topic]` | Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide |
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
@@ -138,9 +138,9 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has nine tools:
 `get_planning_guide`, `search_hotels`, `get_hotel`, `get_hotel_offers`,
-`book_hotel`, `get_order`, `list_orders` and `cancel_order`.
+`book_hotel`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the
@@ -224,8 +224,10 @@ that starts with `local_`.
 
 ## Support
 
-For changes, cancellations, refunds or other help with a booking, email
-[info@fortrip.ai](mailto:info@fortrip.ai) with the order's reference or link.
+A cancellation the CLI can make goes through `fortrip orders cancel`. For
+changes, other cancellations, refunds or other help with a booking, email
+[info@fortrip.ai](mailto:info@fortrip.ai) with the order's reference. Never
+send the payment link.
 
 ## Releasing
 

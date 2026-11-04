@@ -11,9 +11,11 @@ in with OAuth in the browser.
 
 ## Using Fortrip
 
-- **From a shell, or an agent with one:** `npx -y fortrip <command>`. Start
-  with `npx -y fortrip login`; the [CLI's README](packages/cli/README.md) has
-  the commands, sign-in and exit codes.
+- **From a shell, or an agent with one:** `npx -y fortrip <command>`. People
+  start with `npx -y fortrip login`. Agents run `npx -y fortrip guide` and
+  sign in through the `loginUrl` a command prints when it exits 3. The
+  [CLI's README](packages/cli/README.md) has the commands, sign-in and exit
+  codes.
 - **In an MCP client:** connect the hosted server `https://mcp.fortrip.ai/`
   if the client supports remote servers with OAuth, or run the local bridge,
   `npx -y fortrip mcp`. The [CLI's README](packages/cli/README.md#mcp-server)

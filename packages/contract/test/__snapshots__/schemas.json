@@ -4319,7 +4319,8 @@
           {
             "type": "null"
           }
-        ]
+        ],
+        "description": "Up to 8 hotel photos, the cover first; null when the catalogue lists none."
       },
       "checkInTimes": {
         "type": "object",
@@ -6451,7 +6452,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -6578,7 +6580,8 @@
                 "config"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -6588,14 +6591,17 @@
                   "maxAmount": {
                     "type": "integer",
                     "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
+                    "maximum": 9007199254740991,
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The token's currency, lowercase as Stripe takes it: usd."
                   },
                   "expiresAt": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -6608,7 +6614,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
           }
         },
         "required": [
@@ -6628,7 +6635,8 @@
         "type": "object",
         "properties": {
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the user can cancel the order now."
           },
           "reason": {
             "anyOf": [
@@ -6649,7 +6657,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "cancellable when it can be cancelled now; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -6674,7 +6683,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
           },
           "refund": {
             "anyOf": [
@@ -6699,7 +6709,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
           }
         },
         "required": [
@@ -6708,7 +6719,8 @@
           "penalty",
           "refund"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "Whether the order can be cancelled now, and for what penalty and refund."
       },
       "manageUrl": {
         "type": "string"
@@ -7424,7 +7436,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -7551,7 +7564,8 @@
                 "config"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -7561,14 +7575,17 @@
                   "maxAmount": {
                     "type": "integer",
                     "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
+                    "maximum": 9007199254740991,
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The token's currency, lowercase as Stripe takes it: usd."
                   },
                   "expiresAt": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -7581,7 +7598,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
           }
         },
         "required": [
@@ -7601,7 +7619,8 @@
         "type": "object",
         "properties": {
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the user can cancel the order now."
           },
           "reason": {
             "anyOf": [
@@ -7622,7 +7641,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "cancellable when it can be cancelled now; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -7647,7 +7667,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
           },
           "refund": {
             "anyOf": [
@@ -7672,7 +7693,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
           }
         },
         "required": [
@@ -7681,7 +7703,8 @@
           "penalty",
           "refund"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "Whether the order can be cancelled now, and for what penalty and refund."
       },
       "manageUrl": {
         "type": "string"
@@ -8393,7 +8416,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -8520,7 +8544,8 @@
                 "config"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -8530,14 +8555,17 @@
                   "maxAmount": {
                     "type": "integer",
                     "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
+                    "maximum": 9007199254740991,
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The token's currency, lowercase as Stripe takes it: usd."
                   },
                   "expiresAt": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -8550,7 +8578,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
           }
         },
         "required": [
@@ -8570,7 +8599,8 @@
         "type": "object",
         "properties": {
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the user can cancel the order now."
           },
           "reason": {
             "anyOf": [
@@ -8591,7 +8621,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "cancellable when it can be cancelled now; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -8616,7 +8647,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
           },
           "refund": {
             "anyOf": [
@@ -8641,7 +8673,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
           }
         },
         "required": [
@@ -8650,7 +8683,8 @@
           "penalty",
           "refund"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "Whether the order can be cancelled now, and for what penalty and refund."
       },
       "manageUrl": {
         "type": "string"
@@ -9371,7 +9405,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -9498,7 +9533,8 @@
                       "config"
                     ],
                     "additionalProperties": {}
-                  }
+                  },
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -9508,14 +9544,17 @@
                         "maxAmount": {
                           "type": "integer",
                           "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                         },
                         "currency": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
                         },
                         "expiresAt": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
                         }
                       },
                       "required": [
@@ -9528,7 +9567,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
                 }
               },
               "required": [
@@ -9548,7 +9588,8 @@
               "type": "object",
               "properties": {
                 "available": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Whether the user can cancel the order now."
                 },
                 "reason": {
                   "anyOf": [
@@ -9569,7 +9610,8 @@
                     {
                       "type": "string"
                     }
-                  ]
+                  ],
+                  "description": "cancellable when it can be cancelled now; otherwise why not."
                 },
                 "penalty": {
                   "anyOf": [
@@ -9594,7 +9636,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
                 },
                 "refund": {
                   "anyOf": [
@@ -9619,7 +9662,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
                 }
               },
               "required": [
@@ -9628,7 +9672,8 @@
                 "penalty",
                 "refund"
               ],
-              "additionalProperties": {}
+              "additionalProperties": {},
+              "description": "Whether the order can be cancelled now, and for what penalty and refund."
             },
             "manageUrl": {
               "type": "string"
@@ -9657,7 +9702,8 @@
           {
             "type": "null"
           }
-        ]
+        ],
+        "description": "Pass it back as cursor for the next page; null on the last page."
       },
       "nextStep": {
         "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
@@ -10362,7 +10408,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -10489,7 +10536,8 @@
                 "config"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -10499,14 +10547,17 @@
                   "maxAmount": {
                     "type": "integer",
                     "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
+                    "maximum": 9007199254740991,
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The token's currency, lowercase as Stripe takes it: usd."
                   },
                   "expiresAt": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -10519,7 +10570,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
           }
         },
         "required": [
@@ -10539,7 +10591,8 @@
         "type": "object",
         "properties": {
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the user can cancel the order now."
           },
           "reason": {
             "anyOf": [
@@ -10560,7 +10613,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "cancellable when it can be cancelled now; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -10585,7 +10639,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
           },
           "refund": {
             "anyOf": [
@@ -10610,7 +10665,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
           }
         },
         "required": [
@@ -10619,7 +10675,8 @@
           "penalty",
           "refund"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "Whether the order can be cancelled now, and for what penalty and refund."
       },
       "manageUrl": {
         "type": "string"
@@ -11366,7 +11423,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -11493,7 +11551,8 @@
                 "config"
               ],
               "additionalProperties": {}
-            }
+            },
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -11503,14 +11562,17 @@
                   "maxAmount": {
                     "type": "integer",
                     "minimum": -9007199254740991,
-                    "maximum": 9007199254740991
+                    "maximum": 9007199254740991,
+                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                   },
                   "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The token's currency, lowercase as Stripe takes it: usd."
                   },
                   "expiresAt": {
                     "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                    "description": "Request the token valid until at least this time; the order can't be paid after it."
                   }
                 },
                 "required": [
@@ -11523,7 +11585,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
           }
         },
         "required": [
@@ -11543,7 +11606,8 @@
         "type": "object",
         "properties": {
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the user can cancel the order now."
           },
           "reason": {
             "anyOf": [
@@ -11564,7 +11628,8 @@
               {
                 "type": "string"
               }
-            ]
+            ],
+            "description": "cancellable when it can be cancelled now; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -11589,7 +11654,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
           },
           "refund": {
             "anyOf": [
@@ -11614,7 +11680,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
           }
         },
         "required": [
@@ -11623,7 +11690,8 @@
           "penalty",
           "refund"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "Whether the order can be cancelled now, and for what penalty and refund."
       },
       "manageUrl": {
         "type": "string"
@@ -12340,7 +12408,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -12467,7 +12536,8 @@
                       "config"
                     ],
                     "additionalProperties": {}
-                  }
+                  },
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -12477,14 +12547,17 @@
                         "maxAmount": {
                           "type": "integer",
                           "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
                         },
                         "currency": {
-                          "type": "string"
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
                         },
                         "expiresAt": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
                         }
                       },
                       "required": [
@@ -12497,7 +12570,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
                 }
               },
               "required": [
@@ -12517,7 +12591,8 @@
               "type": "object",
               "properties": {
                 "available": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Whether the user can cancel the order now."
                 },
                 "reason": {
                   "anyOf": [
@@ -12538,7 +12613,8 @@
                     {
                       "type": "string"
                     }
-                  ]
+                  ],
+                  "description": "cancellable when it can be cancelled now; otherwise why not."
                 },
                 "penalty": {
                   "anyOf": [
@@ -12563,7 +12639,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated."
                 },
                 "refund": {
                   "anyOf": [
@@ -12588,7 +12665,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What a cancellation now refunds: what was paid less the penalty, in the charge currency; null when not stated."
                 }
               },
               "required": [
@@ -12597,7 +12675,8 @@
                 "penalty",
                 "refund"
               ],
-              "additionalProperties": {}
+              "additionalProperties": {},
+              "description": "Whether the order can be cancelled now, and for what penalty and refund."
             },
             "manageUrl": {
               "type": "string"
@@ -12626,7 +12705,8 @@
           {
             "type": "null"
           }
-        ]
+        ],
+        "description": "Pass it back as cursor for the next page; null on the last page."
       }
     },
     "required": [
@@ -14026,7 +14106,8 @@
                 {
                   "type": "null"
                 }
-              ]
+              ],
+              "description": "The cover photo; null when there is none."
             }
           },
           "required": [
@@ -14052,7 +14133,8 @@
           {
             "type": "null"
           }
-        ]
+        ],
+        "description": "Pass it back as cursor for the next page; null on the last page."
       },
       "notes": {
         "type": "array",

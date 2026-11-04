@@ -1,4 +1,5 @@
 import type { HotelOffersResult, Offer } from "../outputs/offer.ts";
+import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, plural, roomFacts, stayLine, when } from "./format.ts";
 
 /* `get_hotel_offers` (spec §9), and the terms orders and errors share. */
@@ -139,10 +140,14 @@ const OMITTED: Record<string, string> = {
 };
 
 /** Offers cut by `limitPerHotel` exist: say so where they are missing. */
-function limitText(o: Record<string, unknown>): string {
+function limitText(o: Record<string, unknown>, surface: RenderSurface): string {
   const n = o.byLimit;
+  const [limit, filters] =
+    surface === "cli"
+      ? ["--limit-per-hotel", "--require-breakfast / --require-free-cancellation"]
+      : ["limitPerHotel", "requireBreakfast / requireFreeCancellation"];
   return typeof n === "number" && n > 0
-    ? `${plural(n, "more offer")} not shown (limitPerHotel); a filtered request (requireBreakfast / requireFreeCancellation) or a higher limitPerHotel may show them — don't conclude they don't exist`
+    ? `${plural(n, "more offer")} not shown (${limit}); a filtered request (${filters}) or a higher ${limit} may show them — don't conclude they don't exist`
     : "";
 }
 
@@ -163,7 +168,7 @@ const UNAVAILABLE: Record<string, string> = {
   stay_in_past: "check-in is already past",
 };
 
-export function renderOffers(r: HotelOffersResult): string {
+export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp"): string {
   const lines = [
     `Live offers · ${stayLine(r.stay.checkIn, r.stay.checkOut)} · ${party(r.stay.rooms)}`,
     "total = the whole stay and every room, the amount charged. Fees not in the total are in the property's currency, not converted. Times are UTC, then the hotel's time zone.",
@@ -174,14 +179,14 @@ export function renderOffers(r: HotelOffersResult): string {
     h.offers.forEach((o, i) => lines.push(`${i + 1}. ${offerLine(o)}`));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(`Not shown: ${omitted}.`);
-    const limited = limitText(h.omitted);
+    const limited = limitText(h.omitted, surface);
     if (limited) lines.push(`${limited}.`);
   }
   if (r.unavailable.length > 0) {
     lines.push("", "Unavailable:");
     for (const u of r.unavailable) {
       const omitted = u.omitted
-        ? [omittedText(u.omitted), limitText(u.omitted)].filter(Boolean).join("; ")
+        ? [omittedText(u.omitted), limitText(u.omitted, surface)].filter(Boolean).join("; ")
         : "";
       lines.push(`- ${u.hotelId}: ${label(UNAVAILABLE, u.reason)}${omitted ? ` (${omitted})` : ""}`);
     }

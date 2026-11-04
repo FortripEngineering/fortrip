@@ -9,6 +9,7 @@ import {
   type KnownErrorBody,
 } from "../outputs/error-details.ts";
 import type { OfferChange } from "../outputs/order.ts";
+import type { RenderSurface } from "../tools.ts";
 import { km, label, money, num, plural, raw, when } from "./format.ts";
 import {
   cancellationText,
@@ -63,29 +64,31 @@ function changeLine(c: OfferChange): string {
   }
 }
 
-function tooBroad(d: Details<"search_too_broad">): string[] {
+function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): string[] {
+  const locality =
+    surface === "cli" ? "--locality <id>" : 'destination { kind: "locality", placeId: "<id>" }';
   const lines = [
-    'Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with destination { kind: "locality", placeId: "<id>" } and the same text, filters, stay and sort.',
-    ...localitiesLines(d.localities, null),
+    `Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with ${locality} and the same text, filters, stay and sort.`,
+    ...localitiesLines(d.localities, null, surface),
   ];
   // A locality over the pool is priced from its nearest hotels only; when it
   // is the area's center, a radius around the center prices nearly the same.
   const top = d.localities.items[0];
   if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with radiusMeters (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
+      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
     );
   }
   return lines;
 }
 
-function ambiguous(d: Details<"destination_ambiguous">): string[] {
+function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface): string[] {
   const shown =
     d.candidatesTotal > d.candidates.length
       ? `${d.candidates.length} of ${d.candidatesTotal} shown`
       : `${d.candidatesTotal}`;
   const lines = [
-    `Places named "${d.name}" in ${d.countryCode} (${shown}). Ask the user which one, then search with destination { kind: "place", placeId: "<id>" }:`,
+    `Places named "${d.name}" in ${d.countryCode} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
   ];
   for (const c of d.candidates) {
     const other = [c.names.en, c.names.zh].find((n) => n && n !== c.name);
@@ -113,7 +116,7 @@ function ambiguous(d: Details<"destination_ambiguous">): string[] {
   return lines;
 }
 
-function notFound(d: Details<"destination_not_found">): string[] {
+function notFound(d: Details<"destination_not_found">, surface: RenderSurface): string[] {
   switch (d.reason) {
     case "no_match": {
       const m = d as Extract<typeof d, { reason: "no_match" }>;
@@ -127,14 +130,15 @@ function notFound(d: Details<"destination_not_found">): string[] {
       return [`Unknown placeId ${(d as { placeId: string }).placeId}.`];
     case "not_a_locality": {
       const n = d as Extract<typeof d, { reason: "not_a_locality" }>;
-      const town = `{ kind: "place", placeId: "${n.placeId}" }`;
+      const town =
+        surface === "cli" ? `--place ${n.placeId}` : `{ kind: "place", placeId: "${n.placeId}" }`;
       if (n.hub === null) {
         return [`${n.placeId} belongs to no locality: search ${town} for an 8 km circle around it.`];
       }
       const total = n.hubTotal === null ? "" : ` (${plural(n.hubTotal, "matching hotel")})`;
       return [
         `${n.placeId} is not a locality. Its hotels belong to the locality ${n.hub.name} ${n.hub.placeId}${total}.`,
-        `Search { kind: "locality", placeId: "${n.hub.placeId}" } for those, or ${town} for an 8 km circle around the town itself.`,
+        `Search ${surface === "cli" ? `--locality ${n.hub.placeId}` : `{ kind: "locality", placeId: "${n.hub.placeId}" }`} for those, or ${town} for an 8 km circle around the town itself.`,
       ];
     }
     default:
@@ -142,8 +146,9 @@ function notFound(d: Details<"destination_not_found">): string[] {
   }
 }
 
-function detailLines(e: KnownErrorBody): string[] {
+function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
   if (!("details" in e)) return [];
+  const getOrder = (id: string) => (surface === "cli" ? `\`fortrip orders get ${id}\`` : "get_order");
   switch (e.code) {
     case "invalid_request": {
       const d = e.details;
@@ -180,13 +185,17 @@ function detailLines(e: KnownErrorBody): string[] {
       return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
     case "order_not_payable":
       return [
-        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with get_order; nothing was charged.`,
+        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with ${getOrder(e.details.orderId)}; this call charged nothing.`,
       ];
     case "payment_in_progress":
-      return [`Order ${e.details.orderId}: read it with get_order in a few seconds.`];
+      return [`Order ${e.details.orderId}: read it with ${getOrder(e.details.orderId)} in a few seconds.`];
     case "payment_total_changed":
       return [
-        `Order ${e.details.orderId} now totals ${money(e.details.total)}: show the user the new total and ask again, then request a new token for it. Nothing was charged.`,
+        `Order ${e.details.orderId} totals ${money(e.details.total)}, not the total sent: confirm this total with the user, then ${
+          surface === "cli"
+            ? `run \`fortrip orders pay ${e.details.orderId} --token <spt_…> --total ${e.details.total.amount}\` again with the same token`
+            : "call pay_order again with it and the same token"
+        }. Nothing was charged.`,
       ];
     case "payment_credential_invalid":
       return [
@@ -194,19 +203,21 @@ function detailLines(e: KnownErrorBody): string[] {
       ];
     case "payment_declined":
       return [
-        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link (call book_hotel again with the same details for a new payment.url).`,
+        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link: read the order with ${getOrder("<orderId>")} and give its payment.url.`,
       ];
     case "destination_ambiguous":
-      return ambiguous(e.details);
+      return ambiguous(e.details, surface);
     case "destination_not_found":
-      return notFound(e.details);
+      return notFound(e.details, surface);
     case "search_too_broad":
-      return tooBroad(e.details);
+      return tooBroad(e.details, surface);
     case "stay_unsupported":
       return e.details.reason === "mixed_occupancy"
         ? ["Every room must have the same party: ask once per party."]
         : e.details.reason === "max_nights"
-          ? [`At most ${plural((e.details as { max: number }).max, "night")} per stay.`]
+          ? [
+              `At most ${plural((e.details as { max: number }).max, "night")} per stay: ask the user whether to split it into consecutive stays, each its own order.`,
+            ]
           : [`Details: ${raw(e.details)}`];
     case "stay_in_past":
       return [`Check-in ${e.details.checkIn} is already past${e.details.timeZone ? ` in ${e.details.timeZone}` : ""}.`];
@@ -238,8 +249,14 @@ function retryLine(retryable: unknown, after: unknown): string {
   return retryable === false ? "Not retryable." : "Retryable: unknown.";
 }
 
-/** The error envelope as text; `status` is the HTTP status, when known. */
-export function renderError(envelope: unknown, status?: number): string {
+/** The error envelope as text; `status` is the HTTP status, when known.
+ *  `surface` names the next calls: tools (`mcp`, the default) or commands
+ *  (`cli`). */
+export function renderError(
+  envelope: unknown,
+  status?: number,
+  surface: RenderSurface = "mcp",
+): string {
   const http = status === undefined ? "" : ` (HTTP ${status})`;
   let known: KnownErrorBody | null = null;
   let body: Record<string, unknown> | null = null;
@@ -260,7 +277,7 @@ export function renderError(envelope: unknown, status?: number): string {
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
   if (typeof body.param === "string") lines.push(`Field: ${body.param}`);
-  if (known) lines.push(...detailLines(known));
+  if (known) lines.push(...detailLines(known, surface));
   else if (body.details !== undefined) lines.push(`Details: ${raw(body.details)}`);
   if (typeof body.requestId === "string") lines.push(`Request id: ${body.requestId}`);
   return lines.join("\n");

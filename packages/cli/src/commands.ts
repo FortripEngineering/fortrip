@@ -164,7 +164,10 @@ export function parseCommand(
  * and the flag. `null` for any other command, or when the flag is given. A
  * bad order id exits 2 as `orders cancel`'s own, and nothing is sent.
  */
-export function cancelPreview(spec: CommandSpec, argv: string[]): (ApiRequest & { flag: string }) | null {
+export function cancelPreview(
+  spec: CommandSpec,
+  argv: string[],
+): (ApiRequest & { flag: string; orderId: string }) | null {
   const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
   if (!flag) return null;
   const { values, positionals } = parseOptions(spec, argv);
@@ -172,7 +175,8 @@ export function cancelPreview(spec: CommandSpec, argv: string[]): (ApiRequest & 
   if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
   const input = { orderId: positionals[0] };
   check({ ...spec, tool: "get_order" }, input, true, new Map());
-  return { method: "GET", path: API.order(input.orderId as string), flag: `--${flag.flag}` };
+  const orderId = input.orderId as string;
+  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId };
 }
 
 /** Refuses an input the contract's schema doesn't accept, with the issues

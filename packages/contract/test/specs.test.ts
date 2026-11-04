@@ -425,7 +425,7 @@ describe("CANCEL_NEXT_STEP", () => {
       /^Before you call cancel_order, show the user [^.]*stay[^.]*cancel\.penalty and cancel\.refund \(amount and currency\)/,
     );
     assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
-    assert.match(CANCEL_NEXT_STEP, /Pass maximumPenalty exactly as cancel\.penalty\.amount\./);
+    assert.ok(CANCEL_NEXT_STEP.includes('Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).'));
     assert.match(CANCEL_NEXT_STEP, /Never state a refund the order did not return\.$/);
   });
 });

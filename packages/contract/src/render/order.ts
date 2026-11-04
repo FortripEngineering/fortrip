@@ -1,5 +1,6 @@
 import { SUPPORT_EMAIL } from "../limits.ts";
 import type { Order, OrderList } from "../outputs/order.ts";
+import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, feesText, mealsWithLabel } from "./offers.ts";
 
@@ -63,7 +64,7 @@ function itemLines(item: Item): string[] {
   ];
 }
 
-function paymentLines(o: Order): string[] {
+function paymentLines(o: Order, surface: RenderSurface): string[] {
   const p = o.payment;
   const lines = [
     [
@@ -84,30 +85,43 @@ function paymentLines(o: Order): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
-  if (p.handlers.length > 0) lines.push(handlersLine(p.handlers, p.credentialLimits));
-  lines.push(cancelLine(o.cancel));
+  if (p.handlers.length > 0) lines.push(handlersLine(o, surface));
+  lines.push(cancelLine(o));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
 
 /** "Pay without the link: …": each handler by type with the business
- *  profile its token is granted for, and the credential's limits. */
-function handlersLine(
-  handlers: Order["payment"]["handlers"],
-  limits: Order["payment"]["credentialLimits"],
-): string {
+ *  profile its token is granted for, the credential's limits, and when to
+ *  use it at all. */
+function handlersLine(o: Order, surface: RenderSurface): string {
+  const { handlers, credentialLimits: limits } = o.payment;
+  const pay =
+    surface === "cli"
+      ? `\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.price.total.amount}\``
+      : "pay_order";
   const shown = handlers.map(
     (h) => `${h.type} (handler ${h.id}, business_profile ${h.config.business_profile})`,
   );
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";
-  return `Pay without the link: pay_order with a shared payment token via ${shown.join(", ")}${limit}`;
+  return [
+    `Pay without the link: ${pay} with a shared payment token via ${shown.join(", ")}${limit}.`,
+    "Only if you have a tool that can request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give the payment link, and never ask the user to create, type or paste a token.",
+    `First show the user the total and currency, the stay and every term, and wait for a clear yes. Pay one way only: the link or ${surface === "cli" ? "`fortrip orders pay`" : "pay_order"}.`,
+  ].join(" ");
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
- *  only ever the order's own. */
-function cancelLine(c: Order["cancel"]): string {
+ *  only ever the order's own. An order awaiting payment needs no
+ *  cancelling: it expires unpaid. */
+function cancelLine(o: Order): string {
+  const c = o.cancel;
+  if (o.status === "awaiting_payment" && !c.available && c.reason === "not_confirmed") {
+    const at = o.payment.expiresAt === null ? "" : ` at ${when(o.payment.expiresAt, null)}`;
+    return `Cancel: not needed: an unpaid order expires unpaid${at}`;
+  }
   const figure = (name: string, m: typeof c.penalty) =>
     `${name} ${m ? money(m) : "not stated"}`;
   const figures = `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;
@@ -116,30 +130,32 @@ function cancelLine(c: Order["cancel"]): string {
   return c.penalty || c.refund ? `${why} · ${figures}` : why;
 }
 
-export function orderLines(o: Order): string[] {
+export function orderLines(o: Order, surface: RenderSurface = "mcp"): string[] {
   return [
     `Order ${o.orderId} · reference ${o.reference} · ${label(ORDER_STATUS_WORDS, o.status)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
     ...o.items.flatMap(itemLines),
-    ...paymentLines(o),
+    ...paymentLines(o, surface),
   ];
 }
 
-export function renderOrder(o: Order): string {
-  return orderLines(o).join("\n");
+export function renderOrder(o: Order, surface: RenderSurface = "mcp"): string {
+  return orderLines(o, surface).join("\n");
 }
 
-export function renderOrderList(list: OrderList): string {
+export function renderOrderList(list: OrderList, surface: RenderSurface = "mcp"): string {
   const lines = [
     list.data.length === 0
       ? "No orders on this page."
       : `Orders, newest first: ${list.data.length} on this page.`,
   ];
-  for (const o of list.data) lines.push("", ...orderLines(o));
+  for (const o of list.data) lines.push("", ...orderLines(o, surface));
   lines.push(
     "",
     list.nextCursor === null
       ? "Last page."
-      : `Next page: call again with { cursor: "${list.nextCursor}" }.`,
+      : surface === "cli"
+        ? `Next page: run again with --cursor ${list.nextCursor}.`
+        : `Next page: call again with { cursor: "${list.nextCursor}" }.`,
   );
   return lines.join("\n");
 }

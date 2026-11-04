@@ -881,7 +881,7 @@ describe("cancelOrderInput", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
+      'The penalty the user agreed to, in the order\'s currency. Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
     );
   });
 });

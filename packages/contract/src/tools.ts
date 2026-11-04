@@ -58,23 +58,59 @@ export interface ToolSpec {
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
-/**
- * The consent rule of a cancellation (spec §5.7, C11). It rides as the last
- * paragraph of the text of every MCP `get_order` and `list_orders` result
- * that holds an order with `cancel.available`, after `ORDER_NEXT_STEP` when
- * both apply, and never as `nextStep`, which keeps its payment-only meaning.
- */
-export const CANCEL_NEXT_STEP =
-  "Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty exactly as cancel.penalty.amount. Never state a refund the order did not return.";
+/** Where a rendered result is read: an MCP client, which calls tools with
+ *  JSON arguments, or the CLI, which runs commands with flags. */
+export type RenderSurface = "mcp" | "cli";
+
+/** How each next step names the call it leads to. */
+const CALLS = {
+  mcp: {
+    cancel: "call cancel_order",
+    penalty:
+      'Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
+    pay: "call pay_order",
+    payWith: "call pay_order with it and the order's price.total",
+    paid: "pay_order",
+  },
+  cli: {
+    cancel: "run `fortrip orders cancel <orderId> --max-penalty <n>`",
+    penalty:
+      "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
+    pay: "run `fortrip orders pay`",
+    payWith:
+      "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with the token and the order's total",
+    paid: "`fortrip orders pay`",
+  },
+} as const satisfies Record<RenderSurface, Record<string, string>>;
 
 /**
- * How to pay without the link. It rides as the last paragraph of the text
- * of every MCP `book_hotel`, `get_order` and `list_orders` result that holds
- * an order with non-empty `payment.handlers`, after `ORDER_NEXT_STEP`, and in
- * the description of `pay_order`; never as `nextStep`.
+ * The consent rule of a cancellation (spec §5.7, C11), as `surface` names
+ * the call. It rides as the last paragraph of the text of every `get_order`
+ * and `list_orders` result that holds an order with `cancel.available`,
+ * after `ORDER_NEXT_STEP` when both apply, and never as `nextStep`, which
+ * keeps its payment-only meaning.
  */
-export const PAY_NEXT_STEP =
-  "To pay without the link, when the order's payment.handlers isn't empty and the user's wallet can grant a Stripe shared payment token: first show and ask exactly as for payment.url, and wait for a clear yes. Then request the token for this order from the user's wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and call pay_order with it and the order's price.total. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once pay_order succeeds, payment.url stops working.";
+export function cancelNextStep(surface: RenderSurface): string {
+  const c = CALLS[surface];
+  return `Before you ${c.cancel}, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. ${c.penalty} Never state a refund the order did not return.`;
+}
+
+/** `cancelNextStep` over MCP, also in the `cancel_order` description. */
+export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
+
+/**
+ * How to pay without the link, as `surface` names the call. It rides as the
+ * last paragraph of the text of every `book_hotel`, `get_order` and
+ * `list_orders` result that holds an order with non-empty
+ * `payment.handlers`, after `ORDER_NEXT_STEP`; never as `nextStep`.
+ */
+export function payNextStep(surface: RenderSurface): string {
+  const c = CALLS[surface];
+  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.handlers isn't empty. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
+}
+
+/** `payNextStep` over MCP. */
+export const PAY_NEXT_STEP = payNextStep("mcp");
 
 /**
  * How to present hotels (the `presentation` guide, in one line). It rides as
@@ -156,7 +192,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "book_hotel",
     title: "Create hotel order and payment link",
-    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page where the user pays. Nothing is charged until the user pays there; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page where the user pays. Nothing is charged until the order is paid, on that page or with pay_order; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: false,
@@ -201,7 +237,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order with a shared payment token",
     description:
-      "Pay an order awaiting payment without its link, with a Stripe shared payment token, when the order's payment.handlers isn't empty. First show and ask exactly as for payment.url, and wait for a clear yes. Then request the token from the user's wallet with the handler's config.business_profile and payment.credentialLimits, and pass it with the order's price.total. The charge is in USD. Once it succeeds, payment.url stops working; a payment that fails leaves the link open. Answers the order: status confirming, the payment authorized (held, charged once the hotel confirms); poll get_order. payment_total_changed: show details.total and ask again, for a new token. payment_declined: the user picks another payment method in their wallet, or pays by link. payment_action_required: the card needs verification; pay by link. payment_credential_invalid: request a new token. service_unavailable: call pay_order again with the same token, never a new one. A token pays one order only; the same token again answers as before.",
+      "Pay an order with a Stripe shared payment token, not its link, when payment.handlers isn't empty. Only if you have a tool to request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give payment.url, and never ask the user to create, type or paste a token. First show the user the USD total, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm, and wait for a clear yes. Then request the token with the handler's config.business_profile and payment.credentialLimits, and pass it with price.total. Pay one way only: payment.url or pay_order. Once this succeeds, payment.url stops working; a failure leaves it open. Then poll get_order. payment_total_changed: confirm details.total with the user, then retry with it. payment_declined: another wallet method or the link. payment_action_required: give the user payment.url. payment_credential_invalid: a new token. service_unavailable: retry with the same token. A token pays one order only.",
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

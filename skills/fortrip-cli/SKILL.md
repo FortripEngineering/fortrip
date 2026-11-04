@@ -173,13 +173,13 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 ## Paying without the link
 
-An order whose `payment.handlers` isn't empty can also be paid with a Stripe shared payment token that the user's wallet (Link) grants for it, through `fortrip orders pay`:
+An order whose `payment.handlers` isn't empty (in the text output, the line "Pay without the link") can also be paid through `fortrip orders pay` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so `payment.handlers` is empty for a larger order. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
 
-1. Show and ask exactly as before giving the payment link, and wait for a clear yes. The token comes from the user's wallet, never from card details.
-2. Request the token from the user's wallet with the handler's `config.business_profile` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
+1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. The token comes from the user's wallet, never from card details.
+2. Request the token from the user's Link wallet with the handler's `config.business_profile` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
 3. Run `fortrip orders pay` with the token and the order's `price.total` (`--token`, `--total`). The order is then `confirming`, its payment `authorized`: check it as after payment.
 
-The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: once `fortrip orders pay` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total changed: show the new total and ask again, for a new token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. `service_unavailable`: call `fortrip orders pay` again with the same token, never a new one. A token pays one order only.
+The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give `payment.url` or run `fortrip orders pay`. Once `fortrip orders pay` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then run `fortrip orders pay` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the order's `payment.credentialLimits`. `service_unavailable`: call `fortrip orders pay` again with the same token, never a new one. A token pays one order only.
 
 ## After payment
 

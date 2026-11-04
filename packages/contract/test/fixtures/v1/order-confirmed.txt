@@ -7,4 +7,4 @@ Total: USD 366.00 · payment paid · charged in USD (the user's card may pay in 
 Cancel: can cancel now: penalty USD 120.00, refund USD 246.00
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000
 
-Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty exactly as cancel.penalty.amount. Never state a refund the order did not return.
+Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120). Never state a refund the order did not return.

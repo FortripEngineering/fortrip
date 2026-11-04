@@ -56,7 +56,10 @@ export const hotel = openObject({
   description: knownLocaleText.nullable(),
   /** Up to 8 hotel photos, the cover first; `null` when the catalogue lists
    *  none (unknown is not no). */
-  photos: z.array(photo).nullable(),
+  photos: z
+    .array(photo)
+    .nullable()
+    .describe("Up to 8 hotel photos, the cover first; null when the catalogue lists none."),
   checkInTimes: timeRange,
   checkOutTimes: timeRange,
   policies: openObject({
