@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
   "version": "1.4.0",
-  "description": "Search hotels worldwide, compare live room rates, book and pay securely (by payment link, or a Link wallet token where the assistant supports it), and cancel bookings with Fortrip.",
+  "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
     "email": "info@fortrip.ai",
@@ -15,17 +15,16 @@
       "interface": {
         "displayName": "Fortrip",
         "shortDescription": "Search and book hotels",
-        "longDescription": "Fortrip lets you search hotels by place, name, brand or map point, read a hotel's address, policies, amenities and rooms, compare live offers and cancellation terms, book and pay securely, and cancel bookings.\n\nSearch results show indicative nightly prices; live offers come from get_hotel_offers. Offer prices are in USD, with an approximate amount in CNY on request. Before giving you a payment link or paying, the assistant shows the amount and currency you will be charged (USD), the meals, cancellation rules and any fees paid at the hotel, and waits for you to confirm. The link opens a Fortrip page that recaps the order and continues to Stripe Checkout, which may also show the amount in your local currency. An assistant that can request a token from your Link wallet (US and Canadian accounts, orders up to $500) can instead pay with a single-use token you approve in the wallet; the payment is held until the hotel confirms. The assistant refuses card numbers, and nothing is charged without your approval on the Stripe page or in your wallet.\n\nRequires signing in with a Fortrip account. Stays are 1 to 15 nights, with 1 to 8 rooms per order. Adults and children are counted per room, and every room in an order has the same party. Guest names must use Latin letters as on the passport. You can check an order's status and list your orders, including those made on the Fortrip website. You can cancel a confirmed order under its cancellation terms: the assistant first shows the penalty and the refund and waits for you to confirm, and you are never charged more than the penalty you agreed to. Flights, activities and changes to existing orders are not supported.",
+        "longDescription": "Fortrip helps you find and book hotels around the world without leaving the chat. Search by city, neighborhood, hotel name or brand, see what a hotel offers, and compare live room rates, meals and cancellation terms side by side.\n\nWhen you've picked a room, the assistant shows you the total price and the terms and waits for your OK. You then pay on a secure payment page, and nothing is charged until you do. You can check your bookings at any time and cancel one under its cancellation terms; the assistant tells you the fee and the refund first.\n\nYou need a Fortrip account. Fortrip books hotels only for now: flights, activities and changes to an existing booking aren't supported.",
         "developerName": "Fortrip",
         "category": "Travel",
         "capabilities": [
           "Search hotels",
           "Hotel details",
-          "Live hotel offers",
-          "Book and pay by secure link",
-          "Pay with a Link wallet token",
-          "Order status and history",
-          "Order cancellation"
+          "Live room rates",
+          "Secure booking and payment",
+          "Your bookings",
+          "Cancel bookings"
         ],
         "websiteURL": "https://fortrip.ai",
         "supportURL": "https://fortrip.ai/faq",
@@ -96,11 +95,11 @@
         "commerce_description": "Users can book hotel stays. book_hotel creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there through Stripe Checkout. Alternatively, pay_order pays the order with a single-use Stripe shared payment token the user approves in their Link wallet (US and Canadian accounts, orders up to $500); the payment is held until the hotel confirms. Before giving the link or paying, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the Stripe page or in their Link wallet."
       },
       "publication": {
-        "release_notes": "Clearer booking, payment and cancellation: before giving you a payment link, the assistant shows the total in USD, the meals, the cancellation rules and any fees paid at the hotel; before cancelling, the penalty and the refund. Each time it waits for your confirmation. Assistants that can request a token from your Link wallet (US and Canadian accounts, orders up to $500) can also pay with a single-use token you approve.",
+        "release_notes": "Booking is clearer: before you pay or cancel, the assistant shows the price, the terms and any fees, and waits for your OK.",
         "translations": {
           "zh-CN": {
             "subtitle": "搜索并预订酒店",
-            "description": "Fortrip 可以按地点、酒店名、品牌或地图上的位置搜索酒店，查看酒店地址、政策、设施和房型，比较实时报价和取消条款，安全地预订和付款，并取消预订。\n\n搜索结果中的价格是参考起价，实时报价以 get_hotel_offers 为准。报价以美元计，可按需附上人民币的估算金额。给出付款链接或付款前，助手会先展示实际收款的金额和币种（美元）、餐食、取消规则和到店需付的费用，并等你确认。链接打开的是 Fortrip 的订单摘要页，页面汇总订单信息后进入 Stripe 付款，Stripe 付款页可能同时以你所在地的货币显示金额。能从你的 Link 钱包申请付款令牌的助手（限美国和加拿大账户，订单不超过 500 美元）也可以改用你在钱包里批准的一次性令牌付款，款项会先冻结，酒店确认后才扣款。助手不接受银行卡号；未经你在 Stripe 付款页或钱包里批准，不会扣费。\n\n需要登录 Fortrip 账号。每次入住 1 到 15 晚，每单 1 到 8 间房。成人和儿童人数按每间房计算，同一订单的每间房入住人数相同。入住人姓名需使用与护照一致的拉丁字母。可以查询订单状态和订单列表，包括在 Fortrip 网站下的订单。已确认的订单可以按取消条款取消：助手会先展示违约金和退款金额并等你确认，实际收取的违约金不会超过你同意的金额。不支持机票、活动，也不支持修改已有订单。"
+            "description": "Fortrip 让你在对话里直接找酒店、订酒店。按城市、街区、酒店名或品牌搜索，查看酒店详情，并排比较实时房价、餐食和取消政策。\n\n选好房间后，助手会先告诉你总价和各项条款，等你确认。之后你在安全的付款页面完成付款，付款之前不会扣任何钱。你可以随时查看自己的预订，也可以按取消政策取消，助手会先告诉你违约金和退款金额。\n\n需要 Fortrip 账号。目前只支持酒店，暂不支持机票、活动和修改已有预订。"
           }
         }
       }
