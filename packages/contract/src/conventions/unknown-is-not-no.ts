@@ -34,6 +34,7 @@ export const UNKNOWN_IS_NOT_NO_EXEMPTIONS: Readonly<Record<string, string>> = {
   localCurrencyAtCheckout: `${API_DECIDES} (whether checkout may charge in the card's currency).`,
   "cancel.available": `${API_DECIDES} (whether an order can be cancelled now).`,
   "payment.handlers": `${RESULT_LIST} (the ways to pay an order other than its link; empty when there is none).`,
+  "payment.wallets.open": `${API_DECIDES} (the server always knows whether it opened a payment).`,
   available_instruments: `${RESULT_LIST} (the instruments a payment handler takes).`,
   bookable: `${API_DECIDES} (whether the hotel is still in the index).`,
   cityLike: `${API_DECIDES} (frozen per gazetteer release; null where not computed).`,

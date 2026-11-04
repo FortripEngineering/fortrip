@@ -161,6 +161,39 @@ export const order = openObject({
       .describe(
         "What the shared payment token for pay_order must allow. null exactly when handlers is [].",
       ),
+    /** Paying with Alipay or WeChat Pay through `pay_order`'s `method`.
+     *  `null` when it is neither offered for the order nor open on it. */
+    wallets: openObject({
+      open: z.boolean().describe("Whether pay_order has opened a wallet payment on this order."),
+      current: openEnum(["wechat_pay", "alipay"])
+        .nullable()
+        .describe("The wallet the payment is on now; null until it is open."),
+      wechatPay: openObject({
+        qrData: z
+          .string()
+          .nullable()
+          .describe(
+            "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one).",
+          ),
+        qrImageUrl: z.string().nullable().describe("A 480 px PNG of the same code."),
+        url: z
+          .string()
+          .describe("A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."),
+      })
+        .nullable()
+        .describe("The WeChat Pay code and link; null until the payment is open."),
+      alipay: openObject({
+        url: z
+          .string()
+          .describe("A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."),
+      })
+        .nullable()
+        .describe("The Alipay link; null until the payment is open."),
+    })
+      .nullable()
+      .describe(
+        "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open.",
+      ),
   }),
   /** Whether the user can cancel the order now and, when they can, its
    *  penalty under the accepted terms (read a minute ahead) and the refund,

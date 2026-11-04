@@ -256,6 +256,7 @@ const orderFixture = {
     localCharge: null,
     handlers: [],
     credentialLimits: null,
+    wallets: null,
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
@@ -416,6 +417,39 @@ describe("v1 response fixtures parse, open and strict", () => {
     );
   });
 
+  it("an order's wallets, offered and open", () => {
+    const withWallets = (wallets: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, wallets } });
+    parsesBoth(order, withWallets(null));
+    parsesBoth(order, withWallets({ open: false, current: null, wechatPay: null, alipay: null }));
+    parsesBoth(
+      order,
+      withWallets({
+        open: true,
+        current: "wechat_pay",
+        wechatPay: {
+          qrData: "weixin://wxpay/bizpayurl?pr=abc",
+          qrImageUrl: "https://qr.stripe.com/test_1.png",
+          url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/wechat?t=tok",
+        },
+        alipay: { url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/alipay?t=tok" },
+      }),
+    );
+    // Not on WeChat Pay now: no live code, and a wallet this contract doesn't know reads.
+    parsesBoth(
+      order,
+      withWallets({
+        open: true,
+        current: "alipay",
+        wechatPay: { qrData: null, qrImageUrl: null, url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/wechat?t=tok" },
+        alipay: { url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/alipay?t=tok" },
+      }),
+    );
+    // An order always says whether wallets are offered or open.
+    const { wallets: _gone, ...without } = orderFixture.payment;
+    assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false);
+    assert.equal(strictOutput(order).safeParse({ ...orderFixture, payment: without }).success, false);
+  });
+
   it("an order's cancel quote, cancellable or not", () => {
     const cancellable = {
       ...orderFixture,
@@ -574,7 +608,7 @@ const PUBLIC_KEYS = new Set([
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
-  "coverage", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
+  "coverage", "alipay", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
@@ -585,13 +619,13 @@ const PUBLIC_KEYS = new Set([
   "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
   "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
-  "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
-  "priced", "pricing", "radiusMeters", "radiusSource", "rateDate", "reason", "reference", "refund",
+  "open", "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
+  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "rateDate", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
   "sort", "spec", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
-  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "website", "window",
+  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "wallets", "website", "wechatPay", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
 ]);
 

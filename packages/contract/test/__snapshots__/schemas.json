@@ -6616,6 +6616,118 @@
               }
             ],
             "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean",
+                    "description": "Whether pay_order has opened a wallet payment on this order."
+                  },
+                  "current": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "wechat_pay",
+                              "alipay"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The wallet the payment is on now; null until it is open."
+                  },
+                  "wechatPay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "qrData": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                          },
+                          "qrImageUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "A 480 px PNG of the same code."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "qrData",
+                          "qrImageUrl",
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The WeChat Pay code and link; null until the payment is open."
+                  },
+                  "alipay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The Alipay link; null until the payment is open."
+                  }
+                },
+                "required": [
+                  "open",
+                  "current",
+                  "wechatPay",
+                  "alipay"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
           }
         },
         "required": [
@@ -6627,7 +6739,8 @@
           "localCurrencyAtCheckout",
           "localCharge",
           "handlers",
-          "credentialLimits"
+          "credentialLimits",
+          "wallets"
         ],
         "additionalProperties": {}
       },
@@ -7600,6 +7713,118 @@
               }
             ],
             "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean",
+                    "description": "Whether pay_order has opened a wallet payment on this order."
+                  },
+                  "current": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "wechat_pay",
+                              "alipay"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The wallet the payment is on now; null until it is open."
+                  },
+                  "wechatPay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "qrData": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                          },
+                          "qrImageUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "A 480 px PNG of the same code."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "qrData",
+                          "qrImageUrl",
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The WeChat Pay code and link; null until the payment is open."
+                  },
+                  "alipay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The Alipay link; null until the payment is open."
+                  }
+                },
+                "required": [
+                  "open",
+                  "current",
+                  "wechatPay",
+                  "alipay"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
           }
         },
         "required": [
@@ -7611,7 +7836,8 @@
           "localCurrencyAtCheckout",
           "localCharge",
           "handlers",
-          "credentialLimits"
+          "credentialLimits",
+          "wallets"
         ],
         "additionalProperties": {}
       },
@@ -8580,6 +8806,118 @@
               }
             ],
             "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean",
+                    "description": "Whether pay_order has opened a wallet payment on this order."
+                  },
+                  "current": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "wechat_pay",
+                              "alipay"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The wallet the payment is on now; null until it is open."
+                  },
+                  "wechatPay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "qrData": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                          },
+                          "qrImageUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "A 480 px PNG of the same code."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "qrData",
+                          "qrImageUrl",
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The WeChat Pay code and link; null until the payment is open."
+                  },
+                  "alipay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The Alipay link; null until the payment is open."
+                  }
+                },
+                "required": [
+                  "open",
+                  "current",
+                  "wechatPay",
+                  "alipay"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
           }
         },
         "required": [
@@ -8591,7 +8929,8 @@
           "localCurrencyAtCheckout",
           "localCharge",
           "handlers",
-          "credentialLimits"
+          "credentialLimits",
+          "wallets"
         ],
         "additionalProperties": {}
       },
@@ -9569,6 +9908,118 @@
                     }
                   ],
                   "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+                },
+                "wallets": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "boolean",
+                          "description": "Whether pay_order has opened a wallet payment on this order."
+                        },
+                        "current": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "wechat_pay",
+                                    "alipay"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The wallet the payment is on now; null until it is open."
+                        },
+                        "wechatPay": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "qrData": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                                },
+                                "qrImageUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "A 480 px PNG of the same code."
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                                }
+                              },
+                              "required": [
+                                "qrData",
+                                "qrImageUrl",
+                                "url"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The WeChat Pay code and link; null until the payment is open."
+                        },
+                        "alipay": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                                }
+                              },
+                              "required": [
+                                "url"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The Alipay link; null until the payment is open."
+                        }
+                      },
+                      "required": [
+                        "open",
+                        "current",
+                        "wechatPay",
+                        "alipay"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
                 }
               },
               "required": [
@@ -9580,7 +10031,8 @@
                 "localCurrencyAtCheckout",
                 "localCharge",
                 "handlers",
-                "credentialLimits"
+                "credentialLimits",
+                "wallets"
               ],
               "additionalProperties": {}
             },
@@ -10572,6 +11024,118 @@
               }
             ],
             "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean",
+                    "description": "Whether pay_order has opened a wallet payment on this order."
+                  },
+                  "current": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "wechat_pay",
+                              "alipay"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The wallet the payment is on now; null until it is open."
+                  },
+                  "wechatPay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "qrData": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                          },
+                          "qrImageUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "A 480 px PNG of the same code."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "qrData",
+                          "qrImageUrl",
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The WeChat Pay code and link; null until the payment is open."
+                  },
+                  "alipay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The Alipay link; null until the payment is open."
+                  }
+                },
+                "required": [
+                  "open",
+                  "current",
+                  "wechatPay",
+                  "alipay"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
           }
         },
         "required": [
@@ -10583,7 +11147,8 @@
           "localCurrencyAtCheckout",
           "localCharge",
           "handlers",
-          "credentialLimits"
+          "credentialLimits",
+          "wallets"
         ],
         "additionalProperties": {}
       },
@@ -11587,6 +12152,118 @@
               }
             ],
             "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "open": {
+                    "type": "boolean",
+                    "description": "Whether pay_order has opened a wallet payment on this order."
+                  },
+                  "current": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "wechat_pay",
+                              "alipay"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The wallet the payment is on now; null until it is open."
+                  },
+                  "wechatPay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "qrData": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                          },
+                          "qrImageUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "A 480 px PNG of the same code."
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "qrData",
+                          "qrImageUrl",
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The WeChat Pay code and link; null until the payment is open."
+                  },
+                  "alipay": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                          }
+                        },
+                        "required": [
+                          "url"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The Alipay link; null until the payment is open."
+                  }
+                },
+                "required": [
+                  "open",
+                  "current",
+                  "wechatPay",
+                  "alipay"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
           }
         },
         "required": [
@@ -11598,7 +12275,8 @@
           "localCurrencyAtCheckout",
           "localCharge",
           "handlers",
-          "credentialLimits"
+          "credentialLimits",
+          "wallets"
         ],
         "additionalProperties": {}
       },
@@ -12572,6 +13250,118 @@
                     }
                   ],
                   "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
+                },
+                "wallets": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "open": {
+                          "type": "boolean",
+                          "description": "Whether pay_order has opened a wallet payment on this order."
+                        },
+                        "current": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "wechat_pay",
+                                    "alipay"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The wallet the payment is on now; null until it is open."
+                        },
+                        "wechatPay": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "qrData": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                                },
+                                "qrImageUrl": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "A 480 px PNG of the same code."
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                                }
+                              },
+                              "required": [
+                                "qrData",
+                                "qrImageUrl",
+                                "url"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The WeChat Pay code and link; null until the payment is open."
+                        },
+                        "alipay": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                                }
+                              },
+                              "required": [
+                                "url"
+                              ],
+                              "additionalProperties": {}
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The Alipay link; null until the payment is open."
+                        }
+                      },
+                      "required": [
+                        "open",
+                        "current",
+                        "wechatPay",
+                        "alipay"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
                 }
               },
               "required": [
@@ -12583,7 +13373,8 @@
                 "localCurrencyAtCheckout",
                 "localCharge",
                 "handlers",
-                "credentialLimits"
+                "credentialLimits",
+                "wallets"
               ],
               "additionalProperties": {}
             },

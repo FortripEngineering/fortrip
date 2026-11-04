@@ -190,6 +190,7 @@ const orderFixture = {
     localCharge: null,
     handlers: [],
     credentialLimits: null,
+    wallets: null,
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
@@ -742,8 +743,9 @@ describe("COMMANDS", () => {
   });
 
   // `orders pay` sends its token as `--token`: `payment` is UCP's form of
-  // the same token, for agents that speak UCP.
-  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
+  // the same token, for agents that speak UCP. `method` pays with Alipay or
+  // WeChat Pay; its flag lands with the CLI change.
+  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment", "method"] };
 
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {
     for (const spec of COMMANDS) {
