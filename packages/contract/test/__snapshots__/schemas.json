@@ -6490,6 +6490,38 @@
                 "spec": {
                   "type": "string"
                 },
+                "schema": {
+                  "type": "string"
+                },
+                "available_instruments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "config": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
                 "networkId": {
                   "anyOf": [
                     {
@@ -7409,6 +7441,38 @@
                 "spec": {
                   "type": "string"
                 },
+                "schema": {
+                  "type": "string"
+                },
+                "available_instruments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "config": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
                 "networkId": {
                   "anyOf": [
                     {
@@ -8323,6 +8387,38 @@
                 },
                 "spec": {
                   "type": "string"
+                },
+                "schema": {
+                  "type": "string"
+                },
+                "available_instruments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "config": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
                 },
                 "networkId": {
                   "anyOf": [
@@ -9247,6 +9343,38 @@
                       },
                       "spec": {
                         "type": "string"
+                      },
+                      "schema": {
+                        "type": "string"
+                      },
+                      "available_instruments": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string"
+                            },
+                            "config": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
                       },
                       "networkId": {
                         "anyOf": [
@@ -10184,6 +10312,38 @@
                 },
                 "spec": {
                   "type": "string"
+                },
+                "schema": {
+                  "type": "string"
+                },
+                "available_instruments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "config": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
                 },
                 "networkId": {
                   "anyOf": [
@@ -11135,6 +11295,38 @@
                 "spec": {
                   "type": "string"
                 },
+                "schema": {
+                  "type": "string"
+                },
+                "available_instruments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "config": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                },
                 "networkId": {
                   "anyOf": [
                     {
@@ -12054,6 +12246,38 @@
                       },
                       "spec": {
                         "type": "string"
+                      },
+                      "schema": {
+                        "type": "string"
+                      },
+                      "available_instruments": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string"
+                            },
+                            "config": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "config": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
                       },
                       "networkId": {
                         "anyOf": [

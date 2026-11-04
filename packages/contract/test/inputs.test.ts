@@ -15,7 +15,9 @@ import {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
+  payOrderInput,
   searchHotelsInput,
+  sharedPaymentTokenOf,
   stay,
 } from "../src/inputs.ts";
 import { LIMITS } from "../src/limits.ts";
@@ -106,6 +108,7 @@ describe("every request field has a description", () => {
     ["getOrderInput", getOrderInput],
     ["listOrdersInput", listOrdersInput],
     ["cancelOrderInput", cancelOrderInput],
+    ["payOrderInput", payOrderInput],
     ["stay", stay],
     ["destination", destination],
   ] as const) {
@@ -880,5 +883,94 @@ describe("cancelOrderInput", () => {
       json.properties?.maximumPenalty?.description,
       "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
     );
+  });
+});
+
+describe("payOrderInput", () => {
+  const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
+  const total = { amount: "132.40", currency: "USD" };
+  const token = "spt_1TestToken0123456789";
+  const card = (selected: boolean, spt = token) => ({
+    id: selected ? "instr_1" : "instr_2",
+    handler_id: "stripe_payments",
+    type: "card",
+    selected,
+    credential: { type: "stripe_payment_token", token: spt },
+  });
+
+  it("takes the token as sharedPaymentToken (3.4)", () => {
+    assertAccepted(payOrderInput, { orderId, sharedPaymentToken: token, total });
+    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: "tok_1", total }, "sharedPaymentToken");
+    assert.equal(
+      refusalOf(payOrderInput, { orderId, sharedPaymentToken: "", total })[0]?.message,
+      "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+    );
+    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token }, "total");
+    assertRefusedAt(
+      payOrderInput,
+      { orderId, sharedPaymentToken: token, total: { amount: "132.40", currency: "EUR" } },
+      "total.currency",
+    );
+  });
+
+  it("takes it as UCP's payment instead, the selected instrument's credential (3.5)", () => {
+    assertAccepted(payOrderInput, { orderId, payment: { instruments: [card(true)] }, total });
+    assertAccepted(payOrderInput, {
+      orderId,
+      payment: { instruments: [card(false), { ...card(true), display: { brand: "visa", last_digits: "4242" } }] },
+      total,
+    });
+    assert.equal(
+      sharedPaymentTokenOf(
+        payOrderInput.parse({ orderId, payment: { instruments: [card(false, "spt_other1"), card(true)] }, total }),
+      ),
+      token,
+    );
+    assert.equal(sharedPaymentTokenOf(payOrderInput.parse({ orderId, sharedPaymentToken: token, total })), token);
+  });
+
+  it("refuses a payment without exactly one selected stripe_payments card token", () => {
+    const refused = (instruments: unknown[], at: string) =>
+      assertRefusedAt(payOrderInput, { orderId, payment: { instruments }, total }, at);
+    refused([], "payment.instruments");
+    refused(Array.from({ length: 9 }, (_, n) => card(n === 0)), "payment.instruments");
+    refused([card(false)], "payment.instruments");
+    refused([card(true), card(true)], "payment.instruments");
+    refused([{ ...card(true), handler_id: "google_pay" }], "payment.instruments.0.handler_id");
+    refused([{ ...card(true), type: "link" }], "payment.instruments.0.type");
+    refused(
+      [{ ...card(true), credential: { type: "network_token", token } }],
+      "payment.instruments.0.credential.type",
+    );
+    refused([card(true, "pm_card_visa")], "payment.instruments.0.credential.token");
+    refused([{ ...card(true), display: "visa" }], "payment.instruments.0.display");
+    assert.equal(
+      refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), cvc: "123" }] }, total })[0]
+        ?.message,
+      "Unknown argument(s): cvc",
+    );
+    assert.match(
+      refusalOf(payOrderInput, { orderId, payment: { instruments: [card(false)] }, total })[0]?.message ?? "",
+      /exactly one instrument with selected: true, not 0/,
+    );
+  });
+
+  it("takes exactly one of the two", () => {
+    assert.equal(
+      refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, payment: { instruments: [card(true)] }, total })
+        .find((i) => i.path === "payment")?.message,
+      "Send sharedPaymentToken or payment, not both",
+    );
+    assert.deepEqual(refusalOf(payOrderInput, { orderId, total }), [
+      {
+        path: "sharedPaymentToken",
+        message: "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+      },
+    ]);
+    assert.equal(
+      refusalOf(payOrderInput, { orderId, total, credential: "x" })[0]?.message,
+      "Unknown argument(s): credential",
+    );
+    assert.throws(() => sharedPaymentTokenOf({}), /parse with payOrderInput first/);
   });
 });

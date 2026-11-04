@@ -741,6 +741,37 @@ describe("orders and the consent rule", () => {
     assert.ok(!plain.includes(PAY_NEXT_STEP));
   });
 
+  it("a 3.5 handler shows its config.business_profile, else networkId", () => {
+    const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    const handler = {
+      id: "stripe_payments",
+      type: "com.stripe.payments",
+      version: "2026-06-25",
+      spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+      schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+      available_instruments: [{ type: "card" }, { type: "link", config: { business_profile: "profile_test_2" } }],
+      config: { environment: "testmode", business_profile: "profile_test_2" },
+      networkId: "profile_test_1",
+    };
+    data.payment.handlers = [handler];
+    data.payment.credentialLimits = { maxAmount: 36600, currency: "usd", expiresAt: data.payment.expiresAt };
+    strictOutput(TOOLS.find((t) => t.name === "get_order")!.output!).parse(data);
+    const text = renderToolResult("get_order", data);
+    assert.match(
+      text,
+      /^Pay without the link: pay_order with a shared payment token via com\.stripe\.payments \(handler stripe_payments, networkId profile_test_2\); token limits: /m,
+    );
+    assert.equal(text.split(PAY_NEXT_STEP).length, 2);
+    assertClean(text);
+    for (const config of [undefined, { environment: "testmode" }, { business_profile: 7 }]) {
+      data.payment.handlers = [{ ...handler, config }];
+      assert.match(renderToolResult("get_order", data), /\(handler stripe_payments, networkId profile_test_1\)/);
+    }
+    data.payment.handlers = [{ ...handler, config: undefined, networkId: null }];
+    assert.match(renderToolResult("get_order", data), /via com\.stripe\.payments \(handler stripe_payments\); token limits/);
+  });
+
   it("an order from a server before 3.3 has no Cancel line and no cancel rule", () => {
     const fixture = copy(load("order-confirmed")) as ToolFixture;
     delete (fixture.data as Record<string, any>).cancel;

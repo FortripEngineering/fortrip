@@ -91,14 +91,17 @@ function paymentLines(o: Order): string[] {
 }
 
 /** "Pay without the link: …": each handler by type, its Link wallet's
- *  networkId when it names one, and the credential's limits. */
+ *  business profile (`config.business_profile` (3.5), else `networkId`)
+ *  when it names one, and the credential's limits. */
 function handlersLine(
   handlers: NonNullable<Order["payment"]["handlers"]>,
   limits: Order["payment"]["credentialLimits"],
 ): string {
-  const shown = handlers.map(
-    (h) => `${h.type} (handler ${h.id}${h.networkId ? `, networkId ${h.networkId}` : ""})`,
-  );
+  const shown = handlers.map((h) => {
+    const profile = h.config?.business_profile;
+    const networkId = typeof profile === "string" ? profile : h.networkId;
+    return `${h.type} (handler ${h.id}${networkId ? `, networkId ${networkId}` : ""})`;
+  });
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";

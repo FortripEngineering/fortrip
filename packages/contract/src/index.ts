@@ -17,6 +17,7 @@ export {
   openObject,
   openUnion,
   parseOpen,
+  protocolObject,
   strictOutput,
 } from "./conventions/open.ts";
 export { instant, localDate, localTime, timeZone } from "./conventions/time.ts";
@@ -48,6 +49,7 @@ export {
   listOrdersInput,
   payOrderInput,
   searchHotelsInput,
+  sharedPaymentTokenOf,
   stay,
   type CancelOrderInput,
   type CreateOrderInput,

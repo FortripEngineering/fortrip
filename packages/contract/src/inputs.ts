@@ -589,24 +589,115 @@ export const cancelOrderInput = strictInput({
 
 export type CancelOrderInput = z.input<typeof cancelOrderInput>;
 
+const sharedPaymentTokenRe = /^spt_[A-Za-z0-9]{1,250}$/;
+
 const sharedPaymentTokenError =
   "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
 
+const instrumentTokenError =
+  "credential.token must be a Stripe shared payment token: spt_ followed by letters and digits";
+
+const instrumentsError = "payment.instruments must be a list of 1 to 8 instruments";
+
+/** One instrument of UCP's Complete Checkout payment (3.5): a card paid
+ *  with a Stripe shared payment token through the order's
+ *  `stripe_payments` handler. UCP's own field names, in snake case. */
+const ucpInstrument = strictInput({
+  id: nonEmpty("id").describe("The instrument's id, as the agent's UCP client names it."),
+  handler_id: z
+    .literal("stripe_payments", { error: "handler_id must be stripe_payments" })
+    .describe("The id of the order's com.stripe.payments handler: stripe_payments."),
+  type: z
+    .literal("card", { error: "type must be card" })
+    .describe("The instrument type: card."),
+  selected: flag("selected").describe(
+    "Whether this is the instrument to pay with. Exactly one is selected.",
+  ),
+  credential: strictInput({
+    type: z
+      .literal("stripe_payment_token", { error: "credential.type must be stripe_payment_token" })
+      .describe("The credential type: stripe_payment_token."),
+    token: z
+      .string({ error: instrumentTokenError })
+      .regex(sharedPaymentTokenRe, { error: instrumentTokenError })
+      .describe(
+        "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits.",
+      ),
+  }).describe("The instrument's credential: the shared payment token."),
+  display: z
+    .looseObject({}, { error: "display must be a JSON object" })
+    .optional()
+    .describe("How the wallet shows the instrument, as UCP has it. Not used to pay."),
+});
+
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
  *  order, a Stripe shared payment token granted for it, and the total the
- *  user approved. A total other than the order's answers
+ *  user approved. The token is `sharedPaymentToken` or, as UCP's Complete
+ *  Checkout sends it, the credential of `payment`'s selected instrument
+ *  (3.5): exactly one of the two. A total other than the order's answers
  *  `payment_total_changed` and charges nothing. */
 export const payOrderInput = strictInput({
   orderId: orderId.describe("orderId of the order to pay, from create order or get order."),
   sharedPaymentToken: z
     .string({ error: sharedPaymentTokenError })
-    .regex(/^spt_[A-Za-z0-9]{1,250}$/, { error: sharedPaymentTokenError })
+    .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
+    .optional()
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. This or payment, not both.",
+    ),
+  payment: strictInput({
+    instruments: z
+      .array(ucpInstrument, { error: instrumentsError })
+      .min(1, { error: instrumentsError })
+      .max(8, { error: instrumentsError })
+      .describe("The instruments, exactly one of them selected."),
+  })
+    .superRefine((payment, ctx) => {
+      const selected = payment.instruments.filter((i) => i?.selected === true);
+      if (selected.length !== 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["instruments"],
+          message: `payment.instruments must have exactly one instrument with selected: true, not ${selected.length}`,
+        });
+      }
+    })
+    .optional()
+    .describe(
+      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument.",
     ),
   total: usdMoney.describe(
     "The total the user approved: the order's price.total, exactly as returned.",
   ),
+}).superRefine((input, ctx) => {
+  if (input.sharedPaymentToken !== undefined && input.payment !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["payment"],
+      message: "Send sharedPaymentToken or payment, not both",
+    });
+  } else if (input.sharedPaymentToken === undefined && input.payment === undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["sharedPaymentToken"],
+      message: sharedPaymentTokenError,
+    });
+  }
 });
 
 export type PayOrderInput = z.input<typeof payOrderInput>;
+
+/** The shared payment token a `pay_order` call pays with: `sharedPaymentToken`,
+ *  or the credential of `payment`'s selected instrument (3.5). Takes what
+ *  `payOrderInput` parsed, which holds exactly one. */
+export function sharedPaymentTokenOf(
+  input: Pick<z.output<typeof payOrderInput>, "sharedPaymentToken" | "payment">,
+): string {
+  const token =
+    input.sharedPaymentToken ??
+    input.payment?.instruments.find((i) => i.selected)?.credential.token;
+  if (token === undefined) {
+    throw new Error("sharedPaymentTokenOf: no token; parse with payOrderInput first");
+  }
+  return token;
+}
