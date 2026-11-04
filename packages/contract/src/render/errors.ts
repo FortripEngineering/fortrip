@@ -186,7 +186,7 @@ function detailLines(e: KnownErrorBody): string[] {
       return [`Order ${e.details.orderId}: read it with get_order in a few seconds.`];
     case "payment_total_changed":
       return [
-        `Order ${e.details.orderId} now totals ${money(e.details.total)}: show the user the new total and ask again, then request a new token for it. Nothing was charged.`,
+        `Order ${e.details.orderId} totals ${money(e.details.total)}, not the total sent: confirm this total with the user, then call pay_order again with it and the same token. Nothing was charged.`,
       ];
     case "payment_credential_invalid":
       return [
