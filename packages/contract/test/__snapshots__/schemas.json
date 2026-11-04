@@ -6517,20 +6517,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -6538,7 +6548,9 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
@@ -7468,20 +7480,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -7489,7 +7511,9 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
@@ -8415,20 +8439,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -8436,7 +8470,9 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
@@ -9371,20 +9407,30 @@
                       },
                       "config": {
                         "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      },
-                      "networkId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
+                        "properties": {
+                          "environment": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "livemode",
+                                  "testmode"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
                           },
-                          {
-                            "type": "null"
+                          "business_profile": {
+                            "type": "string"
                           }
-                        ]
+                        },
+                        "required": [
+                          "environment",
+                          "business_profile"
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "required": [
@@ -9392,7 +9438,9 @@
                       "type",
                       "version",
                       "spec",
-                      "networkId"
+                      "schema",
+                      "available_instruments",
+                      "config"
                     ],
                     "additionalProperties": {}
                   }
@@ -10340,20 +10388,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -10361,7 +10419,9 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
@@ -11322,20 +11382,30 @@
                 },
                 "config": {
                   "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "networkId": {
-                  "anyOf": [
-                    {
-                      "type": "string"
+                  "properties": {
+                    "environment": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "livemode",
+                            "testmode"
+                          ]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
-                      "type": "null"
+                    "business_profile": {
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "environment",
+                    "business_profile"
+                  ],
+                  "additionalProperties": {}
                 }
               },
               "required": [
@@ -11343,7 +11413,9 @@
                 "type",
                 "version",
                 "spec",
-                "networkId"
+                "schema",
+                "available_instruments",
+                "config"
               ],
               "additionalProperties": {}
             }
@@ -12274,20 +12346,30 @@
                       },
                       "config": {
                         "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      },
-                      "networkId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
+                        "properties": {
+                          "environment": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "livemode",
+                                  "testmode"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
                           },
-                          {
-                            "type": "null"
+                          "business_profile": {
+                            "type": "string"
                           }
-                        ]
+                        },
+                        "required": [
+                          "environment",
+                          "business_profile"
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "required": [
@@ -12295,7 +12377,9 @@
                       "type",
                       "version",
                       "spec",
-                      "networkId"
+                      "schema",
+                      "available_instruments",
+                      "config"
                     ],
                     "additionalProperties": {}
                   }

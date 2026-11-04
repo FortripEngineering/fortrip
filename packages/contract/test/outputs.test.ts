@@ -358,17 +358,13 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
   });
-  it("an order's payment handler, as 3.4 sent it and with UCP's fields (3.5)", () => {
+  it("an order's payment handler, in UCP's shape", () => {
     const limits = { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" };
-    const v34 = {
+    const handler = {
       id: "stripe_payments",
       type: "com.stripe.payments",
       version: "2026-06-25",
       spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-      networkId: "profile_test_1",
-    };
-    const ucp = {
-      ...v34,
       schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
       available_instruments: [
         { type: "card" },
@@ -376,21 +372,35 @@ describe("v1 response fixtures parse, open and strict", () => {
       ],
       config: { environment: "testmode", business_profile: "profile_test_1" },
     };
-    const withHandler = (handler: unknown) => ({
+    const withHandler = (h: unknown) => ({
       ...orderFixture,
-      payment: { ...orderFixture.payment, handlers: [handler], credentialLimits: limits },
+      payment: { ...orderFixture.payment, handlers: [h], credentialLimits: limits },
     });
-    parsesBoth(order, withHandler(v34));
-    parsesBoth(order, withHandler(ucp));
-    // A handler's config is UCP's: the strict copy keeps fields it doesn't know.
-    parsesBoth(order, withHandler({ ...ucp, config: { ...ucp.config, wallet_hint: { any: ["thing"] } } }));
-    // But an instrument stays an object the contract closes.
-    const leaked = withHandler({ ...ucp, available_instruments: [{ type: "card", extra: 1 }] });
-    assert.ok(order.safeParse(leaked).success);
-    assert.equal(strictOutput(order).safeParse(leaked).success, false);
-    assert.equal(order.safeParse(withHandler({ ...ucp, config: "testmode" })).success, false);
-    assert.equal(order.safeParse(withHandler({ ...ucp, networkId: undefined })).success, false);
+    parsesBoth(order, withHandler(handler));
+    // An instrument's config is UCP's: the strict copy keeps what it doesn't know.
+    const hinted = { ...handler, available_instruments: [{ type: "link", config: { hint: { any: ["thing"] } } }] };
+    parsesBoth(order, withHandler(hinted));
+    // An environment this contract doesn't know reads, as an open enum.
+    assert.ok(order.safeParse(withHandler({ ...handler, config: { ...handler.config, environment: "staging" } })).success);
+    // What the contract closes stays closed in the strict copy.
+    for (const leaked of [
+      { ...handler, available_instruments: [{ type: "card", extra: 1 }] },
+      { ...handler, config: { ...handler.config, extra: 1 } },
+      { ...handler, networkId: "profile_test_1" },
+    ]) {
+      assert.ok(order.safeParse(withHandler(leaked)).success);
+      assert.equal(strictOutput(order).safeParse(withHandler(leaked)).success, false);
+    }
+    for (const field of ["schema", "available_instruments", "config"] as const) {
+      const { [field]: _gone, ...without } = handler;
+      assert.equal(order.safeParse(withHandler(without)).success, false, field);
+    }
+    assert.equal(
+      order.safeParse(withHandler({ ...handler, config: { environment: "testmode" } })).success,
+      false,
+    );
   });
+
   it("an order's cancel quote, cancellable or not (3.3)", () => {
     const cancellable = {
       ...orderFixture,
@@ -558,19 +568,19 @@ describe("shape rules", () => {
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
   "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
-  "basis", "beds", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
+  "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
   "coverage", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
-  "en", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
+  "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
   "guestsCoveredPerRoom", "handlers", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
   "issuer", "issues", "items", "kind", "known", "label", "lat", "line", "listed", "listedShare",
   "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
   "manageUrl", "mandatory", "match", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
-  "message", "min", "mode", "more", "name", "nameAsText", "names", "networkId", "nextCursor", "nextStep",
+  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
   "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",

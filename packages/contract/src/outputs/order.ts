@@ -64,27 +64,27 @@ export const CREDENTIAL_INVALID_REASONS = [
 
 export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number];
 
-/** A way to pay an order other than its link, after the Universal Commerce
- *  Protocol's payment handlers, its fields named as UCP and Stripe name
- *  them (snake case): `type` names it (`com.stripe.payments`, which takes a
- *  Stripe shared payment token), `version` and `spec` the handler
- *  specification it follows, and, from 3.5, `schema` that specification's
- *  JSON Schema, `config` its settings, whose `business_profile` is the
- *  seller's id a wallet grants a payment credential for (Stripe's business
- *  profile), and `available_instruments` the instruments it takes.
- *  `networkId` is deprecated (3.5): the same as `config.business_profile`,
- *  null when the handler names none. */
+/** A way to pay an order other than its link: one of the Universal
+ *  Commerce Protocol's payment handlers, its fields named as UCP and Stripe
+ *  name them (snake case). `type` names it (`com.stripe.payments`, which
+ *  takes a Stripe shared payment token); `version`, `spec` and `schema` the
+ *  handler specification it follows; `available_instruments` the
+ *  instruments it takes; `config` its settings, whose `business_profile`
+ *  is the seller's id a wallet grants the token for (Stripe's business
+ *  profile). */
 export const paymentHandler = openObject({
   id: z.string(),
   type: z.string(),
   version: z.string(),
   spec: z.string(),
-  schema: z.string().optional(),
-  available_instruments: z
-    .array(openObject({ type: z.string(), config: protocolObject().optional() }))
-    .optional(),
-  config: protocolObject().optional(),
-  networkId: z.string().nullable(),
+  schema: z.string(),
+  available_instruments: z.array(
+    openObject({ type: z.string(), config: protocolObject().optional() }),
+  ),
+  config: openObject({
+    environment: openEnum(["livemode", "testmode"]),
+    business_profile: z.string(),
+  }),
 });
 
 export type PaymentHandler = z.infer<typeof paymentHandler>;

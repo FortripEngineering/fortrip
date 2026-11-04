@@ -90,19 +90,15 @@ function paymentLines(o: Order): string[] {
   return lines;
 }
 
-/** "Pay without the link: …": each handler by type, its Link wallet's
- *  business profile (`config.business_profile` (3.5), else `networkId`)
- *  when it names one, and the credential's limits. */
+/** "Pay without the link: …": each handler by type with the business
+ *  profile its token is granted for, and the credential's limits. */
 function handlersLine(
   handlers: NonNullable<Order["payment"]["handlers"]>,
   limits: Order["payment"]["credentialLimits"],
 ): string {
-  const shown = handlers.map((h) => {
-    const profile = h.config?.business_profile;
-    const businessProfile =
-      typeof profile === "string" ? profile : h.networkId;
-    return `${h.type} (handler ${h.id}${businessProfile ? `, business_profile ${businessProfile}` : ""})`;
-  });
+  const shown = handlers.map(
+    (h) => `${h.type} (handler ${h.id}, business_profile ${h.config.business_profile})`,
+  );
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";
