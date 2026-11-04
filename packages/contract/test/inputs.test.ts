@@ -162,11 +162,11 @@ describe("amenity codes", () => {
 });
 
 describe("stay", () => {
-  it("accepts one to eight rooms and 1 to 30 nights", () => {
+  it("accepts one to eight rooms and 1 to 15 nights", () => {
     assertAccepted(stay, goodStay);
     assertAccepted(stay, {
       checkIn,
-      checkOut: addIsoDateDays(checkIn, 30),
+      checkOut: addIsoDateDays(checkIn, 15),
       rooms: Array.from({ length: 8 }, () => ({
         adults: 8,
         childrenAges: [0, 17, 5, 5],
@@ -208,11 +208,11 @@ describe("stay", () => {
     );
   });
 
-  it("refuses 0 and 31 nights, and a date that is not a date", () => {
+  it("refuses 0 and 16 nights, and a date that is not a date", () => {
     assertRefusedAt(stay, { ...goodStay, checkOut: checkIn }, "checkOut");
     assertRefusedAt(
       stay,
-      { ...goodStay, checkOut: addIsoDateDays(checkIn, 31) },
+      { ...goodStay, checkOut: addIsoDateDays(checkIn, 16) },
       "checkOut",
     );
     assertRefusedAt(stay, { ...goodStay, checkIn: "2026-02-30" }, "checkIn");
@@ -499,12 +499,12 @@ describe("searchHotelsInput", () => {
     );
   });
 
-  it("a party with different rooms is fine, and so is a stay of 30 nights", () => {
+  it("a party with different rooms is fine, and so is a stay of 15 nights", () => {
     assertAccepted(searchHotelsInput, {
       destination: tokyo,
       stay: {
         checkIn,
-        checkOut: addIsoDateDays(checkIn, 30),
+        checkOut: addIsoDateDays(checkIn, 15),
         rooms: [room, { adults: 1, childrenAges: [3] }],
       },
     });
@@ -881,7 +881,7 @@ describe("cancelOrderInput", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
+      'The penalty the user agreed to, in the order\'s currency. Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
     );
   });
 });

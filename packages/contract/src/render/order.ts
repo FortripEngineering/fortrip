@@ -85,13 +85,14 @@ function paymentLines(o: Order): string[] {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
   if (p.handlers.length > 0) lines.push(handlersLine(p.handlers, p.credentialLimits));
-  lines.push(cancelLine(o.cancel));
+  lines.push(cancelLine(o));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
 
 /** "Pay without the link: …": each handler by type with the business
- *  profile its token is granted for, and the credential's limits. */
+ *  profile its token is granted for, the credential's limits, and when to
+ *  use it at all. */
 function handlersLine(
   handlers: Order["payment"]["handlers"],
   limits: Order["payment"]["credentialLimits"],
@@ -102,12 +103,22 @@ function handlersLine(
   const limit = limits
     ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
     : "";
-  return `Pay without the link: pay_order with a shared payment token via ${shown.join(", ")}${limit}`;
+  return [
+    `Pay without the link: pay_order with a shared payment token via ${shown.join(", ")}${limit}.`,
+    "Only if you have a tool that can request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give the payment link, and never ask the user to create, type or paste a token.",
+    "First show the user the total and currency, the stay and every term, and wait for a clear yes. Pay one way only: the link or pay_order.",
+  ].join(" ");
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
- *  only ever the order's own. */
-function cancelLine(c: Order["cancel"]): string {
+ *  only ever the order's own. An order awaiting payment needs no
+ *  cancelling: it expires unpaid. */
+function cancelLine(o: Order): string {
+  const c = o.cancel;
+  if (o.status === "awaiting_payment" && !c.available && c.reason === "not_confirmed") {
+    const at = o.payment.expiresAt === null ? "" : ` at ${when(o.payment.expiresAt, null)}`;
+    return `Cancel: not needed: an unpaid order expires unpaid${at}`;
+  }
   const figure = (name: string, m: typeof c.penalty) =>
     `${name} ${m ? money(m) : "not stated"}`;
   const figures = `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;

@@ -48,14 +48,14 @@ const cursor = nonEmpty("cursor");
 // Stay
 
 const nightsError = (name: string) =>
-  `${name} must be after the check-in date and at most ${LIMITS.nightsFortrip} nights later`;
+  `${name} must be after the check-in date and at most ${LIMITS.nightsSupplier} nights later`;
 
 export const stay = strictInput({
   checkIn: localDate.describe(
     "Check-in date in the hotel's calendar, yyyy-MM-dd.",
   ),
   checkOut: localDate.describe(
-    `Check-out date in the hotel's calendar, yyyy-MM-dd. Stays are 1 to ${LIMITS.nightsFortrip} nights.`,
+    `Check-out date in the hotel's calendar, yyyy-MM-dd. Stays are 1 to ${LIMITS.nightsSupplier} nights: for a longer stay, ask the user whether to split it into consecutive stays.`,
   ),
   rooms: z
     .array(
@@ -81,12 +81,12 @@ export const stay = strictInput({
       error: `rooms must list 1 to ${LIMITS.rooms} rooms`,
     })
     .describe(
-      `The rooms wanted, 1 to ${LIMITS.rooms}, each with its own party.`,
+      `The rooms wanted, 1 to ${LIMITS.rooms}, each with its party; offers and orders need every room the same.`,
     ),
 }).superRefine((value, ctx) => {
   if (!isIsoDate(value.checkIn) || !isIsoDate(value.checkOut)) return;
   const nights = countIsoDateDays(value.checkIn, value.checkOut);
-  if (nights < 1 || nights > LIMITS.nightsFortrip) {
+  if (nights < 1 || nights > LIMITS.nightsSupplier) {
     ctx.addIssue({
       code: "custom",
       path: ["checkOut"],
@@ -536,14 +536,14 @@ export const createOrderInput = strictInput({
     )
     .min(1, { error: "items must list exactly one offer" })
     .max(1, { error: "items must list exactly one offer" })
-    .describe("The offer to book. Exactly one in v1."),
+    .describe("The offer to book: exactly one."),
 });
 
 export type CreateOrderInput = z.input<typeof createOrderInput>;
 
 /** `GET /v1/orders/{orderId}` and the MCP `get_order` arguments. */
 export const getOrderInput = strictInput({
-  orderId: orderId.describe("orderId from create order or list orders."),
+  orderId: orderId.describe("The order's orderId."),
   locale: locale.optional(),
 });
 
@@ -578,12 +578,12 @@ const maximumPenaltyError =
  *  the order, and the penalty the user agreed to as a ceiling. The server
  *  computes the refund; a higher penalty now answers `cancellation_changed`. */
 export const cancelOrderInput = strictInput({
-  orderId: orderId.describe("orderId of the order to cancel, from get order or list orders."),
+  orderId: orderId.describe("The orderId of the order to cancel."),
   maximumPenalty: z
     .number({ error: maximumPenaltyError })
     .min(0, { error: maximumPenaltyError })
     .describe(
-      "The penalty the user agreed to: cancel.penalty.amount of the order, in its currency.",
+      "The penalty the user agreed to, in the order's currency. Pass maximumPenalty as the number in cancel.penalty.amount (\"120.00\" → 120).",
     ),
 });
 
@@ -613,7 +613,9 @@ const ucpInstrument = z
       handler_id: nonEmpty("handler_id").describe(
         "The id of the handler the instrument pays through: the order's stripe_payments for the selected one.",
       ),
-      type: nonEmpty("type").describe("The instrument type: card for the selected one."),
+      type: nonEmpty("type").describe(
+        "The instrument type: card for the selected one, also when the token came from Link (Link is the wallet that grants the token; the payment completes as a card).",
+      ),
       selected: flag("selected")
         .optional()
         .describe(
@@ -685,7 +687,7 @@ function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) 
  *  exactly one of the two. A total other than the order's answers
  *  `payment_total_changed` and charges nothing. */
 export const payOrderInput = strictInput({
-  orderId: orderId.describe("orderId of the order to pay, from create order or get order."),
+  orderId: orderId.describe("The orderId of the order to pay."),
   sharedPaymentToken: z
     .string({ error: sharedPaymentTokenError })
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })

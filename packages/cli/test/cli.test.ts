@@ -167,7 +167,7 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not cancelled: fortrip orders cancel needs --max-penalty, the penalty the user agreed to.",
-        "Cancel: not available: only a confirmed order that is paid can be cancelled",
+        "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC",
         "",
       ].join("\n"),
     );

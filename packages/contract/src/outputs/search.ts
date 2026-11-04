@@ -59,7 +59,7 @@ export const hotelSummary = openObject({
   distanceMeters: z.number().nullable(),
   price: indicativePrice.nullable(),
   /** The cover photo; `null` without one. */
-  photo: photo.nullable(),
+  photo: photo.nullable().describe("The cover photo; null when there is none."),
 });
 
 export type HotelSummary = z.infer<typeof hotelSummary>;
@@ -142,7 +142,10 @@ export const searchResult = openObject({
     nameAsText: count.nullable(),
   }),
   data: z.array(hotelSummary),
-  nextCursor: z.string().nullable(),
+  nextCursor: z
+    .string()
+    .nullable()
+    .describe("Pass it back as cursor for the next page; null on the last page."),
   notes: z.array(
     openObject({ code: openEnum(SEARCH_NOTE_CODES), message: z.string() }),
   ),

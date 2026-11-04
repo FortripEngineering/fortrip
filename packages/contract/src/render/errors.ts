@@ -180,7 +180,7 @@ function detailLines(e: KnownErrorBody): string[] {
       return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
     case "order_not_payable":
       return [
-        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with get_order; nothing was charged.`,
+        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with get_order; this call charged nothing.`,
       ];
     case "payment_in_progress":
       return [`Order ${e.details.orderId}: read it with get_order in a few seconds.`];
@@ -194,7 +194,7 @@ function detailLines(e: KnownErrorBody): string[] {
       ];
     case "payment_declined":
       return [
-        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link (call book_hotel again with the same details for a new payment.url).`,
+        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link: read the order with get_order and give its payment.url.`,
       ];
     case "destination_ambiguous":
       return ambiguous(e.details);
@@ -206,7 +206,9 @@ function detailLines(e: KnownErrorBody): string[] {
       return e.details.reason === "mixed_occupancy"
         ? ["Every room must have the same party: ask once per party."]
         : e.details.reason === "max_nights"
-          ? [`At most ${plural((e.details as { max: number }).max, "night")} per stay.`]
+          ? [
+              `At most ${plural((e.details as { max: number }).max, "night")} per stay: ask the user whether to split it into consecutive stays, each its own order.`,
+            ]
           : [`Details: ${raw(e.details)}`];
     case "stay_in_past":
       return [`Check-in ${e.details.checkIn} is already past${e.details.timeZone ? ` in ${e.details.timeZone}` : ""}.`];
