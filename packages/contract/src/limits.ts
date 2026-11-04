@@ -7,7 +7,7 @@ export const LIMITS = {
   nightsFortrip: 30,
   nightsSupplier: 15,
   offersHotels: 15,
-  offersPerHotelDefault: 5,
+  offersPerHotelDefault: 10,
   offersPerHotelMax: 20,
   pageSizeDefault: 20,
   pageSizeMax: 50,

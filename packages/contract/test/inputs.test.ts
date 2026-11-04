@@ -550,7 +550,7 @@ describe("getHotelInput", () => {
 describe("hotelOffersInput", () => {
   const base = { hotelIds: [hotel], stay: goodStay };
 
-  it("accepts the full request and defaults limitPerHotel to 5", () => {
+  it("accepts the full request and defaults limitPerHotel to 10", () => {
     assertAccepted(hotelOffersInput, {
       ...base,
       filters: { requireBreakfast: true, requireFreeCancellation: false },
@@ -558,8 +558,8 @@ describe("hotelOffersInput", () => {
       locale: "en",
       displayCurrency: "USD",
     });
-    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 5);
-    assert.equal(LIMITS.offersPerHotelDefault, 5);
+    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 10);
+    assert.equal(LIMITS.offersPerHotelDefault, 10);
   });
 
   it("holds hotelIds to 1 to 15, distinct", () => {
