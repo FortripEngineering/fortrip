@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { API, type AuthConfig, authConfig } from "@fortrip/agent-contract";
+import { API, type AuthConfig, authConfig, SUPPORT_EMAIL } from "@fortrip/agent-contract";
 
 import { type ApiResponse, isEnvelope, postForm, request, unwrap } from "./api.ts";
 import { openBrowser } from "./browser.ts";
@@ -444,7 +444,7 @@ export async function login({
         throw new CliError("Login was denied in the browser.", EXIT.error);
       case "invalid_client":
         throw new CliError(
-          `The sign-in server doesn't accept the client ${apiUrl}'s sign-in config names (invalid_client).`,
+          `The sign-in server at ${apiUrl} doesn't recognise this CLI (invalid_client). Check FORTRIP_API_URL, or email ${SUPPORT_EMAIL}.`,
           EXIT.error,
         );
       case "expired_token":

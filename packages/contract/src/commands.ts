@@ -161,7 +161,11 @@ function fieldDescription(
   return node.description;
 }
 
-type FlagDef = Omit<FlagSpec, "description"> & { description?: string };
+type FlagDef = Omit<FlagSpec, "description"> & {
+  description?: string;
+  /** The command needs it: its help starts with "Required." */
+  required?: true;
+};
 
 /** The flags of a command that sends `input`, each with its field's
  *  description unless the definition words it otherwise. */
@@ -170,11 +174,10 @@ function flagsOf(
   defs: readonly FlagDef[],
 ): readonly FlagSpec[] {
   const json = z.toJSONSchema(input, { io: "input" }) as JsonSchema;
-  return defs.map((def) => ({
-    ...def,
-    description:
-      def.description ?? fieldDescription(json, def.field, def.sets),
-  }));
+  return defs.map(({ required, ...def }) => {
+    const description = def.description ?? fieldDescription(json, def.field, def.sets);
+    return { ...def, description: required ? `Required. ${description}` : description };
+  });
 }
 
 function positional(
@@ -391,10 +394,10 @@ const bookFlags = flagsOf(createOrderInput, [
     description:
       "A guest, as `room:first:last`, e.g. `1:John:Smith` for room 1. Repeat for each guest: at least one per room of the offer, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
   },
-  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>" },
-  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>" },
-  { flag: "email", field: "contact.email", type: "string", placeholder: "<email>" },
-  { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>" },
+  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>", required: true },
+  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>", required: true },
+  { flag: "email", field: "contact.email", type: "string", placeholder: "<email>", required: true },
+  { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>", required: true },
   {
     flag: "special-requests",
     field: "items.hotel.specialRequests",
@@ -428,14 +431,15 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
-    description:
-      "The shared payment token the user's wallet granted for this order, with the order's credential limits.",
+    required: true,
+    description: "The spt_… token the user's Link wallet issued for this order.",
   },
   {
     flag: "total",
     field: "total",
     type: "string",
     placeholder: "<USD decimal>",
+    required: true,
     description:
       "The total the user approved, exactly as `orders get` shows it, in USD, e.g. `125.00`.",
   },
@@ -514,7 +518,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "orders",
     name: "pay",
-    summary: "Pay an order with a shared payment token instead of its link",
+    summary: "Pay an order from the user's Link wallet (US and Canada) instead of its payment link",
     tool: "pay_order",
     flags: payFlags,
     positionals: [positional(payOrderInput, "orderId")],
@@ -522,7 +526,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: null,
     name: "login",
-    summary: "Sign in through the browser (device code)",
+    summary: "Sign in through the browser",
     tool: null,
     flags: [],
     options: [
@@ -551,7 +555,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: null,
     name: "guide",
-    summary: "Print the guide for AI agents (Markdown)",
+    summary: "Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide",
     tool: "get_planning_guide",
     flags: [],
     positionals: [
