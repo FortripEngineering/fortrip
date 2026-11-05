@@ -4,6 +4,7 @@ import { hotelId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject, openUnion } from "../conventions/open.ts";
 import { localDate } from "../conventions/time.ts";
+import { LIMITS } from "../limits.ts";
 import { knownLocaleText, latLng, names, photo, stayEcho } from "./common.ts";
 import { center, place, placeRef } from "./place.ts";
 
@@ -110,6 +111,9 @@ const destination = openUnion("kind", [
 
 const count = z.number().int();
 
+/** A count of hotels, and when the answer has it. */
+const hotels = (what: string) => count.nullable().describe(what);
+
 export const searchResult = openObject({
   destination: destination.nullable(),
   text: openObject({
@@ -130,17 +134,36 @@ export const searchResult = openObject({
     "price_desc",
   ]),
   coverage: openObject({
-    matched: count,
-    priced: count.nullable(),
-    withPrice: count.nullable(),
-    poolRadiusMeters: z.number().nullable(),
-    excludedNoPrice: count.nullable(),
-    excludedNoFacilityData: count.nullable(),
-    withinMaxRadius: count.nullable(),
-    textAnywhere: count.nullable(),
-    localities: localities.nullable(),
-    nameAsText: count.nullable(),
-  }),
+    matched: count.describe(
+      "Hotels that match the destination, the text and every filter but the price filter.",
+    ),
+    priced: hotels(
+      "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.scope); null without prices.",
+    ),
+    withPrice: hotels("Of those priced, how many have an indicative price; null when prices weren't asked for or are unavailable."),
+    poolRadiusMeters: z
+      .number()
+      .nullable()
+      .describe(
+        `When a price sort or price filter priced only the nearest ${LIMITS.poolLimit.toLocaleString("en-US")}: how far the farthest of them is from the center, in meters; otherwise null.`,
+      ),
+    excludedNoPrice: hotels("With a price filter: priced hotels left out for having no indicative price; otherwise null."),
+    excludedNoFacilityData: hotels(
+      "With an amenity filter: hotels left out for listing no facilities at all, though they may have the amenity; otherwise null.",
+    ),
+    withinMaxRadius: hotels(
+      `For a radius under ${LIMITS.radiusMetersMax.toLocaleString("en-US")} m: how many would match within ${LIMITS.radiusMetersMax.toLocaleString("en-US")} m of the center; otherwise null.`,
+    ),
+    textAnywhere: hotels(
+      "With text and a place: the hotels that match the text anywhere in the place's country; otherwise null.",
+    ),
+    localities: localities
+      .nullable()
+      .describe("For an area: its top localities, the towns its matching hotels belong to; otherwise null."),
+    nameAsText: hotels(
+      "When a place_name search matched few hotels: how many in its country match the name as text; otherwise null.",
+    ),
+  }).describe("What the search covered: counts of hotels, each null when it doesn't apply."),
   data: z.array(hotelSummary),
   nextCursor: z
     .string()
