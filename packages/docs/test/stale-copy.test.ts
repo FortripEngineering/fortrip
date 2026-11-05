@@ -108,7 +108,7 @@ describe("stale statements stay fixed", () => {
       assert.ok(!/\bsix characters\b|\b6 characters\b/i.test(source), `${file} states a reference length`);
     }
     assert.match(pageText("/api"), /The access token is short-lived: its lifetime, in seconds, is the token response's expires_in\./);
-    assert.match(pageText("/cli"), /An access token is short-lived, so it suits one sandbox session or one CI run; for longer, sign in\./);
+    assert.match(pageText("/cli"), /An access token is short-lived, so it suits a remote agent environment or a CI run; for longer, sign in\./);
     assert.match(pageText("/payments"), /The order's reference, which starts with FT-, is the number the user quotes to support\./);
   });
 

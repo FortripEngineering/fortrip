@@ -23,6 +23,7 @@ import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
 import { ENDPOINTS } from "../reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
+import { ENVIRONMENT_ROWS } from "../reference/environment.ts";
 import { ERROR_ROWS } from "../reference/error-docs.ts";
 import { EXIT_ROWS } from "../reference/exit-codes.ts";
 import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
@@ -158,6 +159,14 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       GLOBAL_FLAGS.map((option) => ({
         cells: [[code(`${option.short ? `-${option.short}, ` : ""}--${option.flag}`)], [text(option.description)]],
       })),
+    ),
+  ],
+
+  /** The environment variables a reader sets, from the CLI's own list. */
+  EnvironmentTable: () => [
+    table(
+      ["Variable", "Meaning"],
+      ENVIRONMENT_ROWS.map((row) => ({ cells: [[code(row.name)], inline(row.meaning)] })),
     ),
   ],
 

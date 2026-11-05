@@ -9,7 +9,7 @@ import {
   type OptionSpec,
 } from "@fortrip/agent-contract";
 
-import { DEFAULT_API_URL, DEFAULT_MCP_URL } from "./credentials.ts";
+import { ENVIRONMENT } from "./environment.ts";
 import { VERSION } from "./version.ts";
 
 /*
@@ -114,12 +114,10 @@ ${optionList(HELP_FLAG)}
 `;
 }
 
-/** The commands that take `--display-currency`: `hotels search and hotels offers`. */
-const CURRENCY_COMMANDS = COMMANDS.filter((spec) =>
-  spec.flags.some((flag) => flag.field === "displayCurrency"),
-)
-  .map((spec) => commandInvocation(spec).slice("fortrip ".length))
-  .join(" and ");
+/** The environment variables, one unwrapped line each. */
+const ENVIRONMENT_LINES = ENVIRONMENT.map(
+  (variable) => `  ${variable.name.padEnd(Math.max(...ENVIRONMENT.map((v) => v.name.length)) + 2)}${variable.help}`,
+).join("\n");
 
 /** `fortrip --help`: the groups, then the commands typed on their own. */
 export function overallHelp(): string {
@@ -147,9 +145,6 @@ Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
 cancelled), 3 not signed in or sign-in not accepted, 4 rate limited.
 
 Environment:
-  FORTRIP_TOKEN             Use this token instead of the saved login (CI, sandboxes)
-  FORTRIP_API_URL           API base URL (default ${DEFAULT_API_URL})
-  FORTRIP_MCP_URL           MCP server URL for fortrip mcp (default ${DEFAULT_MCP_URL})
-  FORTRIP_DISPLAY_CURRENCY  Default --display-currency for ${CURRENCY_COMMANDS}
+${ENVIRONMENT_LINES}
 `;
 }

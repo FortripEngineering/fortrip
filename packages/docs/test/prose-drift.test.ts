@@ -13,8 +13,10 @@ import {
   SUPPLIER_OUTCOME_STATUS,
 } from "@fortrip/agent-contract";
 
+import { ENVIRONMENT } from "../../cli/src/environment.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
 import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
+import { ENVIRONMENT_ROWS } from "../lib/reference/environment.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
 /*
@@ -159,17 +161,26 @@ test("the pre-release policy has one source, rendered on the API page and the ch
   }
 });
 
-test("the CLI's FORTRIP_API_URL is a base URL, and FORTRIP_MCP_URL is documented with its pairing rule", () => {
-  const cli = source("cli/index.mdx");
-  assert.match(cli, /\| `FORTRIP_API_URL` \| The API's base URL/);
-  assert.doesNotMatch(cli, /API origin/);
-  assert.match(cli, /http:\/\/localhost:3000\/api\/public/);
-  assert.match(cli, /\| `FORTRIP_MCP_URL` \|/);
-  assert.match(cli, /on the origin of `FORTRIP_API_URL`/);
-  assert.match(cli, /`api\.fortrip\.ai` and `mcp\.fortrip\.ai`/);
-  const install = source("install.mdx");
-  assert.match(install, /FORTRIP_MCP_URL/);
-  assert.match(install, /FORTRIP_API_URL/);
+test("the CLI's environment table lists what a reader sets, and leaves out the variables only Fortrip's development uses", () => {
+  const internal = ENVIRONMENT.filter((variable) => variable.internal).map((variable) => variable.name);
+  assert.deepEqual(internal, ["FORTRIP_API_URL", "FORTRIP_MCP_URL"]);
+  assert.deepEqual(
+    ENVIRONMENT_ROWS.map((row) => row.name),
+    ENVIRONMENT.filter((variable) => !variable.internal).map((variable) => variable.name),
+  );
+  assert.ok(source("cli/index.mdx").includes("<EnvironmentTable />"));
+  const cli = pageText("/cli");
+  for (const row of ENVIRONMENT_ROWS) assert.ok(cli.includes(row.name), row.name);
+  for (const page of ["/cli", "/install"]) {
+    for (const name of internal) assert.ok(!pageText(page).includes(name), `${page}: ${name}`);
+    assert.doesNotMatch(pageText(page), /localhost|credentials\.json/, page);
+  }
+});
+
+test("no page calls a remote agent environment a sandbox", () => {
+  for (const page of PAGES) assert.doesNotMatch(source(page), /\bsandbox/i, page);
+  assert.doesNotMatch(ENVIRONMENT_ROWS.map((row) => row.meaning).join(" "), /\bsandbox/i);
+  assert.match(pageText("/cli"), /a remote agent environment or a CI run/);
 });
 
 test("the errors page: an unknown code exits by HTTP status; a wrong method is 405 with Allow", () => {

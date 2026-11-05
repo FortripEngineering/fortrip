@@ -58,7 +58,7 @@ Configure either the remote or the local server in a client, not both. See [fort
 
 | Connection | How it signs in |
 | --- | --- |
-| Skill, CLI, local MCP | OAuth device flow. `npx fortrip login` prints a link and a code; open the link, sign in to Fortrip and approve, and the CLI saves the sign-in to `~/.config/fortrip/credentials.json`. The CLI renews its access token itself; you stay signed in until `npx fortrip logout`, which signs out that machine only. For a sandbox or one CI run you can set `FORTRIP_TOKEN` to an access token instead. To use another API than Fortrip's (a local one), set `FORTRIP_API_URL` and, for the local MCP server, `FORTRIP_MCP_URL` on the same origin; see [Environment](/cli#environment). |
+| Skill, CLI, local MCP | OAuth device flow. `npx fortrip login` prints a link and a code; open the link, sign in to Fortrip and approve, and the CLI saves the sign-in. The CLI renews its access token itself; you stay signed in until `npx fortrip logout`, which signs out that machine only. For a remote agent environment or a CI run you can set `FORTRIP_TOKEN` to an access token instead; see [Environment](/cli#environment). |
 | Remote MCP | OAuth 2.1 with PKCE. Your client opens a Fortrip sign-in page and you approve access. |
 | HTTP API | The same OAuth access tokens, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
 

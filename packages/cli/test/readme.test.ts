@@ -10,6 +10,7 @@ import {
   PUBLIC_ORIGINS,
 } from "@fortrip/agent-contract";
 
+import { DEFAULT_API_URL, DEFAULT_MCP_URL } from "../src/credentials.ts";
 import { overallHelp } from "../src/help.ts";
 
 /** A command as typed after `fortrip`: `hotels search`, `login`. */
@@ -79,6 +80,10 @@ describe("README", () => {
     for (const name of variables) {
       assert.match(readme, new RegExp(`^\\| \`${name}\` \\|`, "m"), name);
     }
+    // The help states the defaults the CLI uses.
+    const help = overallHelp();
+    assert.ok(help.includes(`(default ${DEFAULT_API_URL})`), "the help's default API URL");
+    assert.ok(help.includes(`(default ${DEFAULT_MCP_URL})`), "the help's default MCP URL");
     const row = (name: string) => readme.match(new RegExp(`^\\| \`${name}\` \\|(.*)$`, "m"))?.[1] ?? "";
     assert.ok(row("FORTRIP_API_URL").includes(`\`${PUBLIC_ORIGINS.api}\``), "the default API URL");
     assert.ok(
