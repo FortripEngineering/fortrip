@@ -98,3 +98,24 @@ describe("the ./guest-name entry point", () => {
     assert.equal(reachesZod(await reachableFrom("index.js")), true);
   });
 });
+
+describe("the ./regions entry point", () => {
+  it("resolves through the package's exports map", async () => {
+    const specifier = "@fortrip/agent-contract/regions";
+    const viaExports = (await import(specifier)) as {
+      ENABLED_REGIONS: readonly { placeId: string }[];
+    };
+    assert.equal(viaExports.ENABLED_REGIONS.length, 754);
+  });
+
+  it("is kept out of the root entry", async () => {
+    const files = await reachableFrom("index.js");
+    for (const [name, { source }] of files) {
+      assert.equal(source.includes("plc_3338529"), false, name);
+    }
+    assert.equal(
+      (await readFile(dist("index.js"), "utf8")).includes("plc_3338529"),
+      false,
+    );
+  });
+});

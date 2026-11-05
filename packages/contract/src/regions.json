@@ -1,0 +1,3772 @@
+[
+  {
+    "placeId": "plc_3338529",
+    "countryCode": "AD",
+    "name": "Escaldes-Engordany"
+  },
+  {
+    "placeId": "plc_291075",
+    "countryCode": "AE",
+    "name": "Emirate of Ras Al Khaimah"
+  },
+  {
+    "placeId": "plc_292224",
+    "countryCode": "AE",
+    "name": "Dubai"
+  },
+  {
+    "placeId": "plc_292879",
+    "countryCode": "AE",
+    "name": "Emirate of Fujairah"
+  },
+  {
+    "placeId": "plc_292969",
+    "countryCode": "AE",
+    "name": "Abu Dhabi"
+  },
+  {
+    "placeId": "plc_3344952",
+    "countryCode": "AL",
+    "name": "Qarku i Vlorës"
+  },
+  {
+    "placeId": "plc_616051",
+    "countryCode": "AM",
+    "name": "Yerevan"
+  },
+  {
+    "placeId": "plc_2240444",
+    "countryCode": "AO",
+    "name": "Luanda Province"
+  },
+  {
+    "placeId": "plc_3430657",
+    "countryCode": "AR",
+    "name": "Misiones Province"
+  },
+  {
+    "placeId": "plc_3433955",
+    "countryCode": "AR",
+    "name": "Ciudad Autónoma de Buenos Aires"
+  },
+  {
+    "placeId": "plc_3834450",
+    "countryCode": "AR",
+    "name": "Tierra del Fuego Province"
+  },
+  {
+    "placeId": "plc_3836276",
+    "countryCode": "AR",
+    "name": "Santa Fe Province"
+  },
+  {
+    "placeId": "plc_3836350",
+    "countryCode": "AR",
+    "name": "Santa Cruz Province"
+  },
+  {
+    "placeId": "plc_3838231",
+    "countryCode": "AR",
+    "name": "Salta Province"
+  },
+  {
+    "placeId": "plc_3838830",
+    "countryCode": "AR",
+    "name": "Río Negro Province"
+  },
+  {
+    "placeId": "plc_3843122",
+    "countryCode": "AR",
+    "name": "Neuquén Province"
+  },
+  {
+    "placeId": "plc_3844419",
+    "countryCode": "AR",
+    "name": "Mendoza Province"
+  },
+  {
+    "placeId": "plc_3860255",
+    "countryCode": "AR",
+    "name": "Córdoba Province"
+  },
+  {
+    "placeId": "plc_3861244",
+    "countryCode": "AR",
+    "name": "Chubut Province"
+  },
+  {
+    "placeId": "plc_2761367",
+    "countryCode": "AT",
+    "name": "Wien"
+  },
+  {
+    "placeId": "plc_2762300",
+    "countryCode": "AT",
+    "name": "Vorarlberg"
+  },
+  {
+    "placeId": "plc_2763586",
+    "countryCode": "AT",
+    "name": "Tirol"
+  },
+  {
+    "placeId": "plc_2764581",
+    "countryCode": "AT",
+    "name": "Steiermark"
+  },
+  {
+    "placeId": "plc_2766823",
+    "countryCode": "AT",
+    "name": "Salzburg"
+  },
+  {
+    "placeId": "plc_2770542",
+    "countryCode": "AT",
+    "name": "Niederösterreich"
+  },
+  {
+    "placeId": "plc_2774686",
+    "countryCode": "AT",
+    "name": "Kärnten"
+  },
+  {
+    "placeId": "plc_2781194",
+    "countryCode": "AT",
+    "name": "Burgenland"
+  },
+  {
+    "placeId": "plc_2058645",
+    "countryCode": "AU",
+    "name": "State of Western Australia"
+  },
+  {
+    "placeId": "plc_2061327",
+    "countryCode": "AU",
+    "name": "State of South Australia"
+  },
+  {
+    "placeId": "plc_2064513",
+    "countryCode": "AU",
+    "name": "Northern Territory"
+  },
+  {
+    "placeId": "plc_2145234",
+    "countryCode": "AU",
+    "name": "State of Victoria"
+  },
+  {
+    "placeId": "plc_2147291",
+    "countryCode": "AU",
+    "name": "State of Tasmania"
+  },
+  {
+    "placeId": "plc_2152274",
+    "countryCode": "AU",
+    "name": "State of Queensland"
+  },
+  {
+    "placeId": "plc_2155400",
+    "countryCode": "AU",
+    "name": "State of New South Wales"
+  },
+  {
+    "placeId": "plc_2177478",
+    "countryCode": "AU",
+    "name": "Australian Capital Territory"
+  },
+  {
+    "placeId": "plc_587081",
+    "countryCode": "AZ",
+    "name": "Baku City"
+  },
+  {
+    "placeId": "plc_1337179",
+    "countryCode": "BD",
+    "name": "Dhaka Division"
+  },
+  {
+    "placeId": "plc_1337200",
+    "countryCode": "BD",
+    "name": "Chittagong"
+  },
+  {
+    "placeId": "plc_726051",
+    "countryCode": "BG",
+    "name": "Varna"
+  },
+  {
+    "placeId": "plc_728194",
+    "countryCode": "BG",
+    "name": "Plovdiv"
+  },
+  {
+    "placeId": "plc_731061",
+    "countryCode": "BG",
+    "name": "Sofia-Grad"
+  },
+  {
+    "placeId": "plc_732771",
+    "countryCode": "BG",
+    "name": "Burgas"
+  },
+  {
+    "placeId": "plc_733192",
+    "countryCode": "BG",
+    "name": "Blagoevgrad"
+  },
+  {
+    "placeId": "plc_7090954",
+    "countryCode": "BH",
+    "name": "Capital Governorate"
+  },
+  {
+    "placeId": "plc_1820818",
+    "countryCode": "BN",
+    "name": "Daerah Brunei dan Muara"
+  },
+  {
+    "placeId": "plc_3904907",
+    "countryCode": "BO",
+    "name": "Departamento de Santa Cruz"
+  },
+  {
+    "placeId": "plc_3911924",
+    "countryCode": "BO",
+    "name": "Departamento de La Paz"
+  },
+  {
+    "placeId": "plc_3390290",
+    "countryCode": "BR",
+    "name": "Rio Grande do Norte"
+  },
+  {
+    "placeId": "plc_3392213",
+    "countryCode": "BR",
+    "name": "Piauí"
+  },
+  {
+    "placeId": "plc_3393098",
+    "countryCode": "BR",
+    "name": "Paraíba"
+  },
+  {
+    "placeId": "plc_3393129",
+    "countryCode": "BR",
+    "name": "Pará"
+  },
+  {
+    "placeId": "plc_3395443",
+    "countryCode": "BR",
+    "name": "Maranhão"
+  },
+  {
+    "placeId": "plc_3402362",
+    "countryCode": "BR",
+    "name": "Ceará"
+  },
+  {
+    "placeId": "plc_3408096",
+    "countryCode": "BR",
+    "name": "Alagoas"
+  },
+  {
+    "placeId": "plc_3447799",
+    "countryCode": "BR",
+    "name": "Sergipe"
+  },
+  {
+    "placeId": "plc_3448433",
+    "countryCode": "BR",
+    "name": "São Paulo"
+  },
+  {
+    "placeId": "plc_3450387",
+    "countryCode": "BR",
+    "name": "Santa Catarina"
+  },
+  {
+    "placeId": "plc_3451133",
+    "countryCode": "BR",
+    "name": "Rio Grande do Sul"
+  },
+  {
+    "placeId": "plc_3451189",
+    "countryCode": "BR",
+    "name": "Rio de Janeiro"
+  },
+  {
+    "placeId": "plc_3455077",
+    "countryCode": "BR",
+    "name": "Paraná"
+  },
+  {
+    "placeId": "plc_3457153",
+    "countryCode": "BR",
+    "name": "Minas Gerais"
+  },
+  {
+    "placeId": "plc_3457415",
+    "countryCode": "BR",
+    "name": "Mato Grosso do Sul"
+  },
+  {
+    "placeId": "plc_3457419",
+    "countryCode": "BR",
+    "name": "Mato Grosso"
+  },
+  {
+    "placeId": "plc_3462372",
+    "countryCode": "BR",
+    "name": "Goiás"
+  },
+  {
+    "placeId": "plc_3463504",
+    "countryCode": "BR",
+    "name": "Federal District"
+  },
+  {
+    "placeId": "plc_3463930",
+    "countryCode": "BR",
+    "name": "Espírito Santo"
+  },
+  {
+    "placeId": "plc_3471168",
+    "countryCode": "BR",
+    "name": "Bahia"
+  },
+  {
+    "placeId": "plc_3665361",
+    "countryCode": "BR",
+    "name": "Amazonas"
+  },
+  {
+    "placeId": "plc_3571815",
+    "countryCode": "BS",
+    "name": "New Providence District"
+  },
+  {
+    "placeId": "plc_625143",
+    "countryCode": "BY",
+    "name": "Horad Minsk"
+  },
+  {
+    "placeId": "plc_3580975",
+    "countryCode": "BZ",
+    "name": "Stann Creek District"
+  },
+  {
+    "placeId": "plc_3582429",
+    "countryCode": "BZ",
+    "name": "Cayo District"
+  },
+  {
+    "placeId": "plc_3582676",
+    "countryCode": "BZ",
+    "name": "Belize District"
+  },
+  {
+    "placeId": "plc_5883102",
+    "countryCode": "CA",
+    "name": "Alberta"
+  },
+  {
+    "placeId": "plc_5909050",
+    "countryCode": "CA",
+    "name": "British Columbia"
+  },
+  {
+    "placeId": "plc_6065171",
+    "countryCode": "CA",
+    "name": "Manitoba"
+  },
+  {
+    "placeId": "plc_6087430",
+    "countryCode": "CA",
+    "name": "New Brunswick/Nouveau-Brunswick"
+  },
+  {
+    "placeId": "plc_6091530",
+    "countryCode": "CA",
+    "name": "Nova Scotia"
+  },
+  {
+    "placeId": "plc_6093943",
+    "countryCode": "CA",
+    "name": "Ontario"
+  },
+  {
+    "placeId": "plc_6113358",
+    "countryCode": "CA",
+    "name": "Prince Edward Island"
+  },
+  {
+    "placeId": "plc_6115047",
+    "countryCode": "CA",
+    "name": "Québec"
+  },
+  {
+    "placeId": "plc_6141242",
+    "countryCode": "CA",
+    "name": "Saskatchewan"
+  },
+  {
+    "placeId": "plc_6354959",
+    "countryCode": "CA",
+    "name": "Newfoundland and Labrador"
+  },
+  {
+    "placeId": "plc_2657895",
+    "countryCode": "CH",
+    "name": "Kanton Zürich"
+  },
+  {
+    "placeId": "plc_2658182",
+    "countryCode": "CH",
+    "name": "Canton de Vaud"
+  },
+  {
+    "placeId": "plc_2658205",
+    "countryCode": "CH",
+    "name": "Canton du Valais"
+  },
+  {
+    "placeId": "plc_2658370",
+    "countryCode": "CH",
+    "name": "Cantone Ticino"
+  },
+  {
+    "placeId": "plc_2658821",
+    "countryCode": "CH",
+    "name": "Kanton St. Gallen"
+  },
+  {
+    "placeId": "plc_2659315",
+    "countryCode": "CH",
+    "name": "Kanton Obwalden"
+  },
+  {
+    "placeId": "plc_2659810",
+    "countryCode": "CH",
+    "name": "Kanton Luzern"
+  },
+  {
+    "placeId": "plc_2660522",
+    "countryCode": "CH",
+    "name": "Kanton Graubünden"
+  },
+  {
+    "placeId": "plc_2660645",
+    "countryCode": "CH",
+    "name": "Canton de Genève"
+  },
+  {
+    "placeId": "plc_2660717",
+    "countryCode": "CH",
+    "name": "Canton de Fribourg"
+  },
+  {
+    "placeId": "plc_2661551",
+    "countryCode": "CH",
+    "name": "Canton de Berne"
+  },
+  {
+    "placeId": "plc_2661876",
+    "countryCode": "CH",
+    "name": "Kanton Aargau"
+  },
+  {
+    "placeId": "plc_3868621",
+    "countryCode": "CL",
+    "name": "Región de Valparaíso"
+  },
+  {
+    "placeId": "plc_3873544",
+    "countryCode": "CL",
+    "name": "Región Metropolitana"
+  },
+  {
+    "placeId": "plc_3881974",
+    "countryCode": "CL",
+    "name": "Región de los Lagos"
+  },
+  {
+    "placeId": "plc_3899537",
+    "countryCode": "CL",
+    "name": "Región de Antofagasta"
+  },
+  {
+    "placeId": "plc_4036650",
+    "countryCode": "CL",
+    "name": "Región de Magallanes y Antártica Chilena"
+  },
+  {
+    "placeId": "plc_2229336",
+    "countryCode": "CM",
+    "name": "Littoral Region"
+  },
+  {
+    "placeId": "plc_2233376",
+    "countryCode": "CM",
+    "name": "Centre Region"
+  },
+  {
+    "placeId": "plc_1279685",
+    "countryCode": "CN",
+    "name": "Tibet Autonomous Region"
+  },
+  {
+    "placeId": "plc_1280239",
+    "countryCode": "CN",
+    "name": "Qinghai"
+  },
+  {
+    "placeId": "plc_1529047",
+    "countryCode": "CN",
+    "name": "Xinjiang Uyghur Autonomous Region"
+  },
+  {
+    "placeId": "plc_1784764",
+    "countryCode": "CN",
+    "name": "Zhejiang"
+  },
+  {
+    "placeId": "plc_1785694",
+    "countryCode": "CN",
+    "name": "Yunnan"
+  },
+  {
+    "placeId": "plc_1792943",
+    "countryCode": "CN",
+    "name": "Tianjin Shi"
+  },
+  {
+    "placeId": "plc_1794299",
+    "countryCode": "CN",
+    "name": "Sichuan"
+  },
+  {
+    "placeId": "plc_1795912",
+    "countryCode": "CN",
+    "name": "Shanxi"
+  },
+  {
+    "placeId": "plc_1796231",
+    "countryCode": "CN",
+    "name": "Shanghai Shi"
+  },
+  {
+    "placeId": "plc_1796328",
+    "countryCode": "CN",
+    "name": "Shandong"
+  },
+  {
+    "placeId": "plc_1796480",
+    "countryCode": "CN",
+    "name": "Shaanxi"
+  },
+  {
+    "placeId": "plc_1799355",
+    "countryCode": "CN",
+    "name": "Ningxia Hui Autonomous Region"
+  },
+  {
+    "placeId": "plc_1806222",
+    "countryCode": "CN",
+    "name": "Jiangxi"
+  },
+  {
+    "placeId": "plc_1806260",
+    "countryCode": "CN",
+    "name": "Jiangsu"
+  },
+  {
+    "placeId": "plc_1806691",
+    "countryCode": "CN",
+    "name": "Hunan"
+  },
+  {
+    "placeId": "plc_1806949",
+    "countryCode": "CN",
+    "name": "Hubei"
+  },
+  {
+    "placeId": "plc_1808520",
+    "countryCode": "CN",
+    "name": "Henan"
+  },
+  {
+    "placeId": "plc_1808773",
+    "countryCode": "CN",
+    "name": "Hebei Sheng"
+  },
+  {
+    "placeId": "plc_1809054",
+    "countryCode": "CN",
+    "name": "Hainan"
+  },
+  {
+    "placeId": "plc_1809445",
+    "countryCode": "CN",
+    "name": "Guizhou"
+  },
+  {
+    "placeId": "plc_1809867",
+    "countryCode": "CN",
+    "name": "Guangxi Zhuang Autonomous Region"
+  },
+  {
+    "placeId": "plc_1809935",
+    "countryCode": "CN",
+    "name": "Guangdong"
+  },
+  {
+    "placeId": "plc_1810676",
+    "countryCode": "CN",
+    "name": "Gansu"
+  },
+  {
+    "placeId": "plc_1811017",
+    "countryCode": "CN",
+    "name": "Fujian"
+  },
+  {
+    "placeId": "plc_1814905",
+    "countryCode": "CN",
+    "name": "Chongqing Shi"
+  },
+  {
+    "placeId": "plc_1818058",
+    "countryCode": "CN",
+    "name": "Anhui"
+  },
+  {
+    "placeId": "plc_2035607",
+    "countryCode": "CN",
+    "name": "Inner Mongolia Autonomous Region"
+  },
+  {
+    "placeId": "plc_2036115",
+    "countryCode": "CN",
+    "name": "Liaoning"
+  },
+  {
+    "placeId": "plc_2036500",
+    "countryCode": "CN",
+    "name": "Jilin"
+  },
+  {
+    "placeId": "plc_2036965",
+    "countryCode": "CN",
+    "name": "Hēilóngjiāng"
+  },
+  {
+    "placeId": "plc_2038349",
+    "countryCode": "CN",
+    "name": "Beijing Shi"
+  },
+  {
+    "placeId": "plc_3666313",
+    "countryCode": "CO",
+    "name": "Departamento del Valle del Cauca"
+  },
+  {
+    "placeId": "plc_3668578",
+    "countryCode": "CO",
+    "name": "Departamento de Santander"
+  },
+  {
+    "placeId": "plc_3670205",
+    "countryCode": "CO",
+    "name": "Providencia y Santa Catalina, Departamento de Archipiélago de San Andrés"
+  },
+  {
+    "placeId": "plc_3670698",
+    "countryCode": "CO",
+    "name": "Departamento de Risaralda"
+  },
+  {
+    "placeId": "plc_3671087",
+    "countryCode": "CO",
+    "name": "Quindío Department"
+  },
+  {
+    "placeId": "plc_3688536",
+    "countryCode": "CO",
+    "name": "Departamento de Boyacá"
+  },
+  {
+    "placeId": "plc_3688650",
+    "countryCode": "CO",
+    "name": "Departamento de Bolívar"
+  },
+  {
+    "placeId": "plc_3688685",
+    "countryCode": "CO",
+    "name": "Distrito Capital de Bogotá"
+  },
+  {
+    "placeId": "plc_3689436",
+    "countryCode": "CO",
+    "name": "Departamento del Atlántico"
+  },
+  {
+    "placeId": "plc_3689815",
+    "countryCode": "CO",
+    "name": "Departamento de Antioquia"
+  },
+  {
+    "placeId": "plc_3621837",
+    "countryCode": "CR",
+    "name": "Provincia de San José"
+  },
+  {
+    "placeId": "plc_3622226",
+    "countryCode": "CR",
+    "name": "Provincia de Puntarenas"
+  },
+  {
+    "placeId": "plc_3623064",
+    "countryCode": "CR",
+    "name": "Provincia de Limón"
+  },
+  {
+    "placeId": "plc_3623582",
+    "countryCode": "CR",
+    "name": "Provincia de Guanacaste"
+  },
+  {
+    "placeId": "plc_3624953",
+    "countryCode": "CR",
+    "name": "Provincia de Alajuela"
+  },
+  {
+    "placeId": "plc_3547394",
+    "countryCode": "CU",
+    "name": "Provincia de Matanzas"
+  },
+  {
+    "placeId": "plc_3564073",
+    "countryCode": "CU",
+    "name": "La Habana"
+  },
+  {
+    "placeId": "plc_3374249",
+    "countryCode": "CV",
+    "name": "Sal Municipality"
+  },
+  {
+    "placeId": "plc_146213",
+    "countryCode": "CY",
+    "name": "Paphos District"
+  },
+  {
+    "placeId": "plc_146267",
+    "countryCode": "CY",
+    "name": "Nicosia District"
+  },
+  {
+    "placeId": "plc_146383",
+    "countryCode": "CY",
+    "name": "Limassol District"
+  },
+  {
+    "placeId": "plc_146398",
+    "countryCode": "CY",
+    "name": "Eparchía Lárnakas"
+  },
+  {
+    "placeId": "plc_3067695",
+    "countryCode": "CZ",
+    "name": "Hlavní město Praha"
+  },
+  {
+    "placeId": "plc_3339536",
+    "countryCode": "CZ",
+    "name": "Jihomoravský kraj"
+  },
+  {
+    "placeId": "plc_3339537",
+    "countryCode": "CZ",
+    "name": "Jihočeský kraj"
+  },
+  {
+    "placeId": "plc_3339539",
+    "countryCode": "CZ",
+    "name": "Karlovarský kraj"
+  },
+  {
+    "placeId": "plc_3339540",
+    "countryCode": "CZ",
+    "name": "Královéhradecký kraj"
+  },
+  {
+    "placeId": "plc_3339541",
+    "countryCode": "CZ",
+    "name": "Liberecký kraj"
+  },
+  {
+    "placeId": "plc_3339542",
+    "countryCode": "CZ",
+    "name": "Olomoucký kraj"
+  },
+  {
+    "placeId": "plc_3339573",
+    "countryCode": "CZ",
+    "name": "Moravskoslezský kraj"
+  },
+  {
+    "placeId": "plc_3339575",
+    "countryCode": "CZ",
+    "name": "Plzeňský kraj"
+  },
+  {
+    "placeId": "plc_3339577",
+    "countryCode": "CZ",
+    "name": "Ústecký kraj"
+  },
+  {
+    "placeId": "plc_2822542",
+    "countryCode": "DE",
+    "name": "Thuringia"
+  },
+  {
+    "placeId": "plc_2842565",
+    "countryCode": "DE",
+    "name": "Saxony-Anhalt"
+  },
+  {
+    "placeId": "plc_2842566",
+    "countryCode": "DE",
+    "name": "Saxony"
+  },
+  {
+    "placeId": "plc_2842635",
+    "countryCode": "DE",
+    "name": "Saarland"
+  },
+  {
+    "placeId": "plc_2847618",
+    "countryCode": "DE",
+    "name": "Rheinland-Pfalz"
+  },
+  {
+    "placeId": "plc_2861876",
+    "countryCode": "DE",
+    "name": "Nordrhein-Westfalen"
+  },
+  {
+    "placeId": "plc_2862926",
+    "countryCode": "DE",
+    "name": "Lower Saxony"
+  },
+  {
+    "placeId": "plc_2872567",
+    "countryCode": "DE",
+    "name": "Mecklenburg-Western Pomerania"
+  },
+  {
+    "placeId": "plc_2905330",
+    "countryCode": "DE",
+    "name": "Hessen"
+  },
+  {
+    "placeId": "plc_2911297",
+    "countryCode": "DE",
+    "name": "Free and Hanseatic City of Hamburg"
+  },
+  {
+    "placeId": "plc_2944387",
+    "countryCode": "DE",
+    "name": "Bremen"
+  },
+  {
+    "placeId": "plc_2950157",
+    "countryCode": "DE",
+    "name": "Land Berlin"
+  },
+  {
+    "placeId": "plc_2951839",
+    "countryCode": "DE",
+    "name": "Bavaria"
+  },
+  {
+    "placeId": "plc_2953481",
+    "countryCode": "DE",
+    "name": "Baden-Württemberg"
+  },
+  {
+    "placeId": "plc_6418538",
+    "countryCode": "DK",
+    "name": "Region Hovedstaden"
+  },
+  {
+    "placeId": "plc_6418539",
+    "countryCode": "DK",
+    "name": "Region Midtjylland"
+  },
+  {
+    "placeId": "plc_6418540",
+    "countryCode": "DK",
+    "name": "North Denmark Region"
+  },
+  {
+    "placeId": "plc_6418541",
+    "countryCode": "DK",
+    "name": "Region Sjælland"
+  },
+  {
+    "placeId": "plc_6418542",
+    "countryCode": "DK",
+    "name": "Region Syddanmark"
+  },
+  {
+    "placeId": "plc_3493232",
+    "countryCode": "DO",
+    "name": "Samaná Province"
+  },
+  {
+    "placeId": "plc_3494267",
+    "countryCode": "DO",
+    "name": "Puerto Plata"
+  },
+  {
+    "placeId": "plc_3503706",
+    "countryCode": "DO",
+    "name": "Provincia de La Altagracia"
+  },
+  {
+    "placeId": "plc_2485920",
+    "countryCode": "DZ",
+    "name": "Oran"
+  },
+  {
+    "placeId": "plc_3653224",
+    "countryCode": "EC",
+    "name": "Provincia de Pichincha"
+  },
+  {
+    "placeId": "plc_3657879",
+    "countryCode": "EC",
+    "name": "Provincia de Galápagos"
+  },
+  {
+    "placeId": "plc_3660431",
+    "countryCode": "EC",
+    "name": "Provincia del Azuay"
+  },
+  {
+    "placeId": "plc_592170",
+    "countryCode": "EE",
+    "name": "Harjumaa"
+  },
+  {
+    "placeId": "plc_352603",
+    "countryCode": "EG",
+    "name": "Muḩāfaz̧at Maţrūḩ"
+  },
+  {
+    "placeId": "plc_355182",
+    "countryCode": "EG",
+    "name": "South Sinai Governorate"
+  },
+  {
+    "placeId": "plc_361059",
+    "countryCode": "EG",
+    "name": "Alexandria"
+  },
+  {
+    "placeId": "plc_361468",
+    "countryCode": "EG",
+    "name": "Red Sea Governorate"
+  },
+  {
+    "placeId": "plc_444178",
+    "countryCode": "ET",
+    "name": "Addis Ababa"
+  },
+  {
+    "placeId": "plc_444180",
+    "countryCode": "ET",
+    "name": "Amhara Region"
+  },
+  {
+    "placeId": "plc_830603",
+    "countryCode": "FI",
+    "name": "Lapland"
+  },
+  {
+    "placeId": "plc_830667",
+    "countryCode": "FI",
+    "name": "Pohjois-Pohjanmaa"
+  },
+  {
+    "placeId": "plc_830685",
+    "countryCode": "FI",
+    "name": "Central Finland"
+  },
+  {
+    "placeId": "plc_830704",
+    "countryCode": "FI",
+    "name": "Pirkanmaa"
+  },
+  {
+    "placeId": "plc_830708",
+    "countryCode": "FI",
+    "name": "Varsinais-Suomi"
+  },
+  {
+    "placeId": "plc_830709",
+    "countryCode": "FI",
+    "name": "Uusimaa"
+  },
+  {
+    "placeId": "plc_2194371",
+    "countryCode": "FJ",
+    "name": "Western Division"
+  },
+  {
+    "placeId": "plc_2205272",
+    "countryCode": "FJ",
+    "name": "Central Division"
+  },
+  {
+    "placeId": "plc_611716",
+    "countryCode": "GE",
+    "name": "K'alak'i T'bilisi"
+  },
+  {
+    "placeId": "plc_615929",
+    "countryCode": "GE",
+    "name": "Adjara"
+  },
+  {
+    "placeId": "plc_865539",
+    "countryCode": "GE",
+    "name": "Imereti"
+  },
+  {
+    "placeId": "plc_865541",
+    "countryCode": "GE",
+    "name": "Mtskheta-Mtianeti"
+  },
+  {
+    "placeId": "plc_2300569",
+    "countryCode": "GH",
+    "name": "Greater Accra Region"
+  },
+  {
+    "placeId": "plc_2304116",
+    "countryCode": "GH",
+    "name": "Ashanti Region"
+  },
+  {
+    "placeId": "plc_6692632",
+    "countryCode": "GR",
+    "name": "Attica"
+  },
+  {
+    "placeId": "plc_6697800",
+    "countryCode": "GR",
+    "name": "Central Greece"
+  },
+  {
+    "placeId": "plc_6697801",
+    "countryCode": "GR",
+    "name": "Central Macedonia"
+  },
+  {
+    "placeId": "plc_6697802",
+    "countryCode": "GR",
+    "name": "Crete"
+  },
+  {
+    "placeId": "plc_6697803",
+    "countryCode": "GR",
+    "name": "Eastern Macedonia and Thrace"
+  },
+  {
+    "placeId": "plc_6697804",
+    "countryCode": "GR",
+    "name": "Epirus"
+  },
+  {
+    "placeId": "plc_6697805",
+    "countryCode": "GR",
+    "name": "Ionian Islands"
+  },
+  {
+    "placeId": "plc_6697806",
+    "countryCode": "GR",
+    "name": "North Aegean"
+  },
+  {
+    "placeId": "plc_6697807",
+    "countryCode": "GR",
+    "name": "Peloponnese"
+  },
+  {
+    "placeId": "plc_6697808",
+    "countryCode": "GR",
+    "name": "South Aegean"
+  },
+  {
+    "placeId": "plc_6697809",
+    "countryCode": "GR",
+    "name": "Thessaly"
+  },
+  {
+    "placeId": "plc_6697810",
+    "countryCode": "GR",
+    "name": "Western Greece"
+  },
+  {
+    "placeId": "plc_6697811",
+    "countryCode": "GR",
+    "name": "Western Macedonia"
+  },
+  {
+    "placeId": "plc_3590686",
+    "countryCode": "GT",
+    "name": "Departamento de Sacatepéquez"
+  },
+  {
+    "placeId": "plc_3595530",
+    "countryCode": "GT",
+    "name": "Departamento de Guatemala"
+  },
+  {
+    "placeId": "plc_7533598",
+    "countryCode": "HK",
+    "name": "Central and Western District"
+  },
+  {
+    "placeId": "plc_7533608",
+    "countryCode": "HK",
+    "name": "Eastern"
+  },
+  {
+    "placeId": "plc_3608814",
+    "countryCode": "HN",
+    "name": "Departamento de Islas de la Bahía"
+  },
+  {
+    "placeId": "plc_3613140",
+    "countryCode": "HN",
+    "name": "Departamento de Cortés"
+  },
+  {
+    "placeId": "plc_3337513",
+    "countryCode": "HR",
+    "name": "Dubrovnik-Neretva County"
+  },
+  {
+    "placeId": "plc_3337514",
+    "countryCode": "HR",
+    "name": "Istria County"
+  },
+  {
+    "placeId": "plc_3337524",
+    "countryCode": "HR",
+    "name": "Primorje-Gorski Kotar County"
+  },
+  {
+    "placeId": "plc_3337525",
+    "countryCode": "HR",
+    "name": "Šibenik-Knin County"
+  },
+  {
+    "placeId": "plc_3337527",
+    "countryCode": "HR",
+    "name": "Split-Dalmatia County"
+  },
+  {
+    "placeId": "plc_3337532",
+    "countryCode": "HR",
+    "name": "City of Zagreb"
+  },
+  {
+    "placeId": "plc_3719432",
+    "countryCode": "HT",
+    "name": "Département de l'Ouest"
+  },
+  {
+    "placeId": "plc_3042925",
+    "countryCode": "HU",
+    "name": "Veszprém megye"
+  },
+  {
+    "placeId": "plc_3054638",
+    "countryCode": "HU",
+    "name": "Budapest"
+  },
+  {
+    "placeId": "plc_1213642",
+    "countryCode": "ID",
+    "name": "North Sumatra"
+  },
+  {
+    "placeId": "plc_1621176",
+    "countryCode": "ID",
+    "name": "Daerah Istimewa Yogyakarta"
+  },
+  {
+    "placeId": "plc_1626196",
+    "countryCode": "ID",
+    "name": "Sumatera Selatan"
+  },
+  {
+    "placeId": "plc_1626197",
+    "countryCode": "ID",
+    "name": "Provinsi Sumatera Barat"
+  },
+  {
+    "placeId": "plc_1626229",
+    "countryCode": "ID",
+    "name": "Sulawesi Utara"
+  },
+  {
+    "placeId": "plc_1626230",
+    "countryCode": "ID",
+    "name": "Sulawesi Tenggara"
+  },
+  {
+    "placeId": "plc_1626231",
+    "countryCode": "ID",
+    "name": "Sulawesi Tengah"
+  },
+  {
+    "placeId": "plc_1626232",
+    "countryCode": "ID",
+    "name": "Provinsi Sulawesi Selatan"
+  },
+  {
+    "placeId": "plc_1629652",
+    "countryCode": "ID",
+    "name": "Provinsi Riau"
+  },
+  {
+    "placeId": "plc_1633791",
+    "countryCode": "ID",
+    "name": "East Nusa Tenggara"
+  },
+  {
+    "placeId": "plc_1633792",
+    "countryCode": "ID",
+    "name": "West Nusa Tenggara"
+  },
+  {
+    "placeId": "plc_1636627",
+    "countryCode": "ID",
+    "name": "Provinsi Maluku"
+  },
+  {
+    "placeId": "plc_1638535",
+    "countryCode": "ID",
+    "name": "Provinsi Lampung"
+  },
+  {
+    "placeId": "plc_1641897",
+    "countryCode": "ID",
+    "name": "Provinsi Kalimantan Timur"
+  },
+  {
+    "placeId": "plc_1641898",
+    "countryCode": "ID",
+    "name": "Provinsi Kalimantan Tengah"
+  },
+  {
+    "placeId": "plc_1641899",
+    "countryCode": "ID",
+    "name": "Provinsi Kalimantan Selatan"
+  },
+  {
+    "placeId": "plc_1641900",
+    "countryCode": "ID",
+    "name": "Provinsi Kalimantan Barat"
+  },
+  {
+    "placeId": "plc_1642668",
+    "countryCode": "ID",
+    "name": "Jawa Timur"
+  },
+  {
+    "placeId": "plc_1642669",
+    "countryCode": "ID",
+    "name": "Provinsi Jawa Tengah"
+  },
+  {
+    "placeId": "plc_1642856",
+    "countryCode": "ID",
+    "name": "Provinsi Jambi"
+  },
+  {
+    "placeId": "plc_1642907",
+    "countryCode": "ID",
+    "name": "Daerah Khusus Ibukota Jakarta"
+  },
+  {
+    "placeId": "plc_1643012",
+    "countryCode": "ID",
+    "name": "Provinsi Papua"
+  },
+  {
+    "placeId": "plc_1649147",
+    "countryCode": "ID",
+    "name": "Propinsi Bengkulu"
+  },
+  {
+    "placeId": "plc_1650535",
+    "countryCode": "ID",
+    "name": "Provinsi Bali"
+  },
+  {
+    "placeId": "plc_1923047",
+    "countryCode": "ID",
+    "name": "Kepulauan Bangka Belitung"
+  },
+  {
+    "placeId": "plc_1996551",
+    "countryCode": "ID",
+    "name": "Provinsi Kepulauan Riau"
+  },
+  {
+    "placeId": "plc_293198",
+    "countryCode": "IL",
+    "name": "Jerusalem"
+  },
+  {
+    "placeId": "plc_293396",
+    "countryCode": "IL",
+    "name": "Tel Aviv District"
+  },
+  {
+    "placeId": "plc_294800",
+    "countryCode": "IL",
+    "name": "Haifa"
+  },
+  {
+    "placeId": "plc_294824",
+    "countryCode": "IL",
+    "name": "Northern District"
+  },
+  {
+    "placeId": "plc_294952",
+    "countryCode": "IL",
+    "name": "Southern District"
+  },
+  {
+    "placeId": "plc_1252881",
+    "countryCode": "IN",
+    "name": "West Bengal"
+  },
+  {
+    "placeId": "plc_1253626",
+    "countryCode": "IN",
+    "name": "Uttar Pradesh"
+  },
+  {
+    "placeId": "plc_1254788",
+    "countryCode": "IN",
+    "name": "State of Telangāna"
+  },
+  {
+    "placeId": "plc_1256312",
+    "countryCode": "IN",
+    "name": "Sikkim"
+  },
+  {
+    "placeId": "plc_1258899",
+    "countryCode": "IN",
+    "name": "State of Rājasthān"
+  },
+  {
+    "placeId": "plc_1259223",
+    "countryCode": "IN",
+    "name": "State of Punjab"
+  },
+  {
+    "placeId": "plc_1261029",
+    "countryCode": "IN",
+    "name": "State of Odisha"
+  },
+  {
+    "placeId": "plc_1263207",
+    "countryCode": "IN",
+    "name": "Meghālaya"
+  },
+  {
+    "placeId": "plc_1264418",
+    "countryCode": "IN",
+    "name": "State of Mahārāshtra"
+  },
+  {
+    "placeId": "plc_1264542",
+    "countryCode": "IN",
+    "name": "Madhya Pradesh"
+  },
+  {
+    "placeId": "plc_1267254",
+    "countryCode": "IN",
+    "name": "State of Kerala"
+  },
+  {
+    "placeId": "plc_1267701",
+    "countryCode": "IN",
+    "name": "State of Karnataka"
+  },
+  {
+    "placeId": "plc_1269320",
+    "countryCode": "IN",
+    "name": "State of Jammu and Kashmīr"
+  },
+  {
+    "placeId": "plc_1270101",
+    "countryCode": "IN",
+    "name": "State of Himāchal Pradesh"
+  },
+  {
+    "placeId": "plc_1270770",
+    "countryCode": "IN",
+    "name": "State of Gujarāt"
+  },
+  {
+    "placeId": "plc_1271157",
+    "countryCode": "IN",
+    "name": "Goa"
+  },
+  {
+    "placeId": "plc_1275715",
+    "countryCode": "IN",
+    "name": "State of Bihar"
+  },
+  {
+    "placeId": "plc_1278253",
+    "countryCode": "IN",
+    "name": "Assam"
+  },
+  {
+    "placeId": "plc_1278629",
+    "countryCode": "IN",
+    "name": "State of Andhra Pradesh"
+  },
+  {
+    "placeId": "plc_1278647",
+    "countryCode": "IN",
+    "name": "Union Territory of Andaman and Nicobar Islands"
+  },
+  {
+    "placeId": "plc_1444364",
+    "countryCode": "IN",
+    "name": "State of Chhattīsgarh"
+  },
+  {
+    "placeId": "plc_1444365",
+    "countryCode": "IN",
+    "name": "State of Jhārkhand"
+  },
+  {
+    "placeId": "plc_1444366",
+    "countryCode": "IN",
+    "name": "State of Uttarākhand"
+  },
+  {
+    "placeId": "plc_3337403",
+    "countryCode": "IS",
+    "name": "Norðurland Vestra"
+  },
+  {
+    "placeId": "plc_3337404",
+    "countryCode": "IS",
+    "name": "Norðurland Eystra"
+  },
+  {
+    "placeId": "plc_3337405",
+    "countryCode": "IS",
+    "name": "Austurland"
+  },
+  {
+    "placeId": "plc_3337406",
+    "countryCode": "IS",
+    "name": "Suðurland"
+  },
+  {
+    "placeId": "plc_3426182",
+    "countryCode": "IS",
+    "name": "Höfuðborgarsvæði"
+  },
+  {
+    "placeId": "plc_3426183",
+    "countryCode": "IS",
+    "name": "Suðurnes"
+  },
+  {
+    "placeId": "plc_3426184",
+    "countryCode": "IS",
+    "name": "Vesturland"
+  },
+  {
+    "placeId": "plc_3488700",
+    "countryCode": "JM",
+    "name": "Saint James"
+  },
+  {
+    "placeId": "plc_3488715",
+    "countryCode": "JM",
+    "name": "Parish of Saint Ann"
+  },
+  {
+    "placeId": "plc_3488716",
+    "countryCode": "JM",
+    "name": "Saint Andrew"
+  },
+  {
+    "placeId": "plc_248380",
+    "countryCode": "JO",
+    "name": "Muḩāfaz̧at Ma‘ān"
+  },
+  {
+    "placeId": "plc_443122",
+    "countryCode": "JO",
+    "name": "Muḩāfaz̧at al ‘Aqabah"
+  },
+  {
+    "placeId": "plc_1848649",
+    "countryCode": "JP",
+    "name": "Yamanashi"
+  },
+  {
+    "placeId": "plc_1848681",
+    "countryCode": "JP",
+    "name": "Yamaguchi"
+  },
+  {
+    "placeId": "plc_1848938",
+    "countryCode": "JP",
+    "name": "Wakayama"
+  },
+  {
+    "placeId": "plc_1849872",
+    "countryCode": "JP",
+    "name": "Toyama-ken"
+  },
+  {
+    "placeId": "plc_1850144",
+    "countryCode": "JP",
+    "name": "Tokyo Prefecture"
+  },
+  {
+    "placeId": "plc_1850157",
+    "countryCode": "JP",
+    "name": "Tokushima-ken"
+  },
+  {
+    "placeId": "plc_1850310",
+    "countryCode": "JP",
+    "name": "Tochigi"
+  },
+  {
+    "placeId": "plc_1851715",
+    "countryCode": "JP",
+    "name": "Shizuoka"
+  },
+  {
+    "placeId": "plc_1852442",
+    "countryCode": "JP",
+    "name": "Shimane-ken"
+  },
+  {
+    "placeId": "plc_1852553",
+    "countryCode": "JP",
+    "name": "Shiga"
+  },
+  {
+    "placeId": "plc_1853226",
+    "countryCode": "JP",
+    "name": "Saitama-ken"
+  },
+  {
+    "placeId": "plc_1853299",
+    "countryCode": "JP",
+    "name": "Saga-ken"
+  },
+  {
+    "placeId": "plc_1853904",
+    "countryCode": "JP",
+    "name": "Ōsaka-fu"
+  },
+  {
+    "placeId": "plc_1854345",
+    "countryCode": "JP",
+    "name": "Okinawa"
+  },
+  {
+    "placeId": "plc_1854381",
+    "countryCode": "JP",
+    "name": "Okayama-ken"
+  },
+  {
+    "placeId": "plc_1854484",
+    "countryCode": "JP",
+    "name": "Oita Prefecture"
+  },
+  {
+    "placeId": "plc_1855429",
+    "countryCode": "JP",
+    "name": "Niigata-ken"
+  },
+  {
+    "placeId": "plc_1855608",
+    "countryCode": "JP",
+    "name": "Nara-ken"
+  },
+  {
+    "placeId": "plc_1856156",
+    "countryCode": "JP",
+    "name": "Nagasaki Prefecture"
+  },
+  {
+    "placeId": "plc_1857352",
+    "countryCode": "JP",
+    "name": "Mie-ken"
+  },
+  {
+    "placeId": "plc_1857907",
+    "countryCode": "JP",
+    "name": "Kyoto Prefecture"
+  },
+  {
+    "placeId": "plc_1859133",
+    "countryCode": "JP",
+    "name": "Kochi Prefecture"
+  },
+  {
+    "placeId": "plc_1861387",
+    "countryCode": "JP",
+    "name": "Ishikawa-ken"
+  },
+  {
+    "placeId": "plc_1862047",
+    "countryCode": "JP",
+    "name": "Hyōgo"
+  },
+  {
+    "placeId": "plc_1862413",
+    "countryCode": "JP",
+    "name": "Hiroshima-ken"
+  },
+  {
+    "placeId": "plc_1863501",
+    "countryCode": "JP",
+    "name": "Gunma-ken"
+  },
+  {
+    "placeId": "plc_1863958",
+    "countryCode": "JP",
+    "name": "Fukuoka Prefecture"
+  },
+  {
+    "placeId": "plc_1863983",
+    "countryCode": "JP",
+    "name": "Fukui"
+  },
+  {
+    "placeId": "plc_1864226",
+    "countryCode": "JP",
+    "name": "Ehime"
+  },
+  {
+    "placeId": "plc_1865694",
+    "countryCode": "JP",
+    "name": "Aichi-ken"
+  },
+  {
+    "placeId": "plc_2110554",
+    "countryCode": "JP",
+    "name": "Yamagata-ken"
+  },
+  {
+    "placeId": "plc_2111888",
+    "countryCode": "JP",
+    "name": "Miyagi-ken"
+  },
+  {
+    "placeId": "plc_2112518",
+    "countryCode": "JP",
+    "name": "Iwate"
+  },
+  {
+    "placeId": "plc_2112669",
+    "countryCode": "JP",
+    "name": "Ibaraki"
+  },
+  {
+    "placeId": "plc_2112922",
+    "countryCode": "JP",
+    "name": "Fukushima-ken"
+  },
+  {
+    "placeId": "plc_2113014",
+    "countryCode": "JP",
+    "name": "Chiba-ken"
+  },
+  {
+    "placeId": "plc_2113124",
+    "countryCode": "JP",
+    "name": "Akita"
+  },
+  {
+    "placeId": "plc_2130037",
+    "countryCode": "JP",
+    "name": "Hokkaido"
+  },
+  {
+    "placeId": "plc_2130656",
+    "countryCode": "JP",
+    "name": "Aomori-ken"
+  },
+  {
+    "placeId": "plc_184742",
+    "countryCode": "KE",
+    "name": "Nairobi"
+  },
+  {
+    "placeId": "plc_1528334",
+    "countryCode": "KG",
+    "name": "Gorod Bishkek"
+  },
+  {
+    "placeId": "plc_1821310",
+    "countryCode": "KH",
+    "name": "Battambang"
+  },
+  {
+    "placeId": "plc_1822213",
+    "countryCode": "KH",
+    "name": "Siem Reap"
+  },
+  {
+    "placeId": "plc_1830103",
+    "countryCode": "KH",
+    "name": "Phnom Penh"
+  },
+  {
+    "placeId": "plc_1830937",
+    "countryCode": "KH",
+    "name": "Kep"
+  },
+  {
+    "placeId": "plc_1831037",
+    "countryCode": "KH",
+    "name": "Koh Kong"
+  },
+  {
+    "placeId": "plc_1831111",
+    "countryCode": "KH",
+    "name": "Kampot"
+  },
+  {
+    "placeId": "plc_1899262",
+    "countryCode": "KH",
+    "name": "Preah Sihanouk"
+  },
+  {
+    "placeId": "plc_1835847",
+    "countryCode": "KR",
+    "name": "Seoul"
+  },
+  {
+    "placeId": "plc_1843125",
+    "countryCode": "KR",
+    "name": "Gangwon"
+  },
+  {
+    "placeId": "plc_1845788",
+    "countryCode": "KR",
+    "name": "Jeollanam-do"
+  },
+  {
+    "placeId": "plc_1845789",
+    "countryCode": "KR",
+    "name": "Jeonbuk"
+  },
+  {
+    "placeId": "plc_1846265",
+    "countryCode": "KR",
+    "name": "Jeju-do"
+  },
+  {
+    "placeId": "plc_1902028",
+    "countryCode": "KR",
+    "name": "Gyeongsangnam-do"
+  },
+  {
+    "placeId": "plc_285788",
+    "countryCode": "KW",
+    "name": "Al Asimah Governorate"
+  },
+  {
+    "placeId": "plc_1538317",
+    "countryCode": "KZ",
+    "name": "Astana"
+  },
+  {
+    "placeId": "plc_1652238",
+    "countryCode": "LA",
+    "name": "Vientiane Province"
+  },
+  {
+    "placeId": "plc_1655558",
+    "countryCode": "LA",
+    "name": "Luang Prabang Province"
+  },
+  {
+    "placeId": "plc_1657818",
+    "countryCode": "LA",
+    "name": "Champasak"
+  },
+  {
+    "placeId": "plc_1904618",
+    "countryCode": "LA",
+    "name": "Vientiane Prefecture"
+  },
+  {
+    "placeId": "plc_276780",
+    "countryCode": "LB",
+    "name": "Beyrouth"
+  },
+  {
+    "placeId": "plc_864477",
+    "countryCode": "LT",
+    "name": "Kaunas County"
+  },
+  {
+    "placeId": "plc_864478",
+    "countryCode": "LT",
+    "name": "Klaipėda County"
+  },
+  {
+    "placeId": "plc_864485",
+    "countryCode": "LT",
+    "name": "Vilnius County"
+  },
+  {
+    "placeId": "plc_456173",
+    "countryCode": "LV",
+    "name": "Rīga"
+  },
+  {
+    "placeId": "plc_3189071",
+    "countryCode": "ME",
+    "name": "Tivat"
+  },
+  {
+    "placeId": "plc_3189077",
+    "countryCode": "ME",
+    "name": "Podgorica"
+  },
+  {
+    "placeId": "plc_3203104",
+    "countryCode": "ME",
+    "name": "Budva"
+  },
+  {
+    "placeId": "plc_7670856",
+    "countryCode": "MG",
+    "name": "Analamanga Region"
+  },
+  {
+    "placeId": "plc_1297099",
+    "countryCode": "MM",
+    "name": "Shan State"
+  },
+  {
+    "placeId": "plc_1298822",
+    "countryCode": "MM",
+    "name": "Yangon Region"
+  },
+  {
+    "placeId": "plc_1311871",
+    "countryCode": "MM",
+    "name": "Mandalay Region"
+  },
+  {
+    "placeId": "plc_2028461",
+    "countryCode": "MN",
+    "name": "Ulaanbaatar Hot"
+  },
+  {
+    "placeId": "plc_4041552",
+    "countryCode": "MP",
+    "name": "Saipan Municipality"
+  },
+  {
+    "placeId": "plc_8299751",
+    "countryCode": "MT",
+    "name": "Saint Paul’s Bay"
+  },
+  {
+    "placeId": "plc_8299755",
+    "countryCode": "MT",
+    "name": "Tas-Sliema"
+  },
+  {
+    "placeId": "plc_934212",
+    "countryCode": "MU",
+    "name": "Pamplemousses District"
+  },
+  {
+    "placeId": "plc_934522",
+    "countryCode": "MU",
+    "name": "Flacq District"
+  },
+  {
+    "placeId": "plc_934718",
+    "countryCode": "MU",
+    "name": "Black River District"
+  },
+  {
+    "placeId": "plc_1282478",
+    "countryCode": "MV",
+    "name": "Baa Atholhu"
+  },
+  {
+    "placeId": "plc_1282497",
+    "countryCode": "MV",
+    "name": "Alifu Atholhu"
+  },
+  {
+    "placeId": "plc_3514211",
+    "countryCode": "MX",
+    "name": "Estado de Yucatán"
+  },
+  {
+    "placeId": "plc_3514780",
+    "countryCode": "MX",
+    "name": "Estado de Veracruz-Llave"
+  },
+  {
+    "placeId": "plc_3516391",
+    "countryCode": "MX",
+    "name": "Estado de Tamaulipas"
+  },
+  {
+    "placeId": "plc_3516458",
+    "countryCode": "MX",
+    "name": "Estado de Tabasco"
+  },
+  {
+    "placeId": "plc_3520887",
+    "countryCode": "MX",
+    "name": "Estado de Quintana Roo"
+  },
+  {
+    "placeId": "plc_3520914",
+    "countryCode": "MX",
+    "name": "Estado de Querétaro"
+  },
+  {
+    "placeId": "plc_3521082",
+    "countryCode": "MX",
+    "name": "Estado de Puebla"
+  },
+  {
+    "placeId": "plc_3522509",
+    "countryCode": "MX",
+    "name": "Estado de Oaxaca"
+  },
+  {
+    "placeId": "plc_3522542",
+    "countryCode": "MX",
+    "name": "Estado de Nuevo León"
+  },
+  {
+    "placeId": "plc_3522961",
+    "countryCode": "MX",
+    "name": "Estado de Morelos"
+  },
+  {
+    "placeId": "plc_3527115",
+    "countryCode": "MX",
+    "name": "Estado de Hidalgo"
+  },
+  {
+    "placeId": "plc_3527213",
+    "countryCode": "MX",
+    "name": "Estado de Guerrero"
+  },
+  {
+    "placeId": "plc_3531011",
+    "countryCode": "MX",
+    "name": "Estado de Chiapas"
+  },
+  {
+    "placeId": "plc_3531730",
+    "countryCode": "MX",
+    "name": "Estado de Campeche"
+  },
+  {
+    "placeId": "plc_3979840",
+    "countryCode": "MX",
+    "name": "Estado de Zacatecas"
+  },
+  {
+    "placeId": "plc_3982846",
+    "countryCode": "MX",
+    "name": "Estado de Sonora"
+  },
+  {
+    "placeId": "plc_3983035",
+    "countryCode": "MX",
+    "name": "Estado de Sinaloa"
+  },
+  {
+    "placeId": "plc_3985605",
+    "countryCode": "MX",
+    "name": "Estado de San Luis Potosí"
+  },
+  {
+    "placeId": "plc_3995012",
+    "countryCode": "MX",
+    "name": "Estado de Nayarit"
+  },
+  {
+    "placeId": "plc_3995955",
+    "countryCode": "MX",
+    "name": "Estado de Michoacán de Ocampo"
+  },
+  {
+    "placeId": "plc_4004156",
+    "countryCode": "MX",
+    "name": "Estado de Jalisco"
+  },
+  {
+    "placeId": "plc_4005267",
+    "countryCode": "MX",
+    "name": "Estado de Guanajuato"
+  },
+  {
+    "placeId": "plc_4013513",
+    "countryCode": "MX",
+    "name": "Estado de Colima"
+  },
+  {
+    "placeId": "plc_4013674",
+    "countryCode": "MX",
+    "name": "Estado de Coahuila de Zaragoza"
+  },
+  {
+    "placeId": "plc_4014336",
+    "countryCode": "MX",
+    "name": "Estado de Chihuahua"
+  },
+  {
+    "placeId": "plc_4017698",
+    "countryCode": "MX",
+    "name": "Estado de Baja California Sur"
+  },
+  {
+    "placeId": "plc_4017700",
+    "countryCode": "MX",
+    "name": "Estado de Baja California"
+  },
+  {
+    "placeId": "plc_4019231",
+    "countryCode": "MX",
+    "name": "Estado de Aguascalientes"
+  },
+  {
+    "placeId": "plc_1733035",
+    "countryCode": "MY",
+    "name": "Melaka"
+  },
+  {
+    "placeId": "plc_1733036",
+    "countryCode": "MY",
+    "name": "Terengganu"
+  },
+  {
+    "placeId": "plc_1733038",
+    "countryCode": "MY",
+    "name": "Sarawak"
+  },
+  {
+    "placeId": "plc_1733039",
+    "countryCode": "MY",
+    "name": "Sabah"
+  },
+  {
+    "placeId": "plc_1733040",
+    "countryCode": "MY",
+    "name": "Perlis"
+  },
+  {
+    "placeId": "plc_1733041",
+    "countryCode": "MY",
+    "name": "Perak"
+  },
+  {
+    "placeId": "plc_1733044",
+    "countryCode": "MY",
+    "name": "Kelantan"
+  },
+  {
+    "placeId": "plc_1733047",
+    "countryCode": "MY",
+    "name": "Pulau Pinang"
+  },
+  {
+    "placeId": "plc_1733048",
+    "countryCode": "MY",
+    "name": "Kedah"
+  },
+  {
+    "placeId": "plc_1733049",
+    "countryCode": "MY",
+    "name": "Johor"
+  },
+  {
+    "placeId": "plc_1105845",
+    "countryCode": "MZ",
+    "name": "Cidade de Maputo"
+  },
+  {
+    "placeId": "plc_3371199",
+    "countryCode": "NA",
+    "name": "Erongo"
+  },
+  {
+    "placeId": "plc_2324433",
+    "countryCode": "NG",
+    "name": "Rivers State"
+  },
+  {
+    "placeId": "plc_2325190",
+    "countryCode": "NG",
+    "name": "Oyo State"
+  },
+  {
+    "placeId": "plc_2332453",
+    "countryCode": "NG",
+    "name": "Lagos State"
+  },
+  {
+    "placeId": "plc_2352776",
+    "countryCode": "NG",
+    "name": "Federal Capital Territory"
+  },
+  {
+    "placeId": "plc_3617762",
+    "countryCode": "NI",
+    "name": "Departamento de Managua"
+  },
+  {
+    "placeId": "plc_2743698",
+    "countryCode": "NL",
+    "name": "Provincie Zuid-Holland"
+  },
+  {
+    "placeId": "plc_2744011",
+    "countryCode": "NL",
+    "name": "Provincie Zeeland"
+  },
+  {
+    "placeId": "plc_2745909",
+    "countryCode": "NL",
+    "name": "Provincie Utrecht"
+  },
+  {
+    "placeId": "plc_2748838",
+    "countryCode": "NL",
+    "name": "Provincie Overijssel"
+  },
+  {
+    "placeId": "plc_2749879",
+    "countryCode": "NL",
+    "name": "Provincie Noord-Holland"
+  },
+  {
+    "placeId": "plc_2749990",
+    "countryCode": "NL",
+    "name": "Provincie Noord-Brabant"
+  },
+  {
+    "placeId": "plc_2751596",
+    "countryCode": "NL",
+    "name": "Provincie Limburg"
+  },
+  {
+    "placeId": "plc_2755249",
+    "countryCode": "NL",
+    "name": "Provincie Groningen"
+  },
+  {
+    "placeId": "plc_2755812",
+    "countryCode": "NL",
+    "name": "Provincie Friesland"
+  },
+  {
+    "placeId": "plc_3133897",
+    "countryCode": "NO",
+    "name": "Troms Fylke"
+  },
+  {
+    "placeId": "plc_3141558",
+    "countryCode": "NO",
+    "name": "Rogaland Fylke"
+  },
+  {
+    "placeId": "plc_3143242",
+    "countryCode": "NO",
+    "name": "Oslo County"
+  },
+  {
+    "placeId": "plc_3144301",
+    "countryCode": "NO",
+    "name": "Nordland Fylke"
+  },
+  {
+    "placeId": "plc_3145495",
+    "countryCode": "NO",
+    "name": "Møre og Romsdal fylke"
+  },
+  {
+    "placeId": "plc_3159665",
+    "countryCode": "NO",
+    "name": "Buskerud fylke"
+  },
+  {
+    "placeId": "plc_780166",
+    "countryCode": "NO",
+    "name": "Finnmark Fylke"
+  },
+  {
+    "placeId": "plc_2179538",
+    "countryCode": "NZ",
+    "name": "Wellington"
+  },
+  {
+    "placeId": "plc_2179671",
+    "countryCode": "NZ",
+    "name": "Manawatu-Wanganui"
+  },
+  {
+    "placeId": "plc_2180293",
+    "countryCode": "NZ",
+    "name": "Waikato"
+  },
+  {
+    "placeId": "plc_2181818",
+    "countryCode": "NZ",
+    "name": "Tasman"
+  },
+  {
+    "placeId": "plc_2181872",
+    "countryCode": "NZ",
+    "name": "Taranaki"
+  },
+  {
+    "placeId": "plc_2182501",
+    "countryCode": "NZ",
+    "name": "Southland"
+  },
+  {
+    "placeId": "plc_2182560",
+    "countryCode": "NZ",
+    "name": "Bay of Plenty"
+  },
+  {
+    "placeId": "plc_2185978",
+    "countryCode": "NZ",
+    "name": "Northland"
+  },
+  {
+    "placeId": "plc_2187304",
+    "countryCode": "NZ",
+    "name": "Marlborough"
+  },
+  {
+    "placeId": "plc_2190146",
+    "countryCode": "NZ",
+    "name": "Hawke's Bay"
+  },
+  {
+    "placeId": "plc_2192628",
+    "countryCode": "NZ",
+    "name": "Canterbury"
+  },
+  {
+    "placeId": "plc_2193734",
+    "countryCode": "NZ",
+    "name": "Auckland"
+  },
+  {
+    "placeId": "plc_6612108",
+    "countryCode": "NZ",
+    "name": "Nelson"
+  },
+  {
+    "placeId": "plc_6612109",
+    "countryCode": "NZ",
+    "name": "Otago"
+  },
+  {
+    "placeId": "plc_6612113",
+    "countryCode": "NZ",
+    "name": "West Coast"
+  },
+  {
+    "placeId": "plc_411740",
+    "countryCode": "OM",
+    "name": "Muḩāfaz̧at Masqaţ"
+  },
+  {
+    "placeId": "plc_411742",
+    "countryCode": "OM",
+    "name": "Dhofar Governorate"
+  },
+  {
+    "placeId": "plc_3703433",
+    "countryCode": "PA",
+    "name": "Provincia de Panamá"
+  },
+  {
+    "placeId": "plc_3712410",
+    "countryCode": "PA",
+    "name": "Provincia de Chiriquí"
+  },
+  {
+    "placeId": "plc_3931275",
+    "countryCode": "PE",
+    "name": "Departamento de Puno"
+  },
+  {
+    "placeId": "plc_3938526",
+    "countryCode": "PE",
+    "name": "Departamento de Ica"
+  },
+  {
+    "placeId": "plc_3941583",
+    "countryCode": "PE",
+    "name": "Departamento de Cusco"
+  },
+  {
+    "placeId": "plc_3947319",
+    "countryCode": "PE",
+    "name": "Departamento de Arequipa"
+  },
+  {
+    "placeId": "plc_4034365",
+    "countryCode": "PF",
+    "name": "Îles du Vent"
+  },
+  {
+    "placeId": "plc_1162015",
+    "countryCode": "PK",
+    "name": "Islamabad"
+  },
+  {
+    "placeId": "plc_1164807",
+    "countryCode": "PK",
+    "name": "Sindh"
+  },
+  {
+    "placeId": "plc_3337492",
+    "countryCode": "PL",
+    "name": "Lower Silesian Voivodeship"
+  },
+  {
+    "placeId": "plc_3337493",
+    "countryCode": "PL",
+    "name": "Łódź Voivodeship"
+  },
+  {
+    "placeId": "plc_3337496",
+    "countryCode": "PL",
+    "name": "Pomeranian Voivodeship"
+  },
+  {
+    "placeId": "plc_3337497",
+    "countryCode": "PL",
+    "name": "Silesian Voivodeship"
+  },
+  {
+    "placeId": "plc_3337498",
+    "countryCode": "PL",
+    "name": "Greater Poland Voivodeship"
+  },
+  {
+    "placeId": "plc_3337499",
+    "countryCode": "PL",
+    "name": "West Pomeranian Voivodeship"
+  },
+  {
+    "placeId": "plc_858785",
+    "countryCode": "PL",
+    "name": "Lublin Voivodeship"
+  },
+  {
+    "placeId": "plc_858786",
+    "countryCode": "PL",
+    "name": "Lesser Poland Voivodeship"
+  },
+  {
+    "placeId": "plc_858787",
+    "countryCode": "PL",
+    "name": "Masovian Voivodeship"
+  },
+  {
+    "placeId": "plc_858788",
+    "countryCode": "PL",
+    "name": "Podkarpackie Voivodeship"
+  },
+  {
+    "placeId": "plc_858789",
+    "countryCode": "PL",
+    "name": "Podlaskie Voivodeship"
+  },
+  {
+    "placeId": "plc_858790",
+    "countryCode": "PL",
+    "name": "Świętokrzyskie Voivodeship"
+  },
+  {
+    "placeId": "plc_858791",
+    "countryCode": "PL",
+    "name": "Warmian-Masurian Voivodeship"
+  },
+  {
+    "placeId": "plc_2262961",
+    "countryCode": "PT",
+    "name": "Distrito de Setúbal"
+  },
+  {
+    "placeId": "plc_2263478",
+    "countryCode": "PT",
+    "name": "Distrito de Santarém"
+  },
+  {
+    "placeId": "plc_2264507",
+    "countryCode": "PT",
+    "name": "Distrito de Portalegre"
+  },
+  {
+    "placeId": "plc_2267056",
+    "countryCode": "PT",
+    "name": "Distrito de Lisboa"
+  },
+  {
+    "placeId": "plc_2267094",
+    "countryCode": "PT",
+    "name": "Distrito de Leiria"
+  },
+  {
+    "placeId": "plc_2268337",
+    "countryCode": "PT",
+    "name": "Distrito de Faro"
+  },
+  {
+    "placeId": "plc_2268404",
+    "countryCode": "PT",
+    "name": "Distrito de Évora"
+  },
+  {
+    "placeId": "plc_2269513",
+    "countryCode": "PT",
+    "name": "Distrito de Castelo Branco"
+  },
+  {
+    "placeId": "plc_2270984",
+    "countryCode": "PT",
+    "name": "Distrito de Beja"
+  },
+  {
+    "placeId": "plc_2593105",
+    "countryCode": "PT",
+    "name": "Madeira"
+  },
+  {
+    "placeId": "plc_2732772",
+    "countryCode": "PT",
+    "name": "Distrito de Viana do Castelo"
+  },
+  {
+    "placeId": "plc_2735941",
+    "countryCode": "PT",
+    "name": "Distrito do Porto"
+  },
+  {
+    "placeId": "plc_2738782",
+    "countryCode": "PT",
+    "name": "Distrito da Guarda"
+  },
+  {
+    "placeId": "plc_2740636",
+    "countryCode": "PT",
+    "name": "Distrito de Coimbra"
+  },
+  {
+    "placeId": "plc_2742031",
+    "countryCode": "PT",
+    "name": "Distrito de Braga"
+  },
+  {
+    "placeId": "plc_2742610",
+    "countryCode": "PT",
+    "name": "Distrito de Aveiro"
+  },
+  {
+    "placeId": "plc_3411865",
+    "countryCode": "PT",
+    "name": "Azores"
+  },
+  {
+    "placeId": "plc_389470",
+    "countryCode": "QA",
+    "name": "Baladīyat ad Dawḩah"
+  },
+  {
+    "placeId": "plc_665091",
+    "countryCode": "RO",
+    "name": "Timiş"
+  },
+  {
+    "placeId": "plc_667267",
+    "countryCode": "RO",
+    "name": "Sibiu"
+  },
+  {
+    "placeId": "plc_669737",
+    "countryCode": "RO",
+    "name": "Prahova"
+  },
+  {
+    "placeId": "plc_672628",
+    "countryCode": "RO",
+    "name": "Mureş"
+  },
+  {
+    "placeId": "plc_680962",
+    "countryCode": "RO",
+    "name": "Constanța"
+  },
+  {
+    "placeId": "plc_681291",
+    "countryCode": "RO",
+    "name": "Cluj"
+  },
+  {
+    "placeId": "plc_683504",
+    "countryCode": "RO",
+    "name": "București"
+  },
+  {
+    "placeId": "plc_683843",
+    "countryCode": "RO",
+    "name": "Braşov"
+  },
+  {
+    "placeId": "plc_1488747",
+    "countryCode": "RU",
+    "name": "Tyumen Oblast"
+  },
+  {
+    "placeId": "plc_1489421",
+    "countryCode": "RU",
+    "name": "Tomsk Oblast"
+  },
+  {
+    "placeId": "plc_1490542",
+    "countryCode": "RU",
+    "name": "Sverdlovsk Oblast"
+  },
+  {
+    "placeId": "plc_1496152",
+    "countryCode": "RU",
+    "name": "Omsk Oblast"
+  },
+  {
+    "placeId": "plc_1496745",
+    "countryCode": "RU",
+    "name": "Novosibirsk Oblast"
+  },
+  {
+    "placeId": "plc_1502020",
+    "countryCode": "RU",
+    "name": "Krasnoyarskiy Kray"
+  },
+  {
+    "placeId": "plc_1503773",
+    "countryCode": "RU",
+    "name": "Khanty-Mansiyskiy Avtonomnyy Okrug-Yugra"
+  },
+  {
+    "placeId": "plc_1503900",
+    "countryCode": "RU",
+    "name": "Kemerovo Oblast"
+  },
+  {
+    "placeId": "plc_1508290",
+    "countryCode": "RU",
+    "name": "Chelyabinsk Oblast"
+  },
+  {
+    "placeId": "plc_1511732",
+    "countryCode": "RU",
+    "name": "Altayskiy Kray"
+  },
+  {
+    "placeId": "plc_2017623",
+    "countryCode": "RU",
+    "name": "Primorskiy Kray"
+  },
+  {
+    "placeId": "plc_2022888",
+    "countryCode": "RU",
+    "name": "Khabarovskiy Kray"
+  },
+  {
+    "placeId": "plc_2023468",
+    "countryCode": "RU",
+    "name": "Irkutsk Oblast"
+  },
+  {
+    "placeId": "plc_468898",
+    "countryCode": "RU",
+    "name": "Yaroslavl Oblast"
+  },
+  {
+    "placeId": "plc_472039",
+    "countryCode": "RU",
+    "name": "Voronezh Oblast"
+  },
+  {
+    "placeId": "plc_472454",
+    "countryCode": "RU",
+    "name": "Vologda Oblast"
+  },
+  {
+    "placeId": "plc_472755",
+    "countryCode": "RU",
+    "name": "Volgograd Oblast"
+  },
+  {
+    "placeId": "plc_479119",
+    "countryCode": "RU",
+    "name": "Ulyanovsk Oblast"
+  },
+  {
+    "placeId": "plc_480041",
+    "countryCode": "RU",
+    "name": "Tver Oblast"
+  },
+  {
+    "placeId": "plc_480508",
+    "countryCode": "RU",
+    "name": "Tula Oblast"
+  },
+  {
+    "placeId": "plc_484048",
+    "countryCode": "RU",
+    "name": "Tatarstan"
+  },
+  {
+    "placeId": "plc_487839",
+    "countryCode": "RU",
+    "name": "Stavropol Kray"
+  },
+  {
+    "placeId": "plc_491684",
+    "countryCode": "RU",
+    "name": "Smolensk Oblast"
+  },
+  {
+    "placeId": "plc_498671",
+    "countryCode": "RU",
+    "name": "Saratovskaya Oblast"
+  },
+  {
+    "placeId": "plc_499068",
+    "countryCode": "RU",
+    "name": "Samara Oblast"
+  },
+  {
+    "placeId": "plc_501165",
+    "countryCode": "RU",
+    "name": "Rostov Oblast"
+  },
+  {
+    "placeId": "plc_504338",
+    "countryCode": "RU",
+    "name": "Pskov Oblast"
+  },
+  {
+    "placeId": "plc_511180",
+    "countryCode": "RU",
+    "name": "Perm Krai"
+  },
+  {
+    "placeId": "plc_511555",
+    "countryCode": "RU",
+    "name": "Penza Oblast"
+  },
+  {
+    "placeId": "plc_524304",
+    "countryCode": "RU",
+    "name": "Murmansk Oblast"
+  },
+  {
+    "placeId": "plc_524894",
+    "countryCode": "RU",
+    "name": "Moskva"
+  },
+  {
+    "placeId": "plc_536203",
+    "countryCode": "RU",
+    "name": "Sankt-Peterburg"
+  },
+  {
+    "placeId": "plc_542415",
+    "countryCode": "RU",
+    "name": "Krasnodarskiy Kray"
+  },
+  {
+    "placeId": "plc_552548",
+    "countryCode": "RU",
+    "name": "Respublika Kareliya"
+  },
+  {
+    "placeId": "plc_553899",
+    "countryCode": "RU",
+    "name": "Kaluga Oblast"
+  },
+  {
+    "placeId": "plc_554230",
+    "countryCode": "RU",
+    "name": "Kaliningrad Oblast"
+  },
+  {
+    "placeId": "plc_559838",
+    "countryCode": "RU",
+    "name": "Nizhny Novgorod Oblast"
+  },
+  {
+    "placeId": "plc_578071",
+    "countryCode": "RU",
+    "name": "Belgorod Oblast"
+  },
+  {
+    "placeId": "plc_578853",
+    "countryCode": "RU",
+    "name": "Bashkortostan"
+  },
+  {
+    "placeId": "plc_580491",
+    "countryCode": "RU",
+    "name": "Astrakhan Oblast"
+  },
+  {
+    "placeId": "plc_581043",
+    "countryCode": "RU",
+    "name": "Arkhangelsk Oblast"
+  },
+  {
+    "placeId": "plc_6413338",
+    "countryCode": "RW",
+    "name": "City of Kigali"
+  },
+  {
+    "placeId": "plc_101627",
+    "countryCode": "SA",
+    "name": "Tabuk Region"
+  },
+  {
+    "placeId": "plc_104514",
+    "countryCode": "SA",
+    "name": "Mecca Region"
+  },
+  {
+    "placeId": "plc_105298",
+    "countryCode": "SA",
+    "name": "Jazan Region"
+  },
+  {
+    "placeId": "plc_108241",
+    "countryCode": "SA",
+    "name": "Eastern Province"
+  },
+  {
+    "placeId": "plc_108411",
+    "countryCode": "SA",
+    "name": "Riyadh Region"
+  },
+  {
+    "placeId": "plc_108933",
+    "countryCode": "SA",
+    "name": "Al-Qassim Region"
+  },
+  {
+    "placeId": "plc_109224",
+    "countryCode": "SA",
+    "name": "Medina Region"
+  },
+  {
+    "placeId": "plc_2664179",
+    "countryCode": "SE",
+    "name": "Västmanland County"
+  },
+  {
+    "placeId": "plc_2664292",
+    "countryCode": "SE",
+    "name": "Västernorrland County"
+  },
+  {
+    "placeId": "plc_2664415",
+    "countryCode": "SE",
+    "name": "Västerbotten County"
+  },
+  {
+    "placeId": "plc_2664870",
+    "countryCode": "SE",
+    "name": "Värmland County"
+  },
+  {
+    "placeId": "plc_2666218",
+    "countryCode": "SE",
+    "name": "Uppsala County"
+  },
+  {
+    "placeId": "plc_2673722",
+    "countryCode": "SE",
+    "name": "Stockholm County"
+  },
+  {
+    "placeId": "plc_2676207",
+    "countryCode": "SE",
+    "name": "Södermanland County"
+  },
+  {
+    "placeId": "plc_2685867",
+    "countryCode": "SE",
+    "name": "Östergötland County"
+  },
+  {
+    "placeId": "plc_2686655",
+    "countryCode": "SE",
+    "name": "Örebro County"
+  },
+  {
+    "placeId": "plc_2699050",
+    "countryCode": "SE",
+    "name": "Kronoberg County"
+  },
+  {
+    "placeId": "plc_2699767",
+    "countryCode": "SE",
+    "name": "Dalarna County"
+  },
+  {
+    "placeId": "plc_2702259",
+    "countryCode": "SE",
+    "name": "Kalmar County"
+  },
+  {
+    "placeId": "plc_2702976",
+    "countryCode": "SE",
+    "name": "Jönköping County"
+  },
+  {
+    "placeId": "plc_2703330",
+    "countryCode": "SE",
+    "name": "Jämtland County"
+  },
+  {
+    "placeId": "plc_2708794",
+    "countryCode": "SE",
+    "name": "Halland County"
+  },
+  {
+    "placeId": "plc_2711508",
+    "countryCode": "SE",
+    "name": "Gotland County"
+  },
+  {
+    "placeId": "plc_2712411",
+    "countryCode": "SE",
+    "name": "Gävleborg County"
+  },
+  {
+    "placeId": "plc_3337385",
+    "countryCode": "SE",
+    "name": "Skåne County"
+  },
+  {
+    "placeId": "plc_3337386",
+    "countryCode": "SE",
+    "name": "Västra Götaland County"
+  },
+  {
+    "placeId": "plc_604010",
+    "countryCode": "SE",
+    "name": "Norrbotten County"
+  },
+  {
+    "placeId": "plc_3193340",
+    "countryCode": "SI",
+    "name": "Municipality of Piran"
+  },
+  {
+    "placeId": "plc_3239103",
+    "countryCode": "SI",
+    "name": "Municipality of Bled"
+  },
+  {
+    "placeId": "plc_3239318",
+    "countryCode": "SI",
+    "name": "Urban Municipality of Ljubljana"
+  },
+  {
+    "placeId": "plc_3056506",
+    "countryCode": "SK",
+    "name": "Zilina"
+  },
+  {
+    "placeId": "plc_3343955",
+    "countryCode": "SK",
+    "name": "Bratislava"
+  },
+  {
+    "placeId": "plc_865084",
+    "countryCode": "SK",
+    "name": "Kosice"
+  },
+  {
+    "placeId": "plc_865085",
+    "countryCode": "SK",
+    "name": "Presov"
+  },
+  {
+    "placeId": "plc_2253350",
+    "countryCode": "SN",
+    "name": "Dakar"
+  },
+  {
+    "placeId": "plc_3583360",
+    "countryCode": "SV",
+    "name": "Departamento de San Salvador"
+  },
+  {
+    "placeId": "plc_1150006",
+    "countryCode": "TH",
+    "name": "Changwat Trang"
+  },
+  {
+    "placeId": "plc_1150489",
+    "countryCode": "TH",
+    "name": "Changwat Tak"
+  },
+  {
+    "placeId": "plc_1150514",
+    "countryCode": "TH",
+    "name": "Changwat Surat Thani"
+  },
+  {
+    "placeId": "plc_1150532",
+    "countryCode": "TH",
+    "name": "Changwat Sukhothai"
+  },
+  {
+    "placeId": "plc_1150953",
+    "countryCode": "TH",
+    "name": "Changwat Ratchaburi"
+  },
+  {
+    "placeId": "plc_1150964",
+    "countryCode": "TH",
+    "name": "Changwat Ranong"
+  },
+  {
+    "placeId": "plc_1151073",
+    "countryCode": "TH",
+    "name": "Changwat Prachuap Khiri Khan"
+  },
+  {
+    "placeId": "plc_1151253",
+    "countryCode": "TH",
+    "name": "Phuket Province"
+  },
+  {
+    "placeId": "plc_1151416",
+    "countryCode": "TH",
+    "name": "Changwat Phetchaburi"
+  },
+  {
+    "placeId": "plc_1151462",
+    "countryCode": "TH",
+    "name": "Changwat Phangnga"
+  },
+  {
+    "placeId": "plc_1152221",
+    "countryCode": "TH",
+    "name": "Changwat Mae Hong Son"
+  },
+  {
+    "placeId": "plc_1152467",
+    "countryCode": "TH",
+    "name": "Changwat Lamphun"
+  },
+  {
+    "placeId": "plc_1152472",
+    "countryCode": "TH",
+    "name": "Changwat Lampang"
+  },
+  {
+    "placeId": "plc_1152631",
+    "countryCode": "TH",
+    "name": "Changwat Krabi"
+  },
+  {
+    "placeId": "plc_1153080",
+    "countryCode": "TH",
+    "name": "Changwat Kanchanaburi"
+  },
+  {
+    "placeId": "plc_1153089",
+    "countryCode": "TH",
+    "name": "Changwat Kamphaeng Phet"
+  },
+  {
+    "placeId": "plc_1153555",
+    "countryCode": "TH",
+    "name": "Changwat Chumphon"
+  },
+  {
+    "placeId": "plc_1153668",
+    "countryCode": "TH",
+    "name": "Changwat Chiang Rai"
+  },
+  {
+    "placeId": "plc_1153670",
+    "countryCode": "TH",
+    "name": "Changwat Chiang Mai"
+  },
+  {
+    "placeId": "plc_1605277",
+    "countryCode": "TH",
+    "name": "Changwat Trat"
+  },
+  {
+    "placeId": "plc_1606029",
+    "countryCode": "TH",
+    "name": "Changwat Surin"
+  },
+  {
+    "placeId": "plc_1606032",
+    "countryCode": "TH",
+    "name": "Changwat Suphan Buri"
+  },
+  {
+    "placeId": "plc_1606146",
+    "countryCode": "TH",
+    "name": "Changwat Songkhla"
+  },
+  {
+    "placeId": "plc_1606375",
+    "countryCode": "TH",
+    "name": "Changwat Satun"
+  },
+  {
+    "placeId": "plc_1606585",
+    "countryCode": "TH",
+    "name": "Changwat Samut Songkhram"
+  },
+  {
+    "placeId": "plc_1606789",
+    "countryCode": "TH",
+    "name": "Changwat Sakon Nakhon"
+  },
+  {
+    "placeId": "plc_1607000",
+    "countryCode": "TH",
+    "name": "Changwat Roi Et"
+  },
+  {
+    "placeId": "plc_1607016",
+    "countryCode": "TH",
+    "name": "Changwat Rayong"
+  },
+  {
+    "placeId": "plc_1607551",
+    "countryCode": "TH",
+    "name": "Changwat Phrae"
+  },
+  {
+    "placeId": "plc_1607707",
+    "countryCode": "TH",
+    "name": "Changwat Phitsanulok"
+  },
+  {
+    "placeId": "plc_1607736",
+    "countryCode": "TH",
+    "name": "Changwat Phetchabun"
+  },
+  {
+    "placeId": "plc_1607758",
+    "countryCode": "TH",
+    "name": "Changwat Phayao"
+  },
+  {
+    "placeId": "plc_1607778",
+    "countryCode": "TH",
+    "name": "Changwat Phatthalung"
+  },
+  {
+    "placeId": "plc_1607982",
+    "countryCode": "TH",
+    "name": "Changwat Pathum Thani"
+  },
+  {
+    "placeId": "plc_1608231",
+    "countryCode": "TH",
+    "name": "Changwat Nong Khai"
+  },
+  {
+    "placeId": "plc_1608451",
+    "countryCode": "TH",
+    "name": "Changwat Nan"
+  },
+  {
+    "placeId": "plc_1608526",
+    "countryCode": "TH",
+    "name": "Changwat Nakhon Sawan"
+  },
+  {
+    "placeId": "plc_1608528",
+    "countryCode": "TH",
+    "name": "Changwat Nakhon Ratchasima"
+  },
+  {
+    "placeId": "plc_1608530",
+    "countryCode": "TH",
+    "name": "Changwat Nakhon Phanom"
+  },
+  {
+    "placeId": "plc_1608533",
+    "countryCode": "TH",
+    "name": "Changwat Nakhon Pathom"
+  },
+  {
+    "placeId": "plc_1608538",
+    "countryCode": "TH",
+    "name": "Changwat Nakhon Nayok"
+  },
+  {
+    "placeId": "plc_1609031",
+    "countryCode": "TH",
+    "name": "Changwat Lop Buri"
+  },
+  {
+    "placeId": "plc_1609070",
+    "countryCode": "TH",
+    "name": "Changwat Loei"
+  },
+  {
+    "placeId": "plc_1609348",
+    "countryCode": "TH",
+    "name": "Bangkok"
+  },
+  {
+    "placeId": "plc_1609775",
+    "countryCode": "TH",
+    "name": "Changwat Khon Kaen"
+  },
+  {
+    "placeId": "plc_1611108",
+    "countryCode": "TH",
+    "name": "Changwat Chon Buri"
+  },
+  {
+    "placeId": "plc_1611268",
+    "countryCode": "TH",
+    "name": "Changwat Chanthaburi"
+  },
+  {
+    "placeId": "plc_1611406",
+    "countryCode": "TH",
+    "name": "Changwat Chaiyaphum"
+  },
+  {
+    "placeId": "plc_1611438",
+    "countryCode": "TH",
+    "name": "Changwat Chachoengsao"
+  },
+  {
+    "placeId": "plc_1611452",
+    "countryCode": "TH",
+    "name": "Changwat Buri Ram"
+  },
+  {
+    "placeId": "plc_1906686",
+    "countryCode": "TH",
+    "name": "Changwat Udon Thani"
+  },
+  {
+    "placeId": "plc_1906687",
+    "countryCode": "TH",
+    "name": "Changwat Prachin Buri"
+  },
+  {
+    "placeId": "plc_1906688",
+    "countryCode": "TH",
+    "name": "Changwat Ubon Ratchathani"
+  },
+  {
+    "placeId": "plc_8133594",
+    "countryCode": "TH",
+    "name": "Changwat Bueng Kan"
+  },
+  {
+    "placeId": "plc_2464912",
+    "countryCode": "TN",
+    "name": "Gouvernorat de Sousse"
+  },
+  {
+    "placeId": "plc_2468576",
+    "countryCode": "TN",
+    "name": "Gouvernorat de Nabeul"
+  },
+  {
+    "placeId": "plc_2469470",
+    "countryCode": "TN",
+    "name": "Gouvernorat de Médenine"
+  },
+  {
+    "placeId": "plc_2473495",
+    "countryCode": "TN",
+    "name": "Gouvernorat de Monastir"
+  },
+  {
+    "placeId": "plc_298332",
+    "countryCode": "TR",
+    "name": "Şanlıurfa"
+  },
+  {
+    "placeId": "plc_303830",
+    "countryCode": "TR",
+    "name": "Nevşehir"
+  },
+  {
+    "placeId": "plc_304183",
+    "countryCode": "TR",
+    "name": "Muğla"
+  },
+  {
+    "placeId": "plc_304794",
+    "countryCode": "TR",
+    "name": "Mardin"
+  },
+  {
+    "placeId": "plc_306569",
+    "countryCode": "TR",
+    "name": "Konya"
+  },
+  {
+    "placeId": "plc_308463",
+    "countryCode": "TR",
+    "name": "Kayseri"
+  },
+  {
+    "placeId": "plc_311044",
+    "countryCode": "TR",
+    "name": "İzmir"
+  },
+  {
+    "placeId": "plc_311728",
+    "countryCode": "TR",
+    "name": "Mersin"
+  },
+  {
+    "placeId": "plc_312394",
+    "countryCode": "TR",
+    "name": "Hatay"
+  },
+  {
+    "placeId": "plc_314829",
+    "countryCode": "TR",
+    "name": "Gaziantep"
+  },
+  {
+    "placeId": "plc_315201",
+    "countryCode": "TR",
+    "name": "Eskişehir"
+  },
+  {
+    "placeId": "plc_316540",
+    "countryCode": "TR",
+    "name": "Diyarbakır"
+  },
+  {
+    "placeId": "plc_317106",
+    "countryCode": "TR",
+    "name": "Denizli"
+  },
+  {
+    "placeId": "plc_322164",
+    "countryCode": "TR",
+    "name": "Balıkesir"
+  },
+  {
+    "placeId": "plc_323776",
+    "countryCode": "TR",
+    "name": "Antalya"
+  },
+  {
+    "placeId": "plc_323784",
+    "countryCode": "TR",
+    "name": "Ankara"
+  },
+  {
+    "placeId": "plc_325361",
+    "countryCode": "TR",
+    "name": "Adana"
+  },
+  {
+    "placeId": "plc_738647",
+    "countryCode": "TR",
+    "name": "Trabzon"
+  },
+  {
+    "placeId": "plc_738926",
+    "countryCode": "TR",
+    "name": "Tekirdağ"
+  },
+  {
+    "placeId": "plc_740263",
+    "countryCode": "TR",
+    "name": "Samsun"
+  },
+  {
+    "placeId": "plc_740481",
+    "countryCode": "TR",
+    "name": "Rize"
+  },
+  {
+    "placeId": "plc_742865",
+    "countryCode": "TR",
+    "name": "Kocaeli"
+  },
+  {
+    "placeId": "plc_745042",
+    "countryCode": "TR",
+    "name": "İstanbul"
+  },
+  {
+    "placeId": "plc_747711",
+    "countryCode": "TR",
+    "name": "Edirne"
+  },
+  {
+    "placeId": "plc_749778",
+    "countryCode": "TR",
+    "name": "Çanakkale"
+  },
+  {
+    "placeId": "plc_750268",
+    "countryCode": "TR",
+    "name": "Bursa"
+  },
+  {
+    "placeId": "plc_750510",
+    "countryCode": "TR",
+    "name": "Bolu"
+  },
+  {
+    "placeId": "plc_862468",
+    "countryCode": "TR",
+    "name": "Karabük"
+  },
+  {
+    "placeId": "plc_148724",
+    "countryCode": "TZ",
+    "name": "Mjini Magharibi"
+  },
+  {
+    "placeId": "plc_148728",
+    "countryCode": "TZ",
+    "name": "Kusini Unguja"
+  },
+  {
+    "placeId": "plc_157449",
+    "countryCode": "TZ",
+    "name": "Kilimanjaro Region"
+  },
+  {
+    "placeId": "plc_160260",
+    "countryCode": "TZ",
+    "name": "Dar es Salaam Region"
+  },
+  {
+    "placeId": "plc_161322",
+    "countryCode": "TZ",
+    "name": "Arusha Region"
+  },
+  {
+    "placeId": "plc_698738",
+    "countryCode": "UA",
+    "name": "Odeska Oblast"
+  },
+  {
+    "placeId": "plc_702549",
+    "countryCode": "UA",
+    "name": "Lvivska Oblast"
+  },
+  {
+    "placeId": "plc_703447",
+    "countryCode": "UA",
+    "name": "Misto Kyiv"
+  },
+  {
+    "placeId": "plc_4099753",
+    "countryCode": "US",
+    "name": "Arkansas"
+  },
+  {
+    "placeId": "plc_4138106",
+    "countryCode": "US",
+    "name": "District of Columbia"
+  },
+  {
+    "placeId": "plc_4142224",
+    "countryCode": "US",
+    "name": "Delaware"
+  },
+  {
+    "placeId": "plc_4155751",
+    "countryCode": "US",
+    "name": "Florida"
+  },
+  {
+    "placeId": "plc_4197000",
+    "countryCode": "US",
+    "name": "Georgia"
+  },
+  {
+    "placeId": "plc_4273857",
+    "countryCode": "US",
+    "name": "Kansas"
+  },
+  {
+    "placeId": "plc_4331987",
+    "countryCode": "US",
+    "name": "Louisiana"
+  },
+  {
+    "placeId": "plc_4361885",
+    "countryCode": "US",
+    "name": "Maryland"
+  },
+  {
+    "placeId": "plc_4436296",
+    "countryCode": "US",
+    "name": "Mississippi"
+  },
+  {
+    "placeId": "plc_4482348",
+    "countryCode": "US",
+    "name": "North Carolina"
+  },
+  {
+    "placeId": "plc_4544379",
+    "countryCode": "US",
+    "name": "Oklahoma"
+  },
+  {
+    "placeId": "plc_4597040",
+    "countryCode": "US",
+    "name": "South Carolina"
+  },
+  {
+    "placeId": "plc_4662168",
+    "countryCode": "US",
+    "name": "Tennessee"
+  },
+  {
+    "placeId": "plc_4736286",
+    "countryCode": "US",
+    "name": "Texas"
+  },
+  {
+    "placeId": "plc_4826850",
+    "countryCode": "US",
+    "name": "West Virginia"
+  },
+  {
+    "placeId": "plc_4829764",
+    "countryCode": "US",
+    "name": "Alabama"
+  },
+  {
+    "placeId": "plc_4831725",
+    "countryCode": "US",
+    "name": "Connecticut"
+  },
+  {
+    "placeId": "plc_4862182",
+    "countryCode": "US",
+    "name": "Iowa"
+  },
+  {
+    "placeId": "plc_4896861",
+    "countryCode": "US",
+    "name": "Illinois"
+  },
+  {
+    "placeId": "plc_4921868",
+    "countryCode": "US",
+    "name": "Indiana"
+  },
+  {
+    "placeId": "plc_4971068",
+    "countryCode": "US",
+    "name": "Maine"
+  },
+  {
+    "placeId": "plc_5001836",
+    "countryCode": "US",
+    "name": "Michigan"
+  },
+  {
+    "placeId": "plc_5037779",
+    "countryCode": "US",
+    "name": "Minnesota"
+  },
+  {
+    "placeId": "plc_5073708",
+    "countryCode": "US",
+    "name": "Nebraska"
+  },
+  {
+    "placeId": "plc_5090174",
+    "countryCode": "US",
+    "name": "New Hampshire"
+  },
+  {
+    "placeId": "plc_5128638",
+    "countryCode": "US",
+    "name": "New York"
+  },
+  {
+    "placeId": "plc_5165418",
+    "countryCode": "US",
+    "name": "Ohio"
+  },
+  {
+    "placeId": "plc_5279468",
+    "countryCode": "US",
+    "name": "Wisconsin"
+  },
+  {
+    "placeId": "plc_5332921",
+    "countryCode": "US",
+    "name": "California"
+  },
+  {
+    "placeId": "plc_5417618",
+    "countryCode": "US",
+    "name": "Colorado"
+  },
+  {
+    "placeId": "plc_5481136",
+    "countryCode": "US",
+    "name": "New Mexico"
+  },
+  {
+    "placeId": "plc_5509151",
+    "countryCode": "US",
+    "name": "Nevada"
+  },
+  {
+    "placeId": "plc_5549030",
+    "countryCode": "US",
+    "name": "Utah"
+  },
+  {
+    "placeId": "plc_5551752",
+    "countryCode": "US",
+    "name": "Arizona"
+  },
+  {
+    "placeId": "plc_5596512",
+    "countryCode": "US",
+    "name": "Idaho"
+  },
+  {
+    "placeId": "plc_5667009",
+    "countryCode": "US",
+    "name": "Montana"
+  },
+  {
+    "placeId": "plc_5690763",
+    "countryCode": "US",
+    "name": "North Dakota"
+  },
+  {
+    "placeId": "plc_5744337",
+    "countryCode": "US",
+    "name": "Oregon"
+  },
+  {
+    "placeId": "plc_5769223",
+    "countryCode": "US",
+    "name": "South Dakota"
+  },
+  {
+    "placeId": "plc_5815135",
+    "countryCode": "US",
+    "name": "Washington"
+  },
+  {
+    "placeId": "plc_5843591",
+    "countryCode": "US",
+    "name": "Wyoming"
+  },
+  {
+    "placeId": "plc_5855797",
+    "countryCode": "US",
+    "name": "Hawaii"
+  },
+  {
+    "placeId": "plc_5879092",
+    "countryCode": "US",
+    "name": "Alaska"
+  },
+  {
+    "placeId": "plc_6254925",
+    "countryCode": "US",
+    "name": "Kentucky"
+  },
+  {
+    "placeId": "plc_6254926",
+    "countryCode": "US",
+    "name": "Massachusetts"
+  },
+  {
+    "placeId": "plc_6254927",
+    "countryCode": "US",
+    "name": "Pennsylvania"
+  },
+  {
+    "placeId": "plc_6254928",
+    "countryCode": "US",
+    "name": "Virginia"
+  },
+  {
+    "placeId": "plc_3441572",
+    "countryCode": "UY",
+    "name": "Departamento de Montevideo"
+  },
+  {
+    "placeId": "plc_3441890",
+    "countryCode": "UY",
+    "name": "Departamento de Maldonado"
+  },
+  {
+    "placeId": "plc_1114927",
+    "countryCode": "UZ",
+    "name": "Samarqand Region"
+  },
+  {
+    "placeId": "plc_1114929",
+    "countryCode": "UZ",
+    "name": "Bukhara Region"
+  },
+  {
+    "placeId": "plc_1559969",
+    "countryCode": "VN",
+    "name": "Tỉnh Nghệ An"
+  },
+  {
+    "placeId": "plc_1565033",
+    "countryCode": "VN",
+    "name": "Thừa Thiên Huế"
+  },
+  {
+    "placeId": "plc_1566165",
+    "countryCode": "VN",
+    "name": "Tỉnh Thanh Hóa"
+  },
+  {
+    "placeId": "plc_1568758",
+    "countryCode": "VN",
+    "name": "Tỉnh Quảng Ninh"
+  },
+  {
+    "placeId": "plc_1581129",
+    "countryCode": "VN",
+    "name": "Hanoi"
+  },
+  {
+    "placeId": "plc_2208267",
+    "countryCode": "VU",
+    "name": "Shefa Province"
+  },
+  {
+    "placeId": "plc_1085593",
+    "countryCode": "ZA",
+    "name": "Eastern Cape"
+  },
+  {
+    "placeId": "plc_1085594",
+    "countryCode": "ZA",
+    "name": "Gauteng"
+  },
+  {
+    "placeId": "plc_1085595",
+    "countryCode": "ZA",
+    "name": "Mpumalanga"
+  },
+  {
+    "placeId": "plc_1085596",
+    "countryCode": "ZA",
+    "name": "Northern Cape"
+  },
+  {
+    "placeId": "plc_1085597",
+    "countryCode": "ZA",
+    "name": "Limpopo"
+  },
+  {
+    "placeId": "plc_1085599",
+    "countryCode": "ZA",
+    "name": "Western Cape"
+  },
+  {
+    "placeId": "plc_967573",
+    "countryCode": "ZA",
+    "name": "Free State"
+  },
+  {
+    "placeId": "plc_972062",
+    "countryCode": "ZA",
+    "name": "KwaZulu-Natal"
+  },
+  {
+    "placeId": "plc_896972",
+    "countryCode": "ZM",
+    "name": "Southern Province"
+  },
+  {
+    "placeId": "plc_909129",
+    "countryCode": "ZM",
+    "name": "Lusaka Province"
+  },
+  {
+    "placeId": "plc_1105844",
+    "countryCode": "ZW",
+    "name": "Harare Province"
+  },
+  {
+    "placeId": "plc_886748",
+    "countryCode": "ZW",
+    "name": "Matabeleland North Province"
+  }
+]
