@@ -1,14 +1,16 @@
 # Deploys docs.fortrip.ai to Vercel when a docs-* tag is pushed. Production
 # docs follow the live server, not main, so deploying is a deliberate act: the
 # tag name is free-form (docs-4.3.0, or docs-4.3.0-2 for a docs-only fix cut
-# from a v* tag), the guard refuses a prerelease contract, and a human approves
+# from a v* tag), the guard refuses a tree whose contract isn't the released
+# one (scripts/docs-deploy-guard.ts), and a human approves
 # the docs-production environment, which holds VERCEL_TOKEN, VERCEL_ORG_ID and
 # VERCEL_PROJECT_ID. The v* filter of publish.yml cannot match docs-* tags
 # (tag filters are globs anchored at the start), so this never publishes to npm.
 #
 # The build runs here, from the repo root, so the Vercel project's Root
 # Directory (packages/docs) applies and the whole monorepo is present: the docs
-# read packages/contract and packages/cli/package.json.
+# read packages/contract and packages/cli/package.json. The build runs the
+# dependencies' code, so it gets no VERCEL_TOKEN: only pull and deploy do.
 name: Deploy docs
 
 on:
@@ -35,6 +37,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Every tag, for the guard to compare the contract with its v* tag.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -45,7 +49,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Refuse a prerelease contract
+      - name: Refuse a contract that isn't the released one
         run: node --import tsx scripts/docs-deploy-guard.ts
 
       - name: Check the changelog has the contract's entry
@@ -57,9 +61,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
-        run: npx --yes vercel@65.11.0 build --prod --token="$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@65.11.0 build --prod
 
       - name: Deploy
         run: npx --yes vercel@65.11.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN"
