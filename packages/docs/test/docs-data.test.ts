@@ -10,6 +10,7 @@ import {
   TOOLS,
 } from "@fortrip/agent-contract";
 
+import { OPERATIONS } from "../lib/openapi/build.ts";
 import { API_BASE_URL, ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { CLI_COMMANDS, commandSlug, RAW_BODY_EXAMPLE } from "../lib/reference/cli-commands.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
@@ -29,12 +30,25 @@ test("every contract tool has a docs page that takes its words from the contract
   }
 });
 
-test("a tool page's meta description is the first sentence of its contract description", () => {
+test("a tool page's description is one short sentence: its contract description's first, unless that is too long", () => {
   for (const tool of MCP_TOOLS) {
-    assert.ok(tool.summary.startsWith(tool.snippet), tool.name);
+    assert.ok(tool.snippet.length <= 200, `${tool.name}: ${tool.snippet.length}`);
     assert.match(tool.snippet, /[.!?]$/, tool.name);
     assert.doesNotMatch(tool.snippet, /[.!?]\s/, tool.name);
+    const first = /^.*?[.!?](?=\s|$)/s.exec(tool.summary)?.[0] ?? tool.summary;
+    if (first.length <= 200) assert.equal(tool.snippet, first, tool.name);
+    // The body shows what the description doesn't: all of the contract's text.
+    assert.equal(`${tool.summary.startsWith(tool.snippet) ? tool.snippet : ""} ${tool.rest}`.trim(), tool.summary, tool.name);
   }
+});
+
+test("an API reference page is described like its MCP tool's page; an account route by the docs", () => {
+  for (const op of OPERATIONS) {
+    const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
+    if (tool) assert.equal(op.summary, tool.snippet, op.id);
+    assert.ok(op.summary.length > 0 && op.summary.length <= 200, `${op.id}: ${op.summary.length}`);
+  }
+  assert.deepEqual(OPERATIONS.filter((op) => !op.endpoint.tool).map((op) => op.id).sort(), ["auth_config", "me"]);
 });
 
 test("every contract command has a docs page with a row for each of its flags", () => {

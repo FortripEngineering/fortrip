@@ -1,5 +1,5 @@
 import type { ToolName } from "@fortrip/agent-contract";
-import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
+import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 import { Heading } from "fumadocs-ui/components/heading";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -33,23 +33,16 @@ function Table({ head, children }: { head?: string[]; children: ReactNode }) {
   );
 }
 
-function Code({ children }: { children: string }) {
-  return (
-    <CodeBlock>
-      <Pre>{children}</Pre>
-    </CodeBlock>
-  );
-}
 
-/** A tool's page body: its contract description after the first sentence
- *  (the page's description), input fields and output. */
+/** A tool's page body: its contract description less what the page's
+ *  description says, input fields and output. */
 export function ToolPage({ name }: { name: ToolName }) {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
   const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
   const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
-  const rest = tool.summary.slice(tool.snippet.length).trim();
+  const { rest } = tool;
   return (
     <>
       {rest && <p>{inline(rest)}</p>}
@@ -110,7 +103,8 @@ export function CommandPage({ path }: { path: string }) {
       <Heading as="h2" id="usage">
         Usage
       </Heading>
-      <Code>{command.usage}</Code>
+      {/* Highlighted like a Markdown block (its lines carry the padding), spaced like one. */}
+      <ServerCodeBlock lang="text" code={command.usage} codeblock={{ className: "my-4" }} />
       {command.how && (
         <>
           <Heading as="h2" id="how">

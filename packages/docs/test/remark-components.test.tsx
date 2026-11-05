@@ -17,6 +17,8 @@ import { remarkComponents } from "../lib/remark-components.ts";
 import { remarkFacts } from "../lib/remark-facts.ts";
 
 const Box = ({ children }: { children?: ReactNode }) => createElement("div", null, children);
+/** The site's code block (Fumadocs' CodeBlock), which only Markdown code reaches. */
+const CodeBlock = ({ children }: { children?: ReactNode }) => createElement("figure", null, children);
 
 /**
  * Compiles MDX as the site does (heading ids, facts, components, then Fumadocs' search
@@ -29,7 +31,7 @@ async function compile(source: string) {
     remarkPlugins: [remarkHeading, remarkFacts, remarkComponents, [remarkStructure, { exportAs: "structuredData" }], remarkLLMs],
   });
   const search = (structuredData as { contents: { content: string; heading?: string }[] }).contents;
-  const html = renderToStaticMarkup(createElement(Content, { components: { Cards: Box, Card: Box } }));
+  const html = renderToStaticMarkup(createElement(Content, { components: { Cards: Box, Card: Box, pre: CodeBlock } }));
   return { html, search, markdown: _markdown as string };
 }
 
@@ -82,6 +84,11 @@ describe("remarkComponents", () => {
       'Call <code><Fact path="ROUTES.pay_order" /></code>.\n\n<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>',
     );
     assert.equal(markdown.trim(), `Call \`${fact("ROUTES.pay_order")}\`.\n\n\`\`\`\n${fact("MCP_SERVER_URL")}\n\`\`\``);
+  });
+
+  it("renders a <pre> as the site's code block, so it scrolls and copies", async () => {
+    const { html } = await compile('<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>');
+    assert.equal(html, `<figure><code>${fact("MCP_SERVER_URL")}\n</code></figure>`);
   });
 
   it("fails compilation on a component with no Markdown form", async () => {

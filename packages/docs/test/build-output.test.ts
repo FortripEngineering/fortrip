@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import { fact } from "../components/fact.tsx";
+import { pageHtml, pageRoutes } from "./built-page.ts";
 
 const server = new URL("../.next/server/", import.meta.url).pathname;
 
@@ -25,5 +26,38 @@ describe("built site", () => {
     assert.ok(files.length > 0);
     const leaks = files.filter((f) => readFileSync(join(server, f), "utf8").includes("<Fact"));
     assert.deepEqual(leaks, []);
+  });
+
+  it("renders every code block in an article as the site's code block: scrolling, padded, with a copy button", () => {
+    const routes = pageRoutes();
+    assert.ok(routes.length > 20);
+    const bad: string[] = [];
+    for (const route of routes) {
+      const html = pageHtml(route);
+      const start = html.indexOf('<article id="nd-page"');
+      const article = html.slice(start, html.indexOf("</article>", start));
+      assert.ok(start >= 0 && article.length > 0, `${route}: no article`);
+      for (const pre of article.matchAll(/<pre\b[\s\S]*?<\/pre>/g)) {
+        // Inside a Fumadocs CodeBlock: an open <figure class="… shiki …">.
+        const figure = article.lastIndexOf("<figure", pre.index);
+        const open = figure >= 0 && !article.slice(figure, pre.index).includes("</figure>");
+        const classes = /^<figure\b[^>]*\bclass="([^"]*)"/.exec(article.slice(figure))?.[1] ?? "";
+        if (!open || !classes.split(" ").includes("shiki")) bad.push(`${route}: not in a code block figure`);
+        // Highlighted: <code> holding <span class="line">s, which carry the padding.
+        if (!/<code\b[^>]*>[\s\S]*<span class="line"/.test(pre[0])) {
+          bad.push(`${route}: no <code> with lines: ${pre[0].replace(/<[^>]+>/g, "").slice(0, 40)}`);
+        }
+      }
+    }
+    assert.deepEqual(bad, []);
+  });
+
+  it("top-aligns table cells, site-wide", () => {
+    const css = readdirSync(join(server, "../static"), { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".css"))
+      .map((f) => readFileSync(join(server, "../static", f), "utf8"))
+      .join("\n");
+    assert.ok(css.length > 0);
+    assert.match(css, /:where\(table\) :is\(td,\s*th\)\{vertical-align:top\}/);
   });
 });

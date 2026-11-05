@@ -31,7 +31,7 @@ export function toolMarkdown(name: ToolName): string {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
-  const rest = tool.summary.slice(tool.snippet.length).trim();
+  const { rest } = tool;
   const output =
     typeof tool.returns === "string"
       ? [text(tool.returns)]

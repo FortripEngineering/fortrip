@@ -59,7 +59,7 @@ const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
       body: () => <ToolPage name={tool.name} />,
       markdown: () => toolMarkdown(tool.name),
       ...outline(
-        [tool.name, tool.summary],
+        [tool.name, ...(tool.summary.startsWith(tool.snippet) ? [] : [tool.snippet]), tool.summary],
         [
           {
             id: "input",

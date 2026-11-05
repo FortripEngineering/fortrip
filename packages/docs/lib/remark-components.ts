@@ -33,7 +33,8 @@ const textOf = (node: Nodes): string =>
  * since generated nodes have no source position for Fumadocs to slice.
  *
  * Elements kept as JSX get a Markdown form too: `<Example>` its code,
- * `<Cards>` a list of links, `<code>` and `<pre>` Markdown code. Any other
+ * `<Cards>` a list of links, `<code>` Markdown inline code. A `<pre>` becomes
+ * a Markdown code block on the page too. Any other
  * component fails the compilation, and with it the build, so no page's
  * Markdown is left holding JSX. Runs after `remarkFacts`.
  */
@@ -98,9 +99,12 @@ export function remarkComponents() {
         setMarkdown(node, phrasing([{ type: "inlineCode", value: textOf(node as unknown as Nodes) }]));
         return null;
       }
-      if (name === "pre") {
-        setMarkdown(node, toMarkdown([{ type: "code", lang: null, value: textOf(node as unknown as Nodes) }]));
-        return null;
+      if (name === "pre" && flow) {
+        // Markdown code, so the page renders it as the site's code block
+        // (scrolling, with a copy button), which JSX `<pre>` never reaches.
+        const code: RootContent = { type: "code", lang: null, value: textOf(node as unknown as Nodes) };
+        setMarkdown(node, toMarkdown([code]));
+        return [code];
       }
       if (/^[A-Z]/.test(name)) file.fail(`<${name}> has no Markdown form`, node);
       return null;

@@ -14,6 +14,32 @@ export function markdownPath(url: string): string {
   return `${url === "/" ? "/index" : url}.md`;
 }
 
+/** A link on the docs origin as `llms.txt` writes it: a page to its Markdown
+ *  (keeping a `#section`), a file (`/openapi.json`) as it is. */
+function absolute(path: string): string {
+  const [pathname = "", hash] = path.split("#");
+  const target = /\.\w+$/.test(pathname) ? pathname : markdownPath(pathname);
+  return `${DOCS_ORIGIN}${target}${hash === undefined ? "" : `#${hash}`}`;
+}
+
+/** Markdown for reading off the site: headings without their Fumadocs anchor
+ *  (`## Input [#input]`), and relative links (`/errors`, `#local-mcp`)
+ *  absolute on the docs origin. Fenced code is left as it is. */
+function offSite(markdown: string, url: string): string {
+  return markdown
+    .split(/^(```+[^\n]*\n[\s\S]*?^```+[ \t]*$)/m)
+    .map((part, i) =>
+      i % 2 === 1
+        ? part
+        : part
+            .replace(/^(#{1,6} .*?) \[#[^\]]+\][ \t]*$/gm, "$1")
+            .replace(/\]\(([/#][^)]*)\)/g, (_, link: string) =>
+              `](${absolute(link.startsWith("#") ? `${url}${link}` : link)})`,
+            ),
+    )
+    .join("");
+}
+
 /** A page as Markdown: its title, its description, then its body with every
  *  component as text (`lib/remark-components.ts`). */
 export async function pageMarkdown(page: Page): Promise<string> {
@@ -22,7 +48,7 @@ export async function pageMarkdown(page: Page): Promise<string> {
   else if (page.type === "reference") body = page.data.markdown();
   else body = operationMarkdown(page.slugs.at(-1) ?? "", page.data.description);
   const description = page.data.description ? [`> ${page.data.description}`] : [];
-  return `${[`# ${page.data.title}`, ...description, body.trim()].join("\n\n")}\n`;
+  return `${offSite([`# ${page.data.title}`, ...description, body.trim()].join("\n\n"), page.url)}\n`;
 }
 
 /** Fumadocs' llms.txt helper, for each sidebar node's link list. */
@@ -67,7 +93,5 @@ export function llmsIndex(): string {
     "",
   ]
     .join("\n")
-    .replace(/\]\((\/[^)]*)\)/g, (_, path: string) =>
-      `](${DOCS_ORIGIN}${path.endsWith(".json") ? path : markdownPath(path)})`,
-    );
+    .replace(/\]\((\/[^)]*)\)/g, (_, path: string) => `](${absolute(path)})`);
 }

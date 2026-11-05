@@ -49,3 +49,9 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
+
+/* Table cells read from the top: a short code or status stays level with the
+   first line of a long meaning beside it. */
+:where(table) :is(td, th) {
+  vertical-align: top;
+}

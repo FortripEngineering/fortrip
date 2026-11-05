@@ -15,6 +15,7 @@ import type { OpenAPIV3_1 } from "fumadocs-openapi";
 import { z } from "zod";
 
 import { type Endpoint, ENDPOINTS } from "../reference/api-docs.ts";
+import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { responseDocFor } from "../reference/response-docs.ts";
 
 /** A JSON Schema 2020-12 object, as `z.toJSONSchema` writes it. */
@@ -45,13 +46,21 @@ interface OperationSpec {
   endpoint: Endpoint;
   input: z.ZodType | null;
   output: z.ZodType;
+  /** The page's short description (meta, header, cards, llms.txt): the
+   *  matching MCP tool page's, or the docs' own for an account route. */
+  summary: string;
+  /** The operation's full description, in the page body and openapi.json. */
   description?: string;
 }
 
 /** The routes that aren't tools: their operation ids and what they answer. */
-const ACCOUNT_OPERATIONS: Record<keyof typeof ACCOUNT_ROUTES, { id: string; output: z.ZodType }> = {
-  me: { id: "me", output: meResult },
-  authConfig: { id: "auth_config", output: authConfig },
+const ACCOUNT_OPERATIONS: Record<keyof typeof ACCOUNT_ROUTES, { id: string; output: z.ZodType; summary: string }> = {
+  me: { id: "me", output: meResult, summary: "The signed-in user the access token belongs to: their id, email and name." },
+  authConfig: {
+    id: "auth_config",
+    output: authConfig,
+    summary: "Where and how a client signs in with the device authorization flow. It needs no access token.",
+  },
 };
 
 /** Every operation, in the endpoint table's order. */
@@ -62,14 +71,16 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
     const output = responseDocFor(endpoint.tool)?.schema;
     if (!tool || !output) throw new Error(`no tool or response for ${endpoint.tool}`);
     const route = HTTP_ROUTES[endpoint.tool];
-    return { id: tool.name, route, endpoint, input: tool.input, output, description: tool.description };
+    const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.snippet;
+    if (!summary) throw new Error(`${tool.name} has no MCP tool page`);
+    return { id: tool.name, route, endpoint, input: tool.input, output, summary, description: tool.description };
   }
   const key = (Object.keys(ACCOUNT_ROUTES) as Array<keyof typeof ACCOUNT_ROUTES>).find(
     (k) => ACCOUNT_ROUTES[k].method === endpoint.method && ACCOUNT_ROUTES[k].path === endpoint.path,
   );
   if (!key) throw new Error(`no route for ${endpoint.method} ${endpoint.path}`);
-  const { id, output } = ACCOUNT_OPERATIONS[key];
-  return { id, route: ACCOUNT_ROUTES[key], endpoint, input: null, output };
+  const { id, output, summary } = ACCOUNT_OPERATIONS[key];
+  return { id, route: ACCOUNT_ROUTES[key], endpoint, input: null, output, summary };
 });
 
 /** What an operation answers, by status. */

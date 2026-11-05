@@ -14,6 +14,16 @@ const docs = defineDocs({
 const REFERENCE_DIR = "api/reference";
 const openapiPages = await openapi.staticSource({ baseDir: REFERENCE_DIR });
 
+/** An operation's page with the operation's short summary as its description
+ *  (meta, header, cards, llms.txt); the full description stays in the body. */
+const describedOpenapiPages = openapiPages.files.map((file): (typeof openapiPages.files)[number] => {
+  if (file.type !== "page") return file;
+  const id = file.path.split("/").at(-1)?.replace(/\.\w+$/, "");
+  const op = OPERATIONS.find((o) => o.id === id);
+  if (!op) throw new Error(`${file.path}: no operation`);
+  return { ...file, data: { ...file.data, description: op.summary } };
+});
+
 export const source = loader(
   {
     docs: docs.toFumadocsSource(),
@@ -23,7 +33,7 @@ export const source = loader(
     // listed in the endpoint table's order.
     openapi: {
       files: [
-        ...openapiPages.files,
+        ...describedOpenapiPages,
         {
           type: "meta",
           path: `${REFERENCE_DIR}/meta.json`,

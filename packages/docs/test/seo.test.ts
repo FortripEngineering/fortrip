@@ -44,6 +44,15 @@ const markdownUrl = (route: string) => `${DOCS_ORIGIN}${route === "/" ? "/index"
 const examples = new URL("../examples/", import.meta.url).pathname;
 const docs = new URL("../content/docs/", import.meta.url).pathname;
 
+/** An attribute's text, as React escapes it. */
+const unescape = (text: string) =>
+  text
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+
 /** "`a`, `b` and `c`", as the pages write a list of names. */
 const codeList = (names: string[]) =>
   names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? " and " : ", "}${name}`);
@@ -118,6 +127,27 @@ describe("Markdown pages", () => {
     assert.doesNotMatch(withoutCode(full), /<[A-Z]/);
   });
 
+  it("has no heading anchors and no relative links outside code", () => {
+    const bad: string[] = [];
+    for (const route of routes) {
+      const text = withoutCode(pageMarkdown(route));
+      const anchor = /^#{1,6} .*\[#[^\]]*\][ \t]*$/m.exec(text);
+      if (anchor) bad.push(`${route}: ${anchor[0]}`);
+      const relative = /\]\((?!https?:\/\/|mailto:)[^)]*\)/.exec(text);
+      if (relative) bad.push(`${route}: ${relative[0]}`);
+    }
+    assert.deepEqual(bad, []);
+    // llms-full.txt is these pages joined, so it has neither either.
+    assert.doesNotMatch(withoutCode(routeBody("/llms-full.txt")), /\[#[\w-]+\]$|\]\(\/|\]\(#/m);
+  });
+
+  it("links a page on the docs origin to its Markdown, keeping a #section", () => {
+    assert.ok(pageMarkdown("/").includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
+    assert.ok(pageMarkdown("/api").includes(`(${DOCS_ORIGIN}/changelog.md)`));
+    // A link to a section of the same page names the page.
+    assert.ok(pageMarkdown("/install").includes(`](${DOCS_ORIGIN}/install.md#local-mcp)`));
+  });
+
   it("writes generated tables unpadded", () => {
     const padded: string[] = [];
     for (const route of routes) {
@@ -144,7 +174,7 @@ describe("Markdown pages", () => {
     const markdown = pageMarkdown("/api");
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
     assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS))}, as`), "pay inputs");
-    assert.ok(markdown.includes("[changelog](/changelog)"));
+    assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
     assert.ok(markdown.includes(PRE_RELEASE_POLICY.split(". ")[0]!));
   });
 
@@ -159,13 +189,13 @@ describe("Markdown pages", () => {
 
   it("/mcp.md, /cli.md: the tool and command lists, content blocks, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
-    includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](/mcp/${tool.slug})`), "tool list");
+    includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
     includesAll(mcp, MCP_TOOLS.map((tool) => contentSentence(tool.name)), "content table");
     const nextStep = TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep).map((tool) => tool.name);
     assert.ok(nextStep.length > 0);
     assert.ok(mcp.includes(`An answer of ${codeList(nextStep)} that holds`), "nextStep tools");
     const cli = pageMarkdown("/cli");
-    includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](/cli/${c.slug})`), "command list");
+    includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");
     includesAll(cli, GLOBAL_FLAGS.map((flag) => `--${flag.flag}`), "global flags");
     assert.ok(cli.includes(JSON.stringify(RAW_BODY_EXAMPLE)));
   });
@@ -210,7 +240,7 @@ describe("Markdown pages", () => {
     const markdown = pageMarkdown("/");
     includesAll(markdown, PAY_WAYS.map((way) => `**${PAY_WAY_DOCS[way].title}**`), "pay ways");
     includesAll(markdown, DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
-    assert.ok(markdown.includes("](/install#remote-mcp)"));
+    assert.ok(markdown.includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
   });
 
   it("a tool page has its input fields; a command page its usage", () => {
@@ -224,12 +254,13 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("an API reference page has its method and path, its description once, and says where each field goes", () => {
+  it("an API reference page has its method and path, its short description, its full one in the body, and says where each field goes", () => {
     for (const op of OPERATIONS) {
       const markdown = pageMarkdown(`/api/reference/${op.id}`);
       assert.ok(markdown.includes(`\`${op.route.method} ${op.route.path}\``), op.id);
-      const description = markdown.split("\n")[2]?.replace(/^> /, "") ?? "";
-      assert.equal(markdown.split(description).length, 2, `${op.id}: description repeated`);
+      assert.equal(markdown.split("\n")[2], `> ${op.summary}`, op.id);
+      const body = markdown.split("\n").slice(3).join("\n");
+      includesAll(body, (op.description ?? "").split(/\n\n+/).filter(Boolean), `${op.id} body`);
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);
     }
     assert.match(pageMarkdown("/api/reference/book_hotel"), /The JSON body holds every field\./);
@@ -254,6 +285,28 @@ describe("sitemap and robots", () => {
 });
 
 describe("page metadata", () => {
+  it("every page has a short description: at most 200 characters, in the meta and Open Graph tags", () => {
+    const long: string[] = [];
+    for (const route of routes) {
+      const html = pageHtml(route);
+      const meta = /<meta name="description" content="([^"]*)"/.exec(html)?.[1];
+      const og = /<meta property="og:description" content="([^"]*)"/.exec(html)?.[1];
+      if (!meta) long.push(`${route}: no description`);
+      else if (unescape(meta).length > 200) long.push(`${route}: ${unescape(meta).length}`);
+      if (og !== meta) long.push(`${route}: og:description differs`);
+    }
+    assert.deepEqual(long, []);
+  });
+
+  it("llms.txt summarises each page in at most 200 characters", () => {
+    const lines = routeBody("/llms.txt").split("\n").filter((line) => /^\s*- \[/.test(line));
+    assert.ok(lines.length >= routes.length);
+    for (const line of lines) {
+      const summary = /\]\([^)]+\)(?:: (.*))?$/.exec(line)?.[1] ?? "";
+      assert.ok(summary.length <= 200, line.slice(0, 80));
+    }
+  });
+
   it("every page has a canonical URL on the docs origin and Open Graph tags", () => {
     const bad: string[] = [];
     for (const route of routes) {
