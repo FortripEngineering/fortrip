@@ -1,6 +1,6 @@
 {
   "name": "@fortrip/agent-contract",
-  "version": "4.2.0",
+  "version": "4.3.0-rc.1",
   "license": "Apache-2.0",
   "description": "The contract of Fortrip's agent API (https://api.fortrip.ai/v1) and its MCP server: limits, paths, request and response schemas, error codes and field rules.",
   "type": "module",
