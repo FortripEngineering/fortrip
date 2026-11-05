@@ -12,6 +12,10 @@ describe("fact", () => {
     assert.equal(fact("RATE_LIMITS.search.limit"), "10");
   });
 
+  it("formats numbers with thousands separators", () => {
+    assert.equal(fact("LIMITS.radiusMetersMax"), "80,000");
+  });
+
   it("reads a top-level constant", () => {
     assert.equal(fact("MCP_SERVER_URL"), "https://mcp.fortrip.ai/");
   });

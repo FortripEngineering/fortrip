@@ -43,7 +43,11 @@ export type FactPath = {
   [K in keyof typeof FACTS]: Leaves<(typeof FACTS)[K], K>;
 }[keyof typeof FACTS];
 
-/** The contract's value at `path`, as text; throws so a build fails on a stale path. */
+/**
+ * The contract's value at `path`, as text (numbers as "80,000"); throws so a
+ * build fails on a stale path. MDX states facts with `<Fact path="…" />`,
+ * which `lib/remark-facts.ts` replaces with this text at compile time.
+ */
 export function fact(path: FactPath): string {
   let value: unknown = FACTS;
   for (const key of path.split(".")) {
@@ -55,10 +59,5 @@ export function fact(path: FactPath): string {
   if (typeof value !== "string" && typeof value !== "number") {
     throw new Error(`Unknown fact: ${path}`);
   }
-  return String(value);
-}
-
-/** States a contract fact in MDX: `<Fact path="LIMITS.rooms" />`. */
-export function Fact({ path }: { path: FactPath }) {
-  return <>{fact(path)}</>;
+  return typeof value === "number" ? value.toLocaleString("en-US") : value;
 }
