@@ -24,7 +24,7 @@ import { RESPONSE_DOCS, responseDocFor, responseDocForCommand, schemaHref } from
 import { inputRows } from "@/lib/reference/schema-rows.ts";
 
 /** A table as Fumadocs renders one from Markdown: scrolls sideways when narrow. */
-function Table({ head, children }: { head?: string[]; children: ReactNode }) {
+export function Table({ head, children }: { head?: string[]; children: ReactNode }) {
   return (
     <div className="relative my-6 overflow-auto prose-no-margin">
       <table>
