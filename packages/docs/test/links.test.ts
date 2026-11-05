@@ -43,7 +43,9 @@ describe("internal links", () => {
         if (PENDING.has(path)) continue;
         const target = pages.get(path);
         if (!target) {
-          if (!existsSync(join(publicDir, path))) broken.push(`${route} → ${href}`);
+          // A public file, or a static route's output (`/openapi.json`).
+          const file = existsSync(join(publicDir, path)) || existsSync(join(app, `${path}.body`));
+          if (!file) broken.push(`${route} → ${href}`);
           continue;
         }
         const hash = decodeURIComponent(url.hash.slice(1));

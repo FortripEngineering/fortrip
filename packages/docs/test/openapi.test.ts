@@ -9,6 +9,7 @@ import {
   CONTRACT_VERSION,
   errorEnvelope,
   HTTP_ROUTES,
+  order,
   ORDER_HTTP,
   PUBLIC_ORIGINS,
   TOOLS,
@@ -18,6 +19,7 @@ import addFormats from "ajv-formats";
 import { z } from "zod";
 
 import { buildOpenApi } from "../lib/openapi/build.ts";
+import { ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { pageHtml } from "./built-page.ts";
 
 const doc = buildOpenApi();
@@ -27,6 +29,18 @@ const METHODS = ["get", "post"] as const;
 const operations = Object.entries(doc.paths ?? {}).flatMap(([path, item]) =>
   METHODS.filter((method) => item?.[method]).map((method) => [path, method, item![method]!] as const),
 );
+
+/** A JSON Schema as it stands alone, without `$schema`. */
+const standalone = (schema: z.ZodType) => {
+  const { $schema: _, ...rest } = z.toJSONSchema(schema, { io: "output" });
+  return rest;
+};
+
+/** A response's JSON schema. */
+const responseSchema = (response: unknown) =>
+  (response as { content?: Record<string, { schema?: Record<string, unknown> }> }).content?.[
+    "application/json"
+  ]?.schema;
 
 const ajv = () => {
   const ajv = new Ajv2020({ strict: false, allErrors: true });
@@ -43,9 +57,10 @@ describe("OpenAPI document", () => {
     // and the 3.1 schema's `#meta` anchor is `$defs/schema`; Ajv would check
     // every Schema Object against the whole document's schema. Point the refs at
     // the anchor's schema, which is what they resolve to here.
-    const schema = JSON.parse(
-      JSON.stringify(openapiV31).replaceAll('"$dynamicRef":"#meta"', '"$ref":"#/$defs/schema"'),
-    );
+    const text = JSON.stringify(openapiV31);
+    const dynamicRef = '"$dynamicRef":"#meta"';
+    assert.equal(text.split(dynamicRef).length - 1, 4, "the patch below still applies");
+    const schema = JSON.parse(text.replaceAll(dynamicRef, '"$ref":"#/$defs/schema"'));
     assert.ok(schema.$defs.schema.$dynamicAnchor === "meta");
     const validate = ajv().compile(schema);
     assert.ok(validate(doc), JSON.stringify(validate.errors, null, 2));
@@ -98,8 +113,7 @@ describe("OpenAPI document", () => {
           (z.toJSONSchema(tool.input, { io: "input" }) as { properties: object }).properties,
         );
         assert.deepEqual(fields.sort(), params.map((p) => p.name).sort(), name);
-      }
-      else assert.ok(op?.requestBody, name);
+      } else assert.ok(op?.requestBody, name);
     }
   });
 
@@ -117,13 +131,43 @@ describe("OpenAPI document", () => {
   });
 
   it("answers every other operation 200, and every failure with the error envelope", () => {
-    const { $schema: _, ...envelope } = z.toJSONSchema(errorEnvelope, { io: "output" });
     for (const [path, method, op] of operations) {
       const failure = op.responses?.default as { content: Record<string, { schema: object }> };
-      assert.deepEqual(failure.content["application/json"]?.schema, envelope, `${method} ${path}`);
+      assert.deepEqual(
+        failure.content["application/json"]?.schema,
+        { $ref: "#/components/schemas/ErrorEnvelope" },
+        `${method} ${path}`,
+      );
       if (op.operationId === "book_hotel") continue;
       assert.deepEqual(Object.keys(op.responses ?? {}).sort(), ["200", "default"], op.operationId);
     }
+  });
+
+  it("writes a response schema that answers share once, under components", () => {
+    assert.deepEqual(Object.keys(doc.components?.schemas ?? {}).sort(), ["ErrorEnvelope", "Order"]);
+    assert.deepEqual(doc.components?.schemas?.ErrorEnvelope, standalone(errorEnvelope));
+    assert.deepEqual(doc.components?.schemas?.Order, standalone(order));
+    const orderAnswers = operations.flatMap(([, , op]) =>
+      Object.entries(op.responses ?? {})
+        .filter(([status]) => status !== "default")
+        .filter(([, r]) => responseSchema(r)?.$ref === "#/components/schemas/Order")
+        .map(([status]) => `${op.operationId} ${status}`),
+    );
+    assert.deepEqual(orderAnswers.sort(), [
+      `book_hotel ${ORDER_HTTP.replayedStatus}`,
+      `book_hotel ${ORDER_HTTP.createdStatus}`,
+      "cancel_order 200",
+      "get_order 200",
+      "pay_order 200",
+    ]);
+    // No answer's schema is written out twice.
+    const inline = operations.flatMap(([, , op]) =>
+      Object.values(op.responses ?? {})
+        .map(responseSchema)
+        .filter((schema) => schema && !("$ref" in schema))
+        .map((schema) => JSON.stringify(schema)),
+    );
+    assert.equal(new Set(inline).size, inline.length);
   });
 
   it("documents the HTTP answer, without MCP's nextStep", () => {
@@ -145,11 +189,29 @@ describe("OpenAPI document", () => {
     assert.ok(doc.paths?.[ACCOUNT_ROUTES.authConfig.path]?.get);
   });
 
-  it("embeds only valid JSON Schemas, with no $schema or $ref inside", () => {
+  it("embeds only valid JSON Schemas, referring only to its own components", () => {
     const text = JSON.stringify(doc);
     assert.equal(text.includes('"$schema"'), false);
-    assert.equal(text.includes('"$ref"'), false);
+    assert.equal(text.includes('"$defs"'), false);
+    const names = Object.keys(doc.components?.schemas ?? {});
+    const refs = [...text.matchAll(/"\$ref":"([^"]*)"/g)].map((m) => m[1]);
+    assert.ok(refs.length > 0);
+    for (const ref of refs) {
+      const name = ref?.match(/^#\/components\/schemas\/(\w+)$/)?.[1];
+      assert.ok(name && names.includes(name), ref);
+    }
+
+    // Each component under its own id, references rewritten to it.
+    const id = (name: string) => `https://openapi.test/components/${name}`;
+    const resolved = (schema: object) =>
+      JSON.parse(
+        JSON.stringify(schema).replace(/"#\/components\/schemas\/(\w+)"/g, (_, n) => `"${id(n)}"`),
+      );
     const check = ajv();
+    for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
+      check.addSchema(resolved(schema as object), id(name));
+    }
+    for (const name of names) assert.ok(check.getSchema(id(name)), name);
     for (const [, , op] of operations) {
       const schemas = [
         ...((op.parameters ?? []) as Array<{ schema: object }>).map((p) => p.schema),
@@ -157,13 +219,12 @@ describe("OpenAPI document", () => {
           (op.requestBody as { content: Record<string, { schema: object }> } | undefined)
             ?.content ?? {},
         ).map((c) => c.schema),
-        ...Object.values(op.responses ?? {}).flatMap((r) =>
-          Object.values((r as { content?: Record<string, { schema: object }> }).content ?? {}).map(
-            (c) => c.schema,
-          ),
-        ),
+        ...Object.values(op.responses ?? {}).map(responseSchema),
       ];
-      for (const schema of schemas) assert.doesNotThrow(() => check.compile(schema), op.operationId);
+      for (const schema of schemas) {
+        assert.ok(schema, op.operationId);
+        assert.doesNotThrow(() => check.compile(resolved(schema)), op.operationId);
+      }
     }
   });
 });
@@ -178,11 +239,27 @@ describe("built OpenAPI", () => {
     assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), JSON.parse(JSON.stringify(doc)));
   });
 
-  it("has a reference page per operation, linked from /api", () => {
+  it("has a reference page per operation, linked from /api with the document", () => {
     for (const [, , op] of operations) {
       const html = pageHtml(`/api/reference/${op.operationId}`);
       assert.ok(html.includes(op.summary ?? "?"), op.operationId);
     }
-    assert.match(pageHtml("/api"), /href="\/api\/reference\//);
+    const api = pageHtml("/api");
+    assert.ok(api.includes('href="/api/reference/'), "/api links the reference");
+    assert.ok(api.includes('href="/openapi.json"'), "/api links the document");
+  });
+
+  it("lists the reference in the endpoint table's order", () => {
+    const expected = ENDPOINTS.map(
+      (e) => e.tool ?? (e.path === ACCOUNT_ROUTES.me.path ? "me" : "auth_config"),
+    );
+    const listed = [
+      ...new Set(
+        [...pageHtml("/api/reference/me").matchAll(/href="\/api\/reference\/(\w+)"/g)].map(
+          (m) => m[1],
+        ),
+      ),
+    ];
+    assert.deepEqual(listed, expected);
   });
 });

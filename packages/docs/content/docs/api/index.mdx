@@ -26,7 +26,7 @@ A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROU
 
 <EndpointTable />
 
-The [API reference](/api/reference/search_hotels) has each endpoint's parameters, body and answers, generated from the contract.
+The [API reference](/api/reference/search_hotels) has each endpoint's parameters, body and answers, generated from the contract, as is the [OpenAPI 3.1 document](/openapi.json).
 
 A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUTES.get_hotel" />?include=rooms&amp;locale=en</code> takes what `get_hotel` takes as `{ hotelId, include: "rooms", locale: "en" }`. Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
 
