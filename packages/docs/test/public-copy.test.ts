@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -21,7 +21,8 @@ test("the public docs name no supplier or model", () => {
   let scanned = 0;
   for (const root of SCANNED) {
     const files = readdirSync(join(ROOT, root), { recursive: true, encoding: "utf8" }).filter(
-      (file) => /\.(?:tsx?|mdx?|css|json)$/.test(file),
+      // `app/openapi.json` is a route's folder.
+      (file) => /\.(?:tsx?|mdx?|css|json)$/.test(file) && statSync(join(ROOT, root, file)).isFile(),
     );
     for (const file of files) {
       scanned += 1;
