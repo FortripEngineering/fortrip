@@ -15,13 +15,28 @@ const REFERENCE_DIR = "api/reference";
 const openapiPages = await openapi.staticSource({ baseDir: REFERENCE_DIR });
 
 /** An operation's page with the operation's short summary as its description
- *  (meta, header, cards, llms.txt); the full description stays in the body. */
+ *  (meta, header, cards, llms.txt) and in its search records: the page shows
+ *  the summary, and the full description lives in openapi.json and on the MCP
+ *  tool's page. */
 const describedOpenapiPages = openapiPages.files.map((file): (typeof openapiPages.files)[number] => {
   if (file.type !== "page") return file;
   const id = file.path.split("/").at(-1)?.replace(/\.\w+$/, "");
   const op = OPERATIONS.find((o) => o.id === id);
   if (!op) throw new Error(`${file.path}: no operation`);
-  return { ...file, data: { ...file.data, description: op.summary } };
+  const { structuredData } = file.data;
+  return {
+    ...file,
+    data: {
+      ...file.data,
+      description: op.summary,
+      structuredData: {
+        ...structuredData,
+        contents: structuredData.contents.map((record) =>
+          record.content === op.description ? { ...record, content: op.summary } : record,
+        ),
+      },
+    },
+  };
 });
 
 export const source = loader(
