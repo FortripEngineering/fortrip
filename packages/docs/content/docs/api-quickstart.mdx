@@ -1,0 +1,98 @@
+---
+title: API quickstart
+description: Book a stay over HTTP in five calls, then each call in curl, TypeScript and Python. Every example is a file checked against the contract.
+---
+
+Every call sends `FORTRIP_TOKEN`, an access token of the user who signs in. The examples are files that are checked against the contract. The TypeScript examples use `fetch` on Node.js, and the Python examples use [`httpx`](https://www.python-httpx.org/).
+
+## End to end in five calls [#end-to-end]
+
+You need curl and jq. Each call saves its answer to a file, and the next call takes its id from that file.
+
+<EndToEnd />
+
+## Sign in [#sign-in]
+
+This script runs the OAuth device flow with the settings <code><Fact path="ROUTES.authConfig" /></code> returns, and prints the access token and the refresh token. [Authentication](/api#authentication) explains the flow and when to use another.
+
+<Example name="device-login" />
+
+<code><Fact path="ROUTES.authConfig" /></code> answers, abridged:
+
+<ResponseExample name="device-login" />
+
+### Refresh a token [#refresh]
+
+The access token is short-lived. Get a new one with the refresh token, at the same token endpoint. Each refresh also returns a new refresh token: keep only the newest, because reusing an old one signs the user out.
+
+<RefreshTokenExample />
+
+## Search [#search]
+
+<Example name="search" />
+
+Its answer is under [step 2](#step-search).
+
+## Offers [#offers]
+
+<Example name="offers" />
+
+Its answer is under [step 3](#step-offers).
+
+## Order [#order]
+
+Ordering charges nothing. Show the user the total and every term, and wait for a clear yes before anyone pays. The order can take a couple of minutes; if the call times out, send the same body again and you get the same order. See [Orders and payment](/payments).
+
+<Example name="order" />
+
+Its answer is under [step 4](#step-order).
+
+## Pay [#pay]
+
+An order is paid one way only. [Orders and payment](/payments#pay) says which ways an order offers and when each applies.
+
+### Payment link [#pay-link]
+
+The payment link needs no request: give the user the order's `payment.url`. Read it from the order.
+
+<Example name="get-order" />
+
+The answer, abridged:
+
+<ResponseExample name="get-order" />
+
+### Link token [#pay-token]
+
+Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet.
+
+<Example name="pay-token" />
+
+The answer, abridged:
+
+<ResponseExample name="pay-token" />
+
+### Alipay or WeChat Pay [#pay-wallet]
+
+<Example name="pay-wallet" />
+
+The answer, abridged:
+
+<ResponseExample name="pay-wallet" />
+
+## List orders [#list]
+
+<Example name="list-orders" />
+
+The answer, abridged:
+
+<ResponseExample name="list-orders" />
+
+## Cancel [#cancel]
+
+Cancel only while the order's `cancel.available` is `true`, with `maximumPenalty` the number in `cancel.penalty.amount` that the user agreed to.
+
+<Example name="cancel" />
+
+The answer, abridged:
+
+<ResponseExample name="cancel" />

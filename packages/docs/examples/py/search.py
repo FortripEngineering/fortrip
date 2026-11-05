@@ -1,5 +1,5 @@
 # Search hotels in a city.
-# Needs FORTRIP_TOKEN, a Fortrip access token (see device-login), and httpx.
+# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above), and httpx.
 import json
 import os
 

@@ -1,5 +1,7 @@
 // Create an order from an offer. Nothing is charged until it is paid.
-// Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
+// It can take a couple of minutes. If it times out, send the same body again:
+// it answers the same order.
+// Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 import process from "node:process";
 
 const token = process.env.FORTRIP_TOKEN;
@@ -42,7 +44,7 @@ const response = await fetch("https://api.fortrip.ai/v1/orders", {
     "Content-Type": "application/json",
   },
   body: JSON.stringify(body),
-  signal: AbortSignal.timeout(60_000),
+  signal: AbortSignal.timeout(180_000),
 });
 if (!response.ok) {
   console.error(response.status, await response.text());

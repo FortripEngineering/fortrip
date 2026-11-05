@@ -2,6 +2,7 @@
 // at compile time (`lib/remark-components.ts`). The page, its search records
 // and its Markdown text are all made from these trees.
 import {
+  ACCOUNT_ROUTES,
   DISPLAY_CURRENCIES,
   type ErrorCode,
   FILTERABLE_AMENITIES,
@@ -13,7 +14,9 @@ import {
   PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
+  PUBLIC_ORIGINS,
   type RenderedTool,
+  type ToolName,
   renderError,
   renderToolResult,
   TOOLS,
@@ -21,10 +24,11 @@ import {
 import type { PhrasingContent } from "mdast";
 
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../prose/clients.ts";
-import { PRE_RELEASE_POLICY, PRE_RELEASE_POLICY_ON_CHANGELOG } from "../prose/compatibility.ts";
-import { contentSentence } from "../prose/mcp-content.ts";
+import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
+import { MCP_CONTENT } from "../prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
+import { RETRY_DOCS } from "../prose/retries.ts";
 import { ENDPOINTS, inputAnchor, referenceHref } from "../reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
 import { ENVIRONMENT_ROWS } from "../reference/environment.ts";
@@ -33,7 +37,8 @@ import { EXIT_ROWS } from "../reference/exit-codes.ts";
 import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { regionGroups } from "../reference/regions.ts";
-import { abridgedAnswer, ERRORS, type OperationId, RESPONSES } from "../reference/responses.ts";
+import { EXAMPLE_LANGUAGES, EXAMPLE_REQUESTS, exampleCode } from "../reference/examples.ts";
+import { abridgedAnswer, ERRORS, EXAMPLE_IDS, type OperationId, RESPONSES } from "../reference/responses.ts";
 import {
   RESPONSE_DOCS,
   type ResponseDoc,
@@ -105,16 +110,58 @@ function responseBody(doc: ResponseDoc): Block[] {
   return [fields(`response:${doc.id}`)];
 }
 
+/** The jq paths the quickstart's calls read their ids at: where
+ *  `EXAMPLE_IDS` takes them from the example answers. */
+export const END_TO_END_IDS = {
+  hotel: { file: "search.json", path: ".data[0].hotelId" },
+  offer: { file: "offers.json", path: ".hotels[0].offers[0].offerId" },
+} as const;
+
+/** One call of the quickstart in curl: its example's body and time limit,
+ *  with the ids an earlier call gave as shell variables, and its answer
+ *  saved to `file`. */
+function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "book_hotel", file: string): string {
+  const route = HTTP_ROUTES[op];
+  const example = EXAMPLE_REQUESTS[op][0];
+  const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
+  const maxTime = curl && example && /--max-time (\d+)/.exec(exampleCode(example.name, curl))?.[1];
+  if (!maxTime) throw new Error(`no curl time limit for ${op}`);
+  const body = JSON.stringify(example?.body, null, 2)
+    .replaceAll(`"${EXAMPLE_IDS.hotelId}"`, '"$hotel"')
+    .replaceAll(`"${EXAMPLE_IDS.offerId}"`, '"$offer"');
+  return [
+    `curl -sS --fail-with-body --max-time ${maxTime} -X ${route.method} "${PUBLIC_ORIGINS.api}${route.path}" \\`,
+    `  -H "Authorization: Bearer $FORTRIP_TOKEN" \\`,
+    `  -H "Content-Type: application/json" \\`,
+    `  --data @- > ${file} <<JSON`,
+    body,
+    "JSON",
+  ].join("\n");
+}
+
+/** The answer under a step, abridged. */
+const abridged = (name: string): Block[] => [
+  paragraph([text("The answer, abridged:")]),
+  codeBlock("json", json(abridgedAnswer(name))),
+];
+
 /** Components that stand on their own line, by name. */
 export const BLOCKS: Record<string, (props: Props) => Block[]> = {
-  /** The ways to pay an order, in the contract's order: a line each
-   *  (`summary`), or a section each with when it applies, when it charges
-   *  and how (`full`). */
+  /** The ways to pay an order, in the contract's order: named in one
+   *  sentence (`sentence`), or a section each with when it applies, when it
+   *  charges and how (`full`). */
   PayWays: ({ variant }) => {
-    if (variant === "summary") {
-      return [list(PAY_WAYS.map((way) => [strong(text(PAY_WAY_DOCS[way].title)), text(": "), ...inline(PAY_WAY_DOCS[way].charge)]))];
+    if (variant === "sentence") {
+      const names = PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short);
+      return [
+        paragraph(
+          inline(
+            `The user pays in one of these ways: ${names.slice(0, -1).join(", ")}, or ${names.at(-1)}. Nothing is charged before that.`,
+          ),
+        ),
+      ];
     }
-    if (variant !== "full") throw new Error(`<PayWays> variant must be "summary" or "full", not ${variant}`);
+    if (variant !== "full") throw new Error(`<PayWays> variant must be "sentence" or "full", not ${variant}`);
     return PAY_WAYS.flatMap((way) => {
       const doc = PAY_WAY_DOCS[way];
       return [
@@ -125,6 +172,81 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       ];
     });
   },
+
+  /** The API quickstart's five calls in curl, each step's answer abridged
+   *  under it. */
+  EndToEnd: () => {
+    const order = RESPONSES.book_hotel as { payment: { url: string } };
+    const { hotel, offer } = END_TO_END_IDS;
+    return [
+      heading(3, [text("1. Sign in")], "step-sign-in"),
+      paragraph([
+        text("Save the curl tab of the "),
+        link("#sign-in", text("sign-in script")),
+        text(" as "),
+        code("device-login.sh"),
+        text(", run it and approve the sign-in in your browser. It prints the access token and the refresh token."),
+      ]),
+      codeBlock("sh", "bash device-login.sh > token.json\nexport FORTRIP_TOKEN=$(jq -r .access_token token.json)"),
+      heading(3, [text("2. Search")], "step-search"),
+      paragraph([text("Search a city for the stay, and take the first hotel's "), code("hotelId"), text(".")]),
+      codeBlock("sh", `${endToEndCall("search_hotels", hotel.file)}\nhotel=$(jq -r '${hotel.path}' ${hotel.file})`),
+      ...abridged("search"),
+      heading(3, [text("3. Get offers")], "step-offers"),
+      paragraph([text("Get live offers for that hotel, and take the first offer's "), code("offerId"), text(".")]),
+      codeBlock("sh", `${endToEndCall("get_hotel_offers", offer.file)}\noffer=$(jq -r '${offer.path}' ${offer.file})`),
+      ...abridged("offers"),
+      heading(3, [text("4. Create the order")], "step-order"),
+      paragraph([
+        text("Order the offer with the guests and a contact. Nothing is charged. It can take a couple of minutes, so allow at least three."),
+      ]),
+      codeBlock("sh", endToEndCall("book_hotel", "order.json")),
+      ...abridged("order"),
+      heading(3, [text("5. Give the user the payment link")], "step-pay"),
+      paragraph([
+        text("Show the user the total and every term, and wait for a clear yes. Then give them "),
+        code("payment.url"),
+        text(", where they pay."),
+      ]),
+      codeBlock("sh", "jq -r .payment.url order.json"),
+      codeBlock("text", order.payment.url),
+    ];
+  },
+
+  /** Renewing the access token with the refresh token the sign-in kept,
+   *  in curl, after the sign-in script's `token.json`. */
+  RefreshTokenExample: () => [
+    codeBlock(
+      "sh",
+      [
+        `config=$(curl -sS --fail-with-body "${PUBLIC_ORIGINS.api}${ACCOUNT_ROUTES.authConfig.path}")`,
+        "refresh_token=$(jq -r .refresh_token token.json)",
+        'curl -sS --fail-with-body "$(jq -r .tokenEndpoint <<<"$config")" \\',
+        "  -d grant_type=refresh_token \\",
+        '  -d refresh_token="$refresh_token" \\',
+        '  -d client_id="$(jq -r .clientId <<<"$config")" > token.json',
+        "export FORTRIP_TOKEN=$(jq -r .access_token token.json)",
+      ].join("\n"),
+    ),
+  ],
+
+  /** What sending each call again does, for the HTTP API and the MCP tools. */
+  RetryTable: () => [
+    table(
+      ["Call", "Sending it again"],
+      RETRY_DOCS.map((doc) => ({
+        cells: [
+          doc.reads
+            ? [text("Reads: "), ...codeList([...doc.tools])]
+            : doc.tools.flatMap((tool) => {
+                const route = HTTP_ROUTES[tool as keyof typeof HTTP_ROUTES];
+                return [code(`${route.method} ${route.path}`), lineBreak(), code(tool)];
+              }),
+          inline(doc.again),
+        ],
+      })),
+    ),
+  ],
 
   /** Setup for each client, a section each, in `CLIENT_IDS` order. */
   ClientSetup: () =>
@@ -156,11 +278,8 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ]),
   ],
 
-  /** The pre-release compatibility policy, with its links. */
-  /** `page="changelog"` on the changelog itself, which doesn't link to itself. */
-  PreReleasePolicy: (props) => [
-    paragraph(inline(props.page === "changelog" ? PRE_RELEASE_POLICY_ON_CHANGELOG : PRE_RELEASE_POLICY)),
-  ],
+  /** The pre-release compatibility policy, as the changelog states it. */
+  PreReleasePolicy: () => [paragraph(inline(PRE_RELEASE_POLICY))],
 
   /** The order's `status`, each with what it means, in the contract's order. */
   OrderStatuses: () => statusTable(ORDER_STATUSES, ORDER_STATUS_DOCS),
@@ -178,10 +297,30 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
-  /** Each tool's successful `content`, block by block. */
-  McpContentTable: () => [
-    table(["Tool", "content"], TOOLS.map((tool) => ({ cells: [[code(tool.name)], inline(contentSentence(tool.name))] }))),
-  ],
+  /** The tools whose successful `content` is more than the compact text,
+   *  from `MCP_CONTENT`. */
+  McpContentExceptions: () => {
+    const having = (block: (typeof MCP_CONTENT)[ToolName][number]) =>
+      TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
+    return [
+      list([
+        [
+          ...codeList(having("presentation_hint")),
+          ...inline(
+            " add a block after the text, the presentation hint: it asks the model to show only what Fortrip returned, as cards where the client can draw them.",
+          ),
+        ],
+        [
+          ...codeList(having("wechat_code")),
+          ...inline(
+            " puts the WeChat Pay code first, as a PNG image, while its answer holds a live code, unless the image couldn't be fetched. The code and its links are in `structuredContent` either way.",
+          ),
+        ],
+        [...codeList(having("guide")), ...inline(" returns the planning guide as Markdown.")],
+        inline("So find a block by its `type` (`text`, `image`), not by its position."),
+      ]),
+    ];
+  },
 
   /** The commands, each linking to its page. */
   CommandList: () => [
@@ -235,7 +374,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
           cells: [
             [code(`${endpoint.method} ${endpoint.path}`), lineBreak(), text(endpoint.title)],
             input,
-            [response ? link(schemaHref(response), text(schemaTitle(response))) : text("OAuth settings")],
+            [response ? link(schemaHref(response), text(schemaTitle(response))) : text("OAuth sign-in settings")],
             [...(tool ? [code(tool.name), lineBreak()] : []), link(`/cli/${endpoint.cliSlug}`, text("CLI"))],
           ],
         };
@@ -397,4 +536,6 @@ export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
     return [text(others.length > 1 ? `${others.slice(0, -1).join(", ")} or ${others.at(-1)}` : others.join(""))];
   },
   NextStepTools: () => codeList(nextStepTools()),
+  /** The error codes a retry can help, as `ERROR_CODES` marks them. */
+  RetryableCodes: () => codeList(ERROR_ROWS.filter((row) => row.retryable).map((row) => row.code)),
 };

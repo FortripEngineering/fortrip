@@ -1,5 +1,7 @@
-# Sign in with the OAuth device flow and print an access token.
-# Prints the access token; export it as FORTRIP_TOKEN. Needs httpx.
+# Sign in with the OAuth device flow and print the tokens. Needs httpx.
+# Prints access_token and refresh_token as JSON: export the access token as
+# FORTRIP_TOKEN, and keep the refresh token to get a new one.
+import json
 import sys
 import time
 
@@ -38,7 +40,7 @@ while time.monotonic() < deadline:
         timeout=60,
     ).json()
     if "error" not in token:
-        print(token["access_token"])
+        print(json.dumps({"access_token": token["access_token"], "refresh_token": token.get("refresh_token")}))
         raise SystemExit(0)
     if token["error"] == "slow_down":
         interval += 5

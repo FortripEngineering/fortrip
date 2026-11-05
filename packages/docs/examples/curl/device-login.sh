@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Sign in with the OAuth device flow and print an access token.
-# Needs curl and jq. Prints the access token; export it as FORTRIP_TOKEN.
+# Sign in with the OAuth device flow and print the tokens.
+# Needs curl and jq. Prints access_token and refresh_token as JSON: export the
+# access token as FORTRIP_TOKEN, and keep the refresh token to get a new one.
 set -euo pipefail
 
 config=$(curl -sS --fail-with-body --max-time 60 "https://api.fortrip.ai/v1/auth/config")
@@ -27,7 +28,7 @@ while [ "$SECONDS" -lt "$deadline" ]; do
     -d device_code="$device_code" \
     -d client_id="$client_id")
   case "$(jq -r '.error // empty' <<<"$token")" in
-    "") jq -r .access_token <<<"$token"; exit 0 ;;
+    "") jq '{access_token, refresh_token}' <<<"$token"; exit 0 ;;
     authorization_pending) ;;
     slow_down) interval=$((interval + 5)) ;;
     *) echo "$token" >&2; exit 1 ;;
