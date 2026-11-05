@@ -218,7 +218,7 @@ An error on stderr carries `code`, `message` and `retryable`, and `retryAfterSec
 | `order_removed` (410) | The order was never completed and no payment is held: get offers again and order the new offer (the order keeps its `orderId`) |
 | `stay_unsupported` (422) | `mixed_occupancy`: order once per party; `max_nights`: at most `max` nights per order |
 | `stay_in_past` (422) | Check-in has passed in the hotel's time zone: ask for new dates |
-| `ordering_paused` (503) | Ordering is paused on Fortrip's side: tell the user, and try again only after `retryAfterSeconds` (10 minutes or more) |
+| `ordering_paused` (503) | Ordering is paused on Fortrip's side: tell the user, and try again only after `retryAfterSeconds` |
 
 Any code:
 

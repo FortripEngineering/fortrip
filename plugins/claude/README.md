@@ -52,8 +52,8 @@ token into the chat.
 4. After you confirm, Claude gives you a payment link. It opens a Fortrip page
    that recaps the order and continues to Stripe Checkout, which may also
    show the amount in your local currency. Nothing is charged until you pay
-   there. The link is for you only and expires after about 3 hours 45
-   minutes.
+   there. The link is for you only and expires after a few hours; the order
+   shows when.
 
 Stays are 1 to 15 nights, with 1 to 8 rooms per order and the same number of
 adults and children in each room. After you pay, Claude can check the order's
