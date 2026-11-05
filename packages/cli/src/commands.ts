@@ -6,8 +6,10 @@ import {
   commandInvocation,
   type CommandSpec,
   type FlagSpec,
+  HTTP_ROUTES,
+  type HttpRoute,
   LIMITS,
-  type ToolName,
+  routePath,
   TOOLS,
 } from "@fortrip/agent-contract";
 
@@ -36,43 +38,6 @@ const ONE_ITEM_LISTS = new Set(["items"]);
 /** `--guest room:first:last` sets this field of its room, one of these. */
 const GUEST_FIELD = "items.hotel.rooms.guests";
 const ROOMS_FIELD = "items.hotel.rooms";
-
-const locale = (input: Body) => input.locale as "en" | "zh" | undefined;
-
-/** Where each command sends its request, by the tool it mirrors, from its
- *  input once the contract has accepted it. A POST sends the input as its
- *  body, but for the fields in its path; a GET carries it in its path and
- *  query. */
-const ROUTES: Partial<Record<ToolName, { method: "GET" | "POST"; path: (input: Body) => string }>> = {
-  search_hotels: { method: "POST", path: () => API.hotelSearch },
-  get_hotel: {
-    method: "GET",
-    path: (input) =>
-      API.hotel(input.hotelId as string, { rooms: input.include === "rooms", locale: locale(input) }),
-  },
-  get_hotel_offers: { method: "POST", path: () => API.hotelOffers },
-  book_hotel: { method: "POST", path: () => API.orders },
-  get_order: {
-    method: "GET",
-    path: (input) => API.order(input.orderId as string, { locale: locale(input) }),
-  },
-  list_orders: {
-    method: "GET",
-    path: (input) => {
-      const query = new URLSearchParams();
-      for (const name of ["cursor", "limit", "locale"]) {
-        if (input[name] !== undefined) query.set(name, String(input[name]));
-      }
-      const text = query.toString();
-      return text ? `${API.orders}?${text}` : API.orders;
-    },
-  },
-  cancel_order: { method: "POST", path: (input) => API.orderCancel(input.orderId as string) },
-  pay_order: { method: "POST", path: (input) => API.orderPay(input.orderId as string) },
-};
-
-/** Fields of an input that are in its path; a GET's others are its query. */
-const PATH_FIELDS = new Set(["hotelId", "orderId"]);
 
 /**
  * Parses `argv` with the options a command's spec declares. Unknown flags,
@@ -128,7 +93,7 @@ export function parseCommand(
   argv: string[],
   env: NodeJS.ProcessEnv,
 ): ApiRequest {
-  const route = spec.tool ? ROUTES[spec.tool] : undefined;
+  const route = spec.tool && spec.tool !== "get_planning_guide" ? HTTP_ROUTES[spec.tool] : undefined;
   if (!route) throw new Error(`${commandInvocation(spec)} sends no request`);
   const { values, positionals } = parseOptions(spec, argv);
   const input = baseBody(values.body);
@@ -151,10 +116,10 @@ export function parseCommand(
     }
   }
 
-  check(spec, input, route.method === "GET", fromEnv);
-  const path = route.path(input);
+  check(spec, input, route, fromEnv);
+  const path = routePath(route, input);
   if (route.method === "GET") return { method: "GET", path };
-  const body = Object.fromEntries(Object.entries(input).filter(([field]) => !PATH_FIELDS.has(field)));
+  const body = Object.fromEntries(Object.entries(input).filter(([field]) => !route.pathFields.includes(field)));
   return { method: "POST", path, body };
 }
 
@@ -174,7 +139,7 @@ export function cancelPreview(
   if (values[flag.flag] !== undefined) return null;
   if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
   const input = { orderId: positionals[0] };
-  check({ ...spec, tool: "get_order" }, input, true, new Map());
+  check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
   const orderId = input.orderId as string;
   return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId };
 }
@@ -183,14 +148,14 @@ export function cancelPreview(
  *  the API's `invalid_request` would list (pointers into the body, or
  *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an
  *  environment variable set (`fromEnv`, by pointer) names the variable. */
-function check(spec: CommandSpec, input: Body, isGet: boolean, fromEnv: Map<string, string>): void {
+function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   const result = schema?.safeParse(input);
   if (!result || result.success) return;
   const pointer = (path: readonly PropertyKey[]) => {
     const keys = path.map((key) => String(key).replaceAll("~", "~0").replaceAll("/", "~1"));
     const where =
-      keys[0] === undefined ? [] : PATH_FIELDS.has(keys[0]) ? ["path"] : isGet ? ["query"] : [];
+      keys[0] === undefined ? [] : route.pathFields.includes(keys[0]) ? ["path"] : route.method === "GET" ? ["query"] : [];
     return [...where, ...keys].map((key) => `/${key}`).join("");
   };
   const issues = result.error.issues.flatMap((issue) =>

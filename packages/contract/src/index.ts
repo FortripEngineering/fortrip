@@ -156,6 +156,13 @@ export {
   REPOSITORY_URL,
   SKILL_INSTALL_COMMAND,
 } from "./paths.ts";
+export {
+  ACCOUNT_ROUTES,
+  HTTP_ROUTES,
+  routePath,
+  type HttpRoute,
+  type HttpToolName,
+} from "./routes.ts";
 export { RATE_LIMITS, type RateLimitScope } from "./rate-limits.ts";
 export {
   renderError,
