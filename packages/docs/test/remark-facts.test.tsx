@@ -38,6 +38,13 @@ describe("remarkFacts", () => {
     assert.equal(await render('<Fact path="MCP_SERVER_URL" />'), "<p>https://mcp.fortrip.ai/</p>");
   });
 
+  it("puts the value straight into an element it stands alone in", async () => {
+    assert.equal(
+      await render('<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>'),
+      "<pre><code>https://mcp.fortrip.ai/</code></pre>",
+    );
+  });
+
   it("puts the value, not the tag, in the search index", async () => {
     const { search } = await compile(
       'Connect to <Fact path="MCP_SERVER_URL" /> for up to <Fact path="LIMITS.rooms" /> rooms.\n\n<Fact path="LIMITS.radiusMetersMax" />',

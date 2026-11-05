@@ -27,10 +27,10 @@ function isFact(node: Node): node is JsxElement {
 
 /**
  * Replaces every `<Fact path="…" />` with the contract's value as plain text
- * (a paragraph when the tag stands on its own line). It also replaces the tag's
- * source for Fumadocs' source-backed outputs (the search index, Markdown/LLM
- * text), which slice the authored MDX. An unknown or non-literal path fails
- * the compilation, and with it the build.
+ * (a paragraph when the tag stands on its own line outside JSX). It also
+ * replaces the tag's source for Fumadocs' source-backed outputs (the search
+ * index, Markdown/LLM text), which slice the authored MDX. An unknown or
+ * non-literal path fails the compilation, and with it the build.
  */
 export function remarkFacts() {
   return (tree: Node, file: File) => {
@@ -52,7 +52,10 @@ export function remarkFacts() {
         }
         const text: Node & { value: string } = { type: "text", value, position: node.position };
         replaceSource(file as SourceArgs[0], text as SourceArgs[1], value);
-        return node.type === "mdxJsxFlowElement"
+        // On its own line at the top level (or in a list or quote) a value is a
+        // paragraph; inside a JSX element such as <code> it is the element's text.
+        const inJsx = parent.type === "mdxJsxFlowElement";
+        return node.type === "mdxJsxFlowElement" && !inJsx
           ? { type: "paragraph", children: [text], position: node.position }
           : text;
       });
