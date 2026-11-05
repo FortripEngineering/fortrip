@@ -160,7 +160,7 @@ export const destination = z.discriminatedUnion(
     strictInput({
       kind: z
         .literal("locality", { error: "kind must be locality" })
-        .describe("A locality (hub) listed in an earlier search response."),
+        .describe("A locality listed in an earlier search response."),
       placeId: placeId.describe("placeId of the locality."),
       radiusMeters,
     }),
@@ -583,7 +583,7 @@ export const cancelOrderInput = strictInput({
     .number({ error: maximumPenaltyError })
     .min(0, { error: maximumPenaltyError })
     .describe(
-      "The penalty the user agreed to, in the order's currency. Pass maximumPenalty as the number in cancel.penalty.amount (\"120.00\" → 120).",
+      "The penalty the user agreed to: a JSON number equal to the order's cancel.penalty.amount, e.g. 120.5 for \"120.50\".",
     ),
 });
 

@@ -47,6 +47,9 @@ export interface FlagSpec {
   type: "string" | "number" | "boolean";
   /** Given once per item; its field is a list. */
   multiple?: boolean;
+  /** The command runs without it though the tool needs its field:
+   *  `orders cancel` without `--max-penalty` cancels nothing. */
+  optional?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
    *  `--rooms` sends `include: "rooms"`. */
   value?: string;
@@ -426,6 +429,7 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     flag: "max-penalty",
     field: "maximumPenalty",
     type: "number",
+    optional: true,
     placeholder: "<amount>",
     description:
       "The penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it, the command cancels nothing: it shows the penalty and the refund.",
@@ -438,7 +442,8 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
-    description: "Required unless --wallet. The spt_… token the user's Link wallet issued for this order.",
+    description:
+      "Required unless --wallet. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --wallet.",
   },
   {
     flag: "wallet",
@@ -523,7 +528,8 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "orders",
     name: "cancel",
-    summary: "Cancel an order under its terms, for the penalty the user agreed to",
+    summary:
+      "Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms",
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],

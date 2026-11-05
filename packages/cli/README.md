@@ -82,7 +82,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels book` | Order an offer: an unpaid order with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
-| `orders cancel <orderId>` | Cancel an order under its terms, for the penalty the user agreed to |
+| `orders cancel <orderId>` | Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms |
 | `orders pay <orderId>` | Pay an order with a Link wallet token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |

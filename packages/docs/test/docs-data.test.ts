@@ -51,6 +51,22 @@ test("an API reference page is described like its MCP tool's page; an account ro
   assert.deepEqual(OPERATIONS.filter((op) => !op.endpoint.tool).map((op) => op.id).sort(), ["auth_config", "me"]);
 });
 
+test("an operation has one title: its tool's, on the API page, in openapi.json and on its CLI command's page", () => {
+  for (const endpoint of ENDPOINTS) {
+    const tool = TOOLS.find((t) => t.name === endpoint.tool);
+    const command = CLI_COMMANDS.find((c) => c.slug === endpoint.cliSlug);
+    const title = tool?.title ?? endpoint.title;
+    assert.equal(endpoint.title, title, endpoint.path);
+    assert.equal(OPERATIONS.find((op) => op.endpoint === endpoint)?.endpoint.title, title, endpoint.path);
+    // `fortrip login` reads the sign-in settings to sign in: another operation.
+    if (endpoint.cliSlug !== "login") assert.equal(command?.title, title, endpoint.cliSlug);
+  }
+  assert.deepEqual(
+    ENDPOINTS.filter((endpoint) => !endpoint.tool).map((endpoint) => endpoint.title),
+    ["Account", "OAuth sign-in settings"],
+  );
+});
+
 test("every contract command has a docs page with a row for each of its flags", () => {
   assert.deepEqual(
     CLI_COMMANDS.map((command) => command.slug).sort(),
@@ -102,6 +118,8 @@ test("a usage line lists the positionals and the flags of required fields", () =
   );
   assert.equal(usage("hotels-get"), "fortrip hotels get <hotelId> [options]");
   assert.equal(usage("orders-get"), "fortrip orders get <orderId> [options]");
+  // Without --max-penalty the command shows the penalty and cancels nothing.
+  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [--max-penalty <amount>]");
   assert.equal(usage("guide"), "fortrip guide [topic]");
   assert.equal(usage("logout"), "fortrip logout");
 });

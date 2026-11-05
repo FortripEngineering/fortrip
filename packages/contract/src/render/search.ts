@@ -21,7 +21,7 @@ const CENTER_BASES: Record<string, string> = {
   seat: "the seat",
   capital: "the capital",
   busiest_settlement: "the settlement with the most hotels",
-  hub: "the locality's hub",
+  hub: "the locality",
   point: "its location",
 };
 

@@ -36,7 +36,7 @@ If a command exits with code **3** and stderr has `loginUrl`, show it to the use
 
 When Fortrip no longer accepts the saved sign-in (it was revoked, or it expired and couldn't be renewed), the command also exits 3 with a `loginUrl`; handle it the same way. The saved sign-in is kept until the user approves the new link.
 
-In CI or a sandbox without a browser, the user can set `FORTRIP_TOKEN` instead. Exit 3 with `tokenSource: "FORTRIP_TOKEN"` means Fortrip didn't accept that token: tell the user to replace or unset it.
+In a remote agent environment or a CI run without a browser, the user can set `FORTRIP_TOKEN` instead. Exit 3 with `tokenSource: "FORTRIP_TOKEN"` means Fortrip didn't accept that token: tell the user to replace or unset it.
 
 ## Exit codes
 
@@ -94,7 +94,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 - **Near a point:** `--point <lat,lng>`, for "near X" when you know where X is.
 - **A whole country:** `--country-only <CC>`, as for the Maldives.
 - Countries, regions (states, provinces), prefecture-level cities in China and main islands cover their whole area. Towns, neighbourhoods, districts, small islands and points cover a circle of 8000 meters; `--radius-meters` sets another, up to 80000 meters, and narrows an area to a circle around its center.
-- **Localities:** an area search lists its `localities`, the towns its hotels belong to, each with a `placeId`, its hotel `count` and the places it `includes` (Patong is part of Phuket). To search one, pass it as `--locality <placeId>`. A town that isn't a locality answers `destination_not_found` with `not_a_locality` and the `hub` it belongs to: search the hub, or the town itself with `--place` for a circle around it.
+- **Localities:** an area search lists its `localities`, the towns its hotels belong to, each with a `placeId`, its hotel `count` and the places it `includes` (Patong is part of Phuket). To search one, pass it as `--locality <placeId>`. A town that isn't a locality answers `destination_not_found` with `not_a_locality` and, in `hub`, the locality it belongs to: search that locality, or the town itself with `--place` for a circle around it.
 - A price sort or price filter over more than 3000 hotels (in an area, or for text alone) answers `search_too_broad` with `matched` and the top `localities`: show them and ask the user which they prefer, unless the request already names one of them; search that one by its `placeId` as a locality, never by its name.
 
 ### Text
