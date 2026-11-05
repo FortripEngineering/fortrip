@@ -241,10 +241,13 @@ One-time setup, by the owner:
   turns off Git deployments of `main`: production would otherwise follow
   `main` and skip the approval. Other branches still get previews. On the
   first real run, confirm a push to `main` creates no production deployment.
+  Importing the project deploys `main` once anyway; the first `docs-*` deploy
+  replaces it.
 - The `docs.fortrip.ai` domain on that project, and Vercel Analytics enabled.
-- The GitHub environment `docs-production`, with required reviewers,
-  "Prevent self-review" on, deployment branches and tags limited to the tag
-  pattern `docs-*`, and the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and
+- The GitHub environment `docs-production`, with the same required reviewers
+  as `npm-publish` ("Prevent self-review" off, as there, so whoever pushes the
+  tag can approve), deployment branches and tags limited to the tag pattern
+  `docs-*`, and the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and
   `VERCEL_PROJECT_ID`.
 - On the first deploy, confirm `vercel build` succeeds without
   `VERCEL_TOKEN`: the workflow gives the token only to `vercel pull` and
