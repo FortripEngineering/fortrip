@@ -680,6 +680,18 @@ function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) 
   return chosen;
 }
 
+/** The ways an order is paid: the order's own link, a shared payment token
+ *  through `pay_order`, or Alipay/WeChat Pay through `pay_order`. */
+export const PAY_WAYS = ["payment_link", "shared_payment_token", "alipay_wechat_pay"] as const;
+export type PayWay = (typeof PAY_WAYS)[number];
+
+/** The way each exclusive field of `payOrderInput` pays by. */
+export const PAY_INPUT_WAYS: Record<"sharedPaymentToken" | "payment" | "method", PayWay> = {
+  sharedPaymentToken: "shared_payment_token",
+  payment: "shared_payment_token",
+  method: "alipay_wechat_pay",
+};
+
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
  *  order, how to pay it, and the total the user approved. The way is a
  *  Stripe shared payment token granted for the order, or `method`

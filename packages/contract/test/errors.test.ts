@@ -87,6 +87,10 @@ describe("LIMITS and friends", () => {
       candidatesShown: 8,
       candidatesCounted: 200,
       localitiesShown: 8,
+      tokenPaymentMaxUsd: 500,
+      tokenPaymentMinOfferMinutes: 15,
+      tokensPerOrder: 5,
+      wechatCodeMinutes: 120,
     });
     assert.deepEqual([...DISPLAY_CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");

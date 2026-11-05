@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
+import { renderGuide } from "../src/guide.ts";
+import { LIMITS } from "../src/limits.ts";
+import { TOOLS } from "../src/tools.ts";
 import { CONTRACT_VERSION } from "../src/version.ts";
 
 describe("CONTRACT_VERSION", () => {
@@ -10,5 +13,20 @@ describe("CONTRACT_VERSION", () => {
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),
     ) as { version: string };
     assert.equal(CONTRACT_VERSION, pkg.version);
+  });
+});
+
+describe("pay-eligibility limits", () => {
+  it("states the token and wallet numbers", () => {
+    assert.equal(LIMITS.tokenPaymentMaxUsd, 500);
+    assert.equal(LIMITS.tokenPaymentMinOfferMinutes, 15);
+    assert.equal(LIMITS.tokensPerOrder, 5);
+    assert.equal(LIMITS.wechatCodeMinutes, 120);
+  });
+
+  it("renders the code lifetime in the guide and the pay_order tool", () => {
+    assert.ok(renderGuide("cli", "main").includes("120 minutes"));
+    const pay = TOOLS.find((tool) => tool.name === "pay_order");
+    assert.ok(pay?.description.includes("120 minutes"));
   });
 });

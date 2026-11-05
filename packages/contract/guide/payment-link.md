@@ -22,7 +22,7 @@
 
 ## Paying without the link
 
-An order whose `payment.handlers` isn't empty (in {{#if claude-skill}}a result's text{{/if}}{{#if cli}}the text output{{/if}}, the line "Pay without the link") can also be paid through `{{tool:orders pay}}` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so `payment.handlers` is empty for a larger order. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
+An order whose `payment.handlers` isn't empty (in {{#if claude-skill}}a result's text{{/if}}{{#if cli}}the text output{{/if}}, the line "Pay without the link") can also be paid through `{{tool:orders pay}}` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at ${{limit:tokenPaymentMaxUsd}}, so `payment.handlers` is empty for a larger order. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
 
 1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. The token comes from the user's wallet, never from card details.
 2. Request the token from the user's Link wallet with the handler's `config.business_profile` and `payment.credentialLimits`: `maxAmount` (in cents), `currency` and `expiresAt`.
@@ -38,7 +38,7 @@ An order whose result text has the line "Pay with Alipay or WeChat Pay" can be p
 2. Then show `payment.wallets`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in US dollars, and the wallets show it in yuan at their rate.
 3. Check the order with `{{tool:orders get}}` until it isn't `awaiting_payment`.
 
-A WeChat Pay code expires 120 minutes after it is made, and goes dead earlier if the user opens the Alipay link instead. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again for a new code.
+A WeChat Pay code expires {{limit:wechatCodeMinutes}} minutes after it is made, and goes dead earlier if the user opens the Alipay link instead. Then `payment.wallets.wechatPay.qrData` is null: tell the user to open the WeChat link again, or {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again for a new code.
 
 WeChat can't scan a code shown on the same phone's screen. Offer both ways, since you can't tell which device the user is on: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat link on another screen; on a phone, the Alipay link opens the Alipay app.
 

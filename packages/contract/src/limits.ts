@@ -25,6 +25,10 @@ export const LIMITS = {
   candidatesShown: 8,
   candidatesCounted: 200,
   localitiesShown: 8,
+  tokenPaymentMaxUsd: 500,
+  tokenPaymentMinOfferMinutes: 15,
+  tokensPerOrder: 5,
+  wechatCodeMinutes: 120,
 } as const;
 
 /** Currencies a v1 response can show prices in (USD is also what is paid). */
