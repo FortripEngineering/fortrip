@@ -33,6 +33,10 @@ export type ErrorCode =
   | "supplier_unavailable"
   | "internal";
 
+/** The statuses `supplier_unavailable` is sent with (by its `details.outcome`:
+ *  `SUPPLIER_OUTCOME_STATUS`). */
+export const SUPPLIER_STATUSES = [503, 504] as const;
+
 /** The HTTP statuses each code is sent with, and whether a retry can help. */
 export const ERROR_CODES: Readonly<
   Record<ErrorCode, { status: readonly number[]; retryable: boolean }>
@@ -67,6 +71,6 @@ export const ERROR_CODES: Readonly<
   rate_limited: { status: [429], retryable: true },
   ordering_paused: { status: [503], retryable: true },
   service_unavailable: { status: [503], retryable: true },
-  supplier_unavailable: { status: [503, 504], retryable: true },
+  supplier_unavailable: { status: SUPPLIER_STATUSES, retryable: true },
   internal: { status: [500], retryable: false },
 };

@@ -16,12 +16,23 @@ describe("CONTRACT_VERSION", () => {
   });
 });
 
+describe("order limits", () => {
+  it("caps the orders one stay can have", () => {
+    assert.equal(LIMITS.ordersPerStay, 20);
+  });
+});
+
 describe("pay-eligibility limits", () => {
   it("states the token and wallet numbers", () => {
     assert.equal(LIMITS.tokenPaymentMaxUsd, 500);
     assert.equal(LIMITS.payMinMinutesLeft, 15);
     assert.equal(LIMITS.tokensPerOrder, 5);
     assert.equal(LIMITS.wechatCodeMinutes, 120);
+  });
+
+  it("states the pay cutoff below the pay-start floor", () => {
+    assert.equal(LIMITS.payCutoffMinutes, 2);
+    assert.ok(LIMITS.payCutoffMinutes < LIMITS.payMinMinutesLeft);
   });
 
   it("renders the code lifetime in the guide and the pay_order tool", () => {

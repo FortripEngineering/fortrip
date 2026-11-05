@@ -18,7 +18,8 @@ Not released yet.
   - `RATE_LIMITS`: the requests a token may make per scope and window.
   - `ENABLED_REGIONS`, from the new entry point `@fortrip/agent-contract/regions`: the regions a search can be scoped to.
   - `PAY_WAYS` and `PAY_INPUT_WAYS`: the ways an order is paid, and the way each field of the `pay_order` input pays by.
-  - `LIMITS` gains `tokenPaymentMaxUsd`, `payMinMinutesLeft`, `tokensPerOrder` and `wechatCodeMinutes`.
+  - `LIMITS` gains `tokenPaymentMaxUsd`, `payMinMinutesLeft` (the time that must be left to pay for a token or wallet payment to be offered), `payCutoffMinutes` (the time left below which `pay_order` refuses), `tokensPerOrder`, `wechatCodeMinutes` and `ordersPerStay` (the orders one stay can have).
+  - `SUPPLIER_OUTCOME_STATUS`: the HTTP status of `supplier_unavailable` for each `details.outcome`.
   - `SEARCH_RULES`, `ORDER_HTTP`, `ME_SCOPES`, `MCP_SERVER_URL`, `SKILL_INSTALL_COMMAND`, `REPOSITORY_URL` and `DOCS_ORIGIN`.
 - The API, the MCP tools and the CLI's commands are unchanged.
 

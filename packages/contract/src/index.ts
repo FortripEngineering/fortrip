@@ -83,6 +83,7 @@ export {
 export {
   ERROR_DETAILS,
   errorEnvelope,
+  SUPPLIER_OUTCOME_STATUS,
   type ErrorBody,
   type ErrorEnvelope,
   type KnownErrorBody,

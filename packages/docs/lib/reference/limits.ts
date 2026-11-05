@@ -107,6 +107,11 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     `${l.payMinMinutesLeft} minutes`,
     "Once less is left before the order's `payment.expiresAt`, `payment.handlers` is empty and no Alipay or WeChat Pay payment can be opened.",
   ],
+  payCutoffMinutes: (l) => [
+    "Time left to pay",
+    `${l.payCutoffMinutes} minutes`,
+    "Once less is left before the order's `payment.expiresAt`, `pay_order` answers `order_not_payable`, by token or wallet.",
+  ],
   tokensPerOrder: (l) => [
     "Tokens per order",
     String(l.tokensPerOrder),
@@ -116,6 +121,11 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     "WeChat Pay code",
     `${l.wechatCodeMinutes} minutes`,
     "How long a WeChat Pay code in `payment.wallets` lasts after it is made.",
+  ],
+  ordersPerStay: (l) => [
+    "Orders per stay",
+    String(l.ordersPerStay),
+    "Orders one account can make for one stay (the same room, rate, dates and party); past it, `order_exists`.",
   ],
 };
 
