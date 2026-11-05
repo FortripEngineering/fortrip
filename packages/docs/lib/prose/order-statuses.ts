@@ -13,7 +13,7 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
   expired:
     "The time to pay ran out with nothing paid, and nothing was charged. It can't be paid any more: get offers again and order anew.",
   confirming:
-    "Paid, or the amount held, and the booking is with the hotel. Next comes `confirmed` once the hotel confirms and the payment is charged, or `failed` if the hotel can't confirm.",
+    "Paid, or the amount held, and the booking is with the hotel. Next comes `confirmed` once the hotel confirms and the payment is charged, `failed` if the hotel can't confirm, or `needs_attention` if a person has to resolve it.",
   confirmed:
     "The hotel confirmed the booking and the payment is charged. `confirmationNumber` is the hotel's number, `null` until the hotel gives one.",
   failed:
@@ -28,8 +28,10 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
 /**
  * What each payment status means, keyed by the contract's `PaymentStatus`.
  * Checked against the server's mapping (fortrip-ai `lib/api/v1/orders/status.ts`)
- * and where each state is written: a token or a card on the link is held
- * (`lib/orders/spt-payment.ts`), a wallet payment is charged at once
+ * and where each state is written: a token is held (`lib/orders/spt-payment.ts`),
+ * a card on the link is held and a method that can't be held is charged at once
+ * (`lib/services/stripe/checkout-sessions.ts`, `upfront-payment.ts`), a wallet
+ * payment is charged at once
  * (`lib/orders/wallet-payment.ts`), and a cancellation refunds what was
  * paid less the penalty (`lib/orders/cancellation-refund.ts`).
  */

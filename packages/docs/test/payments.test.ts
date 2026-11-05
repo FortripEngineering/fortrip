@@ -14,10 +14,10 @@ describe("order and payment guide", () => {
     assert.deepEqual(Object.keys(PAYMENT_STATUS_DOCS), [...PAYMENT_STATUSES]);
   });
 
-  it("renders every status", () => {
-    const text = pageText("/payments");
+  it("renders every status as a row of its table", () => {
+    const html = pageHtml("/payments");
     for (const status of [...ORDER_STATUSES, ...PAYMENT_STATUSES]) {
-      assert.ok(text.includes(status), status);
+      assert.ok(html.includes(`<td><code>${status}</code></td>`), status);
     }
   });
 

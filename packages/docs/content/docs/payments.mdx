@@ -18,11 +18,11 @@ The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `boo
 Send the `offerId`, the contact (who the hotel and the confirmation email reach) and, for each room of the offer, at least one guest, named in Latin letters as on their passport. The [schemas](/schemas) list every field.
 
 - Before it creates the order, Fortrip checks the offer with the hotel supplier. If the price or any term changed, the answer is `409 offer_changed` with every change and a new offer: show the user the changes and ask again before ordering the new offer. No order is made at a price the user hasn't seen.
-- Sending the same details for the same offer again answers the same order, with HTTP <Fact path="ORDER_HTTP.replayedStatus" /> and <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>. An offer is ordered once: different details for it answer `409 offer_already_ordered`.
+- Sending the same details for the same offer again answers the same order, with HTTP <Fact path="ORDER_HTTP.replayedStatus" /> and <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>. While an offer's order is live, different details for it answer `409 offer_already_ordered`.
 - Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
 
-The order's `reference` (`FT-` and six characters) is the number the user quotes to support. `price.total` is what is charged, in USD. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
+The order's `reference` (`FT-` and six characters) is the number the user quotes to support. `price.total` is what is charged, in the order's `payment.chargeCurrency`: USD for every order made through the API. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
 
 ## Confirm with the user [#confirm]
 

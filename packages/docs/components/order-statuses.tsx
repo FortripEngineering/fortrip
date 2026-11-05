@@ -5,7 +5,7 @@ import { inline } from "@/lib/reference/field-table.tsx";
 
 import { Table } from "./reference.tsx";
 
-function StatusTable({ statuses, docs }: { statuses: readonly string[]; docs: Record<string, string> }) {
+function StatusTable<S extends string>({ statuses, docs }: { statuses: readonly S[]; docs: Record<S, string> }) {
   return (
     <Table head={["Status", "Meaning"]}>
       {statuses.map((status) => (
@@ -13,7 +13,7 @@ function StatusTable({ statuses, docs }: { statuses: readonly string[]; docs: Re
           <td>
             <code>{status}</code>
           </td>
-          <td>{inline(docs[status] ?? "")}</td>
+          <td>{inline(docs[status])}</td>
         </tr>
       ))}
     </Table>
