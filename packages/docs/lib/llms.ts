@@ -2,7 +2,9 @@ import { DOCS_ORIGIN } from "@fortrip/agent-contract";
 import type { InferPageType } from "fumadocs-core/source";
 import { llms } from "fumadocs-core/source/llms";
 
+import { BLOCKS } from "./markdown/components.ts";
 import { operationMarkdown } from "./markdown/pages.ts";
+import { toMarkdown } from "./markdown/stringify.ts";
 import { buildOpenApi } from "./openapi/build.ts";
 import { SITE } from "./site.ts";
 import { source } from "./source.ts";
@@ -51,6 +53,27 @@ export async function pageMarkdown(page: Page): Promise<string> {
   return `${offSite([`# ${page.data.title}`, ...description, body.trim()].join("\n\n"), page.url)}\n`;
 }
 
+/** Pages of lookup data, by URL, with their data's Markdown: an agent gets
+ *  an entry from an error or a search, so `llms.txt` lists the page by its URL
+ *  only and `llms-full.txt` holds it without the data. */
+const LOOKUP_PAGES: Record<string, () => string> = {
+  "/regions": () => {
+    const regionList = BLOCKS.RegionList;
+    if (!regionList) throw new Error("no RegionList component");
+    return toMarkdown(regionList({}));
+  },
+};
+
+/** A page as `llms-full.txt` holds it: a lookup page's data replaced by a
+ *  link to the page's Markdown, which keeps it. */
+async function fullMarkdown(page: Page): Promise<string> {
+  const markdown = await pageMarkdown(page);
+  const data = LOOKUP_PAGES[page.url]?.();
+  if (data === undefined) return markdown;
+  if (!markdown.includes(data)) throw new Error(`${page.url}: its data isn't in its Markdown`);
+  return markdown.replace(data, `The list: [${page.data.title}](${absolute(page.url)}).`);
+}
+
 /** Fumadocs' llms.txt helper, for each sidebar node's link list. */
 export const docsLlms = llms(source);
 
@@ -68,7 +91,7 @@ export function sidebarPages(nodes: TreeNode[] = source.getPageTree().children):
 
 /** `llms-full.txt`: every page's Markdown, in sidebar order. */
 export async function llmsFull(): Promise<string> {
-  return (await Promise.all(sidebarPages().map(pageMarkdown))).join("\n\n");
+  return (await Promise.all(sidebarPages().map(fullMarkdown))).join("\n\n");
 }
 
 /**
@@ -78,7 +101,13 @@ export async function llmsFull(): Promise<string> {
  */
 export function llmsIndex(): string {
   const groups = source.getPageTree().children.map((node) =>
-    node.type === "separator" ? `\n## ${node.name}\n` : docsLlms.indexNode(node),
+    node.type === "separator"
+      ? `\n## ${node.name}\n`
+      : Object.keys(LOOKUP_PAGES).reduce(
+          // A lookup page by its URL only, without its summary.
+          (index, url) => index.replace(new RegExp(`^(\\s*- \\[[^\\]]*\\]\\(${url}\\)): .*$`, "m"), "$1"),
+          docsLlms.indexNode(node),
+        ),
   );
   return [
     `# ${SITE.name}`,

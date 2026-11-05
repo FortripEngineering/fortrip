@@ -124,8 +124,29 @@ describe("Markdown pages", () => {
     );
     assert.deepEqual(new Set(listed), new Set(routes));
     assert.equal(listed[0], "/");
-    assert.equal(full, listed.map(pageMarkdown).join("\n\n"));
+    // /regions keeps its prose and links its Markdown for the list.
+    const regionsList = `The list: [Enabled regions](${DOCS_ORIGIN}/regions.md).`;
+    const pages = listed.map((route) => {
+      const markdown = pageMarkdown(route);
+      if (route !== "/regions") return markdown;
+      const start = markdown.indexOf("regions in ");
+      const at = markdown.lastIndexOf("\n\n", start) + 2;
+      return `${markdown.slice(0, at)}${regionsList}\n`;
+    });
+    assert.equal(full, pages.join("\n\n"));
     assert.doesNotMatch(withoutCode(full), /<[A-Z]/);
+  });
+
+  it("leaves the region list out of llms-full.txt, and lists /regions in llms.txt by its URL only", () => {
+    const full = routeBody("/llms-full.txt");
+    const regions = pageMarkdown("/regions");
+    for (const region of ENABLED_REGIONS.slice(0, 20)) {
+      assert.ok(regions.includes(`\`${region.placeId}\``), region.placeId);
+      assert.ok(!full.includes(region.placeId), region.placeId);
+    }
+    assert.ok(full.includes("# Enabled regions"));
+    const line = routeBody("/llms.txt").split("\n").find((l) => l.includes(`(${DOCS_ORIGIN}/regions.md)`));
+    assert.match(line ?? "", /^- \[Enabled regions\]\(https:\/\/[^)]+\/regions\.md\)$/);
   });
 
   it("has no heading anchors and no relative links outside code", () => {
