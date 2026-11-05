@@ -254,13 +254,20 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("an API reference page has its method and path, its short description, its full one in the body, and says where each field goes", () => {
+  it("an API reference page has its method and path, its short description once, its tool's page for the rules, and says where each field goes", () => {
     for (const op of OPERATIONS) {
       const markdown = pageMarkdown(`/api/reference/${op.id}`);
       assert.ok(markdown.includes(`\`${op.route.method} ${op.route.path}\``), op.id);
       assert.equal(markdown.split("\n")[2], `> ${op.summary}`, op.id);
-      const body = markdown.split("\n").slice(3).join("\n");
-      includesAll(body, (op.description ?? "").split(/\n\n+/).filter(Boolean), `${op.id} body`);
+      assert.equal(markdown.split(op.summary).length, 2, `${op.id}: description repeated`);
+      const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
+      if (tool) {
+        assert.ok(markdown.includes(`(${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), `${op.id}: no link to its tool`);
+        // The contract's full description is on the tool's page, not here.
+        assert.ok(!markdown.includes(tool.summary), `${op.id}: full description`);
+      } else {
+        assert.doesNotMatch(markdown, /\/mcp\//, op.id);
+      }
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);
     }
     assert.match(pageMarkdown("/api/reference/book_hotel"), /The JSON body holds every field\./);

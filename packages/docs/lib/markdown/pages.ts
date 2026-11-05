@@ -101,10 +101,15 @@ export function commandMarkdown(slug: string): string {
   ]);
 }
 
-/** An API reference page's body: the operation's route, description, input
- *  and answers. The whole schema is in `/openapi.json`. The description is
- *  left out when it is the page's `description`, which heads the page. */
-export function operationMarkdown(id: string, pageDescription?: string): string {
+/** The sentence an API reference page opens its body with, around a link to
+ *  its MCP tool's page, which carries the contract's full description. */
+export const TOOL_RULES = ["The full rules agents follow for this call are on its MCP tool's page, ", "."] as const;
+
+/** An API reference page's body, as the page shows it: the operation's
+ *  route, its tool's page for the rules, input and answers. Its short
+ *  summary heads the page; the contract's full description is on the tool's
+ *  page and in `/openapi.json`, with the whole schema. */
+export function operationMarkdown(id: string): string {
   const op = OPERATIONS.find((o) => o.id === id);
   if (!op) throw new Error(`${id} has no API reference page`);
   const { route, endpoint } = op;
@@ -129,11 +134,8 @@ export function operationMarkdown(id: string, pageDescription?: string): string 
             : []),
         ];
   const blocks: Block[] = [
+    ...(tool ? [paragraph([text(TOOL_RULES[0]), link(`/mcp/${tool.slug}`, code(tool.name)), text(TOOL_RULES[1])])] : []),
     paragraph([code(`${route.method} ${route.path}`), text(" on "), code(PUBLIC_ORIGINS.api)]),
-    ...(op.description === pageDescription ? "" : (op.description ?? ""))
-      .split(/\n\n+/)
-      .filter(Boolean)
-      .map((p) => paragraph(inline(p))),
     paragraph(
       endpoint.auth
         ? [text("Needs an access token: see "), link("/api#authentication", text("Authentication")), text(".")]

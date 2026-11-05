@@ -4,8 +4,11 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
+import { TOOLS } from "@fortrip/agent-contract";
+
 import { fact } from "../components/fact.tsx";
-import { pageHtml, pageRoutes } from "./built-page.ts";
+import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
+import { pageHtml, pageRoutes, pageText } from "./built-page.ts";
 
 const server = new URL("../.next/server/", import.meta.url).pathname;
 
@@ -59,5 +62,41 @@ describe("built site", () => {
       .join("\n");
     assert.ok(css.length > 0);
     assert.match(css, /:where\(table\) :is\(td,\s*th\)\{vertical-align:top\}/);
+  });
+
+  it("shows the previous and next pages by direction and title only, never their description", () => {
+    const routes = pageRoutes();
+    const cards: string[] = [];
+    for (const route of routes) {
+      const html = pageHtml(route).replaceAll("<!-- -->", "");
+      for (const card of html.matchAll(/<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*"[^>]*>([\s\S]*?)<\/a>/g)) {
+        const muted = /<p class="text-fd-muted-foreground">([\s\S]*?)<\/p>/.exec(card[1] as string)?.[1];
+        if (muted !== "Previous Page" && muted !== "Next Page") cards.push(`${route}: ${muted}`);
+      }
+    }
+    assert.deepEqual(cards, []);
+    // On /quickstart, the next card is Installation's: its title, not its description.
+    const quickstart = pageHtml("/quickstart");
+    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/install">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
+    const install = readFileSync(join(server, "app/install.html"), "utf8");
+    const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(install)?.[1] ?? "";
+    const description = /<meta name="description" content="([^"]+)"/.exec(install)?.[1] ?? "";
+    assert.ok(title && description);
+    assert.ok(next.includes(`<p>${title}</p>`), next);
+    assert.ok(next.includes("Next Page"));
+    assert.ok(!next.includes(description));
+  });
+
+  it("an API reference page shows the short summary and links its MCP tool's page, not the contract's full text", () => {
+    const tool = MCP_TOOLS.find((t) => t.name === "book_hotel");
+    const full = TOOLS.find((t) => t.name === "book_hotel")?.description;
+    assert.ok(tool && full && full !== tool.snippet);
+    const text = pageText("/api/reference/book_hotel");
+    assert.ok(text.includes(tool.snippet));
+    // Past the summary, none of the contract's text is shown.
+    const rest = full.slice(tool.snippet.length).trim();
+    assert.ok(rest.length > 0);
+    assert.ok(!text.includes(rest.slice(0, 60)), "the full description is shown");
+    assert.match(pageHtml("/api/reference/book_hotel"), new RegExp(`<a [^>]*href="/mcp/${tool.slug}"`));
   });
 });

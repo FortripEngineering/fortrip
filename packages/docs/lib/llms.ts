@@ -46,7 +46,7 @@ export async function pageMarkdown(page: Page): Promise<string> {
   let body: string;
   if (page.type === "docs") body = await page.data.getText("processed");
   else if (page.type === "reference") body = page.data.markdown();
-  else body = operationMarkdown(page.slugs.at(-1) ?? "", page.data.description);
+  else body = operationMarkdown(page.slugs.at(-1) ?? "");
   const description = page.data.description ? [`> ${page.data.description}`] : [];
   return `${offSite([`# ${page.data.title}`, ...description, body.trim()].join("\n\n"), page.url)}\n`;
 }
