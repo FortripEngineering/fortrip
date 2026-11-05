@@ -1,0 +1,49 @@
+---
+title: Quickstart
+description: From install to a paid order in a few minutes. You need Node.js and a Fortrip account.
+---
+
+You need Node.js <Fact path="CLI_NODE_MAJOR" /> or newer and a Fortrip account.
+
+## 1. Install the skill [#install]
+
+Run this once. It adds Fortrip to the agents on your machine that use skills.
+
+<pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
+
+Using a client without skills, such as Cursor, Claude Desktop, claude.ai or ChatGPT? Connect over [MCP](/install#remote-mcp) instead.
+
+## 2. Sign in [#sign-in]
+
+```sh
+npx fortrip login
+```
+
+The command prints a link and a code and opens your browser. Sign in to Fortrip, check that the code matches the one in your terminal, and approve. You stay signed in until you run `npx fortrip logout`. You can skip this step: the first time your agent needs access, it gives you a sign-in link instead.
+
+## 3. Ask your agent [#ask]
+
+```text
+Find a quiet hotel in Kyoto for two adults, two nights next month, with free cancellation.
+```
+
+The agent searches, compares live offers and creates an order. Before it asks you to pay, it shows the total and currency, the room and dates, the meals, the cancellation terms and any fees paid at the hotel, and asks you to confirm. Then you pay on the Fortrip payment page it links to, or, when the order allows, in your Link wallet or with Alipay or WeChat Pay. See [ways to pay](/api#orders).
+
+## Try it by hand [#by-hand]
+
+The same steps with the CLI. Each answer is compact text with the ids the next command takes; add `--json` for the full response.
+
+```sh
+npx fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
+npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
+npx fortrip hotels book --offer off_… --guest 1:First:Last --first-name First --last-name Last --email you@example.com --phone +1…
+npx fortrip orders get ord_…
+```
+
+`hotels book` answers an unpaid order with its `payment.url`; nothing is charged until you pay. Open the link to pay there or, when the order's `payment.wallets` isn't `null`, pay with Alipay or WeChat Pay:
+
+```sh
+npx fortrip orders pay ord_… --wallet --total <total>
+```
+
+It prints a WeChat Pay code and a link for each wallet; pay once, by one of them. Use the total exactly as `orders get` shows it. Each command's usage and options are in the [CLI reference](/cli).

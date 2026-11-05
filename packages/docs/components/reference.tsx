@@ -1,9 +1,18 @@
-import { GLOBAL_FLAGS, LIMITS, type ToolName } from "@fortrip/agent-contract";
+import {
+  DISPLAY_CURRENCIES,
+  FILTERABLE_AMENITIES,
+  GLOBAL_FLAGS,
+  LIMITS,
+  TOOLS,
+  type ToolName,
+} from "@fortrip/agent-contract";
 import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
 import { Heading } from "fumadocs-ui/components/heading";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { contentSentence } from "@/lib/prose/mcp-content.ts";
+import { ENDPOINTS } from "@/lib/reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "@/lib/reference/cli-commands.ts";
 import { ERROR_ROWS } from "@/lib/reference/error-docs.ts";
 import { FieldTable, inline } from "@/lib/reference/field-table.tsx";
@@ -11,7 +20,7 @@ import { TOOL_INPUTS } from "@/lib/reference/input-docs.ts";
 import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "@/lib/reference/limits.ts";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools.ts";
 import { regionGroups } from "@/lib/reference/regions.ts";
-import { RESPONSE_DOCS, responseDocFor } from "@/lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDocFor, responseDocForCommand, schemaHref } from "@/lib/reference/response-docs.ts";
 import { inputRows } from "@/lib/reference/schema-rows.ts";
 
 /** A table as Fumadocs renders one from Markdown: scrolls sideways when narrow. */
@@ -97,8 +106,7 @@ export function ToolPage({ name }: { name: ToolName }) {
       ) : (
         <p>
           <code>structuredContent</code> is the{" "}
-          <Link href={tool.returns.href}>{tool.returns.title}</Link> object, and{" "}
-          <code>content[0]</code> the same answer as compact text.
+          <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
           {nextStep && (
             <>
               {" "}
@@ -355,4 +363,83 @@ export function RegionList() {
       ))}
     </>
   );
+}
+
+/** Each tool's successful `content`, block by block. */
+export function McpContentTable() {
+  return (
+    <Table head={["Tool", "content"]}>
+      {TOOLS.map((tool) => (
+        <tr key={tool.name}>
+          <td>
+            <code>{tool.name}</code>
+          </td>
+          <td>{inline(contentSentence(tool.name))}</td>
+        </tr>
+      ))}
+    </Table>
+  );
+}
+
+/** The v1 endpoints, with the input, the answer and the matching tool and command. */
+export function EndpointTable() {
+  return (
+    <Table head={["Endpoint", "Input", "Answer", "MCP / CLI"]}>
+      {ENDPOINTS.map((endpoint) => {
+        const tool = MCP_TOOLS.find((t) => t.name === endpoint.tool);
+        const response = responseDocForCommand(endpoint.cliSlug);
+        return (
+          <tr key={`${endpoint.method} ${endpoint.path}`}>
+            <td>
+              <code>{`${endpoint.method} ${endpoint.path}`}</code>
+              <br />
+              {endpoint.title}
+            </td>
+            <td>
+              {endpoint.input === "none" ? (
+                "None"
+              ) : tool ? (
+                <Link href={`/mcp/${tool.slug}#input`}>{endpoint.input === "body" ? "JSON body" : "Path and query"}</Link>
+              ) : null}
+            </td>
+            <td>{response ? <Link href={schemaHref(response)}>{response.title}</Link> : "OAuth settings"}</td>
+            <td>
+              {tool && (
+                <>
+                  <code>{tool.name}</code>
+                  <br />
+                </>
+              )}
+              <Link href={`/cli/${endpoint.cliSlug}`}>CLI</Link>
+            </td>
+          </tr>
+        );
+      })}
+    </Table>
+  );
+}
+
+/** The destination kinds of a search, from the contract's input schema. */
+export function DestinationFields() {
+  return <FieldTable rows={inputRows(TOOL_INPUTS.search_hotels).filter((row) => /^destination\b/.test(row.path))} />;
+}
+
+/** The amenity codes a search can filter by. */
+export function FilterableAmenities() {
+  return FILTERABLE_AMENITIES.map((code, i) => (
+    <span key={code}>
+      {i > 0 && ", "}
+      <code>{code}</code>
+    </span>
+  ));
+}
+
+/** The currencies a price can also be shown in, besides USD. */
+export function OtherDisplayCurrencies() {
+  return DISPLAY_CURRENCIES.filter((c) => c !== "USD").map((code, i, all) => (
+    <span key={code}>
+      {i > 0 && (i === all.length - 1 ? " or " : ", ")}
+      {code}
+    </span>
+  ));
 }

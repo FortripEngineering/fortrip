@@ -1,0 +1,76 @@
+---
+title: HTTP API
+description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Each endpoint takes the same input as its MCP tool and answers the same object.
+---
+
+## Base URL [#base-url]
+
+<pre><code><Fact path="API_BASE_URL" /></code></pre>
+
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`. There is no CORS: call the API from a server, a script or the CLI, not from a web page.
+
+## Authentication [#authentication]
+
+Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a Fortrip OAuth access token, sent as `Authorization: Bearer <token>`. Cookies and API keys are not accepted. The tokens are the ones the CLI and MCP clients get when a user signs in to Fortrip; <code><Fact path="ROUTES.authConfig" /></code> returns the OAuth settings a client signs in with (the CLI uses the device authorization flow).
+
+To get a token for your own integration:
+
+1. <code><Fact path="ROUTES.authConfig" /></code> returns `issuer`, `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
+2. Run the OAuth device authorization flow (RFC 8628) with them: post `client_id` and `scope` as a form to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete` (or `verification_uri` and `user_code`), then poll `tokenEndpoint` every `interval` seconds with `grant_type=urn:ietf:params:oauth:grant-type:device_code`, the `device_code` and `client_id` until the user approves.
+3. Request `offline_access`, which `scopes` includes, to get a refresh token with the access token.
+4. The access token lasts about 24 hours. Refresh it at `tokenEndpoint` with `grant_type=refresh_token` and your `client_id`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again. To sign out, revoke the refresh token at `revocationEndpoint`, again with your `client_id`.
+
+A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
+
+## Endpoints [#endpoints]
+
+<EndpointTable />
+
+A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUTES.get_hotel" />?include=rooms&amp;locale=en</code> takes what `get_hotel` takes as `{ hotelId, include: "rooms", locale: "en" }`. Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
+
+## Conventions [#conventions]
+
+- Fields are camelCase. Ids are opaque strings with a prefix: `htl_` hotels, `off_` offers, `ord_` orders and `plc_` places. Pass them back exactly as received.
+- Instants end in `At` and are RFC 3339 in UTC. Dates are `yyyy-MM-dd` in the hotel's calendar, and times of day `HH:mm` in the hotel's time zone, its IANA `timeZone`.
+- Money is `{ amount: "132.40", currency: "USD" }`, the amount a decimal string. Money in a request must be USD. An `approx` amount is an estimate in the requested `displayCurrency`, with the date of its rate; it never changes what is charged.
+- Coordinates are `{ lat, lng }` in WGS84; distances are in meters.
+- Names with an English and a Chinese form are `name`, in the requested `locale`, plus `names: { en, zh }`. Other text from the catalogue is `{ text, locale }`, with `locale` `null` when unknown. Messages the API writes are in English.
+- **Unknown is not no.** A list or flag the source didn't state is `null`, or comes with `known`, `listed`, `disclosure` or `status` saying so. An amenity that isn't listed may still exist.
+
+## Headers [#headers]
+
+| Header | Meaning |
+| --- | --- |
+| `Request-Id` | On every response, and as `requestId` in an error. Quote it to support. |
+| `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` | On every response a rate limit counted: the limit per minute, what is left, and seconds until the window resets. See [rate limits](/errors#rate-limits). |
+| `Retry-After` | On every retryable error: seconds to wait. The envelope's `retryAfterSeconds` says the same. |
+| <code><Fact path="ORDER_HTTP.replayedHeader" /></code> | `true` when <code><Fact path="ROUTES.book_hotel" /></code> answers an order it already created for the same details. |
+
+## Pagination [#pagination]
+
+Search results and the order list are pages: `{ data, nextCursor }` for orders, and `data` with `nextCursor` alongside the rest of a search result. Pass `nextCursor` back as `cursor`; a next page of a search takes only `cursor` and, optionally, `limit`. `nextCursor` is `null` on the last page. A cursor belongs to its request and user; an expired, edited or foreign one answers `400 cursor_invalid`.
+
+Live offers are not a page: they are grouped by hotel, under `hotels`, with the hotels that have nothing to offer under `unavailable` and the reason.
+
+## Orders and payment [#orders]
+
+- <code><Fact path="ROUTES.book_hotel" /></code> checks the offer with the hotel supplier once. If nothing changed, it answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, its `price.total` in USD and the ways it can be paid. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
+- If the price or any term changed, it answers `409 offer_changed` with every change and a new offer. No order is made at a price the user hasn't seen.
+- Sending the same details for the same offer again answers the same order with <Fact path="ORDER_HTTP.replayedStatus" /> and <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>. Different details for an ordered offer answer `409 offer_already_ordered`.
+- Before the user pays, show them the total and every term and wait for a clear yes. The MCP tools carry this rule with every answer that holds a `payment.url`, as `nextStep`:
+
+> <Fact path="ORDER_NEXT_STEP" />
+
+An order is paid one of three ways. Pay one way only: once the order is paid by a token or by Alipay or WeChat Pay, `payment.url` stops working; a payment that fails leaves it open.
+
+<PayWays variant="full" />
+
+<code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of `sharedPaymentToken`, `payment` and `method`: a token, a token as UCP's `payment.instruments`, or `method: "alipay_wechat_pay"`. A `total` other than the order's answers `payment_total_changed` and charges nothing. The answer is the order; read it again with <code><Fact path="ROUTES.get_order" /></code> to follow its `status` and `payment.status`. A payment that can't go ahead answers `order_not_payable` or one of the `payment_` [error codes](/errors#codes).
+
+Orders can't be changed through the API. <code><Fact path="ROUTES.cancel_order" /></code> cancels one under its terms while `cancel.available` is `true`, with `maximumPenalty` a number equal to `cancel.penalty.amount`. <code><Fact path="ROUTES.list_orders" /></code> lists the user's hotel orders, newest first, including those made on the Fortrip website.
+
+## Changes within v1 [#evolution]
+
+Fortrip's agent API is pre-release. Until general availability, breaking changes may happen. A breaking change ships only in a new major version of the contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and is announced in the changelog with migration notes. After general availability, v1 will change only additively: new fields, endpoints, enum values and error codes.
+
+Read responses tolerantly either way: allow fields you don't know, treat an unknown enum value or error code as its raw string (or by its HTTP status and `retryable`), and don't fail on them.

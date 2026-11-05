@@ -12,7 +12,8 @@ describe("built site", () => {
   it("states the contract's values on the index page", () => {
     // React separates adjacent text with <!-- -->; the reader sees one run of text.
     const html = readFileSync(join(server, "app/index.html"), "utf8").replaceAll("<!-- -->", "");
-    assert.ok(html.includes(`MCP server at ${fact("MCP_SERVER_URL")},`));
+    assert.ok(html.includes(`any MCP client with OAuth at ${fact("MCP_SERVER_URL")}.`));
+    assert.ok(html.includes(`live offers for up to ${fact("LIMITS.offersHotels")} hotels`));
     assert.ok(html.includes(`up to ${fact("LIMITS.rooms")} rooms`));
   });
 

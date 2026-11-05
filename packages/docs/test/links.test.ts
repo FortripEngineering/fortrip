@@ -8,10 +8,10 @@ const app = new URL("../.next/server/app/", import.meta.url).pathname;
 const publicDir = new URL("../public/", import.meta.url).pathname;
 
 /**
- * Pages linked before they are written (the narrative pages of plan Task 8).
+ * Pages linked before they are written; none now.
  * A test below fails once one of them is built, so the entry goes with it.
  */
-const PENDING = new Set(["/quickstart", "/install", "/api", "/search"]);
+const PENDING = new Set<string>();
 
 /** Every built page by its route: `index.html` is `/`, `mcp/x.html` is `/mcp/x`. */
 const pages = new Map(

@@ -1,0 +1,70 @@
+---
+title: How search works
+description: Search never guesses. A name resolves by a published rule, an ambiguous one is an error that lists the candidates, and every answer says what it covered.
+---
+
+## Destinations [#destinations]
+
+A search takes a `destination`, `text`, or both. The destination is one of these:
+
+<DestinationFields />
+
+Pass a `placeId` from an earlier answer back as `{ kind: "place", placeId }`, never its name. Place ids stay valid: a place a later release drops still resolves.
+
+## Areas and radii [#scopes]
+
+A place covers either its whole **area** or a **radius** around it. The answer's `destination.scope`, `center` and `radiusMeters` say which.
+
+| Place | Scope | Covers |
+| --- | --- | --- |
+| Country | `area` | Every hotel in the country. |
+| Region (province, state) | `area` | Every hotel in the region, where the region is [enabled](/regions). |
+| Prefecture-level city (China) | `area` | Every hotel in the prefecture. |
+| Main island | `area` | An island that covers its own land area, such as Bali, Phuket, Hokkaido or Sicily. |
+| Town, neighbourhood, district, small island | `radius` | A circle around the place, <Fact path="LIMITS.radiusMetersDefault" /> m unless `radiusMeters` says otherwise. |
+| Point | `radius` | A circle around the point, <Fact path="LIMITS.radiusMetersDefault" /> m by default. |
+
+- `radiusMeters` is optional, from 1 to <Fact path="LIMITS.radiusMetersMax" />. On an area it narrows the area to a circle around its center.
+- A radius around a named place stays inside the place's country; a radius around a point does not.
+- The search never widens a radius by itself. When more hotels lie just outside, the answer says so in its counts and notes.
+- A hotel belongs to an area by where it is, worked out once per catalogue update, not by the catalogue's own city or region labels.
+
+## How a name resolves [#names]
+
+A `place_name` destination always carries its `countryCode`. The name is matched exactly against the names and alternate names of places in that country, after Unicode normalization, folding typographic apostrophes, lowercasing and collapsing spaces. Accents, hyphens, apostrophes and periods count: "Köln" and "Cologne" match, "Koln" does not; "St. Moritz" matches, "St Moritz" does not; "Xi'an" and "Xi’an" are the same name.
+
+1. **No match** answers `destination_not_found`.
+2. **An area absorbs same-name places inside it**: the region "Okinawa" absorbs the island, and "Shanghai" means the whole municipality, starting from the city center (the note `area_absorbed` says so). An area that isn't city-like doesn't absorb a same-name city of <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people or more: both stay candidates, as with New York State and New York City.
+3. **Near-duplicates count as one**: same-name towns, neighbourhoods and small islands within <Fact path="SEARCH_RULES.nearDuplicateMeters" /> m of each other.
+4. **One place left** is used.
+5. **Several left**: the most populous is used when it has at least <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people and <Fact path="SEARCH_RULES.dominanceRatio" /> times the next (the note `place_resolved_dominant` says so, and `otherMatches` counts the rest).
+6. **Otherwise** the answer is `destination_ambiguous`, with up to <Fact path="LIMITS.candidatesShown" /> candidates, each with its `placeId` and how many hotels it covers. Ask the user, then search the chosen one as `{ kind: "place", placeId }`.
+
+A region that isn't enabled isn't matched by its name, so the name can still match a town or island of that name.
+
+## Localities [#localities]
+
+A search over an area lists its `localities`: the <Fact path="LIMITS.localitiesShown" /> towns with the most matching hotels, each gathering the hotels near it. Each has its `count` in this search, its `total` anywhere, and up to <Fact path="SEARCH_RULES.hubIncludes" /> places it `includes` ("Mestre, incl. Venice"). Search one as `{ kind: "locality", placeId }`: it returns exactly its `total`.
+
+A price sort or price filter prices up to <Fact path="LIMITS.poolLimit" /> hotels. Over a radius with more, the nearest are priced and the note `pool_limited` gives the distance covered. Over an area or text with more, the answer is `search_too_broad` with the localities to choose from.
+
+## Text [#text]
+
+`text` matches whole words in hotel names and addresses, in English and Chinese.
+
+- Every word must match as written: plurals, accents, spacing and abbreviations matter ("Saint Regis" and "St Regis" differ). Hyphens and apostrophes fold, so Ritz-Carlton matches Ritz Carlton.
+- Chinese follows the index's word segmentation, so part of a word can match unrelated names. Traditional and simplified characters match each other.
+- Use distinctive words: a hotel or brand name, a district or a landmark. Not "hotel", "near", "cheap" or "best". A typo matches nothing.
+- For a country or a city, use a destination rather than text.
+
+Amenity filters take the codes that enough hotels list: <FilterableAmenities />. A hotel that doesn't list an amenity is left out, though it may still have it (the note `amenities_listed_only`).
+
+## Indicative prices [#prices]
+
+With a `stay`, each hotel can carry an indicative price per room and night. It is the hotel supplier's lowest nightly reference price for one unit, converted to USD at a market rate. It doesn't depend on the party or on availability, and it can be above or below the cheapest live offer. It can't be booked: only offers can.
+
+Hotels without an indicative price stay listed with `price: null`; price sorts put them last, and a price filter leaves them out and counts them. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
+
+## Counts and notes [#coverage]
+
+Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Field by field, see the [search result](/schemas#search-result).

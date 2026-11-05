@@ -1,11 +1,15 @@
 import {
+  ACCOUNT_ROUTES,
   API,
   CONTRACT_VERSION,
   DOCS_ORIGIN,
+  HTTP_ROUTES,
   LIMITS,
   MCP_PATH,
   MCP_SERVER_URL,
+  ME_SCOPES,
   ORDER_HTTP,
+  ORDER_NEXT_STEP,
   PUBLIC_ORIGINS,
   RATE_LIMITS,
   REPOSITORY_URL,
@@ -15,15 +19,29 @@ import {
 } from "@fortrip/agent-contract";
 
 import cli from "../../cli/package.json" with { type: "json" };
+import { API_BASE_URL } from "../lib/reference/api-docs.ts";
+import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
 
 /** The oldest Node.js major the CLI runs on, from its `engines.node` (`>=22`). */
 const nodeRange = /^>=(\d+)$/.exec(cli.engines.node);
 if (!nodeRange) throw new Error(`Unexpected engines.node in the CLI package: ${cli.engines.node}`);
 
-/** The contract values the docs may state, by the name the contract exports,
- *  and the CLI's Node.js floor from its published package metadata. */
+/** Each endpoint as "POST /v1/orders/{orderId}/pay", by tool or account route name. */
+const ROUTES = Object.fromEntries(
+  Object.entries({ ...HTTP_ROUTES, ...ACCOUNT_ROUTES }).map(([name, route]) => [name, `${route.method} ${route.path}`]),
+) as Record<keyof typeof HTTP_ROUTES | keyof typeof ACCOUNT_ROUTES, string>;
+
+/** The contract values the docs may state, by the name the contract exports;
+ *  a few derived from them (`ROUTES`, `API_BASE_URL`, `GUIDE_SENTENCES`, the
+ *  contract guide's own words); and the CLI's Node.js floor from its
+ *  published package metadata. */
 const FACTS = {
   CLI_NODE_MAJOR: Number(nodeRange[1]),
+  API_BASE_URL,
+  ROUTES,
+  GUIDE_SENTENCES: { adaptivePricing: ADAPTIVE_PRICING },
+  ORDER_NEXT_STEP,
+  ME_SCOPES,
   LIMITS,
   RATE_LIMITS,
   SEARCH_RULES,

@@ -1,12 +1,16 @@
 {
   "pages": [
     "index",
-    "---Search---",
+    "quickstart",
+    "install",
+    "---Guides---",
+    "search",
     "regions",
     "---Reference---",
-    "schemas",
-    "errors",
+    "api",
     "mcp",
-    "cli"
+    "cli",
+    "schemas",
+    "errors"
   ]
 }
