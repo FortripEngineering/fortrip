@@ -15,6 +15,11 @@ describe("the Claude plugin's README", () => {
     for (const figure of figures) assert.equal(figure, LIMITS.tokenPaymentMaxUsd);
   });
 
+  it("states the stay limits as LIMITS.nightsSupplier and LIMITS.rooms", () => {
+    assert.match(README, new RegExp(`\\b1 to ${LIMITS.nightsSupplier} nights\\b`));
+    assert.match(README, new RegExp(`\\b1 to ${LIMITS.rooms} rooms\\b`));
+  });
+
   it("states no payment link lifetime: the order's payment.expiresAt does", () => {
     assert.doesNotMatch(README, /\bexpires after about\b|\b\d+ hours?\b/);
   });
