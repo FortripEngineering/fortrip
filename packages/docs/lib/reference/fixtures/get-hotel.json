@@ -1,0 +1,86 @@
+{
+  "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
+  "name": "Kamo Lantern Hotel",
+  "names": {
+    "en": "Kamo Lantern Hotel",
+    "zh": "鸭川灯笼酒店"
+  },
+  "bookable": true,
+  "stars": 3,
+  "address": {
+    "line": {
+      "text": "120 Kamikorikicho, Shimogyo Ward",
+      "locale": "en"
+    },
+    "countryCode": "JP",
+    "region": null
+  },
+  "location": {
+    "lat": 34.99862,
+    "lng": 135.76911
+  },
+  "timeZone": "Asia/Tokyo",
+  "description": {
+    "text": "A small hotel on the west bank of the Kamo River, a ten-minute walk from Kyoto Station. Rooms on the upper floors look over the river and the Higashiyama hills.",
+    "locale": "en"
+  },
+  "photos": null,
+  "checkInTimes": {
+    "from": "15:00",
+    "until": "23:00"
+  },
+  "checkOutTimes": {
+    "from": null,
+    "until": "11:00"
+  },
+  "policies": {
+    "listed": true,
+    "items": [
+      {
+        "topic": "check_in",
+        "text": "Guests must show a passport or photo ID at check-in.",
+        "locale": "en"
+      },
+      {
+        "topic": "pets",
+        "text": "Pets are not allowed.",
+        "locale": "en"
+      }
+    ]
+  },
+  "amenities": {
+    "listed": true,
+    "items": [
+      {
+        "code": "wifi",
+        "name": {
+          "text": "Free Wi-Fi",
+          "locale": "en"
+        }
+      },
+      {
+        "code": "non_smoking",
+        "name": {
+          "text": "Non-smoking rooms",
+          "locale": "en"
+        }
+      },
+      {
+        "code": "laundry",
+        "name": {
+          "text": "Coin laundry",
+          "locale": "en"
+        }
+      }
+    ]
+  },
+  "breakfastServed": true,
+  "deposit": {
+    "required": false,
+    "amount": null
+  },
+  "contact": {
+    "phone": "+81 75 555 0142",
+    "website": null
+  }
+}

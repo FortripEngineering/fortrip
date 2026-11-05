@@ -20,6 +20,8 @@ import {
   type HttpToolName,
 } from "@fortrip/agent-contract";
 
+import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
+import { EXAMPLE_IDS } from "../lib/reference/responses.ts";
 import { pageText } from "./built-page.ts";
 
 const root = new URL("../examples/", import.meta.url).pathname;
@@ -114,6 +116,18 @@ describe("examples", () => {
       // No field is sent that the route carries in its path.
       for (const field of example.route.pathFields) assert.ok(!(field in bodyOf(example.name)), field);
     }
+  });
+
+  it("the API reference sends the same requests", () => {
+    for (const example of EXAMPLES) {
+      const sent = Object.values(EXAMPLE_REQUESTS)
+        .flat()
+        .find((request) => request.name === example.name);
+      assert.ok(sent, example.name);
+      assert.deepEqual(sent.params ?? {}, example.fromUrl ?? {}, example.name);
+      assert.deepEqual(sent.body, example.body ? bodyOf(example.name) : undefined, example.name);
+    }
+    assert.deepEqual(Object.values(EXAMPLE_IDS).sort(), [HOTEL, OFFER, ORDER].sort());
   });
 
   it("the requests without a body are valid input too", () => {

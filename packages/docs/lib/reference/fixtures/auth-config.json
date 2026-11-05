@@ -1,0 +1,8 @@
+{
+  "issuer": "https://clerk.fortrip.ai",
+  "clientId": "fZY0CXYM5gD7tlgm",
+  "scopes": "openid profile email offline_access",
+  "deviceAuthorizationEndpoint": "https://clerk.fortrip.ai/oauth/device_authorization",
+  "tokenEndpoint": "https://clerk.fortrip.ai/oauth/token",
+  "revocationEndpoint": "https://clerk.fortrip.ai/oauth/token/revoke"
+}
