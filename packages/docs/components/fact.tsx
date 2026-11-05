@@ -19,6 +19,7 @@ import {
 } from "@fortrip/agent-contract";
 
 import cli from "../../cli/package.json" with { type: "json" };
+import { EXIT as CLI_EXIT } from "../../cli/src/exit-codes.ts";
 import { API_BASE_URL } from "../lib/reference/api-docs.ts";
 import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
 
@@ -33,10 +34,11 @@ const ROUTES = Object.fromEntries(
 
 /** The contract values the docs may state, by the name the contract exports;
  *  a few derived from them (`ROUTES`, `API_BASE_URL`, `GUIDE_SENTENCES`, the
- *  contract guide's own words); and the CLI's Node.js floor from its
- *  published package metadata. */
+ *  contract guide's own words); the CLI's Node.js floor from its published
+ *  package metadata; and the CLI's exit codes from its source. */
 const FACTS = {
   CLI_NODE_MAJOR: Number(nodeRange[1]),
+  CLI_EXIT,
   API_BASE_URL,
   ROUTES,
   GUIDE_SENTENCES: { adaptivePricing: ADAPTIVE_PRICING },

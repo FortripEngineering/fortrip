@@ -3,6 +3,7 @@ import {
   ERROR_DETAILS,
   type ErrorCode,
   LIMITS,
+  SUPPLIER_OUTCOME_STATUS,
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 import type { z } from "zod";
@@ -37,7 +38,7 @@ const MEANINGS: Record<ErrorCode, string> = {
     "The hotel supplier's price or terms changed since the offer. `changes` lists every change, and `offer` is a new offer with the new terms. Show the changes, ask the user again, then order the new offer.",
   offer_already_ordered:
     "The offer was ordered with different details. Read the order in `orderId`, or get a new offer.",
-  order_exists: `This stay already has an open order for one of these guests (\`orderId\`, \`status\`): show it instead of ordering again; its payment link stays valid. A party with none of its guests can order the stay from a new offer (get offers again), and so can the user once the stay's order is confirmed, cancelled or refused by the hotel. It also answers when the stay's earlier order failed at the hotel with its outcome unknown, or the stay has had 20 orders; for those, the user emails ${SUPPORT_EMAIL}.`,
+  order_exists: `This stay already has an open order for one of these guests (\`orderId\`, \`status\`): show it instead of ordering again; its payment link stays valid. A party with none of its guests can order the stay from a new offer (get offers again), and so can the user once the stay's order is confirmed, cancelled or refused by the hotel. It also answers when the stay's earlier order failed at the hotel with its outcome unknown, or the stay has had ${LIMITS.ordersPerStay} orders; for those, the user emails ${SUPPORT_EMAIL}.`,
   order_in_progress:
     "The same offer is being ordered by another request right now, or (for `cancel_order`) the order is still being confirmed. Retry after `retryAfterSeconds` to get its answer.",
   cancellation_changed:
@@ -45,8 +46,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   order_not_cancellable:
     "The order can't be cancelled now; `reason` says why, as `order.cancel.reason` does. `stay_started`, `non_refundable` and `refused` won't change: the user emails support. `in_progress` and `not_confirmed` mean the order isn't confirmed yet.",
   order_attempts_exhausted: `This order has reached its limit of attempts and can't be submitted again. The user can email ${SUPPORT_EMAIL} with its reference.`,
-  order_not_payable:
-    "`pay_order` on an order that isn't awaiting payment, or whose payment window closes within two minutes. `status` is the order's. This call charged nothing.",
+  order_not_payable: `\`pay_order\` on an order that isn't awaiting payment, or whose payment window closes within ${LIMITS.payCutoffMinutes} minutes. \`status\` is the order's. This call charged nothing.`,
   payment_in_progress:
     "Another payment of the order is under way. Read the order after `retryAfterSeconds`.",
   payment_total_changed:
@@ -77,8 +77,7 @@ const MEANINGS: Record<ErrorCode, string> = {
     "Ordering is paused for now. Search and offers still work, and an order already made can still be read. Retry after `retryAfterSeconds`.",
   service_unavailable:
     "A service Fortrip depends on is briefly unavailable. Retry after `retryAfterSeconds`.",
-  supplier_unavailable:
-    "The hotel supplier didn't answer. `not_started` (503): nothing was sent, so retrying is safe. `unknown` (504): the call was sent and timed out; for an order, read your orders before ordering again.",
+  supplier_unavailable: `The hotel supplier didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call was sent and timed out; for an order, read your orders before ordering again.`,
   internal: "An unexpected error. The `requestId` helps support find it.",
 };
 

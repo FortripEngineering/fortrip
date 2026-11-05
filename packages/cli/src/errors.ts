@@ -2,15 +2,9 @@ import { randomBytes } from "node:crypto";
 
 import { ERROR_CODES, renderError } from "@fortrip/agent-contract";
 
-export const EXIT = {
-  ok: 0,
-  error: 1,
-  usage: 2,
-  unauthenticated: 3,
-  rateLimited: 4,
-} as const;
+import { EXIT, type ExitCode } from "./exit-codes.ts";
 
-export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
+export { EXIT, type ExitCode };
 
 /** The v1 error envelope (spec §11), as Fortrip sent it or as the CLI
  *  answers a request it refused to send. */

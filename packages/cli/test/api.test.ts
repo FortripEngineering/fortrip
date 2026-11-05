@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 
 import { request, unwrap } from "../src/api.ts";
 import { CliError, EXIT } from "../src/errors.ts";
+import { EXIT_BY_CODE, EXIT_BY_STATUS } from "../src/exit-codes.ts";
 
 function response(
   status: number,
@@ -65,6 +66,22 @@ describe("unwrap", () => {
     }
     // The code decides when it is known, whatever the status.
     assert.equal(exitCodeOf(() => unwrap(response(422, envelope("invalid_request")))), EXIT.usage);
+  });
+
+  it("applies the exit maps it exports (the docs render them)", () => {
+    assert.deepEqual(EXIT_BY_CODE, {
+      invalid_request: EXIT.usage,
+      unauthenticated: EXIT.unauthenticated,
+      rate_limited: EXIT.rateLimited,
+    });
+    assert.deepEqual(EXIT_BY_STATUS, { 400: EXIT.usage, 401: EXIT.unauthenticated, 429: EXIT.rateLimited });
+    for (const [code, exit] of Object.entries(EXIT_BY_CODE)) {
+      assert.equal(exitCodeOf(() => unwrap(response(500, envelope(code)))), exit, code);
+    }
+    for (const [status, exit] of Object.entries(EXIT_BY_STATUS)) {
+      assert.equal(exitCodeOf(() => unwrap(response(Number(status), envelope("brand_new_code")))), exit, status);
+      assert.equal(exitCodeOf(() => unwrap(response(Number(status), null))), exit, status);
+    }
   });
 
   it("keeps the envelope and the status on the error", () => {

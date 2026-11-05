@@ -86,6 +86,40 @@ describe("stale statements stay fixed", () => {
     assert.match(meaning("payment_method_unavailable"), /`payment\.wallets`/);
   });
 
+  it("no page states the access token's lifetime or the order reference's length", () => {
+    const docs = new URL("../content/docs/", import.meta.url).pathname;
+    const lib = new URL("../lib/", import.meta.url).pathname;
+    const examples = new URL("../examples/", import.meta.url).pathname;
+    const files = [
+      ...readdirSync(docs, { recursive: true, encoding: "utf8" })
+        .filter((f) => f.endsWith(".mdx") && f !== "changelog.mdx")
+        .map((f) => join(docs, f)),
+      ...readdirSync(lib, { recursive: true, encoding: "utf8" })
+        .filter((f) => /\.tsx?$/.test(f))
+        .map((f) => join(lib, f)),
+      ...readdirSync(examples, { recursive: true, encoding: "utf8" })
+        .filter((f) => /\.(?:sh|py|ts)$/.test(f))
+        .map((f) => join(examples, f)),
+    ];
+    assert.ok(files.length > 20, String(files.length));
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      assert.ok(!/\b24 hours?\b|\b24-hour\b|\ba day\b/i.test(source), `${file} states a token lifetime`);
+      assert.ok(!/\bsix characters\b|\b6 characters\b/i.test(source), `${file} states a reference length`);
+    }
+    assert.match(pageText("/api"), /The access token is short-lived: its lifetime, in seconds, is the token response's expires_in\./);
+    assert.match(pageText("/cli"), /An access token is short-lived, so it suits one sandbox session or one CI run; for longer, sign in\./);
+    assert.match(pageText("/payments"), /The order's reference, which starts with FT-, is the number the user quotes to support\./);
+  });
+
+  it("no page types a CLI exit code", () => {
+    const docs = new URL("../content/docs/", import.meta.url).pathname;
+    for (const page of readdirSync(docs, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".mdx") && f !== "changelog.mdx")) {
+      const prose = readFileSync(join(docs, page), "utf8").replace(/<Fact [^>]*\/>/g, "");
+      assert.ok(!/\bexits? (?:with )?\[?(?:code )?\d/.test(prose), `${page} types an exit code`);
+    }
+  });
+
   it("/regions states no share its data can't show", () => {
     assert.doesNotMatch(pageText("/regions"), /\d\s?%/);
   });

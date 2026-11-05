@@ -24,6 +24,7 @@ import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
 import { ENDPOINTS } from "../reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
 import { ERROR_ROWS } from "../reference/error-docs.ts";
+import { EXIT_ROWS } from "../reference/exit-codes.ts";
 import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { regionGroups } from "../reference/regions.ts";
@@ -227,6 +228,14 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
           [...inline(row.meaning), ...(row.details ? [lineBreak(), code(`details: ${row.details}`)] : [])],
         ],
       })),
+    ),
+  ],
+
+  /** The CLI's exit codes, from the CLI, each with what it means. */
+  ExitCodes: () => [
+    table(
+      ["Code", "Meaning"],
+      EXIT_ROWS.map((row) => ({ cells: [[code(String(row.code))], inline(row.meaning)] })),
     ),
   ],
 

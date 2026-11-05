@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ERROR_CODES, ERROR_DETAILS, LIMITS } from "@fortrip/agent-contract";
+import { ERROR_CODES, ERROR_DETAILS, LIMITS, SUPPLIER_OUTCOME_STATUS } from "@fortrip/agent-contract";
 
 import { detailsShape, ERROR_ROWS } from "../lib/reference/error-docs.ts";
 
@@ -84,8 +84,21 @@ test("the meanings say what the contract and its guide say", () => {
     /A party with none of its guests can order the stay/,
     /once the stay's order is confirmed, cancelled or refused by the hotel/,
     /earlier order failed at the hotel with its outcome unknown/,
-    /the stay has had 20 orders/,
+    new RegExp(`the stay has had ${LIMITS.ordersPerStay} orders`),
   ]) {
     assert.match(meaning("order_exists"), blocked);
+  }
+});
+
+test("the stay order cap, the pay cutoff and supplier_unavailable's statuses come from the contract", () => {
+  const meaning = (code: keyof typeof ERROR_CODES) =>
+    ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
+  assert.ok(meaning("order_exists").includes(`the stay has had ${LIMITS.ordersPerStay} orders`));
+  assert.ok(
+    meaning("order_not_payable").includes(`whose payment window closes within ${LIMITS.payCutoffMinutes} minutes`),
+    meaning("order_not_payable"),
+  );
+  for (const [outcome, status] of Object.entries(SUPPLIER_OUTCOME_STATUS)) {
+    assert.ok(meaning("supplier_unavailable").includes(`\`${outcome}\` (${status})`), outcome);
   }
 });

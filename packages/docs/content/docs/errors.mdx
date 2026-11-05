@@ -32,13 +32,7 @@ Every failure answers the same envelope:
 
 ## CLI exit codes [#exit-codes]
 
-| Code | Meaning |
-| --- | --- |
-| `0` | Success. |
-| `1` | Any other error. An error code the CLI doesn't know exits by its HTTP status: 400 → 2, 401 → 3, 429 → 4, any other status 1. |
-| `2` | Invalid arguments, found by the CLI or answered as `invalid_request`. |
-| `3` | Not signed in, or the saved sign-in is no longer accepted (`unauthenticated`). stderr normally includes `loginUrl` and `userCode`: show them to the user and rerun the command once they have approved. When `FORTRIP_TOKEN` is set and Fortrip rejects it, stderr has `tokenSource: "FORTRIP_TOKEN"` and no link: replace or unset the token. |
-| `4` | Rate limited (`rate_limited`). stderr includes `retryAfterSeconds`. |
+<ExitCodes />
 
 ## Rate limits [#rate-limits]
 

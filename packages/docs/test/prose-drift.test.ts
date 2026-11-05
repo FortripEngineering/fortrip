@@ -10,6 +10,7 @@ import {
   RATE_LIMITS,
   renderGuide,
   SEARCH_RULES,
+  SUPPLIER_OUTCOME_STATUS,
 } from "@fortrip/agent-contract";
 
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
@@ -49,6 +50,7 @@ const NUMBERS = new Set(
     ...Object.values(SEARCH_RULES),
     ...Object.values(ORDER_HTTP),
     ...Object.values(RATE_LIMITS).flatMap((r) => [r.limit, r.windowSeconds]),
+    ...Object.values(SUPPLIER_OUTCOME_STATUS),
   ].filter((v): v is number => typeof v === "number" && v >= 10),
 );
 
@@ -57,6 +59,7 @@ const lib = new URL("../lib/", import.meta.url).pathname;
 const PROSE_TS = [
   ...readdirSync(join(lib, "prose")).map((f) => `prose/${f}`),
   "reference/error-docs.ts",
+  "reference/exit-codes.ts",
   // The copy of expanded components, generated pages' Markdown and llms.txt.
   "markdown/components.ts",
   "markdown/pages.ts",
@@ -79,10 +82,7 @@ function tsProse(ts: string): string {
  * owner), or equal a contract value by coincidence. Each phrase must still
  * be in its file, so a stale entry fails too.
  */
-const UNOWNED: Array<[file: string, phrase: string]> = [
-  // The per-stay order cap is the server's; no LIMITS key.
-  ["reference/error-docs.ts", "the stay has had 20 orders"],
-];
+const UNOWNED: Array<[file: string, phrase: string]> = [];
 
 /** The contract numbers `text` (of `file`) types itself. */
 function typedNumbers(file: string, text: string): string[] {
@@ -175,6 +175,7 @@ test("the CLI's FORTRIP_API_URL is a base URL, and FORTRIP_MCP_URL is documented
 test("the errors page: an unknown code exits by HTTP status; a wrong method is 405 with Allow", () => {
   const page = source("errors.mdx");
   assert.doesNotMatch(page, /including an error code the CLI doesn't know/);
-  assert.match(page, /400 → 2, 401 → 3, 429 → 4/);
+  assert.ok(page.includes("<ExitCodes />"));
+  assert.match(pageText("/errors"), /An error code the CLI doesn't know exits by its HTTP status: 400 → 2, 401 → 3, 429 → 4, any other status 1\./);
   assert.match(page, /`invalid_request` with HTTP 405 and an `Allow` header/);
 });

@@ -62,4 +62,4 @@ Configure either the remote or the local server in a client, not both. See [fort
 | Remote MCP | OAuth 2.1 with PKCE. Your client opens a Fortrip sign-in page and you approve access. |
 | HTTP API | The same OAuth access tokens, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
 
-Both use a Fortrip account and the same OAuth service. When a CLI command needs a sign-in it does not wait: it exits with [code 3](/errors#exit-codes) and normally prints a `loginUrl` and a `userCode` (a rejected `FORTRIP_TOKEN` prints `tokenSource` and no link). An agent can give both to the user and rerun the command once they have approved.
+Both use a Fortrip account and the same OAuth service. When a CLI command needs a sign-in it does not wait: it exits with [code <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes) and normally prints a `loginUrl` and a `userCode` (a rejected `FORTRIP_TOKEN` prints `tokenSource` and no link). An agent can give both to the user and rerun the command once they have approved.

@@ -61,6 +61,12 @@ describe("README", () => {
     assert.ok(named > 5, `${named} commands named`);
   });
 
+  it("states no access token lifetime: Fortrip's token response does (expires_in)", async () => {
+    const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+    assert.doesNotMatch(readme, /\b24 hours?\b|\ba day\b/i);
+    assert.match(readme, /Access tokens are short-lived/);
+  });
+
   it("documents every environment variable the help lists, and the URLs the CLI defaults to", async () => {
     const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
     const variables = [...overallHelp().matchAll(/^ {2}(FORTRIP_[A-Z_]+) /gm)].map((m) => m[1] as string);
