@@ -195,6 +195,47 @@ release candidate, tagged `vX.Y.Z-rc.N`, is published under the `next`
 dist-tag, so `npm install` doesn't pick it up. Rerunning the publish job after
 a partial publish skips what is already on npm.
 
+## Docs
+
+[`packages/docs`](packages/docs) is the Fumadocs site behind `docs.fortrip.ai`.
+
+```bash
+pnpm --filter ./packages/docs dev   # local dev server
+pnpm --filter ./packages/docs test  # its tests
+```
+
+Production docs follow the live server, not `main`. A docs deploy is a
+`docs-*` tag, and the order is:
+
+1. Tag `vX.Y.Z` (npm, see Releasing above).
+2. Ship the fortrip-ai release that pins that contract to production.
+3. Push the tag `docs-X.Y.Z`.
+4. A human approves the `docs-production` environment. The workflow
+   [`deploy-docs.yml`](.github/workflows/deploy-docs.yml) then builds and
+   deploys to Vercel.
+
+The workflow refuses a contract with a prerelease suffix and a changelog
+without the contract's entry. The tag name itself is free-form.
+
+While `main` carries an rc, a docs-only fix can't go out from `main`: cut a
+short branch from the live `v*` tag, fix it there, tag `docs-X.Y.Z-<n>` on
+that branch and push the tag, and also merge the fix to `main`. A docs-only
+fix needs no npm release and no changelog entry.
+
+Before tagging a stable release, replace the version's "Not released yet." with
+"Released YYYY-MM-DD." in `packages/docs/content/docs/changelog.mdx`, or the
+changelog gate fails.
+
+One-time setup, by the owner:
+
+- A Vercel project with Root Directory `packages/docs`, framework Next.js,
+  "Include files outside the root directory" left on (the build reads
+  `packages/contract` and `packages/cli/package.json`) and preview
+  deployments on.
+- The `docs.fortrip.ai` domain on that project, and Vercel Analytics enabled.
+- The GitHub environment `docs-production`, with required reviewers and the
+  secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`.
+
 ## License
 
 [Apache License 2.0](LICENSE). Copyright 2026 FortripAI, Inc. (see
