@@ -13,7 +13,7 @@ export interface PayWayDoc {
 }
 
 const PAY = `\`${HTTP_ROUTES.pay_order.method} ${HTTP_ROUTES.pay_order.path}\``;
-const minutesLeft = fact("LIMITS.tokenPaymentMinOfferMinutes");
+const minutesLeft = fact("LIMITS.payMinMinutesLeft");
 
 /**
  * The ways an order is paid, keyed by the contract's `PayWay`, so a way the

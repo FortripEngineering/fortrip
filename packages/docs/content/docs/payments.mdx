@@ -53,7 +53,7 @@ A total other than the order's answers [`payment_total_changed`](/errors#code-pa
 ## The WeChat Pay code [#wechat-code]
 
 - A code lasts <Fact path="LIMITS.wechatCodeMinutes" /> minutes from when it is made, and goes dead earlier if the user opens the Alipay link. Either way `payment.wallets.wechatPay.qrData` and `qrImageUrl` are then `null`: the user opens the WeChat Pay link again for a new code, or you pay again with `method` `"alipay_wechat_pay"` for one.
-- Paying again while a code is live answers the same code. `payment.wallets` stays on the order while its wallet payment is open, however little time is left to pay; a new wallet payment can't be opened with less than <Fact path="LIMITS.tokenPaymentMinOfferMinutes" /> minutes left.
+- Paying again while a code is live answers the same code. `payment.wallets` stays on the order while its wallet payment is open, however little time is left to pay; a new wallet payment can't be opened with less than <Fact path="LIMITS.payMinMinutesLeft" /> minutes left.
 - WeChat can't scan a code shown on the same phone it runs on. You can't tell which device the user is on, so offer both ways: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat Pay link on another screen. On a phone, the Alipay link opens the Alipay app.
 - Over MCP, `pay_order`'s answer carries the code as an image block when it holds a live code, unless the image couldn't be fetched; then there is no image block. `structuredContent` has the code and both links either way.
 

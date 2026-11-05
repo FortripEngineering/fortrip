@@ -26,7 +26,9 @@ export const LIMITS = {
   candidatesCounted: 200,
   localitiesShown: 8,
   tokenPaymentMaxUsd: 500,
-  tokenPaymentMinOfferMinutes: 15,
+  /** Minutes that must be left before the order's payment window closes
+   *  (`payment.expiresAt`) to start a token or wallet payment. */
+  payMinMinutesLeft: 15,
   tokensPerOrder: 5,
   wechatCodeMinutes: 120,
 } as const;

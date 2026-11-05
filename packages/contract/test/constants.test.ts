@@ -19,7 +19,7 @@ describe("CONTRACT_VERSION", () => {
 describe("pay-eligibility limits", () => {
   it("states the token and wallet numbers", () => {
     assert.equal(LIMITS.tokenPaymentMaxUsd, 500);
-    assert.equal(LIMITS.tokenPaymentMinOfferMinutes, 15);
+    assert.equal(LIMITS.payMinMinutesLeft, 15);
     assert.equal(LIMITS.tokensPerOrder, 5);
     assert.equal(LIMITS.wechatCodeMinutes, 120);
   });

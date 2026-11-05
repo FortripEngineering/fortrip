@@ -88,7 +88,7 @@ describe("LIMITS and friends", () => {
       candidatesCounted: 200,
       localitiesShown: 8,
       tokenPaymentMaxUsd: 500,
-      tokenPaymentMinOfferMinutes: 15,
+      payMinMinutesLeft: 15,
       tokensPerOrder: 5,
       wechatCodeMinutes: 120,
     });
