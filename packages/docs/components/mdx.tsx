@@ -2,6 +2,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 
 import { ClientSetup, RemoteMcpTable } from "./client-setup.tsx";
+import { Example } from "./example.tsx";
 import { OrderStatuses, PaymentStatuses } from "./order-statuses.tsx";
 import { PayInputs, PayWays } from "./pay-ways.tsx";
 import {
@@ -42,6 +43,7 @@ export function getMDXComponents(components?: MDXComponents) {
     RemoteMcpTable,
     CommandPage,
     ErrorCodes,
+    Example,
     GlobalFlags,
     LimitsTable,
     RateLimitsTable,

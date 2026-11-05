@@ -1,0 +1,7 @@
+{
+  "sharedPaymentToken": "spt_ExampleTokenFromTheUsersLinkWallet",
+  "total": {
+    "amount": "132.40",
+    "currency": "USD"
+  }
+}

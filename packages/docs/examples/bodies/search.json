@@ -1,0 +1,23 @@
+{
+  "destination": {
+    "kind": "place_name",
+    "name": "Kyoto",
+    "countryCode": "JP"
+  },
+  "stay": {
+    "checkIn": "2027-03-10",
+    "checkOut": "2027-03-12",
+    "rooms": [
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "filters": {
+    "amenities": [
+      "wifi"
+    ]
+  },
+  "sort": "price_asc"
+}

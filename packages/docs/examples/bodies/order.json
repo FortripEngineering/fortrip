@@ -1,0 +1,29 @@
+{
+  "contact": {
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "email": "ada@example.com",
+    "phone": "+14155550132"
+  },
+  "items": [
+    {
+      "offerId": "off_Bz6yN1cD5fGh8JkM2pQs",
+      "hotel": {
+        "rooms": [
+          {
+            "guests": [
+              {
+                "firstName": "Ada",
+                "lastName": "Lovelace"
+              },
+              {
+                "firstName": "Charles",
+                "lastName": "Babbage"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
