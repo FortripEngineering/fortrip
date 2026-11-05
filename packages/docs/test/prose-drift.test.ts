@@ -12,8 +12,9 @@ import {
   SEARCH_RULES,
 } from "@fortrip/agent-contract";
 
+import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
 import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
-import { pageText } from "./built-page.ts";
+import { pageHtml, pageText } from "./built-page.ts";
 
 /*
  * The pages state some facts in prose. Each comes from the contract export
@@ -25,8 +26,12 @@ import { pageText } from "./built-page.ts";
 const docs = new URL("../content/docs/", import.meta.url).pathname;
 const source = (page: string) => readFileSync(join(docs, page), "utf8");
 
-/** Every MDX page, by its path under content/docs. */
-const PAGES = readdirSync(docs, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".mdx"));
+/** Every MDX page, by its path under content/docs. The changelog is left
+ *  out: its entries state the values each release had, and rendering the
+ *  current value through <Fact> would rewrite that history. */
+const PAGES = readdirSync(docs, { recursive: true, encoding: "utf8" }).filter(
+  (f) => f.endsWith(".mdx") && f !== "changelog.mdx",
+);
 
 /** What a reader sees as prose: code (fenced and inline), JSX tags and
  *  <Fact> tags removed. */
@@ -127,6 +132,22 @@ test("the local-currency sentence is the guide's, on both pages that say USD", (
   ] as const) {
     assert.ok(source(page).includes('<Fact path="GUIDE_SENTENCES.adaptivePricing" />'), page);
     assert.ok(pageText(route).includes(ADAPTIVE_PRICING), route);
+  }
+});
+
+test("the pre-release policy has one source, rendered on the API page and the changelog", () => {
+  const text = PRE_RELEASE_POLICY.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replaceAll("`", "");
+  assert.match(text, /^Fortrip's agent API is pre-release\. Until general availability/);
+  for (const [page, route] of [
+    ["api/index.mdx", "/api"],
+    ["changelog.mdx", "/changelog"],
+  ] as const) {
+    assert.ok(source(page).includes("<PreReleasePolicy />"), page);
+    assert.ok(pageText(route).includes(text), route);
+    assert.match(pageHtml(route), /href="\/changelog">changelog<\/a>/, route);
+  }
+  for (const page of [...PAGES, "changelog.mdx"]) {
+    assert.doesNotMatch(source(page), /Until general availability/, page);
   }
 });
 

@@ -13,6 +13,7 @@
     "mcp",
     "cli",
     "schemas",
-    "errors"
+    "errors",
+    "changelog"
   ]
 }

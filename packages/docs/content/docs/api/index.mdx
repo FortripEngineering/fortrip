@@ -73,6 +73,6 @@ Orders can't be changed through the API. <code><Fact path="ROUTES.cancel_order" 
 
 ## Changes within v1 [#evolution]
 
-Fortrip's agent API is pre-release. Until general availability, breaking changes may happen. A breaking change ships only in a new major version of the contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and is announced in the changelog with migration notes. After general availability, v1 will change only additively: new fields, endpoints, enum values and error codes.
+<PreReleasePolicy />
 
 Read responses tolerantly either way: allow fields you don't know, treat an unknown enum value or error code as its raw string (or by its HTTP status and `retryable`), and don't fail on them.
