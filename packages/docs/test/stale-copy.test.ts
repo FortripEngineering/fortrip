@@ -3,8 +3,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { MCP_OUTPUT } from "@fortrip/agent-contract";
+
 import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
-import { pageText } from "./built-page.ts";
+import { pageHtml, pageText } from "./built-page.ts";
 
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
@@ -29,6 +34,33 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(text, /content\[0\] is compact text/);
     assert.match(text, /WeChat Pay code/);
     assert.match(text, /content\[1\]/);
+  });
+
+  it("/mcp: nextStep only on the answers that declare it; blocks found by type", () => {
+    const text = pageText("/mcp");
+    const withNextStep = Object.entries(MCP_OUTPUT)
+      .filter(([, schema]) => "nextStep" in schema.shape)
+      .map(([tool]) => tool);
+    assert.ok(withNextStep.length > 0 && !withNextStep.includes("pay_order"));
+    const list = `${withNextStep.slice(0, -1).join(", ")} and ${withNextStep.at(-1)}`;
+    assert.ok(text.includes(`An answer of ${list} that holds a payment.url also carries nextStep`), list);
+    assert.match(text, /by its type \(text, image\), not by its position/);
+    assert.match(text, /unless the image couldn't be fetched/);
+  });
+
+  it("no page states the ways to pay or the pay inputs as a closed set by hand", () => {
+    const docs = new URL("../content/docs/", import.meta.url).pathname;
+    for (const page of readdirSync(docs, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".mdx"))) {
+      const mdx = readFileSync(join(docs, page), "utf8");
+      assert.doesNotMatch(mdx, /\b(?:one|two|three|four|five) ways\b/, page);
+      assert.doesNotMatch(mdx, /`sharedPaymentToken`,? (?:or|and) `payment`|`payment`,? (?:or|and) `method`/, page);
+      assert.doesNotMatch(mdx, /token,? or (?:by )?Alipay/, page);
+    }
+  });
+
+  it("the quickstart sends Claude Desktop to client setup, not to the remote server", () => {
+    assert.match(pageHtml("/quickstart"), /href="\/install#clients"/);
+    assert.doesNotMatch(pageHtml("/quickstart"), /href="\/install#remote-mcp"/);
   });
 
   it("a tool page says where its text is", () => {

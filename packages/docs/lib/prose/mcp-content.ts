@@ -8,7 +8,8 @@ type Block =
   | "guide"
   /** The contract's `PRESENTATION_HINT`: how to show hotels to the user. */
   | "presentation_hint"
-  /** The WeChat Pay code as a PNG, only while the answer holds a live one. */
+  /** The WeChat Pay code as a PNG, while the answer holds a live one and
+   *  the server could fetch the image (it is left out otherwise). */
   | "wechat_code";
 
 /**
@@ -40,11 +41,11 @@ const WHAT: Record<Block, string> = {
 const list = (blocks: readonly Block[]) =>
   blocks.map((block, i) => `\`content[${i}]\` is ${WHAT[block]}`).join(", and ");
 
-/** Where each block of `tool`'s content is, in words. A WeChat Pay code is
- *  there only while the answer holds a live one; without it, the blocks
- *  after it move up one. */
+/** Where each block of `tool`'s content usually is, in words. A WeChat Pay
+ *  code is there only while the answer holds a live one and its image could
+ *  be fetched; without it, the blocks after it move up one. */
 export function contentSentence(tool: ToolName): string {
   const blocks = MCP_CONTENT[tool];
   if (blocks[0] !== "wechat_code") return `${list(blocks)}.`;
-  return `When the answer holds a live WeChat Pay code, ${list(blocks)}; otherwise ${list(blocks.slice(1))}.`;
+  return `When the answer holds a live WeChat Pay code, ${list(blocks)}, unless the image couldn't be fetched; otherwise ${list(blocks.slice(1))}. Find the blocks by \`type\`, not by position.`;
 }

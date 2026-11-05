@@ -22,5 +22,6 @@ export function pageText(route: string): string {
     .replaceAll("&#x27;", "'")
     .replaceAll("&amp;", "&")
     .replace(/\s+/g, " ")
-    .replace(/ ([.,;:)])/g, "$1");
+    .replace(/ ([.,;:)])/g, "$1")
+    .replace(/\( /g, "(");
 }

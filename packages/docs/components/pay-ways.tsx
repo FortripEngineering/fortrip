@@ -1,8 +1,10 @@
-import { PAY_WAYS } from "@fortrip/agent-contract";
+import { PAY_INPUT_WAYS, PAY_WAYS } from "@fortrip/agent-contract";
 import { Heading } from "fumadocs-ui/components/heading";
 
 import { PAY_WAY_DOCS } from "@/lib/prose/pay-ways.ts";
 import { inline } from "@/lib/reference/field-table.tsx";
+
+import { codeList } from "./reference.tsx";
 
 /** The ways to pay an order, in the contract's order: a line each
  *  (`summary`), or a section each with when it applies, when it charges and
@@ -34,4 +36,9 @@ export function PayWays({ variant }: { variant: "summary" | "full" }) {
       </section>
     );
   });
+}
+
+/** The fields of the pay input, one of which a call sends: "`sharedPaymentToken`, `payment` and `method`". */
+export function PayInputs() {
+  return codeList(Object.keys(PAY_INPUT_WAYS));
 }

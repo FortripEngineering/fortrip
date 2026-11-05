@@ -15,12 +15,12 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 ## Results and errors [#results]
 
-- Success: `structuredContent` is the full response object, the same as the [HTTP API](/api)'s, and every tool but `get_planning_guide` declares its `outputSchema`. `content` holds the answer as compact text for the model: one line per hotel, offer or order with its ids, full descriptions and policies, every note, and "not listed" or "unknown" written out. Some tools put more blocks around it; by tool:
+- Success: `structuredContent` is the full response object, the same as the [HTTP API](/api)'s, and every tool but `get_planning_guide` declares its `outputSchema`. `content` holds the answer as compact text for the model: one line per hotel, offer or order with its ids, full descriptions and policies, every note, and "not listed" or "unknown" written out. Some tools add blocks before or after it, so find a block by its `type` (`text`, `image`), not by its position. By tool:
 
 <McpContentTable />
 
-- The hotel tools' presentation hint asks the model to show only what Fortrip returned, as cards where the client can draw them. A WeChat Pay code comes as an image only while `pay_order`'s answer holds a live one; its link is in `structuredContent` either way.
-- An answer that holds a `payment.url` also carries `nextStep` in `structuredContent`, and its text states the same rule: show the user the total and terms and wait for a clear yes before giving them the link.
+- The hotel tools' presentation hint asks the model to show only what Fortrip returned, as cards where the client can draw them. A WeChat Pay code comes as an image when `pay_order`'s answer holds a live one and the image could be fetched; the code and its link are in `structuredContent` either way.
+- An answer of <NextStepTools /> that holds a `payment.url` also carries `nextStep` in `structuredContent`, and its text states the same rule: show the user the total and terms and wait for a clear yes before giving them the link.
 - Failure: `isError: true` with no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text.
 - Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
 - `_meta["ai.fortrip/requestId"]` carries the request id, and `_meta["ai.fortrip/replayed"]` marks an order answered again for the same details.

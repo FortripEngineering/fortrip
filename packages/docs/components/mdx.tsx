@@ -2,18 +2,19 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 
 import { ClientSetup, RemoteMcpTable } from "./client-setup.tsx";
-import { PayWays } from "./pay-ways.tsx";
+import { PayInputs, PayWays } from "./pay-ways.tsx";
 import {
   CommandList,
+  CommandPage,
   DestinationFields,
   EndpointTable,
-  FilterableAmenities,
-  McpContentTable,
-  OtherDisplayCurrencies,
-  CommandPage,
   ErrorCodes,
+  FilterableAmenities,
   GlobalFlags,
   LimitsTable,
+  McpContentTable,
+  NextStepTools,
+  OtherDisplayCurrencies,
   RateLimitsTable,
   RawBodyExample,
   RegionList,
@@ -31,7 +32,9 @@ export function getMDXComponents(components?: MDXComponents) {
     EndpointTable,
     FilterableAmenities,
     McpContentTable,
+    NextStepTools,
     OtherDisplayCurrencies,
+    PayInputs,
     PayWays,
     RemoteMcpTable,
     CommandPage,

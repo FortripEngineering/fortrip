@@ -443,3 +443,19 @@ export function OtherDisplayCurrencies() {
     </span>
   ));
 }
+
+/** `a`, `b` and `c`, each as code. */
+export function codeList(names: readonly string[], last = "and") {
+  return names.map((name, i) => (
+    <span key={name}>
+      {i > 0 && (i === names.length - 1 ? ` ${last} ` : ", ")}
+      <code>{name}</code>
+    </span>
+  ));
+}
+
+/** The tools whose MCP answer carries `nextStep` (the response docs' flag,
+ *  which response-docs.test.ts checks against the contract's MCP outputs). */
+export function NextStepTools() {
+  return codeList(TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep === true).map((tool) => tool.name));
+}

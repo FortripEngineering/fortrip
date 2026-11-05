@@ -37,8 +37,8 @@ function prose(mdx: string): string {
     .replace(/<[^>]*>/g, " ");
 }
 
-/** The contract numbers prose may state, all from <Fact>. Below 10 they are
- *  too common in plain English to tell apart. */
+/** The contract numbers prose may state, all from <Fact> or the export.
+ *  Below 10 they are too common in plain English to tell apart. */
 const NUMBERS = new Set(
   [
     ...Object.values(LIMITS),
@@ -48,13 +48,50 @@ const NUMBERS = new Set(
   ].filter((v): v is number => typeof v === "number" && v >= 10),
 );
 
-test("no page types a contract number itself", () => {
-  const typed: string[] = [];
-  for (const page of PAGES) {
-    for (const [match] of prose(source(page)).matchAll(/(?<![\w.$-])\d{1,3}(?:,\d{3})+(?![\w.])|(?<![\w.-])\d+(?![\w.])/g)) {
-      if (NUMBERS.has(Number(match.replaceAll(",", "")))) typed.push(`${page}: ${match}`);
-    }
+/** The TypeScript files that hold prose, under lib/. */
+const lib = new URL("../lib/", import.meta.url).pathname;
+const PROSE_TS = [...readdirSync(join(lib, "prose")).map((f) => `prose/${f}`), "reference/error-docs.ts"];
+
+/** What a TypeScript file says: comments and interpolations removed, so a
+ *  value interpolated from the contract never counts as typed. */
+function tsProse(ts: string): string {
+  return ts
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1")
+    .replace(/\$\{[^}]*\}/g, " ");
+}
+
+/**
+ * Typed numbers that state a fact no public export owns (reported to the
+ * owner), or equal a contract value by coincidence. Each phrase must still
+ * be in its file, so a stale entry fails too.
+ */
+const UNOWNED: Array<[file: string, phrase: string]> = [
+  // The per-stay order cap is the server's (fortrip-ai #596); no LIMITS key.
+  ["reference/error-docs.ts", "the stay has had 20 orders"],
+];
+
+/** The contract numbers `text` (of `file`) types itself. */
+function typedNumbers(file: string, text: string): string[] {
+  let rest = text;
+  for (const [owner, phrase] of UNOWNED) {
+    if (owner !== file) continue;
+    assert.ok(rest.includes(phrase), `${file}: "${phrase}" is gone; drop its UNOWNED entry`);
+    rest = rest.replaceAll(phrase, " ");
   }
+  const typed: string[] = [];
+  for (const [match] of rest.matchAll(/(?<![\w.$-])\d{1,3}(?:,\d{3})+(?![\w.])|(?<![\w.-])\d+(?![\w.])/g)) {
+    if (NUMBERS.has(Number(match.replaceAll(",", "")))) typed.push(`${file}: ${match}`);
+  }
+  return typed;
+}
+
+test("no page or prose module types a contract number itself", () => {
+  assert.ok(PROSE_TS.length >= 4, PROSE_TS.join(", "));
+  const typed = [
+    ...PAGES.flatMap((page) => typedNumbers(page, prose(source(page)))),
+    ...PROSE_TS.flatMap((file) => typedNumbers(file, tsProse(readFileSync(join(lib, file), "utf8")))),
+  ];
   assert.deepEqual(typed, []);
 });
 
