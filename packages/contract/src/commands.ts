@@ -537,7 +537,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "orders",
     name: "pay",
-    summary: "Pay an order with a Link wallet token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link",
+    summary: "Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link",
     tool: "pay_order",
     flags: payFlags,
     positionals: [positional(payOrderInput, "orderId")],

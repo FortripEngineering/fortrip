@@ -17,7 +17,7 @@ export const meals = openObject({
     .int()
     .nullable()
     .describe(
-      "Main meals a day the rate includes beyond included, without saying which (1 for half board); null when known is false.",
+      "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false.",
     ),
   allInclusive: z.boolean().nullable(),
   guestsCoveredPerRoom: z
