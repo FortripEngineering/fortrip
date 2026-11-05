@@ -38,7 +38,10 @@ function isFact(node: Node): node is JsxElement {
 export function remarkFacts() {
   return (tree: Node, file: File) => {
     const visit = (parent: Node) => {
-      parent.children = parent.children?.map((node) => {
+      // Leaves have no `children` key; adding one (even undefined) breaks
+      // Fumadocs' Markdown output, which walks every node that has it.
+      if (!parent.children) return;
+      parent.children = parent.children.map((node) => {
         if (!isFact(node)) {
           visit(node);
           return node;

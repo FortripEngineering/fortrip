@@ -73,7 +73,7 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
 });
 
 /** What an operation answers, by status. */
-function answers(op: OperationSpec): Record<string, z.ZodType> {
+export function answers(op: OperationSpec): Record<string, z.ZodType> {
   const ok: Record<string, z.ZodType> =
     op.id === "book_hotel"
       ? { [ORDER_HTTP.createdStatus]: op.output, [ORDER_HTTP.replayedStatus]: op.output }

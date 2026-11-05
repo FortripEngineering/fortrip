@@ -7,6 +7,8 @@ import { referenceSource } from "./reference/pages.tsx";
 
 const docs = defineDocs({
   dir: "content/docs",
+  // Each page's Markdown, for `/<page>.md` and the llms files.
+  docs: { postprocess: { includeProcessedMarkdown: true } },
 });
 
 const REFERENCE_DIR = "api/reference";

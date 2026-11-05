@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
+import { SITE } from "@/lib/site";
 import { source } from "@/lib/source";
 
 export default async function Page(props: PageProps<"/[[...slug]]">) {
@@ -46,8 +47,11 @@ export async function generateMetadata(props: PageProps<"/[[...slug]]">): Promis
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const { title, description } = page.data;
   return {
-    title: page.data.title,
-    description: page.data.description,
+    title,
+    description,
+    alternates: { canonical: page.url },
+    openGraph: { type: "article", siteName: SITE.name, url: page.url, title, description },
   };
 }

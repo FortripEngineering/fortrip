@@ -1,58 +1,18 @@
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 
-import { ClientSetup, RemoteMcpTable } from "./client-setup.tsx";
-import { PreReleasePolicy } from "./compatibility.tsx";
 import { Example } from "./example.tsx";
-import { OrderStatuses, PaymentStatuses } from "./order-statuses.tsx";
-import { PayInputs, PayWays } from "./pay-ways.tsx";
-import {
-  CommandList,
-  CommandPage,
-  DestinationFields,
-  EndpointTable,
-  ErrorCodes,
-  FilterableAmenities,
-  GlobalFlags,
-  LimitsTable,
-  McpContentTable,
-  NextStepTools,
-  OtherDisplayCurrencies,
-  RateLimitsTable,
-  RawBodyExample,
-  RegionList,
-  SchemaTables,
-  ToolList,
-  ToolPage,
-} from "./reference.tsx";
+import { CommandPage, Fields, ToolPage } from "./reference.tsx";
 
+/** The components a page renders. The data components an MDX page names
+ *  (`<PayWays />`, `<EndpointTable />` …) are expanded into Markdown at
+ *  compile time by `lib/remark-components.ts`; what stays JSX is here. */
 export function getMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
-    ClientSetup,
-    CommandList,
-    DestinationFields,
-    EndpointTable,
-    FilterableAmenities,
-    McpContentTable,
-    NextStepTools,
-    OrderStatuses,
-    OtherDisplayCurrencies,
-    PayInputs,
-    PaymentStatuses,
-    PayWays,
-    PreReleasePolicy,
-    RemoteMcpTable,
     CommandPage,
-    ErrorCodes,
     Example,
-    GlobalFlags,
-    LimitsTable,
-    RateLimitsTable,
-    RawBodyExample,
-    RegionList,
-    SchemaTables,
-    ToolList,
+    Fields,
     ToolPage,
     ...components,
   } satisfies MDXComponents;

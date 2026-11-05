@@ -1,10 +1,12 @@
 import { defineConfig } from "fumadocs-mdx/config";
 
+import { remarkComponents } from "./lib/remark-components.ts";
 import { remarkFacts } from "./lib/remark-facts.ts";
 
 export default defineConfig({
   mdxOptions: {
-    // Runs before Fumadocs' structure plugin, so the search index sees the values.
-    remarkPlugins: [remarkFacts],
+    // Both run before Fumadocs' structure and Markdown plugins, so the search
+    // index and each page's Markdown see the values and the expanded components.
+    remarkPlugins: [remarkFacts, remarkComponents],
   },
 });

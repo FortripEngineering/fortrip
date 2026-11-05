@@ -5,6 +5,7 @@ import type { MDXComponents } from "mdx/types";
 import type { FC } from "react";
 
 import { CommandPage, ToolPage } from "../../components/reference.tsx";
+import { commandMarkdown, toolMarkdown } from "../markdown/pages.ts";
 import { CLI_COMMANDS } from "./cli-commands.ts";
 import { TOOL_INPUTS } from "./input-docs.ts";
 import { MCP_TOOLS } from "./mcp-tools.ts";
@@ -15,6 +16,8 @@ export interface ReferencePageData extends PageData {
   title: string;
   description: string;
   body: FC<{ components?: MDXComponents }>;
+  /** The body as Markdown, for the page's `.md` and the llms files. */
+  markdown: () => string;
   toc: TOCItemType[];
   structuredData: StructuredData;
   full?: boolean;
@@ -54,6 +57,7 @@ const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
       title: tool.title,
       description: tool.snippet,
       body: () => <ToolPage name={tool.name} />,
+      markdown: () => toolMarkdown(tool.name),
       ...outline(
         [tool.name, tool.summary],
         [
@@ -78,6 +82,7 @@ const commandPages: ReferencePage[] = CLI_COMMANDS.map((command) => ({
     title: command.title,
     description: plain(command.summary),
     body: () => <CommandPage path={command.slug} />,
+    markdown: () => commandMarkdown(command.slug),
     ...outline(
       [command.invocation, command.summary],
       [
