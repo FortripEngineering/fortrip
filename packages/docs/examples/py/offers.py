@@ -22,16 +22,17 @@ body = {
     ]
   },
   "filters": {
-    "requireFreeCancellation": true
+    "requireFreeCancellation": True
   }
 }
 
 response = httpx.post(
     "https://api.fortrip.ai/v1/hotels/offers",
-    headers={"Authorization": f"Bearer {token}"},
+    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     json=body,
+    timeout=60,
 )
-result = response.json()
 if response.is_error:
-    raise SystemExit(json.dumps(result, indent=2))
+    raise SystemExit(f"HTTP {response.status_code}: {response.text}")
+result = response.json()
 print(json.dumps(result, indent=2))

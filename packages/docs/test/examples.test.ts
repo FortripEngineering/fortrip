@@ -64,14 +64,27 @@ const bodyOf = (name: string): Record<string, unknown> => JSON.parse(read(`bodie
 
 /** The JSON the example sends, as written in its file: the heredoc of a curl
  *  script, or the `body = {…}` literal of a TypeScript or Python one. */
-function embeddedBody(lang: (typeof LANGS)[number], text: string): unknown {
+function embeddedBodyText(lang: (typeof LANGS)[number], text: string): string {
   const pattern =
     lang.dir === "curl"
       ? /<<'JSON'\n([\s\S]*?)\nJSON\n/
       : /^(?:const )?body = (\{[\s\S]*?\n\})(?:;)?$/m;
   const match = text.match(pattern);
   assert.ok(match?.[1], `${lang.dir}: no embedded body`);
-  return JSON.parse(match[1]);
+  return match[1];
+}
+
+const hasPython = !spawnSync("python3", ["--version"]).error;
+
+/** The body as the language reads it: JSON for curl and TypeScript, and for
+ *  Python what `ast.literal_eval` makes of the dict (JSON's `true` is a
+ *  NameError there, which `JSON.parse` would accept). */
+function embeddedBody(lang: (typeof LANGS)[number], text: string): unknown {
+  const body = embeddedBodyText(lang, text);
+  if (lang.dir !== "py") return JSON.parse(body);
+  const run = spawnSync("python3", ["-I", "-c", "import ast, json, sys; print(json.dumps(ast.literal_eval(sys.argv[1])))", body]);
+  assert.equal(run.status, 0, String(run.stderr));
+  return JSON.parse(String(run.stdout));
 }
 
 describe("examples", () => {
@@ -133,7 +146,7 @@ describe("examples", () => {
     assert.equal(sent("pay-token").length, 1);
     assert.equal(sent("pay-wallet").length, 1);
     // payment_link: the order's link, read from get_order.
-    for (const lang of LANGS) assert.match(read(file(lang, "get-order")), /payment\.url|\["payment"\]\["url"\]/);
+    for (const lang of LANGS) assert.match(read(file(lang, "get-order")), /payment\.url|get\("url"\)/);
   });
 
   for (const lang of LANGS) {
@@ -145,21 +158,61 @@ describe("examples", () => {
           assert.ok(text.includes(`"${url}"`), `${file(lang, example.name)} lacks "${url}"`);
           // The device flow posts to the sign-in server; its Fortrip call is a GET.
           if (example.name === "device-login") return;
+          // The token is sent as a bearer header, from FORTRIP_TOKEN.
+          assert.match(
+            text,
+            lang.dir === "curl"
+              ? /-H "Authorization: Bearer \$FORTRIP_TOKEN"/
+              : lang.dir === "ts"
+                ? /process\.env\.FORTRIP_TOKEN[\s\S]*Authorization: `Bearer \$\{token\}`/
+                : /os\.environ\["FORTRIP_TOKEN"\][\s\S]*"Authorization": f"Bearer \{token\}"/,
+          );
+          // A body is sent as JSON (httpx's json= sets the header itself).
+          if (example.body) {
+            assert.match(
+              text,
+              lang.dir === "curl" ? /-H "Content-Type: application\/json"/ : lang.dir === "ts" ? /"Content-Type": "application\/json"/ : /json=body/,
+            );
+          }
+          // A slow answer is waited for, and an HTTP error is not mistaken for success.
+          assert.match(
+            text,
+            lang.dir === "curl" ? /--max-time 60/ : lang.dir === "ts" ? /AbortSignal\.timeout\(60_000\)/ : /timeout=60/,
+          );
+          assert.match(
+            text,
+            lang.dir === "curl" ? /--fail-with-body/ : lang.dir === "ts" ? /if \(!response\.ok\)[\s\S]*response\.status[\s\S]*await response\.json\(\)/ : /if response\.is_error:[\s\S]*status_code[\s\S]*response\.json\(\)/,
+          );
           if (example.route.method === "POST") {
             assert.match(text, lang.dir === "curl" ? /-X POST/ : lang.dir === "ts" ? /method: "POST"/ : /httpx\.post\(/);
           } else {
             assert.doesNotMatch(text, /-X POST|method: "POST"|httpx\.post\(/);
           }
           assert.doesNotMatch(text, /Bearer [A-Za-z0-9_-]{10,}/);
-          if (example.name !== "device-login") assert.match(text, /FORTRIP_TOKEN/);
         });
 
         if (example.body) {
-          it(`${example.name}: sends exactly the shared body`, () => {
+          it(`${example.name}: sends exactly the shared body`, (t) => {
+            if (lang.dir === "py" && !hasPython) return t.skip("python3 is not installed");
             assert.deepEqual(embeddedBody(lang, read(file(lang, example.name))), bodyOf(example.name));
           });
         }
       }
+    });
+  }
+
+  for (const lang of LANGS) {
+    it(`${lang.dir}/device-login follows the device flow: checks the grant, backs off, stops at expiry`, () => {
+      const text = read(file(lang, "device-login"));
+      assert.ok(text.includes("urn:ietf:params:oauth:grant-type:device_code"));
+      assert.ok(text.includes("device_code"));
+      assert.ok(text.includes("authorization_pending"));
+      assert.ok(text.includes("slow_down"));
+      assert.match(text, /expires_in/);
+      // The interval grows on slow_down (RFC 8628: by 5 seconds).
+      assert.match(text, /interval( \+= 5|=\$\(\(interval \+ 5\)\))/);
+      // The device-authorization answer is checked before polling.
+      assert.match(text, lang.dir === "curl" ? /-z "\$device_code"/ : lang.dir === "ts" ? /!deviceResponse\.ok \|\| !device\?\.device_code/ : /device_response\.is_error[\s\S]*"device_code" not in device/);
     });
   }
 

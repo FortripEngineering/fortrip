@@ -10,10 +10,11 @@ const response = await fetch("https://api.fortrip.ai/v1/orders?limit=10", {
   headers: {
     Authorization: `Bearer ${token}`,
   },
+  signal: AbortSignal.timeout(60_000),
 });
-const result = await response.json();
 if (!response.ok) {
-  console.error(result);
+  console.error(response.status, await response.text());
   process.exit(1);
 }
+const result = await response.json();
 console.log(JSON.stringify(result, null, 2));

@@ -3,7 +3,7 @@
 # Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
 set -euo pipefail
 
-curl -sS -X POST "https://api.fortrip.ai/v1/hotels/search" \
+curl -sS --fail-with-body --max-time 60 -X POST "https://api.fortrip.ai/v1/hotels/search" \
   -H "Authorization: Bearer $FORTRIP_TOKEN" \
   -H "Content-Type: application/json" \
   --data @- <<'JSON'

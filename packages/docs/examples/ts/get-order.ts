@@ -10,10 +10,15 @@ const response = await fetch("https://api.fortrip.ai/v1/orders/ord_Wr4tY7uI0oPa3
   headers: {
     Authorization: `Bearer ${token}`,
   },
+  signal: AbortSignal.timeout(60_000),
 });
-const order = await response.json();
 if (!response.ok) {
-  console.error(order);
+  console.error(response.status, await response.text());
+  process.exit(1);
+}
+const order = await response.json();
+if (!order.payment?.url) {
+  console.error("The order has no payment link: it is not awaiting payment, or read it again.");
   process.exit(1);
 }
 console.log(order.payment.url);

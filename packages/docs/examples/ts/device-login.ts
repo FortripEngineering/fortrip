@@ -4,35 +4,50 @@ import process from "node:process";
 
 const sleep = (seconds: number) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 
-const configResponse = await fetch("https://api.fortrip.ai/v1/auth/config");
+async function post(url: string, form: Record<string, string>) {
+  const response = await fetch(url, {
+    method: "POST",
+    body: new URLSearchParams(form),
+    signal: AbortSignal.timeout(60_000),
+  });
+  return { response, json: await response.json().catch(() => null) };
+}
+
+const configResponse = await fetch("https://api.fortrip.ai/v1/auth/config", { signal: AbortSignal.timeout(60_000) });
+if (!configResponse.ok) {
+  console.error(configResponse.status, await configResponse.text());
+  process.exit(1);
+}
 const config = await configResponse.json();
 
-const deviceResponse = await fetch(config.deviceAuthorizationEndpoint, {
-  method: "POST",
-  body: new URLSearchParams({ client_id: config.clientId, scope: config.scopes }),
+const { response: deviceResponse, json: device } = await post(config.deviceAuthorizationEndpoint, {
+  client_id: config.clientId,
+  scope: config.scopes,
 });
-const device = await deviceResponse.json();
+if (!deviceResponse.ok || !device?.device_code) {
+  console.error(deviceResponse.status, device);
+  process.exit(1);
+}
 console.error(`Open ${device.verification_uri_complete ?? device.verification_uri} and approve the sign-in.`);
 
 let interval: number = device.interval ?? 5;
-while (true) {
+const deadline = Date.now() + (device.expires_in ?? 600) * 1000;
+while (Date.now() < deadline) {
   await sleep(interval);
-  const tokenResponse = await fetch(config.tokenEndpoint, {
-    method: "POST",
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-      device_code: device.device_code,
-      client_id: config.clientId,
-    }),
+  const { json: token } = await post(config.tokenEndpoint, {
+    grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+    device_code: device.device_code,
+    client_id: config.clientId,
   });
-  const token = await tokenResponse.json();
-  if (!token.error) {
+  if (token && !token.error) {
     console.log(token.access_token);
-    break;
+    process.exit(0);
   }
-  if (token.error === "slow_down") interval += 5;
-  else if (token.error !== "authorization_pending") {
+  if (token?.error === "slow_down") interval += 5;
+  else if (token?.error !== "authorization_pending") {
     console.error(token);
     process.exit(1);
   }
 }
+console.error("The sign-in expired before it was approved. Run this again.");
+process.exit(1);
