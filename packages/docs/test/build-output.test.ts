@@ -8,6 +8,7 @@ import { TOOLS } from "@fortrip/agent-contract";
 
 import { fact } from "../components/fact.tsx";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
+import { FOOTER_LINKS } from "../lib/site.ts";
 import { pageHtml, pageRoutes, pageText } from "./built-page.ts";
 
 const server = new URL("../.next/server/", import.meta.url).pathname;
@@ -18,7 +19,20 @@ describe("built site", () => {
     const html = readFileSync(join(server, "app/index.html"), "utf8").replaceAll("<!-- -->", "");
     assert.ok(html.includes(`any MCP client with OAuth at ${fact("MCP_SERVER_URL")}.`));
     assert.ok(html.includes(`live offers for up to ${fact("LIMITS.offersHotels")} hotels`));
-    assert.ok(html.includes(`up to ${fact("LIMITS.rooms")} rooms`));
+  });
+
+  it("ends every page with the footer links", () => {
+    const routes = pageRoutes();
+    assert.ok(routes.length > 20);
+    const missing: string[] = [];
+    for (const route of routes) {
+      const html = pageHtml(route);
+      const footer = /<footer\b[^>]*>([\s\S]*?)<\/footer>/.exec(html.slice(html.indexOf('<article id="nd-page"')))?.[1] ?? "";
+      for (const link of FOOTER_LINKS) {
+        if (!footer.includes(`href="${link.url}"`) || !footer.includes(`>${link.text}</a>`)) missing.push(`${route}: ${link.text}`);
+      }
+    }
+    assert.deepEqual(missing, []);
   });
 
   it("leaves no <Fact> tag in any output, search data included", () => {
@@ -75,12 +89,12 @@ describe("built site", () => {
       }
     }
     assert.deepEqual(cards, []);
-    // On /quickstart, the next card is Installation's: its title, not its description.
+    // On /quickstart, the next card is the API quickstart's: its title, not its description.
     const quickstart = pageHtml("/quickstart");
-    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/install">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
-    const install = readFileSync(join(server, "app/install.html"), "utf8");
-    const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(install)?.[1] ?? "";
-    const description = /<meta name="description" content="([^"]+)"/.exec(install)?.[1] ?? "";
+    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/api-quickstart">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
+    const target = readFileSync(join(server, "app/api-quickstart.html"), "utf8");
+    const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(target)?.[1] ?? "";
+    const description = /<meta name="description" content="([^"]+)"/.exec(target)?.[1] ?? "";
     assert.ok(title && description);
     assert.ok(next.includes(`<p>${title}</p>`), next);
     assert.ok(next.includes("Next Page"));

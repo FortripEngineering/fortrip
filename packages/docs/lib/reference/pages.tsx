@@ -123,7 +123,7 @@ export const REFERENCE_PAGES: ReferencePage[] = [...toolPages, ...commandPages];
 export const referenceSource: { files: VirtualFile<Config>[] } = {
   files: [
     ...REFERENCE_PAGES,
-    folder("mcp", "MCP", MCP_TOOLS),
+    folder("mcp", "MCP server", MCP_TOOLS),
     folder("cli", "CLI", CLI_COMMANDS),
   ],
 };

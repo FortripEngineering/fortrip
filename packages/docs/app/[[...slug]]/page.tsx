@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
 import { ModelReads } from "@/components/reference";
+import { SiteFooter } from "@/components/site-footer";
 import { OPERATIONS } from "@/lib/openapi/build";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools";
 import { SITE } from "@/lib/site";
@@ -32,7 +33,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
     // description, the endpoint's full description, under its label.
     const tool = MCP_TOOLS.find((t) => t.name === OPERATIONS.find((op) => op.id === page.slugs.at(-1))?.endpoint.tool);
     return (
-      <DocsPage toc={page.data.toc} full footer={{ items: neighbours(page.url) }}>
+      <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
         <DocsBody>
@@ -46,7 +47,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   const MDX = page.data.body;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full} footer={{ items: neighbours(page.url) }}>
+    <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
