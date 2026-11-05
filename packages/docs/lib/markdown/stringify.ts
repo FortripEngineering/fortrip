@@ -1,7 +1,6 @@
 // Markdown text of the trees data components expand into. Only the node
 // types `mdast.ts` builds are written; another one throws, so a builder
 // can't produce a node that silently drops out of the Markdown.
-import { markdownTable } from "fumadocs-core/mdx-plugins/stringifier";
 import type { ListItem, PhrasingContent, RootContent } from "mdast";
 
 import type { Block, Widget } from "./mdast.ts";
@@ -74,10 +73,14 @@ function block(node: Block): string {
       const fence = "`".repeat(longest + 1);
       return `${fence}${content.lang ?? ""}\n${content.value}\n${fence}`;
     }
-    case "table":
-      return markdownTable(
-        content.children.map((row) => row.children.map((cell) => phrasing(cell.children))),
+    case "table": {
+      // Unpadded: padding to column width is mostly spaces in a long table.
+      const [head = [], ...rows] = content.children.map((row) =>
+        row.children.map((cell) => phrasing(cell.children).replace(/\s*\n\s*/g, " ").replace(/(?<!\\)\|/g, "\\|")),
       );
+      const line = (cells: string[]) => `| ${cells.join(" | ")} |`;
+      return [line(head), line(head.map(() => "---")), ...rows.map(line)].join("\n");
+    }
     default:
       throw new Error(`No Markdown for a ${content.type} node`);
   }

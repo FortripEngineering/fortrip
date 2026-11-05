@@ -39,23 +39,39 @@ describe("search", () => {
   before(async () => {
     const port = await freePort();
     origin = `http://127.0.0.1:${port}`;
-    server = spawn("node_modules/.bin/next", ["start", "-p", String(port), "-H", "127.0.0.1"], {
+    const child = spawn("node_modules/.bin/next", ["start", "-p", String(port), "-H", "127.0.0.1"], {
       cwd: root,
-      stdio: "ignore",
+      stdio: ["ignore", "ignore", "pipe"],
     });
-    for (let i = 0; ; i++) {
-      try {
-        if ((await fetch(`${origin}/api/search?query=x`)).ok) break;
-      } catch {
-        // not listening yet
+    server = child;
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    const exited = new Promise<never>((_, reject) => {
+      child.once("exit", (code, signal) => reject(new Error(`next start exited (${code ?? signal}):\n${stderr}`)));
+    });
+    const ready = (async () => {
+      for (let i = 0; ; i++) {
+        try {
+          if ((await fetch(`${origin}/api/search?query=x`, { signal: AbortSignal.timeout(2000) })).ok) return;
+        } catch {
+          // not listening yet
+        }
+        if (child.exitCode !== null || child.signalCode !== null) throw new Error(`next start exited:\n${stderr}`);
+        if (i > 150) throw new Error(`next start didn't answer:\n${stderr}`);
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
-      if (i > 150) throw new Error("next start didn't answer");
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    }
+    })();
+    await Promise.race([ready, exited]);
+    exited.catch(() => {});
   });
 
-  after(() => {
-    server?.kill();
+  after(async () => {
+    if (!server || server.exitCode !== null || server.signalCode !== null) return;
+    const exit = new Promise((resolve) => server?.once("exit", resolve));
+    server.kill();
+    await exit;
   });
 
   it("finds each way to pay on /payments, at the section its component renders", async () => {

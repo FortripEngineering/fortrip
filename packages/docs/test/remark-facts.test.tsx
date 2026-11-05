@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { evaluate } from "@mdx-js/mdx";
+import type { Node, Parent } from "mdast";
 import { remarkStructure } from "fumadocs-core/mdx-plugins/remark-structure";
 import { createElement } from "react";
 import * as runtime from "react/jsx-runtime";
@@ -61,6 +62,19 @@ describe("remarkFacts", () => {
       'Connect to <Fact path="MCP_SERVER_URL" /> for up to <Fact path="LIMITS.rooms" /> rooms.\n\n<Fact path="LIMITS.radiusMetersMax" />',
     );
     assert.deepEqual(search, ["Connect to https://mcp.fortrip.ai/ for up to 8 rooms.", "80,000"]);
+  });
+
+  it("adds no children to a leaf", async () => {
+    const leaves: string[] = [];
+    const capture = () => (tree: Node) => {
+      const walk = (node: Node) => {
+        if ("value" in node && "children" in node) leaves.push(node.type);
+        for (const child of (node as Parent).children ?? []) walk(child);
+      };
+      walk(tree);
+    };
+    await evaluate('Up to <Fact path="LIMITS.rooms" /> rooms, `code`.', { ...runtime, remarkPlugins: [remarkFacts, capture] });
+    assert.deepEqual(leaves, []);
   });
 
   it("fails compilation on an unknown path", async () => {

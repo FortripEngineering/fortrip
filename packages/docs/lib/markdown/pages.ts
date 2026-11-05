@@ -2,6 +2,7 @@
 // `ToolPage` and `CommandPage`) and an API operation's (rendered by Fumadocs
 // OpenAPI). Each is built from the data its page shows.
 import { ORDER_HTTP, PUBLIC_ORIGINS, type ToolName } from "@fortrip/agent-contract";
+import type { PhrasingContent } from "mdast";
 
 import { answers, OPERATIONS } from "../openapi/build.ts";
 import { contentSentence } from "../prose/mcp-content.ts";
@@ -101,18 +102,21 @@ export function commandMarkdown(slug: string): string {
 }
 
 /** An API reference page's body: the operation's route, description, input
- *  and answers. The whole schema is in `/openapi.json`. */
-export function operationMarkdown(id: string): string {
+ *  and answers. The whole schema is in `/openapi.json`. The description is
+ *  left out when it is the page's `description`, which heads the page. */
+export function operationMarkdown(id: string, pageDescription?: string): string {
   const op = OPERATIONS.find((o) => o.id === id);
   if (!op) throw new Error(`${id} has no API reference page`);
   const { route, endpoint } = op;
   const tool = MCP_TOOLS.find((t) => t.name === endpoint.tool);
   const response = responseDocForCommand(endpoint.cliSlug);
-  const where = [
-    ...(route.pathFields.length > 0 ? [[text("Path: "), ...codeList(route.pathFields)]] : []),
-    ...(route.queryFields.length > 0 ? [[text("Query: "), ...codeList(route.queryFields)]] : []),
-    ...(route.method === "POST" ? [[text("the other fields are the JSON body")]] : []),
-  ];
+  // "Path: `orderId`; the JSON body holds the rest", each part capitalized only first.
+  const where: PhrasingContent[][] = [];
+  const part = (label: string, rest: PhrasingContent[] = []) =>
+    where.push([text(where.length === 0 ? label[0]!.toUpperCase() + label.slice(1) : label), ...rest]);
+  if (route.pathFields.length > 0) part("path: ", codeList(route.pathFields));
+  if (route.queryFields.length > 0) part("query: ", codeList(route.queryFields));
+  if (route.method === "POST") part(where.length === 0 ? "the JSON body holds every field" : "the JSON body holds the rest");
   const answer = (status: string) =>
     status === "default"
       ? [code("default"), text(": the "), link("/errors", text("error envelope"))]
@@ -126,7 +130,10 @@ export function operationMarkdown(id: string): string {
         ];
   const blocks: Block[] = [
     paragraph([code(`${route.method} ${route.path}`), text(" on "), code(PUBLIC_ORIGINS.api)]),
-    ...(op.description ?? "").split(/\n\n+/).filter(Boolean).map((p) => paragraph(inline(p))),
+    ...(op.description === pageDescription ? "" : (op.description ?? ""))
+      .split(/\n\n+/)
+      .filter(Boolean)
+      .map((p) => paragraph(inline(p))),
     paragraph(
       endpoint.auth
         ? [text("Needs an access token: see "), link("/api#authentication", text("Authentication")), text(".")]

@@ -55,7 +55,16 @@ const NUMBERS = new Set(
 
 /** The TypeScript files that hold prose, under lib/. */
 const lib = new URL("../lib/", import.meta.url).pathname;
-const PROSE_TS = [...readdirSync(join(lib, "prose")).map((f) => `prose/${f}`), "reference/error-docs.ts"];
+const PROSE_TS = [
+  ...readdirSync(join(lib, "prose")).map((f) => `prose/${f}`),
+  "reference/error-docs.ts",
+  // The copy of expanded components, generated pages' Markdown and llms.txt.
+  "markdown/components.ts",
+  "markdown/pages.ts",
+  "markdown/widgets.ts",
+  "llms.ts",
+  "site.ts",
+];
 
 /** What a TypeScript file says: comments and interpolations removed, so a
  *  value interpolated from the contract never counts as typed. */

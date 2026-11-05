@@ -43,7 +43,12 @@ export function pageMarkdown(route: string): string {
   return routeBody(`/llms.md${route === "/" ? "/index" : route}`);
 }
 
+/** Markdown with its fenced code blocks taken out. */
+export function withoutFences(markdown: string): string {
+  return markdown.replace(/^(```+|~~~+)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "");
+}
+
 /** Markdown with its code (fenced blocks and inline spans) taken out. */
 export function withoutCode(markdown: string): string {
-  return markdown.replace(/^(```+|~~~+)[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "").replace(/(`+)[\s\S]*?\1/g, "");
+  return withoutFences(markdown).replace(/(`+)[\s\S]*?\1/g, "");
 }

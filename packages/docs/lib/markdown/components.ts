@@ -3,6 +3,7 @@
 // and its Markdown text are all made from these trees.
 import {
   DISPLAY_CURRENCIES,
+  type ErrorCode,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
   LIMITS,
@@ -56,6 +57,13 @@ function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, s
  *  which response-docs.test.ts checks against the contract's MCP outputs). */
 const nextStepTools = () =>
   TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep === true).map((tool) => tool.name);
+
+/** What a call answers when the rate limiter is down and refuses it. */
+const serviceUnavailable = (() => {
+  const row = ERROR_ROWS.find((r) => r.code === ("service_unavailable" satisfies ErrorCode));
+  if (!row) throw new Error("no service_unavailable error row");
+  return row;
+})();
 
 /** Components that stand on their own line, by name. */
 export const BLOCKS: Record<string, (props: Props) => Block[]> = {
@@ -243,7 +251,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
     paragraph([
       ...inline(`If the rate limiter itself is down, calls go through, except ${failClosedClause()} `),
-      code("503 service_unavailable"),
+      code(`${serviceUnavailable.status} ${serviceUnavailable.code}`),
       text(" instead."),
     ]),
   ],

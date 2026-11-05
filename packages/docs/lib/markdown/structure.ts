@@ -10,6 +10,16 @@ import { attributesOf, WIDGETS } from "./widgets.ts";
 
 type Content = StructuredData["contents"][number];
 
+/** Links written as their text, as Fumadocs' remark-structure writes them. */
+function unlinked(nodes: PhrasingContent[]): PhrasingContent[] {
+  return nodes.flatMap((node) =>
+    node.type === "link" ? unlinked(node.children) : node.type === "strong" ? [{ ...node, children: unlinked(node.children) }] : [node],
+  );
+}
+
+/** A record's text: Markdown, with links as their text. */
+const recordText = (nodes: PhrasingContent[]) => phrasing(unlinked(nodes)).trim();
+
 /**
  * A record per paragraph, list item, table row and heading. A record under a
  * heading with an id links to it; the others take the heading before the
@@ -20,7 +30,7 @@ export function toContents(blocks: Block[], table: string): Content[] {
   let heading: string | undefined;
   let tables = 0;
   const add = (children: PhrasingContent[]) => {
-    const content = phrasing(children).trim();
+    const content = recordText(children);
     if (content) contents.push({ heading, content });
   };
   const visit = (nodes: Block[]) => {
@@ -40,7 +50,7 @@ export function toContents(blocks: Block[], table: string): Content[] {
         }
       } else if (node.type === "table") {
         const [head, ...rows] = node.children;
-        const cells = (row: typeof head) => row?.children.map((cell) => phrasing(cell.children).trim()) ?? [];
+        const cells = (row: typeof head) => row?.children.map((cell) => recordText(cell.children)) ?? [];
         const id = `${table}-${tables++}`;
         for (const row of rows) {
           contents.push(tableRowToStructuredData({ table: id, heading, row: cells(row), header: cells(head) }));

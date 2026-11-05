@@ -11,6 +11,7 @@ import * as runtime from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { fact } from "../components/fact.tsx";
+import { MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { remarkComponents } from "../lib/remark-components.ts";
 import { remarkFacts } from "../lib/remark-facts.ts";
@@ -66,6 +67,14 @@ describe("remarkComponents", () => {
     );
     assert.equal(markdown.trim(), `- [Remote](/install#remote): At ${fact("MCP_SERVER_URL")}.`);
     assert.match(html, /^<div><div>/);
+  });
+
+  it("indexes a link as its text and writes it as a Markdown link", async () => {
+    const { search, markdown } = await compile("<RemoteMcpTable />");
+    const listed = search.find((c) => c.content.includes("MCP Registry"));
+    assert.ok(listed, JSON.stringify(search));
+    assert.ok(!listed.content.includes("]("), listed.content);
+    assert.ok(markdown.includes(`[MCP Registry](${MCP_REGISTRY.url})`));
   });
 
   it("writes <code> and <pre> as Markdown code", async () => {
