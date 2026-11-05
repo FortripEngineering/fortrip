@@ -22,6 +22,7 @@ import { z } from "zod";
 import { buildOpenApi, OPERATIONS, tidy } from "../lib/openapi/build.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
+import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
 import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
@@ -335,6 +336,17 @@ describe("built OpenAPI", () => {
     // The body sent is the example's.
     assert.ok(pageText("/api/reference/search_hotels").includes('"countryCode": "JP"'));
     assert.ok(pageText("/api/reference/pay_order").includes("alipay_wechat_pay") || pageHtml("/api/reference/pay_order").includes("Alipay or WeChat Pay"));
+  });
+
+  it("quotes the tool description under its label, and sends no reader to the MCP page for it", () => {
+    for (const op of OPERATIONS) {
+      const text = pageText(`/api/reference/${op.id}`);
+      const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
+      assert.doesNotMatch(text, /full rules agents follow/, op.id);
+      if (!tool) continue;
+      assert.ok(text.includes("What the model reads (tool description)"), op.id);
+      assert.ok(text.includes(tool.summary), op.id);
+    }
   });
 
   it("lists the reference in the endpoint table's order", () => {

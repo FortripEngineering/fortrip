@@ -14,7 +14,7 @@ import { OPERATIONS } from "../lib/openapi/build.ts";
 import { API_BASE_URL, ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { CLI_COMMANDS, commandSlug, RAW_BODY_EXAMPLE } from "../lib/reference/cli-commands.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDocFor, schemaTitle } from "../lib/reference/response-docs.ts";
 
 test("every contract tool has a docs page that takes its words from the contract", () => {
   assert.deepEqual(
@@ -37,8 +37,17 @@ test("a tool page's description is one short sentence: its contract description'
     assert.doesNotMatch(tool.snippet, /[.!?]\s/, tool.name);
     const first = /^.*?[.!?](?=\s|$)/s.exec(tool.summary)?.[0] ?? tool.summary;
     if (first.length <= 200) assert.equal(tool.snippet, first, tool.name);
-    // The body shows what the description doesn't: all of the contract's text.
-    assert.equal(`${tool.summary.startsWith(tool.snippet) ? tool.snippet : ""} ${tool.rest}`.trim(), tool.summary, tool.name);
+  }
+});
+
+test("a tool page opens with what the tool does for a person, in one or two sentences", () => {
+  for (const tool of MCP_TOOLS) {
+    const sentences = tool.human.split(/(?<=[.!?])\s+/);
+    assert.ok(sentences.length >= 1 && sentences.length <= 2, `${tool.name}: ${sentences.length} sentences`);
+    assert.match(tool.human, /[.!?]$/, tool.name);
+    assert.notEqual(tool.human, tool.summary, tool.name);
+    // No limit typed by hand: the description the model reads states those.
+    assert.doesNotMatch(tool.human, /\d/, tool.name);
   }
 });
 
@@ -156,7 +165,7 @@ test("a tool or command that answers an object links to its response schema", ()
       assert.equal(typeof tool.returns, "object", tool.name);
       if (typeof tool.returns === "object") {
         assert.ok(anchors.has(tool.returns.href), tool.name);
-        assert.equal(tool.returns.title, doc.title, tool.name);
+        assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
       }
     } else {
       assert.equal(typeof tool.returns, "string", tool.name);
@@ -173,6 +182,12 @@ test("a tool or command that answers an object links to its response schema", ()
     CLI_COMMANDS.find((command) => command.slug === slug)?.schema?.href;
   assert.equal(schema("hotels-search"), "/schemas#search-result");
   assert.equal(schema("orders-list"), "/schemas#order-list");
+  // Cancel and pay answer the order itself, and link to it.
+  assert.equal(schema("orders-cancel"), "/schemas#order");
+  assert.equal(schema("orders-pay"), "/schemas#order");
+  for (const name of ["cancel_order", "pay_order"]) {
+    assert.deepEqual(MCP_TOOLS.find((t) => t.name === name)?.returns, { title: "Order", href: "/schemas#order" }, name);
+  }
   assert.equal(schema("whoami"), "/schemas#account");
   assert.equal(schema("guide"), undefined);
 });

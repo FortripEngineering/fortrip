@@ -1,21 +1,25 @@
 import {
+  center,
   ERROR_CODES,
   ERROR_DETAILS,
   type ErrorCode,
   LIMITS,
+  localities,
+  offer,
   SUPPLIER_OUTCOME_STATUS,
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 import type { z } from "zod";
-import { shapeOf, toJsonSchema } from "./schema-rows.ts";
+import { fieldShape, type JsonSchema, shapeOf, toJsonSchema } from "./schema-rows.ts";
 
 export interface ErrorRow {
   code: ErrorCode;
   /** `409`, or `503 / 504` for a code answered at two statuses. */
   status: string;
   retryable: boolean;
-  /** The shape of `details`, or `null` when the code carries none. */
-  details: string | null;
+  /** The fields of `details`, a Markdown line each (a union's branches,
+   *  one each), or `null` when the code carries none. */
+  details: string[] | null;
   meaning: string;
 }
 
@@ -81,9 +85,52 @@ const MEANINGS: Record<ErrorCode, string> = {
   internal: "An unexpected error. The `requestId` helps support find it.",
 };
 
-/** The `details` shape of a code, from its contract schema. */
-export function detailsShape(schema: z.ZodType | null): string | null {
-  return schema ? shapeOf(toJsonSchema(schema, "output")) : null;
+/** Objects the schemas page describes, which a detail links to rather than spells out. */
+const DESCRIBED: Array<[z.ZodType, string]> = [
+  [offer, "[Offer](/schemas#offers)"],
+  [localities, "[`coverage.localities`](/schemas#search-result)"],
+  [center, "[`destination.center`](/schemas#search-result)"],
+];
+
+type Def = { type: string; innerType?: z.ZodType; shape?: Record<string, z.ZodType> };
+const defOf = (schema: z.ZodType) => schema._zod.def as unknown as Def;
+
+/** A field's schema less `.nullable()` and `.optional()`, and whether it can be null. */
+function unwrapped(schema: z.ZodType): { inner: z.ZodType; nullable: boolean } {
+  let inner = schema;
+  let nullable = false;
+  for (let def = defOf(inner); (def.type === "nullable" || def.type === "optional") && def.innerType; def = defOf(inner)) {
+    nullable ||= def.type === "nullable";
+    inner = def.innerType;
+  }
+  return { inner, nullable };
+}
+
+/** The fields of a code's `details`, a Markdown line each: `name`, then its
+ *  shape, or a link to the object the schemas page describes. A union of
+ *  objects is a line per branch. */
+export function detailFields(schema: z.ZodType | null): string[] | null {
+  if (!schema) return null;
+  const json = toJsonSchema(schema, "output");
+  const shape = defOf(schema).shape;
+  if (!shape) {
+    // A union: each known branch whole (one with a constant discriminator),
+    // not the fallback that keeps a branch to come.
+    return (json.anyOf ?? json.oneOf ?? [json])
+      .filter((branch) => Object.values(branch.properties ?? {}).some((p) => p.const !== undefined))
+      .map((branch) => `\`${shapeOf(branch)}\``);
+  }
+  return Object.entries(json.properties ?? {}).map(([name, prop]) => {
+    const optional = json.required?.includes(name) ? "" : " (optional)";
+    const field = shape[name];
+    const { inner, nullable } = field ? unwrapped(field) : { inner: null, nullable: false };
+    const described = DESCRIBED.find(([known]) => known === inner)?.[1];
+    if (described) return `\`${name}\`${optional}: ${described}${nullable ? " or `null`" : ""}`;
+    const items = prop.type === "array" && prop.items ? prop.items : null;
+    return items
+      ? `\`${name}[]\`${optional}: \`${fieldShape(items as JsonSchema)}\``
+      : `\`${name}\`${optional}: \`${fieldShape(prop)}\``;
+  });
 }
 
 /** One row per contract error code, in the contract's order. */
@@ -93,6 +140,6 @@ export const ERROR_ROWS: ErrorRow[] = (
   code,
   status: ERROR_CODES[code].status.join(" / "),
   retryable: ERROR_CODES[code].retryable,
-  details: detailsShape(ERROR_DETAILS[code] as z.ZodType | null),
+  details: detailFields(ERROR_DETAILS[code] as z.ZodType | null),
   meaning: MEANINGS[code],
 }));

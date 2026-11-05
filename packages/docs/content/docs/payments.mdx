@@ -22,6 +22,10 @@ Send the `offerId`, the contact (who the hotel and the confirmation email reach)
 - Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
 
+The `details` of a `409 offer_changed`:
+
+<ErrorExample code="offer_changed" part="details" />
+
 The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `price.total` is what is charged, in the order's `payment.chargeCurrency`: USD for every order made through the API. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
 
 ## Confirm with the user [#confirm]

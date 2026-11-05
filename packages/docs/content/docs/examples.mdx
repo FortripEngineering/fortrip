@@ -11,19 +11,35 @@ The [API page](/api#authentication) describes the OAuth device flow. This script
 
 <Example name="device-login" />
 
+The answer, abridged:
+
+<ResponseExample name="device-login" />
+
 ## Search [#search]
 
 <Example name="search" />
 
+The answer, abridged:
+
+<ResponseExample name="search" />
+
 ## Offers [#offers]
 
 <Example name="offers" />
+
+The answer, abridged:
+
+<ResponseExample name="offers" />
 
 ## Order [#order]
 
 Ordering charges nothing. The answer is an order `awaiting_payment`; show the user the total and every term, and wait for a clear yes before anyone pays. See [orders and payment](/payments).
 
 <Example name="order" />
+
+The answer, abridged:
+
+<ResponseExample name="order" />
 
 ## Pay [#pay]
 
@@ -35,20 +51,40 @@ The payment link needs no request: give the user the order's `payment.url`. Read
 
 <Example name="get-order" />
 
+The answer, abridged:
+
+<ResponseExample name="get-order" />
+
 ### Shared payment token [#pay-token]
 
 <Example name="pay-token" />
+
+The answer, abridged:
+
+<ResponseExample name="pay-token" />
 
 ### Alipay or WeChat Pay [#pay-wallet]
 
 <Example name="pay-wallet" />
 
+The answer, abridged:
+
+<ResponseExample name="pay-wallet" />
+
 ## List orders [#list]
 
 <Example name="list-orders" />
+
+The answer, abridged:
+
+<ResponseExample name="list-orders" />
 
 ## Cancel [#cancel]
 
 Cancel only while the order's `cancel.available` is `true`, with `maximumPenalty` the number in `cancel.penalty.amount` that the user agreed to.
 
 <Example name="cancel" />
+
+The answer, abridged:
+
+<ResponseExample name="cancel" />

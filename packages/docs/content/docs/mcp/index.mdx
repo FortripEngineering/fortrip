@@ -25,4 +25,12 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 - Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
 - `_meta["ai.fortrip/requestId"]` carries the request id, and `_meta["ai.fortrip/replayed"]` marks an order answered again for the same details.
 
+`content[0]` of a `get_hotel_offers` answer:
+
+<ToolResultSample tool="get_hotel_offers" />
+
+`content[0]` of an `offer_changed` error from `book_hotel`:
+
+<ToolErrorSample code="offer_changed" />
+
 See [Errors & limits](/errors).

@@ -68,6 +68,8 @@ function block(node: Block): string {
           return marker + listItem(item).replaceAll("\n", `\n${" ".repeat(marker.length)}`);
         })
         .join("\n");
+    case "blockquote":
+      return content.children.map((child) => block(child)).join("\n\n").replace(/^/gm, "> ").replace(/^> $/gm, ">");
     case "code": {
       const longest = Math.max(2, ...(content.value.match(/^`+/gm) ?? []).map((run) => run.length));
       const fence = "`".repeat(longest + 1);

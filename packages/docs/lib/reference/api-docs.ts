@@ -59,3 +59,13 @@ export const ENDPOINTS: Endpoint[] = [
     ...ACCOUNT_ENDPOINTS[name],
   })),
 ];
+
+/** The API reference page of an endpoint with a tool: `/api/reference/<tool>`. */
+export const referenceHref = (tool: HttpToolName) => `/api/reference/${tool}`;
+
+/** Where the reference page's input starts, as Fumadocs OpenAPI names its
+ *  sections: the JSON body of a POST, else the path or query parameters. */
+export function inputAnchor(route: HttpRoute): string {
+  if (route.method === "POST") return "request-body";
+  return route.pathFields.length > 0 ? "parameters-path" : "parameters-query";
+}

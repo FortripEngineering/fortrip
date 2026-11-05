@@ -6,12 +6,16 @@ import {
   type ErrorCode,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
+  HTTP_ROUTES,
   LIMITS,
   MCP_SERVER_URL,
   ORDER_STATUSES,
   PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
+  type RenderedTool,
+  renderError,
+  renderToolResult,
   TOOLS,
 } from "@fortrip/agent-contract";
 import type { PhrasingContent } from "mdast";
@@ -21,7 +25,7 @@ import { PRE_RELEASE_POLICY, PRE_RELEASE_POLICY_ON_CHANGELOG } from "../prose/co
 import { contentSentence } from "../prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
-import { ENDPOINTS } from "../reference/api-docs.ts";
+import { ENDPOINTS, inputAnchor, referenceHref } from "../reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
 import { ENVIRONMENT_ROWS } from "../reference/environment.ts";
 import { ERROR_ROWS } from "../reference/error-docs.ts";
@@ -29,7 +33,16 @@ import { EXIT_ROWS } from "../reference/exit-codes.ts";
 import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { regionGroups } from "../reference/regions.ts";
-import { RESPONSE_DOCS, responseDocFor, responseDocForCommand, schemaHref } from "../reference/response-docs.ts";
+import { abridgedAnswer, ERRORS, type OperationId, RESPONSES } from "../reference/responses.ts";
+import {
+  RESPONSE_DOCS,
+  type ResponseDoc,
+  responseDoc,
+  responseDocFor,
+  responseDocForCommand,
+  schemaHref,
+  schemaTitle,
+} from "../reference/response-docs.ts";
 import {
   type Block,
   code,
@@ -66,6 +79,31 @@ const serviceUnavailable = (() => {
   if (!row) throw new Error("no service_unavailable error row");
   return row;
 })();
+
+/** A response's section body: its fields; for an answer that is another
+ *  object, a line pointing there; for a list, its own fields, `data` linking
+ *  to the object it lists. */
+function responseBody(doc: ResponseDoc): Block[] {
+  if (doc.sameAs) {
+    const same = responseDoc(doc.sameAs);
+    return [paragraph([text("The answer is the "), link(`#${same.id}`, text(same.title)), text(".")])];
+  }
+  if (doc.listOf) {
+    const item = responseDoc(doc.listOf);
+    return [
+      list(
+        doc.rows
+          .filter((row) => row.depth === 0)
+          .map((row) =>
+            row.path === "data"
+              ? [code(row.path), text(" ("), link(`#${item.id}`, text(item.title)), text("[]): newest first.")]
+              : [code(row.path), text(" ("), code(row.type), text(")"), ...(row.description ? [text(": "), ...inline(row.description)] : [])],
+          ),
+      ),
+    ];
+  }
+  return [fields(`response:${doc.id}`)];
+}
 
 /** Components that stand on their own line, by name. */
 export const BLOCKS: Record<string, (props: Props) => Block[]> = {
@@ -185,14 +223,19 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
         const input: PhrasingContent[] =
           endpoint.input === "none"
             ? [text("None")]
-            : tool
-              ? [link(`/mcp/${tool.slug}#input`, text(endpoint.input === "body" ? "JSON body" : "Path and query"))]
+            : endpoint.tool
+              ? [
+                  link(
+                    `${referenceHref(endpoint.tool)}#${inputAnchor(HTTP_ROUTES[endpoint.tool])}`,
+                    text(endpoint.input === "body" ? "JSON body" : "Path and query"),
+                  ),
+                ]
               : [];
         return {
           cells: [
             [code(`${endpoint.method} ${endpoint.path}`), lineBreak(), text(endpoint.title)],
             input,
-            [response ? link(schemaHref(response), text(response.title)) : text("OAuth settings")],
+            [response ? link(schemaHref(response), text(schemaTitle(response))) : text("OAuth settings")],
             [...(tool ? [code(tool.name), lineBreak()] : []), link(`/cli/${endpoint.cliSlug}`, text("CLI"))],
           ],
         };
@@ -224,7 +267,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
               ]),
             ]
           : []),
-        fields(`response:${doc.id}`),
+        ...responseBody(doc),
       ];
     }),
 
@@ -237,7 +280,10 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
           [code(row.code)],
           [text(String(row.status))],
           [text(row.retryable ? "Yes" : "No")],
-          [...inline(row.meaning), ...(row.details ? [lineBreak(), code(`details: ${row.details}`)] : [])],
+          [
+            ...inline(row.meaning),
+            ...(row.details ? [lineBreak(), code("details"), text(":"), ...row.details.flatMap((line) => [lineBreak(), ...inline(line)])] : []),
+          ],
         ],
       })),
     ),
@@ -305,7 +351,39 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
 
   /** The destination kinds of a search, from the contract's input schema. */
   DestinationFields: () => [fields("destination")],
+
+  /** An example's answer as JSON, abridged to the fields the next step reads
+   *  (`name` is the example's, as `<Example>` takes it). */
+  ResponseExample: ({ name = "" }) => [codeBlock("json", json(abridgedAnswer(name)))],
+
+  /** An error envelope the reference shows, as JSON: the whole envelope, or
+   *  with `part="details"` its `details`. */
+  ErrorExample: ({ code: errorCode = "", part }) => {
+    const { envelope } = errorExample(errorCode);
+    if (part !== undefined && part !== "details") throw new Error(`<ErrorExample> part must be "details", not ${part}`);
+    return [codeBlock("json", json(part === "details" ? (envelope.error as { details?: unknown }).details : envelope))];
+  },
+
+  /** A tool's `content[0]` for its example answer: the compact text the
+   *  contract's `renderToolResult` writes, as the MCP server sends it. */
+  ToolResultSample: ({ tool = "" }) => {
+    if (!(tool in RESPONSES) || !TOOLS.some((t) => t.name === tool)) throw new Error(`<ToolResultSample> has no answer of ${tool}`);
+    return [codeBlock("text", renderToolResult(tool as RenderedTool, RESPONSES[tool as OperationId], "mcp"))];
+  },
+
+  /** An error's `content[0]`: the text the contract's `renderError` writes. */
+  ToolErrorSample: ({ code: errorCode = "" }) => {
+    const { status, envelope } = errorExample(errorCode);
+    return [codeBlock("text", renderError(envelope, status, "mcp"))];
+  },
 };
+
+const json = (value: unknown) => JSON.stringify(value, null, 2);
+
+function errorExample(errorCode: string) {
+  if (!Object.hasOwn(ERRORS, errorCode)) throw new Error(`no example of the error ${errorCode}`);
+  return ERRORS[errorCode as keyof typeof ERRORS];
+}
 
 /** Components that stand inside a sentence, by name. */
 export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {

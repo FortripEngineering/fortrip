@@ -87,16 +87,17 @@ describe("built site", () => {
     assert.ok(!next.includes(description));
   });
 
-  it("an API reference page shows the short summary and links its MCP tool's page, not the contract's full text", () => {
+  it("an API reference page shows the short summary, then the tool description the model reads under its label", () => {
     const tool = MCP_TOOLS.find((t) => t.name === "book_hotel");
     const full = TOOLS.find((t) => t.name === "book_hotel")?.description;
     assert.ok(tool && full && full !== tool.snippet);
     const text = pageText("/api/reference/book_hotel");
     assert.ok(text.includes(tool.snippet));
-    // Past the summary, none of the contract's text is shown.
+    assert.ok(text.includes("What the model reads (tool description)"));
+    // Past the summary, the contract's text is shown too, as the model reads it.
     const rest = full.slice(tool.snippet.length).trim();
     assert.ok(rest.length > 0);
-    assert.ok(!text.includes(rest.slice(0, 60)), "the full description is shown");
-    assert.match(pageHtml("/api/reference/book_hotel"), new RegExp(`<a [^>]*href="/mcp/${tool.slug}"`));
+    assert.ok(text.includes(rest.slice(0, 60).replaceAll("`", "")), "the full description is not shown");
+    assert.doesNotMatch(pageHtml("/api/reference/book_hotel"), /full rules agents follow/);
   });
 });

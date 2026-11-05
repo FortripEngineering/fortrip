@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { ERROR_CODES, ERROR_DETAILS, LIMITS, SUPPLIER_OUTCOME_STATUS } from "@fortrip/agent-contract";
 
-import { detailsShape, ERROR_ROWS } from "../lib/reference/error-docs.ts";
+import { detailFields, ERROR_ROWS } from "../lib/reference/error-docs.ts";
 
 test("every contract error code has exactly one row, with its status and retry rule", () => {
   assert.deepEqual(
@@ -23,48 +23,34 @@ test("every contract error code has exactly one row, with its status and retry r
   }
 });
 
-test("details read as the shapes in the contract", () => {
+test("details are listed field by field, as the contract's shapes", () => {
   const details = (code: keyof typeof ERROR_CODES) =>
     ERROR_ROWS.find((row) => row.code === code)?.details;
-  assert.equal(
-    details("cursor_invalid"),
-    '{ reason: "expired" | "mismatch" | "malformed" }',
-  );
-  assert.equal(
-    details("order_removed"),
-    "{ orderId: string; reference: string }",
-  );
-  assert.equal(
-    details("stay_unsupported"),
-    '{ reason: "mixed_occupancy" } or { reason: "max_nights"; max: number }',
-  );
-  assert.equal(
-    details("supplier_unavailable"),
-    '{ outcome: "not_started" | "unknown" }',
-  );
-  assert.equal(
-    details("stay_in_past"),
-    "{ checkIn: string; timeZone: string | null }",
-  );
-  // Nested objects are named, not spelled out.
-  assert.match(
-    details("destination_ambiguous") ?? "",
-    /candidates: object\[\]/,
-  );
-  assert.match(
-    details("destination_not_found") ?? "",
-    /^\{ reason: "no_match";/,
-  );
-  assert.match(
-    details("destination_not_found") ?? "",
-    / or \{ reason: "not_a_locality";/,
-  );
-  // A nested object of scalars is spelled out.
-  assert.match(
-    details("invalid_request") ?? "",
-    /^\{ issues: \{ pointer: string; message: string \}\[\]; filterable\?: .+; share\?: \{ code: string; listedShare: number \} \}$/,
-  );
-  assert.equal(detailsShape(null), null);
+  assert.deepEqual(details("cursor_invalid"), ['`reason`: `"expired" | "mismatch" | "malformed"`']);
+  assert.deepEqual(details("order_removed"), ["`orderId`: `string`", "`reference`: `string`"]);
+  assert.deepEqual(details("supplier_unavailable"), ['`outcome`: `"not_started" | "unknown"`']);
+  assert.deepEqual(details("stay_in_past"), ["`checkIn`: `string`", "`timeZone`: `string | null`"]);
+  assert.deepEqual(details("payment_total_changed"), ["`orderId`: `string`", "`total`: `{ amount: string; currency: string }`"]);
+  // A union lists each of its branches whole.
+  assert.deepEqual(details("stay_unsupported"), ['`{ reason: "mixed_occupancy" }`', '`{ reason: "max_nights"; max: number }`']);
+  assert.equal(details("destination_not_found")?.length, 3);
+  assert.match(details("destination_not_found")?.[2] ?? "", /^`\{ reason: "not_a_locality"; placeId: string; hub: \{ placeId; name; names \} \| null; hubTotal: number \| null \}`$/);
+  // offer_changed: each change's fields, and the new offer linked to its schema.
+  assert.deepEqual(details("offer_changed"), [
+    '`changes[]`: `{ field: "price" | "meals" | "cancellation" | "confirmation" | "pay_at_property"; previous; current; worse: boolean }`',
+    "`offer`: [Offer](/schemas#offers)",
+  ]);
+  // Objects the schemas page describes link there; other nested objects name their fields.
+  assert.ok(details("search_too_broad")?.includes("`localities`: [`coverage.localities`](/schemas#search-result)"));
+  assert.ok(details("search_too_broad")?.includes("`center`: [`destination.center`](/schemas#search-result) or `null`"));
+  assert.match(details("destination_ambiguous")?.find((line) => line.startsWith("`candidates[]`")) ?? "", /\{ placeId; name; names; .*; hotels \}/);
+  assert.ok(details("invalid_request")?.includes("`issues[]`: `{ pointer: string; message: string }`"));
+  assert.match(details("invalid_request")?.[1] ?? "", /^`filterable\[\]` \(optional\): `"parking" \| /);
+  assert.ok(details("invalid_request")?.includes("`share` (optional): `{ code: string; listedShare: number }`"));
+  for (const row of ERROR_ROWS) {
+    for (const line of row.details ?? []) assert.doesNotMatch(line, /\bobject\b/, `${row.code}: ${line}`);
+  }
+  assert.equal(detailFields(null), null);
 });
 
 test("the meanings say what the contract and its guide say", () => {

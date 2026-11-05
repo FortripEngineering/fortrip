@@ -21,6 +21,7 @@ import { ENABLED_REGIONS } from "@fortrip/agent-contract/regions";
 
 import { fact } from "../components/fact.tsx";
 import { OPERATIONS } from "../lib/openapi/build.ts";
+import { MODEL_READS } from "../lib/markdown/pages.ts";
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
 import { contentSentence } from "../lib/prose/mcp-content.ts";
@@ -32,7 +33,7 @@ import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDoc, responseDocFor } from "../lib/reference/response-docs.ts";
 import { inputRows } from "../lib/reference/schema-rows.ts";
 import { pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
 
@@ -219,7 +220,14 @@ describe("Markdown pages", () => {
   it("/schemas.md: every response object and its fields", () => {
     const markdown = pageMarkdown("/schemas");
     for (const doc of RESPONSE_DOCS) {
-      includesAll(markdown, [doc.title, ...doc.rows.map((row) => `\`${row.path}\``)], doc.id);
+      if (doc.sameAs) {
+        // One line pointing at the object it is, not its fields again.
+        includesAll(markdown, [doc.title, `The answer is the [${responseDoc(doc.sameAs).title}](${DOCS_ORIGIN}/schemas.md#${doc.sameAs}).`], doc.id);
+      } else if (doc.listOf) {
+        includesAll(markdown, [doc.title, `\`data\` ([${responseDoc(doc.listOf).title}](${DOCS_ORIGIN}/schemas.md#${doc.listOf})[])`, "`nextCursor`"], doc.id);
+      } else {
+        includesAll(markdown, [doc.title, ...doc.rows.map((row) => `\`${row.path}\``)], doc.id);
+      }
     }
   });
 
@@ -254,18 +262,22 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("an API reference page has its method and path, its short description once, its tool's page for the rules, and says where each field goes", () => {
+  it("an API reference page has its method and path, its short description, the tool description under its label, and says where each field goes", () => {
     for (const op of OPERATIONS) {
       const markdown = pageMarkdown(`/api/reference/${op.id}`);
       assert.ok(markdown.includes(`\`${op.route.method} ${op.route.path}\``), op.id);
       assert.equal(markdown.split("\n")[2], `> ${op.summary}`, op.id);
-      assert.equal(markdown.split(op.summary).length, 2, `${op.id}: description repeated`);
       const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
       if (tool) {
-        assert.ok(markdown.includes(`(${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), `${op.id}: no link to its tool`);
-        // The contract's full description is on the tool's page, not here.
-        assert.ok(!markdown.includes(tool.summary), `${op.id}: full description`);
+        // The description the model reads, verbatim, quoted under its label; it opens with the summary.
+        assert.ok(markdown.includes(`**${MODEL_READS}**`), `${op.id}: no label`);
+        assert.ok(markdown.replace(/^> ?/gm, "").includes(tool.summary), `${op.id}: no full description`);
+        // Outside the quoted description, the summary is in the header only.
+        const unquoted = markdown.split("\n").filter((line, i) => i === 2 || !line.startsWith(">")).join("\n");
+        assert.equal(unquoted.split(op.summary).length, 2, `${op.id}: description repeated`);
       } else {
+        assert.equal(markdown.split(op.summary).length, 2, `${op.id}: description repeated`);
+        assert.ok(!markdown.includes(MODEL_READS), op.id);
         assert.doesNotMatch(markdown, /\/mcp\//, op.id);
       }
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);

@@ -7,7 +7,7 @@ import {
   type PositionalSpec,
   TOOLS,
 } from "@fortrip/agent-contract";
-import { responseDocForCommand, schemaHref } from "./response-docs.ts";
+import { responseDocForCommand, schemaHref, schemaTitle } from "./response-docs.ts";
 import { toJsonSchema } from "./schema-rows.ts";
 
 /** A table row: how the flag is typed, the input field it sets (empty for
@@ -162,7 +162,7 @@ export const CLI_COMMANDS: CliCommand[] = Object.entries(DOCS).map(
       flags: flags.length > 0 ? flags : undefined,
       output,
       schema: response
-        ? { title: response.title, href: schemaHref(response) }
+        ? { title: schemaTitle(response), href: schemaHref(response) }
         : undefined,
       mcp: spec.tool?.replaceAll("_", "-"),
     };
