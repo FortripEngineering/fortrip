@@ -17,7 +17,7 @@ import {
 import type { PhrasingContent } from "mdast";
 
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../prose/clients.ts";
-import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
+import { PRE_RELEASE_POLICY, PRE_RELEASE_POLICY_ON_CHANGELOG } from "../prose/compatibility.ts";
 import { contentSentence } from "../prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
@@ -119,7 +119,10 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   ],
 
   /** The pre-release compatibility policy, with its links. */
-  PreReleasePolicy: () => [paragraph(inline(PRE_RELEASE_POLICY))],
+  /** `page="changelog"` on the changelog itself, which doesn't link to itself. */
+  PreReleasePolicy: (props) => [
+    paragraph(inline(props.page === "changelog" ? PRE_RELEASE_POLICY_ON_CHANGELOG : PRE_RELEASE_POLICY)),
+  ],
 
   /** The order's `status`, each with what it means, in the contract's order. */
   OrderStatuses: () => statusTable(ORDER_STATUSES, ORDER_STATUS_DOCS),

@@ -5,3 +5,9 @@
  */
 export const PRE_RELEASE_POLICY =
   "Fortrip's agent API is pre-release. Until general availability, breaking changes may happen. A breaking change ships only in a new major version of the contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and is announced in the [changelog](/changelog) with migration notes. After general availability, v1 will change only additively: new fields, endpoints, enum values and error codes.";
+
+/** The policy as the changelog states it, without a link to itself. */
+export const PRE_RELEASE_POLICY_ON_CHANGELOG = PRE_RELEASE_POLICY.replace(
+  "in the [changelog](/changelog)",
+  "in this changelog",
+);
