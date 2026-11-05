@@ -1,0 +1,15 @@
+---
+title: Enabled regions
+description: A region (a province or state) is searched as a whole area only where Fortrip can tell reliably which hotels lie in it. These are those regions.
+---
+
+## What enabled means [#what-it-means]
+
+- An enabled region's name resolves to the region, and a search covers every hotel in it. A hotel's `address.region` names its region only when the region is enabled; otherwise it is `null`.
+- A region is enabled only where its hotels' membership agrees closely with an independent boundary source. Regions in mainland China are enabled.
+- Elsewhere, a region's name isn't matched as a region, so it can match a town or island of that name; search a town, a point or a country instead. See [areas and radii](/search#scopes).
+- The list changes only with a reviewed release. A region on it stays on it unless Fortrip decides otherwise, and its `placeId` keeps resolving.
+
+## The list [#list]
+
+<RegionList />

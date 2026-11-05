@@ -47,7 +47,10 @@ export {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
+  PAY_INPUT_WAYS,
+  PAY_WAYS,
   payOrderInput,
+  type PayWay,
   searchHotelsInput,
   sharedPaymentTokenOf,
   stay,
@@ -80,6 +83,7 @@ export {
 export {
   ERROR_DETAILS,
   errorEnvelope,
+  SUPPLIER_OUTCOME_STATUS,
   type ErrorBody,
   type ErrorEnvelope,
   type KnownErrorBody,
@@ -144,7 +148,23 @@ export {
   type SearchNoteCode,
   type SearchResult,
 } from "./outputs/search.ts";
-export { API, MCP_PATH, PUBLIC_ORIGINS } from "./paths.ts";
+export {
+  API,
+  DOCS_ORIGIN,
+  MCP_PATH,
+  MCP_SERVER_URL,
+  PUBLIC_ORIGINS,
+  REPOSITORY_URL,
+  SKILL_INSTALL_COMMAND,
+} from "./paths.ts";
+export {
+  ACCOUNT_ROUTES,
+  HTTP_ROUTES,
+  routePath,
+  type HttpRoute,
+  type HttpToolName,
+} from "./routes.ts";
+export { RATE_LIMITS, type RateLimitScope } from "./rate-limits.ts";
 export {
   renderError,
   renderToolResult,
@@ -174,4 +194,5 @@ export {
   type FilterableAmenity,
 } from "./vocabulary.ts";
 export { UNKNOWN_IS_NOT_NO_EXEMPTIONS } from "./conventions/unknown-is-not-no.ts";
+export { ME_SCOPES, ORDER_HTTP, SEARCH_RULES } from "./stated-facts.ts";
 export { CONTRACT_VERSION } from "./version.ts";

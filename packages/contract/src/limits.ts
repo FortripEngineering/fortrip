@@ -25,6 +25,20 @@ export const LIMITS = {
   candidatesShown: 8,
   candidatesCounted: 200,
   localitiesShown: 8,
+  tokenPaymentMaxUsd: 500,
+  /** Minutes that must be left before the order's payment window closes
+   *  (`payment.expiresAt`) for the order to offer a token or wallet payment
+   *  (`payment.handlers`, `payment.wallets`). */
+  payMinMinutesLeft: 15,
+  /** `pay_order` refuses (`order_not_payable`), by token or wallet, when the
+   *  order's payment window (`payment.expiresAt`) closes within this many
+   *  minutes. */
+  payCutoffMinutes: 2,
+  tokensPerOrder: 5,
+  wechatCodeMinutes: 120,
+  /** Orders one account can make for one stay (the same room, rate, dates
+   *  and party); past it, ordering the stay answers `order_exists`. */
+  ordersPerStay: 20,
 } as const;
 
 /** Currencies a v1 response can show prices in (USD is also what is paid). */

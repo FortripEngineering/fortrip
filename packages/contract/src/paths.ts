@@ -30,3 +30,14 @@ export const API = {
 
 /** The MCP server answers at the root of `PUBLIC_ORIGINS.mcp`. */
 export const MCP_PATH = "/";
+
+/** The URL to add as a remote MCP server. */
+export const MCP_SERVER_URL = `${PUBLIC_ORIGINS.mcp}${MCP_PATH}`;
+
+/** Installs the CLI skill into an agent. */
+export const SKILL_INSTALL_COMMAND =
+  "npx skills add FortripEngineering/fortrip --skill fortrip-cli";
+
+export const REPOSITORY_URL = "https://github.com/FortripEngineering/fortrip";
+
+export const DOCS_ORIGIN = "https://docs.fortrip.ai";

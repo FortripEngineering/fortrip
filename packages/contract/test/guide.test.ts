@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -502,6 +503,17 @@ describe("renderText", () => {
     assert.equal(renderText("{{arg:stay.rooms}}", "cli"), "--room");
     assert.equal(renderText("{{arg:items.offerId}}", "cli"), "--offer");
     assert.equal(renderText("{{arg:stay.checkIn}}", "cli"), "--check-in");
+  });
+
+  it("states the stay order cap from LIMITS", () => {
+    const fragment = readFileSync(new URL("../guide/errors.md", import.meta.url), "utf8");
+    assert.ok(fragment.includes("the stay has had {{limit:ordersPerStay}} orders"));
+    for (const surface of ["cli", "claude-skill"] as const) {
+      assert.ok(
+        flat(renderGuide(surface, "main")).includes(`the stay has had ${LIMITS.ordersPerStay} orders`),
+        surface,
+      );
+    }
   });
 
   it("renders limits and the support address", () => {

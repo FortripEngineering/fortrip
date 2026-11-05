@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "index",
+    "quickstart",
+    "install",
+    "---Guides---",
+    "search",
+    "payments",
+    "examples",
+    "regions",
+    "---Reference---",
+    "api",
+    "mcp",
+    "cli",
+    "schemas",
+    "errors",
+    "changelog"
+  ]
+}

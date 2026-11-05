@@ -195,6 +195,61 @@ release candidate, tagged `vX.Y.Z-rc.N`, is published under the `next`
 dist-tag, so `npm install` doesn't pick it up. Rerunning the publish job after
 a partial publish skips what is already on npm.
 
+## Docs
+
+[`packages/docs`](packages/docs) is the Fumadocs site behind `docs.fortrip.ai`.
+
+```bash
+pnpm --filter ./packages/docs dev   # local dev server
+pnpm --filter ./packages/docs test  # its tests
+```
+
+Production docs follow the live server, not `main`. A docs deploy is a
+`docs-*` tag, and the order is:
+
+1. Tag `vX.Y.Z` (npm, see Releasing above).
+2. Ship the server release that pins that contract to production.
+3. Push the tag `docs-X.Y.Z`.
+4. A human approves the `docs-production` environment. The workflow
+   [`deploy-docs.yml`](.github/workflows/deploy-docs.yml) then builds and
+   deploys to Vercel.
+
+The workflow refuses to deploy unless all of these hold at the tagged commit:
+
+- the contract's version is a plain `X.Y.Z`, not an rc;
+- `packages/contract/src` is unchanged since the tag `vX.Y.Z` of that version;
+- the changelog has the version's entry, dated, and no entry says "Not
+  released yet.".
+
+The tag name itself is free-form. So once `main` has moved on from the live
+release (contract changes, or a new undated changelog entry), a docs deploy
+can't go out from `main`: cut a short branch from the live `v*` tag, make the
+docs-only fix there, tag `docs-X.Y.Z-<n>` on that branch and push the tag,
+and also merge the fix to `main`. A docs-only fix needs no npm release and no
+changelog entry.
+
+Before tagging a stable release, replace the version's "Not released yet." with
+"Released YYYY-MM-DD." in `packages/docs/content/docs/changelog.mdx`, or the
+changelog gate fails.
+
+One-time setup, by the owner:
+
+- A Vercel project with Root Directory `packages/docs`, framework Next.js,
+  "Include files outside the root directory" left on (the build reads
+  `packages/contract` and `packages/cli/package.json`) and preview
+  deployments on. [`packages/docs/vercel.json`](packages/docs/vercel.json)
+  turns off Git deployments of `main`: production would otherwise follow
+  `main` and skip the approval. Other branches still get previews. On the
+  first real run, confirm a push to `main` creates no production deployment.
+- The `docs.fortrip.ai` domain on that project, and Vercel Analytics enabled.
+- The GitHub environment `docs-production`, with required reviewers,
+  "Prevent self-review" on, deployment branches and tags limited to the tag
+  pattern `docs-*`, and the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and
+  `VERCEL_PROJECT_ID`.
+- On the first deploy, confirm `vercel build` succeeds without
+  `VERCEL_TOKEN`: the workflow gives the token only to `vercel pull` and
+  `vercel deploy`, since the build runs the dependencies' code.
+
 ## License
 
 [Apache License 2.0](LICENSE). Copyright 2026 FortripAI, Inc. (see

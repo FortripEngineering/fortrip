@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import type { z } from "zod";
+
 import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
+import { SUPPLIER_OUTCOME_STATUS } from "../src/index.ts";
+import { ERROR_DETAILS } from "../src/outputs/error-details.ts";
 import { API, MCP_PATH, PUBLIC_ORIGINS } from "../src/paths.ts";
 import {
   DISPLAY_CURRENCIES,
@@ -59,6 +63,22 @@ describe("ERROR_CODES", () => {
   });
 });
 
+describe("SUPPLIER_OUTCOME_STATUS", () => {
+  it("answers 503 when nothing was sent and 504 when the call timed out", () => {
+    assert.deepEqual(SUPPLIER_OUTCOME_STATUS, { not_started: 503, unknown: 504 });
+  });
+
+  it("uses only supplier_unavailable's statuses, and covers every outcome it names", () => {
+    for (const status of Object.values(SUPPLIER_OUTCOME_STATUS)) {
+      assert.ok(ERROR_CODES.supplier_unavailable.status.includes(status), String(status));
+    }
+    // openEnum is a union of the known values and any string.
+    const outcome = ERROR_DETAILS.supplier_unavailable.shape.outcome as unknown as z.ZodUnion<[z.ZodEnum, z.ZodString]>;
+    const known = outcome._zod.def.options[0].options;
+    assert.deepEqual(Object.keys(SUPPLIER_OUTCOME_STATUS).sort(), [...known].sort());
+  });
+});
+
 describe("LIMITS and friends", () => {
   it("carries the v1 numbers", () => {
     assert.deepEqual(LIMITS, {
@@ -87,6 +107,12 @@ describe("LIMITS and friends", () => {
       candidatesShown: 8,
       candidatesCounted: 200,
       localitiesShown: 8,
+      tokenPaymentMaxUsd: 500,
+      payMinMinutesLeft: 15,
+      payCutoffMinutes: 2,
+      tokensPerOrder: 5,
+      wechatCodeMinutes: 120,
+      ordersPerStay: 20,
     });
     assert.deepEqual([...DISPLAY_CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");

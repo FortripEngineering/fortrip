@@ -1,6 +1,7 @@
-import { ERROR_CODES } from "@fortrip/agent-contract";
+import { ERROR_CODES, type ErrorCode } from "@fortrip/agent-contract";
 
 import { CliError, EXIT, type ErrorEnvelope, type ExitCode } from "./errors.ts";
+import { EXIT_BY_CODE, EXIT_BY_STATUS } from "./exit-codes.ts";
 import { VERSION } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
@@ -140,21 +141,9 @@ export function isEnvelope(body: unknown): body is ErrorEnvelope {
  *  doesn't know (or no envelope at all), by the HTTP status. */
 function exitCodeFor(code: string | undefined, status: number): ExitCode {
   if (code !== undefined && Object.hasOwn(ERROR_CODES, code)) {
-    return code === "invalid_request"
-      ? EXIT.usage
-      : code === "unauthenticated"
-        ? EXIT.unauthenticated
-        : code === "rate_limited"
-          ? EXIT.rateLimited
-          : EXIT.error;
+    return EXIT_BY_CODE[code as ErrorCode] ?? EXIT.error;
   }
-  return status === 400
-    ? EXIT.usage
-    : status === 401
-      ? EXIT.unauthenticated
-      : status === 429
-        ? EXIT.rateLimited
-        : EXIT.error;
+  return EXIT_BY_STATUS[status] ?? EXIT.error;
 }
 
 /**

@@ -1,0 +1,7 @@
+{
+  "method": "alipay_wechat_pay",
+  "total": {
+    "amount": "132.40",
+    "currency": "USD"
+  }
+}

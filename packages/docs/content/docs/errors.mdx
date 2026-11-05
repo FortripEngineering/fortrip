@@ -1,0 +1,45 @@
+---
+title: Errors & limits
+description: The HTTP API, the MCP tools and the CLI share one error envelope, one set of codes and the same limits.
+---
+
+## Error format [#format]
+
+Every failure answers the same envelope:
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many requests; retry later.",
+    "retryable": true,
+    "retryAfterSeconds": 42,
+    "details": { "scope": "search" },
+    "requestId": "req_…"
+  }
+}
+```
+
+- `code` is one of the codes below; act on it, not on `message`, which is English for people. A code you don't know: go by the HTTP status and `retryable`.
+- `param`, when present, points at the field at fault: a JSON Pointer into the body (`/stay/checkIn`), or `/query/<name>` and `/path/<name>`.
+- A retryable error carries `retryAfterSeconds` and the `Retry-After` header.
+- A wrong method answers `invalid_request` with HTTP 405 and an `Allow` header.
+- Over MCP an error is `isError: true`: `content[0]` says what happened and what to do next, `content[1]` is the envelope as JSON text, and `_meta["ai.fortrip/error"]` carries it too. The CLI prints the error to stderr (the envelope with `--json`) and exits with a code below.
+
+## Error codes [#codes]
+
+<ErrorCodes />
+
+## CLI exit codes [#exit-codes]
+
+<ExitCodes />
+
+## Rate limits [#rate-limits]
+
+Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. Over a limit, the answer is `429 rate_limited` with the limit's `scope`.
+
+<RateLimitsTable />
+
+## Limits [#limits]
+
+<LimitsTable />

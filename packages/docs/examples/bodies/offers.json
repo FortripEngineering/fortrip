@@ -1,0 +1,18 @@
+{
+  "hotelIds": [
+    "htl_Qm3xK9vT2pLw7Hn4Rb8Z"
+  ],
+  "stay": {
+    "checkIn": "2027-03-10",
+    "checkOut": "2027-03-12",
+    "rooms": [
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "filters": {
+    "requireFreeCancellation": true
+  }
+}

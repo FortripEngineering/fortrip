@@ -1,0 +1,46 @@
+// Search hotels in a city.
+// Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
+import process from "node:process";
+
+const token = process.env.FORTRIP_TOKEN;
+if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip access token");
+
+const body = {
+  "destination": {
+    "kind": "place_name",
+    "name": "Kyoto",
+    "countryCode": "JP"
+  },
+  "stay": {
+    "checkIn": "2027-03-10",
+    "checkOut": "2027-03-12",
+    "rooms": [
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "filters": {
+    "amenities": [
+      "wifi"
+    ]
+  },
+  "sort": "price_asc"
+};
+
+const response = await fetch("https://api.fortrip.ai/v1/hotels/search", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(body),
+  signal: AbortSignal.timeout(60_000),
+});
+if (!response.ok) {
+  console.error(response.status, await response.text());
+  process.exit(1);
+}
+const result = await response.json();
+console.log(JSON.stringify(result, null, 2));

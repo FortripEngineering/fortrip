@@ -8,7 +8,7 @@ import {
   type OpenFallback,
 } from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
-import { ERROR_CODES, type ErrorCode } from "../errors.ts";
+import { ERROR_CODES, type ErrorCode, SUPPLIER_STATUSES } from "../errors.ts";
 import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
 import { money } from "../conventions/money.ts";
@@ -28,6 +28,16 @@ import { localities } from "./search.ts";
  */
 
 const count = z.number().int();
+
+/** `supplier_unavailable`'s `details.outcome`: nothing was sent, or the call
+ *  was sent and timed out. */
+const SUPPLIER_OUTCOMES = ["not_started", "unknown"] as const;
+
+/** The HTTP status `supplier_unavailable` is answered with, by its
+ *  `details.outcome`: one of its statuses for each outcome it names. */
+export const SUPPLIER_OUTCOME_STATUS: Readonly<
+  Record<(typeof SUPPLIER_OUTCOMES)[number], (typeof SUPPLIER_STATUSES)[number]>
+> = { not_started: 503, unknown: 504 };
 
 export const ERROR_DETAILS = {
   invalid_request: openObject({
@@ -126,7 +136,7 @@ export const ERROR_DETAILS = {
   ordering_paused: null,
   service_unavailable: null,
   supplier_unavailable: openObject({
-    outcome: openEnum(["not_started", "unknown"]),
+    outcome: openEnum(SUPPLIER_OUTCOMES),
   }),
   internal: null,
 } satisfies Readonly<Record<ErrorCode, z.ZodType | null>>;

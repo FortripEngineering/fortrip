@@ -1,0 +1,39 @@
+---
+title: Overview
+description: "Commands print compact text on stdout, or the response as one line of JSON with --json, and errors on stderr with a fixed exit code."
+---
+
+The exceptions: `fortrip guide` prints Markdown, `fortrip mcp` speaks MCP over stdin and stdout, and `--help` and `--version` print plain text.
+
+## Install [#install]
+
+```sh
+npm install -g fortrip
+```
+
+Or run any command with `npx fortrip`. Needs Node.js <Fact path="CLI_NODE_MAJOR" /> or newer. Sign in once with [`fortrip login`](/cli/login); you stay signed in until `fortrip logout`. See [Installation](/install#cli).
+
+## Commands [#commands]
+
+<CommandList />
+
+Options of the CLI itself:
+
+<GlobalFlags />
+
+## Raw request body [#raw-body]
+
+`hotels search`, `hotels offers` and `hotels book` also take `--body` with a JSON object, or `--body @file.json`. Flags override its fields. Field names and limits are the same as the [MCP tool inputs](/mcp) and the [HTTP API](/api) bodies.
+
+<RawBodyExample />
+
+## Environment [#environment]
+
+| Variable | Meaning |
+| --- | --- |
+| `FORTRIP_TOKEN` | Use this access token instead of the saved sign-in, e.g. in a remote sandbox or on a CI run. An access token is short-lived, so it suits one sandbox session or one CI run; for longer, sign in. |
+| `FORTRIP_DISPLAY_CURRENCY` | Default `--display-currency` for `hotels search` and `hotels offers`. It never changes what is charged. |
+| `FORTRIP_API_URL` | The API's base URL (default <Fact path="PUBLIC_ORIGINS.api" />). It must be `https`, except for `localhost`, `127.0.0.1` and `[::1]`, which may use plain `http`. It may end in a path prefix (`http://localhost:3000/api/public`), which every request path follows; a query or fragment is dropped. |
+| `FORTRIP_MCP_URL` | The MCP server `fortrip mcp` bridges to (default <Fact path="MCP_SERVER_URL" />), under the same URL rule. Your sign-in is sent to it, so it must be the MCP server of the API you use: on the origin of `FORTRIP_API_URL`, except that the default API goes with the default MCP server, `api.fortrip.ai` and `mcp.fortrip.ai`. When you set `FORTRIP_API_URL` to a local API, set `FORTRIP_MCP_URL` too; `fortrip mcp` exits <Fact path="CLI_EXIT.usage" /> and says so when you don't. |
+
+Exit codes are listed in [Errors & limits](/errors#exit-codes).

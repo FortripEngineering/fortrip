@@ -1,0 +1,77 @@
+---
+title: Orders and payment
+description: From a live offer to a confirmed booking. Create the order, confirm it with the user, take payment one way, then follow the order until the hotel confirms.
+---
+
+## The flow [#flow]
+
+1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `price.total` in USD for the whole stay, and its terms.
+2. **Order.** <code><Fact path="ROUTES.book_hotel" /></code> orders one offer and answers an order `awaiting_payment`. Nothing is charged.
+3. **Confirm with the user.** Show them the total and every term, and wait for a clear yes.
+4. **Pay**, one way only: the payment link, or one of the other ways the order offers.
+5. **After payment**, read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
+
+The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `book_hotel`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip hotels book`, `fortrip orders pay` and `fortrip orders get`.
+
+## Order [#order]
+
+Send the `offerId`, the contact (who the hotel and the confirmation email reach) and, for each room of the offer, at least one guest, named in Latin letters as on their passport. The [schemas](/schemas) list every field.
+
+- Before it creates the order, Fortrip checks the offer with the hotel supplier. If the price or any term changed, the answer is `409 offer_changed` with every change and a new offer: show the user the changes and ask again before ordering the new offer. No order is made at a price the user hasn't seen.
+- Sending the same details for the same offer again answers the same order, with HTTP <Fact path="ORDER_HTTP.replayedStatus" /> and <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>. While an offer's order is live, different details for it answer `409 offer_already_ordered`.
+- Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid.
+- Never collect card details. A card number in a guest name, the contact or the special requests is refused.
+
+The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `price.total` is what is charged, in the order's `payment.chargeCurrency`: USD for every order made through the API. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
+
+## Confirm with the user [#confirm]
+
+Before any payment, show the user:
+
+- the total and its currency;
+- the stay: hotel, room, dates, rooms and guests per room;
+- every term: meals, cancellation (whether it's free, until when, and the penalties), and fees paid at the property, with what is unknown said as unknown.
+
+End that message by asking the user to confirm, and wait for a clear yes; urgency is not consent. Only then give them `payment.url`, or pay another way. The MCP tools repeat this rule as `nextStep` on every answer that holds a `payment.url` (see [MCP](/mcp)).
+
+<Fact path="GUIDE_SENTENCES.adaptivePricing" /> A token or a wallet payment is charged in USD: a card in another currency may add a foreign transaction fee, and Alipay and WeChat Pay show the total in yuan at their own rate.
+
+## Pay [#pay]
+
+Pay one way only. Every order awaiting payment has a payment link; the other ways show on the order only when it offers them: `payment.handlers` for a shared payment token, `payment.wallets` for Alipay or WeChat Pay.
+
+- Once a token or wallet payment succeeds, `payment.url` stops working. A token or wallet payment that fails leaves the link open and the order `awaiting_payment`.
+- If the link is paid first, a token hold made meanwhile is released, and a wallet charge refunded in full.
+- `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, never in a shared channel, document, log or ticket, and give it exactly as returned: don't shorten, rebuild or re-encode it.
+- An order `awaiting_payment` whose `payment.url` is `null` had its link unreadable this time: read the order again.
+- The link closes at `payment.expiresAt`, and the order is then `expired`. To order the stay again, get offers again and confirm the new order with the user.
+
+<PayWays variant="full" />
+
+A total other than the order's answers [`payment_total_changed`](/errors#code-payment_total_changed) and charges nothing. Every other refusal of a payment is in the [error codes](/errors#codes). The [`pay_order`](/mcp/pay-order) and [`fortrip orders pay`](/cli/orders-pay) pages have the full input and answer.
+
+## The WeChat Pay code [#wechat-code]
+
+- A code lasts <Fact path="LIMITS.wechatCodeMinutes" /> minutes from when it is made, and goes dead earlier if the user opens the Alipay link. Either way `payment.wallets.wechatPay.qrData` and `qrImageUrl` are then `null`: the user opens the WeChat Pay link again for a new code, or you pay again with `method` `"alipay_wechat_pay"` for one.
+- Paying again while a code is live answers the same code. `payment.wallets` stays on the order while its wallet payment is open, however little time is left to pay; a new wallet payment can't be opened with less than <Fact path="LIMITS.payMinMinutesLeft" /> minutes left.
+- WeChat can't scan a code shown on the same phone it runs on. You can't tell which device the user is on, so offer both ways: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat Pay link on another screen. On a phone, the Alipay link opens the Alipay app.
+- Over MCP, `pay_order`'s answer carries the code as an image block when it holds a live code, unless the image couldn't be fetched; then there is no image block. `structuredContent` has the code and both links either way.
+
+## After payment [#after-payment]
+
+Read the order with <code><Fact path="ROUTES.get_order" /></code> ([`get_order`](/mcp/get-order), [`fortrip orders get`](/cli/orders-get)) until it is no longer `confirming`. Its `status`:
+
+<OrderStatuses />
+
+And its `payment.status`, which says where the money is:
+
+<PaymentStatuses />
+
+- `items[0].hotel.confirmationNumber` is the hotel's confirmation number, once it gives one. The confirmation is also emailed to the contact.
+- `manageUrl` is the order's page on fortrip.ai, for the user signed in to the account that ordered it.
+
+## Cancel and refund [#cancel]
+
+Orders can't be changed through the API. The order's `cancel` says whether it can be cancelled now (`available`, and `reason` when it can't) and, when it can, the `penalty` and the `refund`, what was paid less the penalty, both in the charge currency. Show the user both and wait for a yes, then cancel with [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) or <code><Fact path="ROUTES.cancel_order" /></code>.
+
+The order is then `cancelling` while the hotel cancels, and `cancelled` once it has; the refund goes back to the payment the order was paid with. A booking that fails is released or refunded in full without a cancellation. For a change, or a cancellation these can't make, the user emails <Fact path="SUPPORT_EMAIL" /> with the order's `reference`.
