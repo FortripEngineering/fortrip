@@ -30,18 +30,13 @@ test("every contract tool has a docs page that takes its words from the contract
   }
 });
 
-test("a tool page's description is one short sentence: its contract description's first, unless that is too long", () => {
+test("a tool page is described by what the tool does for a person, in one or two short plain sentences", () => {
   for (const tool of MCP_TOOLS) {
-    assert.ok(tool.snippet.length <= 200, `${tool.name}: ${tool.snippet.length}`);
-    assert.match(tool.snippet, /[.!?]$/, tool.name);
-    assert.doesNotMatch(tool.snippet, /[.!?]\s/, tool.name);
-    const first = /^.*?[.!?](?=\s|$)/s.exec(tool.summary)?.[0] ?? tool.summary;
-    if (first.length <= 200) assert.equal(tool.snippet, first, tool.name);
-  }
-});
-
-test("a tool page opens with what the tool does for a person, in one or two sentences", () => {
-  for (const tool of MCP_TOOLS) {
+    // The page description is plain text (meta, header, llms.txt), and the
+    // model's description is shown once, under its label, not repeated here.
+    assert.ok(tool.human.length <= 200, `${tool.name}: ${tool.human.length}`);
+    assert.doesNotMatch(tool.human, /[`[\]*]/, tool.name);
+    assert.ok(!tool.summary.startsWith(tool.human.split(/(?<=[.!?])\s/)[0] ?? ""), tool.name);
     const sentences = tool.human.split(/(?<=[.!?])\s+/);
     assert.ok(sentences.length >= 1 && sentences.length <= 2, `${tool.name}: ${sentences.length} sentences`);
     assert.match(tool.human, /[.!?]$/, tool.name);
@@ -54,7 +49,7 @@ test("a tool page opens with what the tool does for a person, in one or two sent
 test("an API reference page is described like its MCP tool's page; an account route by the docs", () => {
   for (const op of OPERATIONS) {
     const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
-    if (tool) assert.equal(op.summary, tool.snippet, op.id);
+    if (tool) assert.equal(op.summary, tool.human, op.id);
     assert.ok(op.summary.length > 0 && op.summary.length <= 200, `${op.id}: ${op.summary.length}`);
   }
   assert.deepEqual(OPERATIONS.filter((op) => !op.endpoint.tool).map((op) => op.id).sort(), ["auth_config", "me"]);

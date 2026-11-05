@@ -298,16 +298,19 @@ describe("the API quickstart", () => {
       assert.deepEqual(sent, bodyOf(name), name);
       assert.ok(script?.includes(`--max-time ${SLOW.has(name) ? 180 : 60} `), name);
     }
-    // jq's paths read the ids the next calls send.
-    const at = (value: unknown, path: string) =>
-      path.slice(1).split(/\.|\[(\d+)\]/).filter(Boolean).reduce<unknown>((v, key) => (v as Record<string, unknown>)[key], value);
-    assert.equal(at(RESPONSES.search_hotels, END_TO_END_IDS.hotel.path), HOTEL);
-    assert.equal(at(RESPONSES.get_hotel_offers, END_TO_END_IDS.offer.path), OFFER);
+    // The first step saves the curl sign-in script as it is.
+    assert.ok(scripts[0]?.includes(readFileSync(join(root, "curl", "device-login.sh"), "utf8").replace(/^#!.*\n/, "").trimEnd()));
     const probe = spawnSync("bash", ["--version"]);
     if (probe.error) return t.skip("bash is not installed");
     for (const script of scripts) {
       const run = spawnSync("bash", ["-n"], { input: script });
       assert.equal(run.status, 0, `${script}: ${run.stderr}`);
     }
+    // jq's filters read the ids the next calls send, and fail on an answer with none.
+    if (spawnSync("jq", ["--version"]).error) return t.skip("jq is not installed");
+    const jq = (filter: string, value: unknown) => spawnSync("jq", ["-re", filter], { input: JSON.stringify(value), encoding: "utf8" });
+    assert.equal(jq(END_TO_END_IDS.hotel.path, RESPONSES.search_hotels).stdout.trim(), HOTEL);
+    assert.equal(jq(END_TO_END_IDS.offer.path, RESPONSES.get_hotel_offers).stdout.trim(), OFFER);
+    assert.notEqual(jq(END_TO_END_IDS.offer.path, { ...RESPONSES.get_hotel_offers, hotels: [] }).status, 0);
   });
 });

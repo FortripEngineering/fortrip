@@ -103,14 +103,14 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     "An order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.handlers` is empty.",
   ],
   payMinMinutesLeft: (l) => [
-    "Time left to offer token and wallet payment",
+    "Time left to offer a Link token or Alipay or WeChat Pay",
     `${l.payMinMinutesLeft} minutes`,
     "Once less is left before the order's `payment.expiresAt`, `payment.handlers` is empty and no Alipay or WeChat Pay payment can be opened.",
   ],
   payCutoffMinutes: (l) => [
     "Time left to pay",
     `${l.payCutoffMinutes} minutes`,
-    "Once less is left before the order's `payment.expiresAt`, `pay_order` answers `order_not_payable`, by token or wallet.",
+    "Once less is left before the order's `payment.expiresAt`, `pay_order` answers `order_not_payable`, by Link token or by Alipay or WeChat Pay.",
   ],
   tokensPerOrder: (l) => [
     "Tokens per order",

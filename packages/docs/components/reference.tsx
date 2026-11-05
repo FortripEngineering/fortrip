@@ -48,8 +48,9 @@ export function ModelReads({ description }: { description: string }) {
   );
 }
 
-/** A tool's page body: what it does for a person, the tool, its access and
- *  command, its description as the model reads it, input fields and output. */
+/** A tool's page body, under its description (what it does for a person):
+ *  the tool, its access and command, its description as the model reads it,
+ *  input fields and output. */
 export function ToolPage({ name }: { name: ToolName }) {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
@@ -58,7 +59,6 @@ export function ToolPage({ name }: { name: ToolName }) {
   const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
   return (
     <>
-      <p>{inline(tool.human)}</p>
       <p className="text-sm text-fd-muted-foreground">
         <code>{tool.name}</code> · {tool.access}
         {cli && (

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import {
+  destination,
   DISPLAY_CURRENCIES,
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
@@ -54,9 +55,9 @@ const unescape = (text: string) =>
     .replaceAll("&gt;", ">")
     .replaceAll("&amp;", "&");
 
-/** "`a`, `b` and `c`", as the pages write a list of names. */
-const codeList = (names: string[]) =>
-  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? " and " : ", "}${name}`);
+/** "`a`, `b` and `c`" (or `last`), as the pages write a list of names. */
+const codeList = (names: string[], last = "and") =>
+  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? ` ${last} ` : ", "}${name}`);
 
 /** `assert.ok(text.includes(part))` for each part, naming the misses. */
 function includesAll(text: string, parts: readonly string[], where: string) {
@@ -195,7 +196,7 @@ describe("Markdown pages", () => {
   it("/api.md: every endpoint, the pay inputs and the pre-release policy", () => {
     const markdown = pageMarkdown("/api");
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
-    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS))}, as`), "pay inputs");
+    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS), "or")}, for the way it pays.`), "pay inputs");
     assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
     assert.ok(markdown.includes("Pre-release: breaking changes ship as a new major version"));
     assert.ok(pageMarkdown("/changelog").includes(PRE_RELEASE_POLICY.split(". ")[0]!));
@@ -240,12 +241,12 @@ describe("Markdown pages", () => {
     includesAll(markdown, limitRows(LIMITS).map(([name]) => name), "limits");
   });
 
-  it("/regions.md, /search.md: regions, destination fields and amenities", () => {
+  it("/regions.md, /search.md: regions, destination kinds and amenities", () => {
     includesAll(pageMarkdown("/regions"), ENABLED_REGIONS.map((r) => `\`${r.placeId}\``), "regions");
     const search = pageMarkdown("/search");
-    const destination = inputRows(TOOL_INPUTS.search_hotels).filter((row) => /^destination\b/.test(row.path));
-    assert.ok(destination.length > 0);
-    includesAll(search, destination.map((row) => `\`${row.path}\``), "destination fields");
+    // Each kind with what it is for; every field is on the reference page.
+    includesAll(search, destination.options.map((o) => `| \`${o.shape.kind.value}\` | ${o.shape.kind.description}`), "destination kinds");
+    assert.ok(search.includes(`(${DOCS_ORIGIN}/api/reference/search_hotels.md#request-body)`), "destination fields");
     includesAll(search, FILTERABLE_AMENITIES.map((code) => `\`${code}\``), "amenities");
   });
 

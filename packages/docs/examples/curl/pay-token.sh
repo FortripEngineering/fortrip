@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pay an order with a Stripe shared payment token.
+# Pay an order with a Link token.
 # Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 set -euo pipefail
 

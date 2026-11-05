@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create an order from an offer. Nothing is charged until it is paid.
-# It can take a couple of minutes. If it times out, send the same body again:
-# it answers the same order.
+# It can take a couple of minutes. A call that timed out is safe to send again:
+# https://docs.fortrip.ai/api#retries
 # Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 set -euo pipefail
 

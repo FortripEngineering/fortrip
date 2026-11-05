@@ -7,7 +7,7 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 
 1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `price.total` in USD for the whole stay, and its terms.
 2. **Order.** <code><Fact path="ROUTES.book_hotel" /></code> orders one offer and answers an order `awaiting_payment`. Nothing is charged.
-3. **Confirm with the user.** Show them the total and every term, and wait for a clear yes.
+3. **Confirm with the user** ([what to show](#confirm)).
 4. **Pay**, one way only: the payment link, or another way the order offers.
 5. **After payment**, read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
 
@@ -18,7 +18,7 @@ The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `boo
 Send the `offerId`, the contact (who the hotel and the confirmation email reach) and, for each room of the offer, at least one guest, named in Latin letters as on their passport. The [schemas](/schemas) list every field.
 
 - Before it creates the order, Fortrip checks the offer with the hotel. If the price or any term changed, the answer is `409 offer_changed` instead (below). No order is made at a price the user hasn't seen.
-- Sending the same details for the same offer again answers the same order, so a call that timed out is safe to send again. Different details for an ordered offer answer `409 offer_already_ordered`. See [Retries and idempotency](/api#retries).
+- A call that timed out is [safe to send again](/api#retries) with the same details.
 - Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
 
@@ -28,7 +28,7 @@ The `details` of a `409 offer_changed`:
 
 <ErrorExample code="offer_changed" part="details" />
 
-Show each change's `previous` → `current`; `worse: true` marks a change that is worse for the user. After the user agrees, order `details.offer.offerId`; there is no need to fetch offers again.
+Show each change's `previous` → `current`; `worse: true` marks a change that is worse for the user. After the user agrees, order `details.offer.offerId`; there is no need to fetch offers again. Over HTTP that is `error.details.offer.offerId`, inside the error envelope.
 
 ### The order [#the-order]
 
@@ -71,7 +71,6 @@ A total other than the order's answers [`payment_total_changed`](/errors#code-pa
 - A code lasts <Fact path="LIMITS.wechatCodeMinutes" /> minutes from when it is made, and goes dead earlier if the user opens the Alipay link. Either way `payment.wallets.wechatPay.qrData` and `qrImageUrl` are then `null`: the user opens the WeChat Pay link again for a new code, or you pay again with `method` `"alipay_wechat_pay"` for one.
 - Paying again while a code is live answers the same code. `payment.wallets` stays on the order while its Alipay or WeChat Pay payment is open, however little time is left to pay; a new one can't be opened with less than <Fact path="LIMITS.payMinMinutesLeft" /> minutes left.
 - WeChat can't scan a code shown on the same phone it runs on. You can't tell which device the user is on, so offer both ways: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat Pay link on another screen. On a phone, the Alipay link opens the Alipay app.
-- Over MCP, `pay_order`'s answer carries the code as an image block when it holds a live code, unless the image couldn't be fetched; then there is no image block. `structuredContent` has the code and both links either way.
 
 ## After payment [#after-payment]
 

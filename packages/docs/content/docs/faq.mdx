@@ -15,7 +15,7 @@ description: Fees and terms, testing an integration, your account, getting help,
 - Search, hotel details and live offers are free reads.
 - Creating an order charges nothing. An unpaid order expires at its `payment.expiresAt` and needs no cancelling.
 - There is no test environment. Any payment is real, and so is any cancellation penalty.
-- Repeated test orders of one stay hit `order_exists` while an order with the same guest names is open, and a stay takes at most <Fact path="LIMITS.ordersPerStay" /> orders.
+- Repeated test orders of one stay hit `order_exists` while an open order has any of the same guests, and a stay takes at most <Fact path="LIMITS.ordersPerStay" /> orders.
 
 ## Your account [#account]
 
@@ -23,10 +23,10 @@ Create one at [fortrip.ai](https://fortrip.ai). Orders belong to the account tha
 
 ## Help and support [#support]
 
-- **Paid, and still confirming.** The hotel is confirming the booking. The offer's `confirmation` says how long that takes: at once when `instant`, or within `withinMinutes` when `on_request`.
+- **Paid, and still confirming.** The hotel is confirming the booking. Some hotels confirm at once and others take a while; your agent showed you which before you paid (the offer's `confirmation`). Ask your agent to check the order.
 - **Failed.** No stay was booked. A card hold is released, or the payment refunded in full.
-- **Your bookings.** See them on fortrip.ai, signed in to the account that made them. An order's `manageUrl` is its page there.
-- **Anything else.** Email <Fact path="SUPPORT_EMAIL" /> with the order's `reference` (`FT-…`) or the error's `requestId`.
+- **Your bookings.** See them on [fortrip.ai](https://fortrip.ai), signed in to the account that made them (an order's `manageUrl` links there).
+- **Anything else.** Email <Fact path="SUPPORT_EMAIL" /> with the booking number, which starts `FT-` (the order's `reference`), or, for an error, its `requestId`.
 - **A security issue.** Email <Fact path="SUPPORT_EMAIL" />.
 
 ## Can my agent pay without the user? [#agent-pay]

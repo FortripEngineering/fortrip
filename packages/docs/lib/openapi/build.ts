@@ -95,7 +95,7 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
     const output = responseDocFor(endpoint.tool)?.schema;
     if (!tool || !output) throw new Error(`no tool or response for ${endpoint.tool}`);
     const route = HTTP_ROUTES[endpoint.tool];
-    const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.snippet;
+    const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.human;
     if (!summary) throw new Error(`${tool.name} has no MCP tool page`);
     return { id: tool.name, route, endpoint, input: tool.input, output, summary, description: tool.description };
   }

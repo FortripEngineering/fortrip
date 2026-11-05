@@ -19,7 +19,7 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
     // §8.1 item 2: exactly one of the three inputs.
-    assert.match(text, /exactly one of sharedPaymentToken, payment and method/);
+    assert.match(text, /exactly one of sharedPaymentToken, payment or method, for the way it pays/);
     // §8.1 item 3, the owner's ruling, which the changelog states in full.
     assert.match(text, /major version/);
     assert.match(text, /changelog/);

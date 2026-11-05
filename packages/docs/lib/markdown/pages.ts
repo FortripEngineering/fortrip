@@ -59,7 +59,6 @@ export function toolMarkdown(name: ToolName): string {
           text("."),
         ];
   return toMarkdown([
-    paragraph(inline(tool.human)),
     paragraph([
       code(tool.name),
       text(` · ${tool.access}`),

@@ -27,7 +27,7 @@ export interface ErrorRow {
  *  so a code the contract gains fails the typecheck until it is described. */
 const MEANINGS: Record<ErrorCode, string> = {
   invalid_request:
-    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`. Filtering by an amenity that can't filter adds `filterable`, the codes that can, and `share`: for the requested `code`, `listedShare` is the fraction, from 0 to 1, of the hotels that list facilities that list it.",
+    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`. Filtering by an amenity that can't filter adds `filterable`, the codes that can, and `share`: for the requested `code`, `listedShare` is the fraction, from 0 to 1, of hotels with a facility list that include the requested `code`.",
   cursor_invalid:
     "The cursor expired, belongs to another request or user, or was never a cursor. Start again from the first page.",
   unauthenticated:

@@ -101,17 +101,15 @@ describe("built site", () => {
     assert.ok(!next.includes(description));
   });
 
-  it("an API reference page shows the short summary, then the tool description the model reads under its label", () => {
+  it("an API reference page shows what the tool does for a person, then the tool description the model reads under its label", () => {
     const tool = MCP_TOOLS.find((t) => t.name === "book_hotel");
     const full = TOOLS.find((t) => t.name === "book_hotel")?.description;
-    assert.ok(tool && full && full !== tool.snippet);
+    assert.ok(tool && full);
     const text = pageText("/api/reference/book_hotel");
-    assert.ok(text.includes(tool.snippet));
+    assert.ok(text.includes(tool.human));
     assert.ok(text.includes("What the model reads (tool description)"));
-    // Past the summary, the contract's text is shown too, as the model reads it.
-    const rest = full.slice(tool.snippet.length).trim();
-    assert.ok(rest.length > 0);
-    assert.ok(text.includes(rest.slice(0, 60).replaceAll("`", "")), "the full description is not shown");
+    // The contract's text is shown too, as the model reads it.
+    assert.ok(text.includes(full.slice(0, 60).replaceAll("`", "")), "the full description is not shown");
     assert.doesNotMatch(pageHtml("/api/reference/book_hotel"), /full rules agents follow/);
   });
 });

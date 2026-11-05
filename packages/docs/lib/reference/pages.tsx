@@ -55,11 +55,11 @@ const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
     path: `mcp/${tool.slug}.mdx`,
     data: {
       title: tool.title,
-      description: tool.snippet,
+      description: tool.human,
       body: () => <ToolPage name={tool.name} />,
       markdown: () => toolMarkdown(tool.name),
       ...outline(
-        [tool.name, ...(tool.summary.startsWith(tool.snippet) ? [] : [tool.snippet]), tool.human, tool.summary],
+        [tool.name, tool.human, tool.summary],
         [
           {
             id: "input",

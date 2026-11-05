@@ -35,18 +35,19 @@ A failed call has `isError: true` and no `structuredContent`. `content[0]` says 
 
 <ToolErrorSample code="offer_changed" />
 
-`_meta["ai.fortrip/requestId"]` carries the request id, which support asks for. See [Errors & limits](/errors).
+On an error, the request id support asks for is the envelope's `requestId`; a successful result carries it in `_meta["ai.fortrip/requestId"]`. See [Errors & limits](/errors).
 
 ## Server instructions [#instructions]
 
-On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. `get_planning_guide` returns the long planning guide.
+On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. The full agent guide is what `fortrip guide` prints. `get_planning_guide` returns a separate guide, for requests that are more than one hotel for fixed dates.
 
 ## Timeouts and retries [#retries]
 
 - Creating an order or paying can take a couple of minutes. Give `book_hotel` and `pay_order` a timeout of at least three minutes.
-- After a `book_hotel` timeout, call it again with the same details. You get the order if one was made, marked by `_meta["ai.fortrip/replayed"]`.
-- After a `pay_order` timeout, call `get_order` before paying again.
-- Retry <RetryableCodes /> once, with the same details, after `retryAfterSeconds`. Other codes need a change first.
+- After a `book_hotel` timeout, call it again with the same details: it is [safe to send again](/api#retries).
+- After a `pay_order` timeout, <PayAfterTimeout />
+
+<RetryCodes />
 
 What each call answers when sent again is in [Retries and idempotency](/api#retries).
 

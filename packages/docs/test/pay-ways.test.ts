@@ -24,8 +24,8 @@ describe("ways to pay", () => {
       assert.ok(PAY_WAY_DOCS[way].body.includes(`\`${input}\``), `${way}: ${input}`);
     }
     const inputs = Object.keys(PAY_INPUT_WAYS);
-    const list = `${inputs.slice(0, -1).join(", ")} and ${inputs.at(-1)}`;
-    assert.ok(pageText("/api").includes(`exactly one of ${list},`), list);
+    const list = `${inputs.slice(0, -1).join(", ")} or ${inputs.at(-1)}`;
+    assert.ok(pageText("/api").includes(`exactly one of ${list}, for the way it pays.`), list);
   });
 
   it("/ names every way in one sentence", () => {

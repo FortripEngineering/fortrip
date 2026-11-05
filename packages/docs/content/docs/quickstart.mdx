@@ -7,7 +7,7 @@ No Fortrip account? Create one at [fortrip.ai](https://fortrip.ai).
 
 ## Chat apps: no install [#chat-apps]
 
-For claude.ai, ChatGPT and Claude Desktop. Add Fortrip as a connector, sign in to Fortrip when your app asks, and ask for a stay. The steps for each app are in [Set up your client](/install#clients).
+For claude.ai, ChatGPT and Claude Desktop. Add Fortrip as a connector, sign in to Fortrip when your app asks, and ask for a stay. Steps: [claude.ai](/install#claude-ai) · [Claude Desktop](/install#claude-desktop) · [ChatGPT](/install#chatgpt).
 
 ## Coding agents [#coding-agents]
 
@@ -19,7 +19,7 @@ Run this once in your project. It asks which of your agents to add the skill to;
 
 <pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
 
-Prefer MCP, or use Cursor? [Set up your client](/install#clients) instead.
+Prefer the Claude Code plugin or MCP, or use Cursor? [Set up your client](/install#clients) instead of the skill. Use one setup per agent, not several.
 
 ### 2. Sign in [#sign-in]
 
@@ -47,9 +47,9 @@ Find a quiet hotel in Kyoto for two adults, two nights next month, with free can
 - You pay on a Stripe, Alipay or WeChat Pay page. The agent never sees your card.
 - A card is held until the hotel confirms, then charged. If the hotel can't confirm, the hold is released, or a payment already taken is refunded in full.
 - The payment link is for you alone: anyone who has it can pay, so don't share it.
-- The charge is in US dollars.
+- Prices are in US dollars. The payment page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
 
-The ways to pay are in [Orders and payment](/payments#pay).
+Questions about a booking, or a payment that didn't go through? See [Help and support](/faq#support).
 
 ## Try it by hand [#by-hand]
 
@@ -61,6 +61,8 @@ npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY
 npx fortrip hotels book --offer off_… --guest 1:First:Last --first-name First --last-name Last --email you@example.com --phone +1…
 npx fortrip orders get ord_…
 ```
+
+`--room 2` is one room for two adults; `--guest 1:First:Last` is a guest in room 1, named as on the passport.
 
 `hotels book` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
 

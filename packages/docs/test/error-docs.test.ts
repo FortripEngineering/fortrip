@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { ERROR_CODES, ERROR_DETAILS, LIMITS, SUPPLIER_OUTCOME_STATUS } from "@fortrip/agent-contract";
 
+import { RETRY_WAYS } from "../lib/prose/retries.ts";
 import { detailFields, ERROR_ROWS } from "../lib/reference/error-docs.ts";
 
 test("every contract error code has exactly one row, with its status and retry rule", () => {
@@ -58,7 +59,7 @@ test("the meanings say what the contract and its guide say", () => {
     ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
   assert.match(
     meaning("invalid_request"),
-    /`listedShare` is the fraction, from 0 to 1, of the hotels that list facilities/,
+    /`listedShare` is the fraction, from 0 to 1, of hotels with a facility list that include the requested `code`/,
   );
   assert.match(
     meaning("destination_ambiguous"),
@@ -87,4 +88,13 @@ test("the stay order cap, the pay cutoff and supplier_unavailable's statuses com
   for (const [outcome, status] of Object.entries(SUPPLIER_OUTCOME_STATUS)) {
     assert.ok(meaning("supplier_unavailable").includes(`\`${outcome}\` (${status})`), outcome);
   }
+});
+
+test("the retry advice places exactly the codes a retry can help, each once", () => {
+  const placed = Object.values(RETRY_WAYS).flat();
+  assert.equal(new Set(placed).size, placed.length);
+  assert.deepEqual(
+    [...placed].sort(),
+    ERROR_ROWS.filter((row) => row.retryable).map((row) => row.code).sort(),
+  );
 });

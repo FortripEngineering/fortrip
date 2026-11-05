@@ -14,12 +14,10 @@ export interface McpTool {
   group: string;
   /** The contract's description of the tool, as the model reads it. */
   summary: string;
-  /** The page's description (meta, header, cards, llms.txt): the first
-   *  sentence of `summary`, or the docs' own when that runs past 200
-   *  characters. The OpenAPI page of the tool's endpoint shares it. */
-  snippet: string;
-  /** What the tool does for a person, and what it changes: the page's
-   *  opening, before the description the model reads. */
+  /** What the tool does for a person, and what it changes, in plain text:
+   *  the page's description (meta, header, cards, llms.txt), before the
+   *  description the model reads. The API reference page of the tool's
+   *  endpoint shares it. */
   human: string;
   readOnly: boolean;
   /** What a call does: "Read-only", or what it writes. */
@@ -37,7 +35,7 @@ export interface McpTool {
  *  and a tool added to the contract fails the typecheck until it is listed. */
 const DOCS: Record<
   ToolName,
-  { group: string; access: string; human: string; returns?: string; cliArgs?: string; snippet?: string }
+  { group: string; access: string; human: string; returns?: string; cliArgs?: string }
 > = {
   search_hotels: {
     group: "Hotels",
@@ -76,7 +74,6 @@ const DOCS: Record<
   cancel_order: {
     group: "Orders",
     access: "Cancels an order",
-    snippet: "Cancel one of the user's orders under its cancellation terms, when its cancel.available is true.",
     human:
       "Cancels the user's booking under its cancellation terms, once they agree to the penalty and refund. The hotel booking is cancelled and the refund is issued.",
   },
@@ -84,7 +81,7 @@ const DOCS: Record<
     group: "Orders",
     access: "Pays an order",
     human:
-      "Pays an order with a Link token, a shared payment token from the user's Stripe Link wallet, or opens an Alipay or WeChat Pay payment for the user. A payment link needs no call: the user opens the order's `payment.url`.",
+      "Pays an order with a Link token (a shared payment token from the user's Stripe Link wallet), or opens an Alipay or WeChat Pay payment. A payment link needs no call.",
   },
   get_planning_guide: {
     group: "Guides",
@@ -93,13 +90,8 @@ const DOCS: Record<
     returns:
       "A Markdown guide. It says what to ask the user, which results count as evidence, and how to rank and present options.",
     cliArgs: "planning",
-    snippet:
-      "Returns Fortrip's planning guide for a request that is more than one hotel for fixed dates: what to ask, what counts as evidence, how to rank and present options.",
   },
 };
-
-const firstSentence = (text: string) =>
-  /^.*?[.!?](?=\s|$)/s.exec(text)?.[0] ?? text;
 
 export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
   (name) => {
@@ -108,7 +100,7 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
     if (!tool || !command) {
       throw new Error(`${name} is not in the contract's TOOLS and COMMANDS`);
     }
-    const { group, access, human, returns, cliArgs, snippet = firstSentence(tool.description) } = DOCS[name];
+    const { group, access, human, returns, cliArgs } = DOCS[name];
     const response = responseDocFor(name);
     if (!response && !returns) throw new Error(`${name}: what does it return?`);
     return {
@@ -117,7 +109,6 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
       title: tool.title,
       group,
       summary: tool.description,
-      snippet,
       human,
       readOnly: tool.annotations.readOnlyHint,
       access,

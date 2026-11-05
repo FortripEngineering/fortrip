@@ -102,7 +102,7 @@
       "current": "wechat_pay",
       "wechatPay": {
         "qrData": "weixin://wxpay/bizpayurl?pr=Q7nT2kX",
-        "qrImageUrl": "https://fortrip.ai/pay/ord_Wr4tY7uI0oPa3SdF6gHj/wechat/qr.png?t=wl_4mZ8qR2xN7cV1bK6",
+        "qrImageUrl": "https://qr.stripe.com/YWNjdF9FeGFtcGxlV2VDaGF0UGF5UXI.png",
         "url": "https://fortrip.ai/pay/ord_Wr4tY7uI0oPa3SdF6gHj/wechat?t=wl_4mZ8qR2xN7cV1bK6"
       },
       "alipay": {

@@ -1,7 +1,5 @@
 import { HTTP_ROUTES, type PayWay } from "@fortrip/agent-contract";
 
-import { fact } from "../../components/fact.tsx";
-
 export interface PayWayDoc {
   title: string;
   /** The way's name inside a sentence. */
@@ -15,7 +13,6 @@ export interface PayWayDoc {
 }
 
 const PAY = `\`${HTTP_ROUTES.pay_order.method} ${HTTP_ROUTES.pay_order.path}\``;
-const minutesLeft = fact("LIMITS.payMinMinutesLeft");
 
 /**
  * The ways an order is paid, keyed by the contract's `PayWay`, so a way the
@@ -31,7 +28,7 @@ export const PAY_WAY_DOCS: Record<PayWay, PayWayDoc> = {
     when: "Every order awaiting payment has one: `payment.url`.",
     charge:
       "The user pays on Stripe Checkout, reached through a Fortrip page. A card is held until the hotel confirms, then charged; a method that can't be held is charged at once and refunded in full if the hotel can't confirm.",
-    body: "Show the user the total and every term, wait for a clear yes, then give them `payment.url` exactly as returned. Anyone holding it can pay, except when `requiresSignIn` is `true` (an order started on the Fortrip website): then only the signed-in owner can, on the Fortrip booking page. It stays open until the order is paid, whichever way, or until `payment.expiresAt`.",
+    body: "Give the user `payment.url` once they have confirmed. Only the signed-in owner can pay it when `requiresSignIn` is `true` (an order started on the Fortrip website).",
   },
   shared_payment_token: {
     title: "Link token",
@@ -44,9 +41,9 @@ export const PAY_WAY_DOCS: Record<PayWay, PayWayDoc> = {
   alipay_wechat_pay: {
     title: "Alipay or WeChat Pay",
     short: "Alipay or WeChat Pay",
-    when: `When \`payment.wallets\` isn't \`null\`: the order is charged in USD, paid on a page that needs no sign-in, without a negotiated price, with at least ${minutesLeft} minutes left to pay and no token payment under way.`,
+    when: "Offered only when the order's `payment.wallets` isn't `null`; it is `null` when the order can't be paid this way.",
     charge:
       "Charged at once when the user pays; if the hotel can't confirm, the payment is refunded in full.",
-    body: `Call ${PAY} (MCP \`pay_order\`, CLI \`fortrip orders pay --wallet\`) with \`method\` set to \`"alipay_wechat_pay"\` and \`total\`, the order's \`price.total\`. The answer is the order, whose \`payment.wallets\` holds a WeChat Pay code (\`wechatPay.qrData\` to draw, or \`wechatPay.qrImageUrl\`, a PNG) and an Alipay link and a WeChat Pay link. Show the user the code and both links; they pay once, by one of them. A WeChat Pay code lasts ${fact("LIMITS.wechatCodeMinutes")} minutes; after that the WeChat Pay link opens a new one, or call again. Calling again while the payment is open answers the same payment. Then read the order until it is paid.`,
+    body: `Call ${PAY} (MCP \`pay_order\`, CLI \`fortrip orders pay --wallet\`) with \`method\` set to \`"alipay_wechat_pay"\` and \`total\`, the order's \`price.total\`. The answer is the order, whose \`payment.wallets\` holds a WeChat Pay code (\`wechatPay.qrData\` to draw, or \`wechatPay.qrImageUrl\`, a PNG) and an Alipay link and a WeChat Pay link. Show the user the code and both links; they pay once, by one of them. Then read the order until it is paid. See [The WeChat Pay code](#wechat-code).`,
   },
 };

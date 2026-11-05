@@ -3,6 +3,8 @@
 // and its Markdown text are all made from these trees.
 import {
   ACCOUNT_ROUTES,
+  type Destination,
+  destination,
   DISPLAY_CURRENCIES,
   type ErrorCode,
   FILTERABLE_AMENITIES,
@@ -28,7 +30,7 @@ import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
 import { MCP_CONTENT } from "../prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
-import { RETRY_DOCS } from "../prose/retries.ts";
+import { PAY_AFTER_TIMEOUT, RETRY_DOCS, RETRY_WAYS } from "../prose/retries.ts";
 import { ENDPOINTS, inputAnchor, referenceHref } from "../reference/api-docs.ts";
 import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
 import { ENVIRONMENT_ROWS } from "../reference/environment.ts";
@@ -110,12 +112,26 @@ function responseBody(doc: ResponseDoc): Block[] {
   return [fields(`response:${doc.id}`)];
 }
 
-/** The jq paths the quickstart's calls read their ids at: where
+/** The jq filters the quickstart's calls read their ids with: the first
+ *  hotel found, and the first offer of any hotel offered, which is where
  *  `EXAMPLE_IDS` takes them from the example answers. */
 export const END_TO_END_IDS = {
-  hotel: { file: "search.json", path: ".data[0].hotelId" },
-  offer: { file: "offers.json", path: ".hotels[0].offers[0].offerId" },
+  hotel: { file: "search.json", path: ".data[0].hotelId", none: "No hotel found: search another place or other dates." },
+  offer: { file: "offers.json", path: "[.hotels[].offers[]][0].offerId", none: "No offer matches: pick another hotel from step 2." },
 } as const;
+
+/** Reads an id into a shell variable with `jq -e`, which fails on `null`, and
+ *  says so when there is none. */
+const readId = (name: string, { file, path, none }: (typeof END_TO_END_IDS)[keyof typeof END_TO_END_IDS]) =>
+  `${name}=$(jq -re '${path}' ${file}) || echo "${none}" >&2`;
+
+/** The curl sign-in script, as the quickstart's first step saves it: the
+ *  example file without its `#!` line. */
+function signInScript(): string {
+  const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
+  if (!curl) throw new Error("no curl examples");
+  return exampleCode("device-login", curl).replace(/^#!.*\n/, "").trimEnd();
+}
 
 /** One call of the quickstart in curl: its example's body and time limit,
  *  with the ids an earlier call gave as shell variables, and its answer
@@ -173,7 +189,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     });
   },
 
-  /** The API quickstart's five calls in curl, each step's answer abridged
+  /** The API quickstart's five steps in curl, each step's answer abridged
    *  under it. */
   EndToEnd: () => {
     const order = RESPONSES.book_hotel as { payment: { url: string } };
@@ -181,20 +197,31 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     return [
       heading(3, [text("1. Sign in")], "step-sign-in"),
       paragraph([
-        text("Save the curl tab of the "),
-        link("#sign-in", text("sign-in script")),
-        text(" as "),
+        text("Run this, then approve the sign-in in your browser. It saves the sign-in script as "),
         code("device-login.sh"),
-        text(", run it and approve the sign-in in your browser. It prints the access token and the refresh token."),
+        text(" and runs it, keeping the access token and the refresh token in "),
+        code("token.json"),
+        text(". "),
+        link("#sign-in", text("Sign in")),
+        text(" explains the flow."),
       ]),
-      codeBlock("sh", "bash device-login.sh > token.json\nexport FORTRIP_TOKEN=$(jq -r .access_token token.json)"),
+      codeBlock(
+        "sh",
+        [
+          "cat > device-login.sh <<'SH'",
+          signInScript(),
+          "SH",
+          "bash device-login.sh > token.json",
+          "export FORTRIP_TOKEN=$(jq -r .access_token token.json)",
+        ].join("\n"),
+      ),
       heading(3, [text("2. Search")], "step-search"),
       paragraph([text("Search a city for the stay, and take the first hotel's "), code("hotelId"), text(".")]),
-      codeBlock("sh", `${endToEndCall("search_hotels", hotel.file)}\nhotel=$(jq -r '${hotel.path}' ${hotel.file})`),
+      codeBlock("sh", `${endToEndCall("search_hotels", hotel.file)}\n${readId("hotel", hotel)}`),
       ...abridged("search"),
       heading(3, [text("3. Get offers")], "step-offers"),
       paragraph([text("Get live offers for that hotel, and take the first offer's "), code("offerId"), text(".")]),
-      codeBlock("sh", `${endToEndCall("get_hotel_offers", offer.file)}\noffer=$(jq -r '${offer.path}' ${offer.file})`),
+      codeBlock("sh", `${endToEndCall("get_hotel_offers", offer.file)}\n${readId("offer", offer)}`),
       ...abridged("offers"),
       heading(3, [text("4. Create the order")], "step-order"),
       paragraph([
@@ -202,6 +229,11 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       ]),
       codeBlock("sh", endToEndCall("book_hotel", "order.json")),
       ...abridged("order"),
+      paragraph(
+        inline(
+          "If the price or terms changed, the answer is `409 offer_changed` instead, and `order.json` holds the error. Show the user `error.details.changes`; if they agree, order `error.details.offer.offerId` the same way. See [When the offer changed](/payments#offer-changed).",
+        ),
+      ),
       heading(3, [text("5. Give the user the payment link")], "step-pay"),
       paragraph([
         text("Show the user the total and every term, and wait for a clear yes. Then give them "),
@@ -214,7 +246,8 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   },
 
   /** Renewing the access token with the refresh token the sign-in kept,
-   *  in curl, after the sign-in script's `token.json`. */
+   *  in curl, after the sign-in script's `token.json`, which a failed
+   *  refresh leaves as it was. */
   RefreshTokenExample: () => [
     codeBlock(
       "sh",
@@ -224,7 +257,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
         'curl -sS --fail-with-body "$(jq -r .tokenEndpoint <<<"$config")" \\',
         "  -d grant_type=refresh_token \\",
         '  -d refresh_token="$refresh_token" \\',
-        '  -d client_id="$(jq -r .clientId <<<"$config")" > token.json',
+        '  -d client_id="$(jq -r .clientId <<<"$config")" > token.new.json && mv token.new.json token.json',
         "export FORTRIP_TOKEN=$(jq -r .access_token token.json)",
       ].join("\n"),
     ),
@@ -247,6 +280,32 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       })),
     ),
   ],
+
+  /** What to do after each code a retry can help, from `RETRY_WAYS`: the
+   *  one statement of it, on the API and MCP pages. */
+  RetryCodes: () => {
+    const codes = (names: readonly string[]) => codeList(names);
+    const after = [code("retryAfterSeconds")];
+    return [
+      paragraph([
+        text("Retry "),
+        ...codes(RETRY_WAYS.once),
+        text(" once, with the same details, after "),
+        ...after,
+        text(". "),
+        ...codes(RETRY_WAYS.untilAnswered),
+        text(": send the same call again after "),
+        ...after,
+        text(" until it answers. "),
+        ...codes(RETRY_WAYS.readOrder),
+        text(": read the order after "),
+        ...after,
+        text(". Other codes need a change first: the "),
+        link("/errors#codes", text("error codes")),
+        text(" say what to do."),
+      ]),
+    ];
+  },
 
   /** Setup for each client, a section each, in `CLIENT_IDS` order. */
   ClientSetup: () =>
@@ -290,7 +349,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The tools, each linking to its page. */
   ToolList: () => [
     table(
-      ["Tool", "Description", "Access"],
+      ["Tool", "Title", "Access"],
       MCP_TOOLS.map((tool) => ({
         cells: [[link(`/mcp/${tool.slug}`, code(tool.name))], [text(tool.title)], [text(tool.access)]],
       })),
@@ -488,8 +547,23 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ];
   },
 
-  /** The destination kinds of a search, from the contract's input schema. */
-  DestinationFields: () => [fields("destination")],
+  /** The destination kinds of a search, each with what it is for, from the
+   *  contract's input schema, and an example; the fields are on the
+   *  operation's reference page. */
+  DestinationKinds: () => [
+    table(
+      ["Kind", "Use it for", "Example"],
+      destination.options.map((option) => {
+        const kind = option.shape.kind.value;
+        return { cells: [[code(kind)], inline(option.shape.kind.description ?? ""), [code(DESTINATION_EXAMPLES[kind])]] };
+      }),
+    ),
+    paragraph([
+      text("Every field: "),
+      link(`${referenceHref("search_hotels")}#${inputAnchor(HTTP_ROUTES.search_hotels)}`, code("search_hotels"), text(" input")),
+      text("."),
+    ]),
+  ],
 
   /** An example's answer as JSON, abridged to the fields the next step reads
    *  (`name` is the example's, as `<Example>` takes it). */
@@ -510,14 +584,24 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     return [codeBlock("text", renderToolResult(tool as RenderedTool, RESPONSES[tool as OperationId], "mcp"))];
   },
 
-  /** An error's `content[0]`: the text the contract's `renderError` writes. */
+  /** An error's `content[0]`: the text the contract's `renderError` writes,
+   *  with no HTTP status, as the MCP server sends it. */
   ToolErrorSample: ({ code: errorCode = "" }) => {
-    const { status, envelope } = errorExample(errorCode);
-    return [codeBlock("text", renderError(envelope, status, "mcp"))];
+    const { envelope } = errorExample(errorCode);
+    return [codeBlock("text", renderError(envelope, undefined, "mcp"))];
   },
 };
 
 const json = (value: unknown) => JSON.stringify(value, null, 2);
+
+/** A destination of each kind, as a search sends it. */
+const DESTINATION_EXAMPLES: Record<Destination["kind"], string> = {
+  place_name: '{ kind: "place_name", name: "Kyoto", countryCode: "JP" }',
+  place: '{ kind: "place", placeId: "plc_…" }',
+  point: '{ kind: "point", location: { lat: 35.0116, lng: 135.7681 } }',
+  country: '{ kind: "country", countryCode: "JP" }',
+  locality: '{ kind: "locality", placeId: "plc_…" }',
+};
 
 function errorExample(errorCode: string) {
   if (!Object.hasOwn(ERRORS, errorCode)) throw new Error(`no example of the error ${errorCode}`);
@@ -527,7 +611,7 @@ function errorExample(errorCode: string) {
 /** Components that stand inside a sentence, by name. */
 export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
   /** The fields of the pay input, one of which a call sends. */
-  PayInputs: () => codeList(Object.keys(PAY_INPUT_WAYS)),
+  PayInputs: () => codeList(Object.keys(PAY_INPUT_WAYS), "or"),
   /** The amenity codes a search can filter by. */
   FilterableAmenities: () => joined(FILTERABLE_AMENITIES.map((c) => [code(c)]), ", "),
   /** The currencies a price can also be shown in, besides USD. */
@@ -536,6 +620,6 @@ export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
     return [text(others.length > 1 ? `${others.slice(0, -1).join(", ")} or ${others.at(-1)}` : others.join(""))];
   },
   NextStepTools: () => codeList(nextStepTools()),
-  /** The error codes a retry can help, as `ERROR_CODES` marks them. */
-  RetryableCodes: () => codeList(ERROR_ROWS.filter((row) => row.retryable).map((row) => row.code)),
+  /** What to do after a pay call timed out, as the retry table says it. */
+  PayAfterTimeout: () => inline(PAY_AFTER_TIMEOUT),
 };

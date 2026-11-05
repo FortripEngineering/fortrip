@@ -16,7 +16,7 @@ Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a For
 ### Choose a sign-in flow [#sign-in-flow]
 
 - **An app without a browser of its own, such as a CLI or a script:** the device flow below, with the `clientId` from <code><Fact path="ROUTES.authConfig" /></code>, the OAuth sign-in settings.
-- **A web app:** the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints.
+- **A web app:** the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints. Request the scopes the OAuth sign-in settings list in `scopes` (they include `offline_access`, for a refresh token).
 
 There are no API keys, service accounts or partner accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to that account.
 
@@ -77,17 +77,17 @@ There is no `Idempotency-Key` header. Every call is safe to send again with the 
 
 <RetryTable />
 
-Retry the codes a retry can help, <RetryableCodes />, once, with the same details, after `retryAfterSeconds`. Any other code needs a change first: the [error codes](/errors#codes) say what to do.
+<RetryCodes />
 
 ## Polling [#polling]
 
-There are no webhooks. After the user pays, read the order with <code><Fact path="ROUTES.get_order" /></code> every few seconds while it is `confirming`. Each read counts against the `orders_read` limit of <Fact path="RATE_LIMITS.orders_read.limit" /> calls a minute. How long the hotel may take is in the offer's `confirmation`: `instant`, or `on_request` within `withinMinutes`.
+There are no webhooks. After you give the user the payment link, read the order with <code><Fact path="ROUTES.get_order" /></code> when the user says they have paid, or every few seconds while they are paying. It moves from `awaiting_payment` to `confirming` once paid; keep reading while it is `confirming`. Each read counts against the `orders_read` limit of <Fact path="RATE_LIMITS.orders_read.limit" /> calls a minute. How long the hotel may take is in the offer's `confirmation`: `instant`, or `on_request` within `withinMinutes`.
 
 ## Orders [#orders]
 
 - <code><Fact path="ROUTES.book_hotel" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
-- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; `409 offer_already_ordered` when the offer was ordered with other details; and `409 order_exists` when the stay already has an open order for these guests.
-- <code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, as the way it pays by needs.
+- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; `409 offer_already_ordered` when the offer was ordered with other details and that order hasn't failed or expired; and `409 order_exists` when the stay already has an open order for one of these guests.
+- <code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, for the way it pays.
 - Orders can't be changed through the API.
 
 The whole flow, the ways to pay, the order statuses and cancelling are in [Orders and payment](/payments).
