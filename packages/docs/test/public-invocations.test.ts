@@ -10,8 +10,7 @@ import { COMMANDS, GLOBAL_FLAGS } from "@fortrip/agent-contract";
  * hotels search ...`). Nothing renders those from the contract, so a command
  * the contract renames would live on in the text. This reads that text and
  * fails on a `fortrip <word>` that names no command in `COMMANDS`, or a flag
- * the command doesn't take. (Ported from fortrip-ai
- * `components/docs/public-invocations.test.ts`.)
+ * the command doesn't take.
  */
 
 const ROOT = new URL("../", import.meta.url).pathname;

@@ -15,8 +15,8 @@ type Block =
 /**
  * The `content` of each tool's successful result, in order, keyed by the
  * contract's tools so a new tool fails the typecheck until it is described.
- * Checked against the server (fortrip-ai `app/(public-api)/api/public/mcp/tools.ts`:
- * `toolResult`, `PRESENTED`, and `walletQrImage` prepended for `pay_order`).
+ * Checked against the server's behaviour (`pay_order` puts the WeChat Pay code
+ * before its text).
  */
 export const MCP_CONTENT: Record<ToolName, readonly Block[]> = {
   get_planning_guide: ["guide"],

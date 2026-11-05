@@ -3,9 +3,7 @@ import { type OrderStatus, type PaymentStatus, SUPPORT_EMAIL } from "@fortrip/ag
 /**
  * What each order status means, keyed by the contract's `OrderStatus`, so a
  * status the contract gains fails the typecheck until it is described.
- * Checked against the server (fortrip-ai `lib/api/v1/orders/status.ts`,
- * `lib/workflows/book-hotel-workflow.ts`, the cancellation progress under `lib/orders/`,
- * `app/(service)/api/stripe/webhook/route.ts`).
+ * Checked against the server's behaviour.
  */
 export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
   awaiting_payment:
@@ -27,13 +25,9 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
 
 /**
  * What each payment status means, keyed by the contract's `PaymentStatus`.
- * Checked against the server's mapping (fortrip-ai `lib/api/v1/orders/status.ts`)
- * and where each state is written: a token is held (`lib/orders/spt-payment.ts`),
- * a card on the link is held and a method that can't be held is charged at once
- * (`lib/services/stripe/checkout-sessions.ts`, `upfront-payment.ts`), a wallet
- * payment is charged at once
- * (`lib/orders/wallet-payment.ts`), and a cancellation refunds what was
- * paid less the penalty (`lib/orders/cancellation-refund.ts`).
+ * Checked against the server's behaviour: a token is held, a card on the link
+ * is held and a method that can't be held is charged at once, a wallet payment
+ * is charged at once, and a cancellation refunds what was paid less the penalty.
  */
 export const PAYMENT_STATUS_DOCS: Record<PaymentStatus, string> = {
   unpaid: "Nothing is charged or held.",

@@ -18,11 +18,9 @@ const minutesLeft = fact("LIMITS.tokenPaymentMinOfferMinutes");
 /**
  * The ways an order is paid, keyed by the contract's `PayWay`, so a way the
  * contract gains fails the typecheck until it is described. Checked against
- * the server (fortrip-ai `lib/api/v1/orders/pay.ts`, `lib/orders/spt-eligibility.ts`,
- * `lib/orders/wallet-eligibility.ts`, `lib/services/stripe/{shared-payment,wallet-payment,upfront-payment}.ts`):
- * a token's PaymentIntent is manual capture, captured when the hotel
- * confirms and cancelled when it can't; a wallet's is automatic capture,
- * refunded in full when the hotel can't confirm.
+ * the server's behaviour: a token's PaymentIntent is manual capture, captured
+ * when the hotel confirms and cancelled when it can't; a wallet's is automatic
+ * capture, refunded in full when the hotel can't confirm.
  */
 export const PAY_WAY_DOCS: Record<PayWay, PayWayDoc> = {
   payment_link: {

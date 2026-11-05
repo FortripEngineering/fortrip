@@ -19,8 +19,7 @@ import { pageHtml, pageText } from "./built-page.ts";
 /*
  * The pages state some facts in prose. Each comes from the contract export
  * that owns it, through <Fact>; these fail when a page types a value itself.
- * (Ported from fortrip-ai `components/docs/prose-drift.test.ts`: the values
- * the server runs on are pinned by the contract's own tests now.)
+ * (The values the server runs on are pinned by the contract's own tests.)
  */
 
 const docs = new URL("../content/docs/", import.meta.url).pathname;
@@ -81,7 +80,7 @@ function tsProse(ts: string): string {
  * be in its file, so a stale entry fails too.
  */
 const UNOWNED: Array<[file: string, phrase: string]> = [
-  // The per-stay order cap is the server's (fortrip-ai #596); no LIMITS key.
+  // The per-stay order cap is the server's; no LIMITS key.
   ["reference/error-docs.ts", "the stay has had 20 orders"],
 ];
 

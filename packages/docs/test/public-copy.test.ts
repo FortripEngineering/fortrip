@@ -5,7 +5,7 @@ import { test } from "node:test";
 
 /*
  * The public docs, their data and components must not name the hotel
- * supplier or a model. (Ported from fortrip-ai `components/docs/public-copy.test.ts`.)
+ * supplier or a model.
  */
 
 const ROOT = new URL("../", import.meta.url).pathname;
