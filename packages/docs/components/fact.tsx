@@ -14,8 +14,16 @@ import {
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 
-/** The contract values the docs may state, by the name the contract exports. */
+import cli from "../../cli/package.json" with { type: "json" };
+
+/** The oldest Node.js major the CLI runs on, from its `engines.node` (`>=22`). */
+const nodeRange = /^>=(\d+)$/.exec(cli.engines.node);
+if (!nodeRange) throw new Error(`Unexpected engines.node in the CLI package: ${cli.engines.node}`);
+
+/** The contract values the docs may state, by the name the contract exports,
+ *  and the CLI's Node.js floor from its published package metadata. */
 const FACTS = {
+  CLI_NODE_MAJOR: Number(nodeRange[1]),
   LIMITS,
   RATE_LIMITS,
   SEARCH_RULES,

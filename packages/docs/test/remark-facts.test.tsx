@@ -38,10 +38,21 @@ describe("remarkFacts", () => {
     assert.equal(await render('<Fact path="MCP_SERVER_URL" />'), "<p>https://mcp.fortrip.ai/</p>");
   });
 
-  it("puts the value straight into an element it stands alone in", async () => {
+  it("puts the value straight into the code element it stands alone in", async () => {
     assert.equal(
       await render('<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>'),
       "<pre><code>https://mcp.fortrip.ai/</code></pre>",
+    );
+  });
+
+  it("keeps the paragraph inside any other element", async () => {
+    assert.equal(
+      await render('<div><Fact path="MCP_SERVER_URL" /></div>'),
+      "<div><p>https://mcp.fortrip.ai/</p></div>",
+    );
+    assert.equal(
+      await render('<aside>\n  <Fact path="MCP_SERVER_URL" />\n</aside>'),
+      "<aside><p>https://mcp.fortrip.ai/</p></aside>",
     );
   });
 

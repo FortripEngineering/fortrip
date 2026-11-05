@@ -25,6 +25,7 @@ test("every contract tool has a docs page that takes its words from the contract
     assert.equal(tool.title, spec?.title);
     assert.equal(tool.summary, spec?.description);
     assert.equal(tool.readOnly, spec?.annotations.readOnlyHint);
+    assert.equal(tool.access === "Read-only", tool.readOnly, `${tool.name}: access`);
   }
 });
 

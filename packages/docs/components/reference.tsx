@@ -42,15 +42,6 @@ function Code({ children }: { children: string }) {
   );
 }
 
-function access(tool: (typeof MCP_TOOLS)[number]): string {
-  if (tool.readOnly) return "Read-only";
-  const writes: Partial<Record<ToolName, string>> = {
-    cancel_order: "Cancels an order",
-    pay_order: "Pays an order",
-  };
-  return writes[tool.name] ?? "Creates an unpaid order";
-}
-
 /** The tools, each linking to its page. */
 export function ToolList() {
   return (
@@ -63,7 +54,7 @@ export function ToolList() {
             </Link>
           </td>
           <td>{tool.title}</td>
-          <td>{access(tool)}</td>
+          <td>{tool.access}</td>
         </tr>
       ))}
     </Table>
@@ -83,7 +74,7 @@ export function ToolPage({ name }: { name: ToolName }) {
     <>
       {rest && <p>{inline(rest)}</p>}
       <p className="text-sm text-fd-muted-foreground">
-        <code>{tool.name}</code> · {access(tool)}
+        <code>{tool.name}</code> · {tool.access}
         {cli && (
           <>
             {" "}

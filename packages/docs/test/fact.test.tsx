@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import cli from "../../cli/package.json" with { type: "json" };
+
 import { fact, type FactPath } from "../components/fact.tsx";
 
 describe("fact", () => {
@@ -18,6 +20,10 @@ describe("fact", () => {
 
   it("reads a top-level constant", () => {
     assert.equal(fact("MCP_SERVER_URL"), "https://mcp.fortrip.ai/");
+  });
+
+  it("reads the oldest Node.js the CLI supports from its package", () => {
+    assert.equal(`>=${fact("CLI_NODE_MAJOR")}`, cli.engines.node);
   });
 
   it("fails on a path the contract doesn't have", () => {

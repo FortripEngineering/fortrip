@@ -17,6 +17,8 @@ export interface McpTool {
   /** Its first sentence, short enough for a meta description. */
   snippet: string;
   readOnly: boolean;
+  /** What a call does: "Read-only", or what it writes. */
+  access: string;
   /** The matching CLI command as typed: `fortrip hotels offers`. */
   cli: string;
   /** The slug of that command's page. */
@@ -30,18 +32,19 @@ export interface McpTool {
  *  and a tool added to the contract fails the typecheck until it is listed. */
 const DOCS: Record<
   ToolName,
-  { group: string; returns?: string; cliArgs?: string }
+  { group: string; access: string; returns?: string; cliArgs?: string }
 > = {
-  search_hotels: { group: "Hotels" },
-  get_hotel: { group: "Hotels" },
-  get_hotel_offers: { group: "Hotels" },
-  book_hotel: { group: "Orders" },
-  get_order: { group: "Orders" },
-  list_orders: { group: "Orders" },
-  cancel_order: { group: "Orders" },
-  pay_order: { group: "Orders" },
+  search_hotels: { group: "Hotels", access: "Read-only" },
+  get_hotel: { group: "Hotels", access: "Read-only" },
+  get_hotel_offers: { group: "Hotels", access: "Read-only" },
+  book_hotel: { group: "Orders", access: "Creates an unpaid order" },
+  get_order: { group: "Orders", access: "Read-only" },
+  list_orders: { group: "Orders", access: "Read-only" },
+  cancel_order: { group: "Orders", access: "Cancels an order" },
+  pay_order: { group: "Orders", access: "Pays an order" },
   get_planning_guide: {
     group: "Guides",
+    access: "Read-only",
     returns:
       "A Markdown guide. It says what to ask the user, which results count as evidence, and how to rank and present options.",
     cliArgs: "planning",
@@ -58,7 +61,7 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
     if (!tool || !command) {
       throw new Error(`${name} is not in the contract's TOOLS and COMMANDS`);
     }
-    const { group, returns, cliArgs } = DOCS[name];
+    const { group, access, returns, cliArgs } = DOCS[name];
     const response = responseDocFor(name);
     if (!response && !returns) throw new Error(`${name}: what does it return?`);
     return {
@@ -69,6 +72,7 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
       summary: tool.description,
       snippet: firstSentence(tool.description),
       readOnly: tool.annotations.readOnlyHint,
+      access,
       cli: cliArgs
         ? `${commandInvocation(command)} ${cliArgs}`
         : commandInvocation(command),

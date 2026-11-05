@@ -15,6 +15,7 @@ import {
 } from "@fortrip/agent-contract";
 import { ENABLED_REGIONS } from "@fortrip/agent-contract/regions";
 
+import { fact } from "../components/fact.tsx";
 import { limitRows } from "../lib/reference/limits.ts";
 import { REFERENCE_PAGES } from "../lib/reference/pages.tsx";
 import { RESPONSE_DOCS } from "../lib/reference/response-docs.ts";
@@ -97,6 +98,7 @@ describe("reference pages", () => {
     const cli = html("/cli");
     for (const { route } of commandRoutes) assert.ok(cli.includes(`href="${route}"`), route);
     for (const option of GLOBAL_FLAGS) assert.ok(cli.includes(`--${option.flag}`), option.flag);
+    assert.ok(cli.includes(`Needs Node.js ${fact("CLI_NODE_MAJOR")} or newer.`));
   });
 
   it("documents every response schema, error code, limit and rate limit", () => {

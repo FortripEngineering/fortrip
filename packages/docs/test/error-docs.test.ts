@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { ERROR_CODES, ERROR_DETAILS } from "@fortrip/agent-contract";
+import { ERROR_CODES, ERROR_DETAILS, LIMITS } from "@fortrip/agent-contract";
 
 import { detailsShape, ERROR_ROWS } from "../lib/reference/error-docs.ts";
 
@@ -73,6 +73,10 @@ test("the meanings say what the contract and its guide say", () => {
   assert.match(
     meaning("invalid_request"),
     /`listedShare` is the fraction, from 0 to 1, of the hotels that list facilities/,
+  );
+  assert.match(
+    meaning("destination_ambiguous"),
+    new RegExp(`lists up to ${LIMITS.candidatesShown} with`),
   );
   // The guide's order_exists cases (renderGuide "cli" main).
   for (const blocked of [

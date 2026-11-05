@@ -2,6 +2,7 @@ import {
   ERROR_CODES,
   ERROR_DETAILS,
   type ErrorCode,
+  LIMITS,
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 import type { z } from "zod";
@@ -59,7 +60,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   payment_method_unavailable:
     "This order can't be paid with a token (its `payment.handlers` is empty), or it took its limit of tokens. Give the user `payment.url`.",
   destination_ambiguous:
-    "Several places carry the name. `candidates` lists up to 8 with their hotel counts, `candidatesTotal` how many there are, and `nameAsText` how many hotels match the name as text. Ask the user which one is meant, then search it by `placeId`.",
+    `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:
     "`no_match`: no place in the country carries the name. `unknown_id`: the `placeId` isn't known. `not_a_locality`: the place is no locality hub; `hub` is the hub it belongs to, and searching the town itself with `place` gives a radius around it.",
   search_too_broad:
