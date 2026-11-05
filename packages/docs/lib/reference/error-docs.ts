@@ -50,7 +50,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   payment_in_progress:
     "Another payment of the order is under way. Read the order after `retryAfterSeconds`.",
   payment_total_changed:
-    "The `total` sent isn't the order's. Confirm the order's total with the user, then call again with that total and the same token. This call charged nothing.",
+    "The `total` sent isn't the order's; `details.total` is. Confirm that total with the user, then call again with it: with the same token, or with `method` again for Alipay or WeChat Pay. This call charged nothing.",
   payment_credential_invalid:
     "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the order's `payment.credentialLimits`), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
   payment_declined:
@@ -58,7 +58,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   payment_action_required:
     "The card needs a verification (such as 3-D Secure) that a token payment can't give. The user pays by `payment.url`, which stays open.",
   payment_method_unavailable:
-    "This order can't be paid with a token (its `payment.handlers` is empty), or it took its limit of tokens. Give the user `payment.url`.",
+    "The order can't be paid the way asked. With a token: its `payment.handlers` is empty, it took its limit of tokens, Stripe refused the token for a reason a new one wouldn't fix, or an Alipay or WeChat Pay payment was opened on it (use `payment.wallets`). With `method`: Alipay and WeChat Pay aren't offered for it (`payment.wallets` is `null`), or too little of its payment window is left to start a payment. Otherwise give the user `payment.url`.",
   destination_ambiguous:
     `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:
