@@ -3,14 +3,47 @@ title: Introduction
 description: Fortrip gives AI agents hotel search, live offers and orders. Your agent finds and prices the stay; the user reviews the terms and pays.
 ---
 
+Fortrip lets an AI agent search hotels, compare live offers and book a stay that the user pays for themselves.
+
+## Pick your path [#pick-your-path]
+
+<Cards>
+  <Card title="Use Fortrip in your AI app" href="/quickstart">
+    Connect Claude, ChatGPT, Codex or another agent and ask it for a stay.
+  </Card>
+  <Card title="Build on the HTTP API" href="/api-quickstart">
+    Sign in, search, get offers and create an order in five calls.
+  </Card>
+  <Card title="Build an MCP client" href="/mcp">
+    Connect your own agent to Fortrip's MCP server.
+  </Card>
+</Cards>
+
 ## What you can do [#what-you-can-do]
 
 - Search hotels in a city, region or country, near a place or point, or by name or brand, with an indicative price per room and night.
 - Read a hotel's details: address, time zone, check-in times, the full description, its policies, amenities and rooms.
 - Get live offers for up to <Fact path="LIMITS.offersHotels" /> hotels: the room, the meals, the total in USD, fees payable at the property, cancellation terms and how the booking is confirmed.
-- Order an offer and have the user pay it [one of the ways](#how-an-order-works) the order offers; then follow the order, cancel it under its terms and list past orders.
+- Order an offer and have the user pay it; then follow the order, cancel it under its terms and list past orders.
 
-Offers and orders are for stays of 1 to <Fact path="LIMITS.nightsSupplier" /> nights, with up to <Fact path="LIMITS.rooms" /> rooms of the same party. Orders are charged in USD. <Fact path="GUIDE_SENTENCES.adaptivePricing" /> Prices can also be shown in <OtherDisplayCurrencies /> as a labelled estimate. Flights, activities and changes to existing orders are not supported.
+Flights, activities and changes to existing orders aren't supported. The limits on stays and rooms are in [Errors & limits](/errors#limits).
+
+## How an order works [#how-an-order-works]
+
+1. **Search** for hotels. You get `hotelId`s and, when you give dates, indicative prices. See [How search works](/search).
+2. **Get offers** for the hotels the user likes. Each offer has an `offerId` and expires at its `expiresAt`. See [the flow](/payments#flow).
+3. **Order** the chosen offer with the guests and a contact. You get an unpaid order with its total and terms. If the price or terms changed, you get the changes instead. See [Order](/payments#order).
+4. **Confirm** the total and terms with the user, then have them pay. See [Pay](/payments#pay).
+
+<PayWays variant="sentence" />
+
+## Key terms [#key-terms]
+
+- **Offer**: a live, bookable room at a total price, with its terms. A search's **indicative price** only shows roughly what a hotel costs; it can't be booked.
+- **Order**: what ordering an offer makes. It stays unpaid, and nothing is charged, until the user pays.
+- **Payment link**: the order's `payment.url`, a Fortrip page where the user pays.
+- **Link token**: a shared payment token from the user's Stripe Link wallet. Some agents can pay an order with one, once the user approves it.
+- **Reference**: the order's number, starting `FT-`. The user quotes it to support.
 
 ## Ways to connect [#ways-to-connect]
 
@@ -24,7 +57,7 @@ All of them give the same capabilities and sign in with a Fortrip account.
     Run fortrip commands from a terminal or script. They print compact text, or JSON with `--json`.
   </Card>
   <Card title="Remote MCP" href="/install#remote-mcp">
-    Point any MCP client with OAuth at <Fact path="MCP_SERVER_URL" />. Nothing to install.
+    Point any MCP client with OAuth at <Fact path="MCP_SERVER_URL" />. Nothing to install. The model reads compact text; your code gets the full object in `structuredContent`.
   </Card>
   <Card title="Local MCP" href="/install#local-mcp">
     Run `npx -y fortrip mcp` for clients that launch local commands. It forwards to the hosted server.
@@ -33,14 +66,3 @@ All of them give the same capabilities and sign in with a Fortrip account.
     Call <Fact path="API_BASE_URL" /> with a Fortrip OAuth access token.
   </Card>
 </Cards>
-
-## How an order works [#how-an-order-works]
-
-1. **Search** for hotels and get `hotelId`s, with indicative prices when you give a stay. Indicative prices can't be booked.
-2. **Get offers** for the hotels the user likes. Each offer has an `offerId` and expires at its `expiresAt`.
-3. **Order** the chosen offer with the guests and a contact. You get an unpaid order: the total, the stay, its terms and the ways it can be paid. If the price or terms changed since the offer, you get `offer_changed` with every change instead.
-4. **Confirm** the total and terms with the user, then have them pay one way:
-
-<PayWays variant="summary" />
-
-Nothing is charged until the user pays or approves a token. See [Orders and payment](/api#orders) for when each way applies, and every field in [Response schemas](/schemas).

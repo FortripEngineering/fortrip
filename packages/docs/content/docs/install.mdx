@@ -3,7 +3,9 @@ title: Installation
 description: Install Fortrip as an agent skill, a CLI, a remote MCP server with OAuth, or a local stdio MCP server, and set it up in your client.
 ---
 
-Pick the connection that fits your client. Each one uses the same Fortrip account and returns the same data.
+## Choosing a setup [#choosing]
+
+Claude Code → [the plugin](#claude-code). Codex → [MCP](#codex), or [the skill](#skill) if you prefer the CLI. Chat apps → [the remote MCP connector](#clients). Install one per agent, not several. Each uses the same Fortrip account and returns the same data.
 
 ## Agent skill [#skill]
 
@@ -11,7 +13,9 @@ For Codex, Claude Code, Muse, WorkBuddy and other agents that use skills and can
 
 <pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
 
-The skill carries the agent guide: when to use Fortrip, the call order, how to sign in, and what to show the user before they pay. Your agent runs the CLI with `npx -y fortrip@latest`; `fortrip guide` prints the same guide.
+`npx skills add` runs the open-source skills installer. It finds the agents on your machine, asks which ones to add the skill to, and writes it to their skills folders in the current project; add `-g` to install it for every project.
+
+The skill carries the agent guide: when to use Fortrip, the call order, how to sign in, and what to show the user before they pay. Your agent runs the CLI with `npx -y fortrip@latest`, so it may ask your permission to run those commands. `fortrip guide` prints the same guide.
 
 ## CLI [#cli]
 
@@ -32,8 +36,6 @@ Nothing to install. Use a client that supports Streamable HTTP and MCP OAuth.
 A `401` before you sign in is expected: authenticate through your client.
 
 ## Set up your client [#clients]
-
-Claude Desktop runs the [local server](#local-mcp); the others connect to the remote one.
 
 <ClientSetup />
 
@@ -58,8 +60,10 @@ Configure either the remote or the local server in a client, not both. See [fort
 
 | Connection | How it signs in |
 | --- | --- |
-| Skill, CLI, local MCP | OAuth device flow. `npx fortrip login` prints a link and a code; open the link, sign in to Fortrip and approve, and the CLI saves the sign-in. The CLI renews its access token itself; you stay signed in until `npx fortrip logout`, which signs out that machine only. For a remote agent environment or a CI run you can set `FORTRIP_TOKEN` to an access token instead; see [Environment](/cli#environment). |
-| Remote MCP | OAuth 2.1 with PKCE. Your client opens a Fortrip sign-in page and you approve access. |
-| HTTP API | The same OAuth access tokens, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
+| Skill, CLI, local MCP | `npx fortrip login` prints a link and a code; open the link, sign in to Fortrip and approve. You stay signed in until `npx fortrip logout`. In a remote agent environment or a CI run, set `FORTRIP_TOKEN` to an access token instead; see [Environment](/cli#environment). |
+| Remote MCP | Your client opens a Fortrip sign-in page and you approve access. |
+| HTTP API | OAuth access tokens, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
 
-Both use a Fortrip account and the same OAuth service. When a CLI command needs a sign-in it does not wait: it exits with [code <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes) and normally prints a `loginUrl` and a `userCode` (a rejected `FORTRIP_TOKEN` prints `tokenSource` and no link). An agent can give both to the user and rerun the command once they have approved.
+When a CLI command needs a sign-in it doesn't wait: it exits with [code <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes) and prints a `loginUrl` and a `userCode` (for a rejected `FORTRIP_TOKEN`, its `tokenSource` instead). An agent can give both to the user and run the command again once they have approved.
+
+To disconnect, remove the connector in your client; the CLI signs out with `npx fortrip logout`.

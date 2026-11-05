@@ -19,16 +19,17 @@ export interface ClientSetup {
 const repo = new URL(REPOSITORY_URL).pathname.slice(1);
 const plugin = `${marketplace.plugins[0]?.name}@${marketplace.name}`;
 
-/** The local bridge for clients that start a command (packages/cli/README.md). */
-const BRIDGE = JSON.stringify({ mcpServers: { fortrip: { command: "npx", args: ["-y", "fortrip", "mcp"] } } }, null, 2);
-
 /**
  * How to connect each client. Menu paths were checked against the vendors'
- * docs on 2026-11-05 where they could be (claude.ai: support.claude.com
- * "custom connectors"; Claude Desktop: modelcontextprotocol.io "connect local
+ * docs where they could be (claude.ai and Claude Desktop: support.claude.com
+ * "custom connectors using remote MCP", 2026-11-06, which has custom
+ * connectors on both, under Customize → Connectors, configured through the
+ * Claude account; the Desktop bridge: modelcontextprotocol.io "connect local
  * servers"; Codex: `codex mcp add --url` / `codex mcp login` in openai/codex;
- * Claude Code: code.claude.com `/mcp`). ChatGPT's and Cursor's current
- * menus couldn't be confirmed, so their steps name no menu path.
+ * Claude Code: code.claude.com `/mcp`; ChatGPT: developers.openai.com
+ * "developer mode", where a tool without `readOnlyHint` is a write action
+ * the user confirms). ChatGPT's and Cursor's current menus couldn't be
+ * confirmed, so their steps name no menu path.
  */
 export const CLIENT_SETUP: Record<ClientId, ClientSetup> = {
   codex: {
@@ -61,13 +62,13 @@ export const CLIENT_SETUP: Record<ClientId, ClientSetup> = {
   },
   "claude-desktop": {
     name: "Claude Desktop",
-    code: { lang: "json", text: BRIDGE },
+    code: { lang: "text", text: MCP_SERVER_URL },
     steps: [
-      `Run \`npx -y fortrip login\` in a terminal and approve in your browser. The bridge needs Node.js ${fact("CLI_NODE_MAJOR")} or newer and uses this sign-in.`,
-      "In Claude Desktop, open Settings from the Claude menu, then Developer → Edit Config, and add this to `claude_desktop_config.json`.",
-      "Quit Claude Desktop completely, start it again and ask for a stay.",
+      "The same as claude.ai: go to Customize → Connectors, click + Add, then Add custom connector.",
+      "Name it Fortrip, enter this URL and click Continue. Keep the detected sign-in settings (OAuth) and click Add.",
+      "Connect Fortrip, sign in to Fortrip in your browser and ask for a stay.",
     ],
-    note: "The bridge also starts before you sign in: a tool call then answers with how to sign in, and works once you have, without a restart.",
+    note: `Connectors are set up through your Claude account. Without custom connectors, run the [local bridge](#local-mcp) instead: sign in with \`npx -y fortrip login\` (Node.js ${fact("CLI_NODE_MAJOR")} or newer), add the bridge to \`claude_desktop_config.json\` (Settings, then Developer → Edit Config), and restart Claude Desktop.`,
   },
   "claude-ai": {
     name: "claude.ai",
@@ -87,6 +88,7 @@ export const CLIENT_SETUP: Record<ClientId, ClientSetup> = {
       "Create an app with this URL and OAuth authentication, and sign in to Fortrip in your browser when ChatGPT asks.",
       "Turn the app on in a conversation and ask for a stay.",
     ],
+    note: "ChatGPT asks you to approve each action that creates, pays or cancels an order.",
   },
 };
 

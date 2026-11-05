@@ -24,7 +24,7 @@ import { OPERATIONS } from "../lib/openapi/build.ts";
 import { MODEL_READS } from "../lib/markdown/pages.ts";
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
-import { contentSentence } from "../lib/prose/mcp-content.ts";
+import { MCP_CONTENT } from "../lib/prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../lib/prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../lib/prose/pay-ways.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
@@ -197,7 +197,8 @@ describe("Markdown pages", () => {
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
     assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS))}, as`), "pay inputs");
     assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
-    assert.ok(markdown.includes(PRE_RELEASE_POLICY.split(". ")[0]!));
+    assert.ok(markdown.includes("Pre-release: breaking changes ship as a new major version"));
+    assert.ok(pageMarkdown("/changelog").includes(PRE_RELEASE_POLICY.split(". ")[0]!));
   });
 
   it("/install.md: every client's setup and the remote server", () => {
@@ -212,7 +213,17 @@ describe("Markdown pages", () => {
   it("/mcp.md, /cli.md: the tool and command lists, content blocks, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
     includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
-    includesAll(mcp, MCP_TOOLS.map((tool) => contentSentence(tool.name)), "content table");
+    // The tools whose content is more than the compact text, by the block they add.
+    for (const [block, phrase] of [
+      ["presentation_hint", "the presentation hint"],
+      ["wechat_code", "WeChat Pay code first"],
+      ["guide", "planning guide as Markdown"],
+    ] as const) {
+      const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
+      assert.ok(tools.length > 0, block);
+      const line = mcp.split("\n").find((l) => l.includes(phrase)) ?? "";
+      includesAll(line, tools.map((tool) => `\`${tool}\``), block);
+    }
     const nextStep = TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep).map((tool) => tool.name);
     assert.ok(nextStep.length > 0);
     assert.ok(mcp.includes(`An answer of ${codeList(nextStep)} that holds`), "nextStep tools");
@@ -252,8 +263,8 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("/examples.md: each example in fenced code, in every language", () => {
-    const markdown = pageMarkdown("/examples");
+  it("/api-quickstart.md: each example in fenced code, in every language", () => {
+    const markdown = pageMarkdown("/api-quickstart");
     for (const [dir, ext] of [
       ["curl", "sh"],
       ["ts", "ts"],
@@ -265,11 +276,11 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("/index.md: the ways to pay, the display currencies and the ways to connect", () => {
+  it("/index.md: the ways to pay and the ways to connect; /api.md: the display currencies", () => {
     const markdown = pageMarkdown("/");
-    includesAll(markdown, PAY_WAYS.map((way) => `**${PAY_WAY_DOCS[way].title}**`), "pay ways");
-    includesAll(markdown, DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
+    includesAll(markdown, PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short), "pay ways");
     assert.ok(markdown.includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
+    includesAll(pageMarkdown("/api"), DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
   });
 
   it("a tool page has its input fields; a command page its usage", () => {
