@@ -55,7 +55,7 @@ export function toolMarkdown(name: ToolName): string {
             ? [text(" It also carries "), code("nextStep"), text(", the rule for sharing "), code("payment.url"), text(".")]
             : []),
           text(" Errors are described in the "),
-          link("/mcp#results", text("overview")),
+          link("/mcp#errors", text("overview")),
           text("."),
         ];
   return toMarkdown([

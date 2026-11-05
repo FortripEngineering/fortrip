@@ -91,7 +91,7 @@ export function ToolPage({ name }: { name: ToolName }) {
               It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
             </>
           )}{" "}
-          Errors are described in the <Link href="/mcp#results">overview</Link>.
+          Errors are described in the <Link href="/mcp#errors">overview</Link>.
         </p>
       )}
     </>
