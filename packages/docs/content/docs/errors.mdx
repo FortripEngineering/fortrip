@@ -1,0 +1,51 @@
+---
+title: Errors & limits
+description: The HTTP API, the MCP tools and the CLI share one error envelope, one set of codes and the same limits.
+---
+
+## Error format [#format]
+
+Every failure answers the same envelope:
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many requests; retry later.",
+    "retryable": true,
+    "retryAfterSeconds": 42,
+    "details": { "scope": "search" },
+    "requestId": "req_…"
+  }
+}
+```
+
+- `code` is one of the codes below; act on it, not on `message`, which is English for people. A code you don't know: go by the HTTP status and `retryable`.
+- `param`, when present, points at the field at fault: a JSON Pointer into the body (`/stay/checkIn`), or `/query/<name>` and `/path/<name>`.
+- A retryable error carries `retryAfterSeconds` and the `Retry-After` header.
+- A wrong method answers `invalid_request` with HTTP 405 and an `Allow` header.
+- Over MCP an error is `isError: true`: `content[0]` says what happened and what to do next, `content[1]` is the envelope as JSON text, and `_meta["ai.fortrip/error"]` carries it too. The CLI prints the error to stderr (the envelope with `--json`) and exits with a code below.
+
+## Error codes [#codes]
+
+<ErrorCodes />
+
+## CLI exit codes [#exit-codes]
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success. |
+| `1` | Any other error. An error code the CLI doesn't know exits by its HTTP status: 400 → 2, 401 → 3, 429 → 4, any other status 1. |
+| `2` | Invalid arguments, found by the CLI or answered as `invalid_request`. |
+| `3` | Not signed in, or the saved sign-in is no longer accepted (`unauthenticated`). stderr normally includes `loginUrl` and `userCode`: show them to the user and rerun the command once they have approved. When `FORTRIP_TOKEN` is set and Fortrip rejects it, stderr has `tokenSource: "FORTRIP_TOKEN"` and no link: replace or unset the token. |
+| `4` | Rate limited (`rate_limited`). stderr includes `retryAfterSeconds`. |
+
+## Rate limits [#rate-limits]
+
+Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. Over a limit, the answer is `429 rate_limited` with the limit's `scope`.
+
+<RateLimitsTable />
+
+## Limits [#limits]
+
+<LimitsTable />

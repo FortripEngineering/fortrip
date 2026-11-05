@@ -1,0 +1,24 @@
+---
+title: Overview
+description: Search hotels, compare live offers and create orders with a payment link from any MCP client. The remote and the local server expose the same tools, and each tool matches a CLI command and an HTTP endpoint.
+---
+
+## Endpoint [#endpoint]
+
+<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>
+
+Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients that only launch local commands can run [`npx -y fortrip mcp`](/cli/mcp), a stdio bridge to this server, instead. Setup for each client is in [Installation](/install#remote-mcp).
+
+## Tools [#tools]
+
+<ToolList />
+
+## Results and errors [#results]
+
+- Success: `content[0]` is compact text for the model: one line per hotel, offer or order with its ids, full descriptions and policies, every note, and "not listed" or "unknown" written out. `structuredContent` is the full response object, the same as the [HTTP API](/api)'s, and every tool declares its `outputSchema`.
+- An answer with a `payment.url` (`book_hotel`, `get_order`, `list_orders`) also carries `nextStep`: show the user the total and terms and wait for a clear yes before giving them the link.
+- Failure: `isError: true` with no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text.
+- Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
+- `_meta["ai.fortrip/requestId"]` carries the request id, and `_meta["ai.fortrip/replayed"]` marks an order answered again for the same details.
+
+See [Errors & limits](/errors).

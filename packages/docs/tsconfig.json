@@ -20,7 +20,8 @@
       "@/*": ["./*"],
       // The contract is read from its source, as the CLI does, so typecheck,
       // tests and the build don't need it built first.
-      "@fortrip/agent-contract": ["../contract/src/index.ts"]
+      "@fortrip/agent-contract": ["../contract/src/index.ts"],
+      "@fortrip/agent-contract/regions": ["../contract/src/regions.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],

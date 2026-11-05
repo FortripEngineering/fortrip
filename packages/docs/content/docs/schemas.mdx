@@ -1,0 +1,15 @@
+---
+title: Response schemas
+description: Each object below is what the HTTP API answers, what an MCP tool returns as structuredContent, and what the CLI prints with --json.
+---
+
+The fields come from the zod schemas in the [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract) npm package.
+
+## Reading the tables [#reading]
+
+- Every field is present unless marked optional; `| null` means the field can be `null`. On catalogue facts `null` means not known, never no. Elsewhere it has its own meaning: `nextCursor` is `null` on the last page, `payment.url` when there is no link to pay now, and `payment.credentialLimits` when a token can't pay the order.
+- `[]` marks the items of a list, and "when `kind`" or "when `type`" a branch of a union, with that branch's fields below it.
+- The schemas are open: objects can gain fields, enums can gain values, and unions can gain branches. Don't fail on what you don't know.
+- Field rules shared by every response (ids, money, dates, names) are in [Conventions](/api#conventions).
+
+<SchemaTables />

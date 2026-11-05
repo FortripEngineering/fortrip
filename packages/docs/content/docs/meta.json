@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "index",
+    "---Search---",
+    "regions",
+    "---Reference---",
+    "schemas",
+    "errors",
+    "mcp",
+    "cli"
+  ]
+}
