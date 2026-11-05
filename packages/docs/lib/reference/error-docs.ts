@@ -81,7 +81,7 @@ const MEANINGS: Record<ErrorCode, string> = {
     "Ordering is paused for now. Search and offers still work, and an order already made can still be read. Retry after `retryAfterSeconds`.",
   service_unavailable:
     "A service Fortrip depends on is briefly unavailable. Retry after `retryAfterSeconds`.",
-  supplier_unavailable: `The hotel supplier didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call was sent and timed out; for an order, read your orders before ordering again.`,
+  supplier_unavailable: `The hotel supplier didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call reached the supplier and timed out, so it may have taken effect. Either way, sending the same call again is safe ([retries](/api#retries)).`,
   internal: "An unexpected error. The `requestId` helps support find it.",
 };
 

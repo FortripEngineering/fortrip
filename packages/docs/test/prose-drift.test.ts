@@ -14,7 +14,7 @@ import {
 } from "@fortrip/agent-contract";
 
 import { ENVIRONMENT } from "../../cli/src/environment.ts";
-import { PRE_RELEASE_POLICY, PRE_RELEASE_POLICY_ON_CHANGELOG } from "../lib/prose/compatibility.ts";
+import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
 import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
 import { ENVIRONMENT_ROWS } from "../lib/reference/environment.ts";
 import { pageHtml, pageText } from "./built-page.ts";
@@ -133,11 +133,11 @@ test("the API page states the order statuses, the replay header and the /me scop
   assert.ok(text.includes(`the ${ME_SCOPES.email} scope`));
 });
 
-test("the local-currency sentence is the guide's, on both pages that say USD", () => {
+test("the local-currency sentence is the guide's, on both pages that say what is charged", () => {
   assert.ok(renderGuide("mcp", "main").includes(ADAPTIVE_PRICING));
   assert.match(ADAPTIVE_PRICING, /local currency at Stripe's rate\.$/);
   for (const [page, route] of [
-    ["index.mdx", "/"],
+    ["payments.mdx", "/payments"],
     ["api/index.mdx", "/api"],
   ] as const) {
     assert.ok(source(page).includes('<Fact path="GUIDE_SENTENCES.adaptivePricing" />'), page);
@@ -145,17 +145,16 @@ test("the local-currency sentence is the guide's, on both pages that say USD", (
   }
 });
 
-test("the pre-release policy has one source, rendered on the API page and the changelog", () => {
+test("the changelog owns the pre-release policy; the API page states it in one line and links there", () => {
   const plain = (policy: string) => policy.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replaceAll("`", "");
   assert.match(plain(PRE_RELEASE_POLICY), /^Fortrip's agent API is pre-release\. Until general availability/);
-  assert.ok(source("api/index.mdx").includes("<PreReleasePolicy />"));
-  assert.ok(pageText("/api").includes(plain(PRE_RELEASE_POLICY)));
-  assert.match(pageHtml("/api"), /href="\/changelog">changelog<\/a>/);
+  assert.ok(source("changelog.mdx").includes("<PreReleasePolicy />"));
+  assert.ok(pageText("/changelog").includes(plain(PRE_RELEASE_POLICY)));
   // The changelog states it without a link to itself.
-  assert.notEqual(PRE_RELEASE_POLICY_ON_CHANGELOG, PRE_RELEASE_POLICY);
-  assert.ok(source("changelog.mdx").includes('<PreReleasePolicy page="changelog" />'));
-  assert.ok(pageText("/changelog").includes(plain(PRE_RELEASE_POLICY_ON_CHANGELOG)));
   assert.doesNotMatch(pageHtml("/changelog"), /href="\/changelog"[^>]*>changelog<\/a>/);
+  assert.ok(!source("api/index.mdx").includes("<PreReleasePolicy"));
+  assert.ok(pageText("/api").includes("Pre-release: breaking changes ship as a new major version; see the changelog."));
+  assert.match(pageHtml("/api"), /href="\/changelog">changelog<\/a>/);
   for (const page of [...PAGES, "changelog.mdx"]) {
     assert.doesNotMatch(source(page), /Until general availability/, page);
   }

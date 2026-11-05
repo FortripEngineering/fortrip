@@ -14,19 +14,20 @@ import { pageHtml, pageText } from "./built-page.ts";
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
 describe("stale statements stay fixed", () => {
-  it("/api: three ways to pay, the wallet input, and no additive-only promise", () => {
+  it("/api: the pay inputs, and no additive-only promise; /payments: the Alipay or WeChat Pay input", () => {
     const text = pageText("/api");
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
-    assert.ok(text.includes("method"));
-    assert.ok(text.includes("payment.wallets"));
-    assert.ok(text.includes('"alipay_wechat_pay"'));
     // §8.1 item 2: exactly one of the three inputs.
     assert.match(text, /exactly one of sharedPaymentToken, payment and method/);
-    // §8.1 item 3, the owner's ruling.
-    assert.match(text, /[Uu]ntil general availability/);
+    // §8.1 item 3, the owner's ruling, which the changelog states in full.
     assert.match(text, /major version/);
     assert.match(text, /changelog/);
+    assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
+    const payments = pageText("/payments");
+    assert.ok(payments.includes("method"));
+    assert.ok(payments.includes("payment.wallets"));
+    assert.ok(payments.includes('"alipay_wechat_pay"'));
   });
 
   it("/mcp: content[0] is not always text", () => {

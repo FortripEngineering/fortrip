@@ -7,18 +7,27 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`. There is no CORS: call the API from a server, a script or the CLI, not from a web page.
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`. There is no CORS: call the API from a server, a script or the CLI, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
 
 ## Authentication [#authentication]
 
-Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a Fortrip OAuth access token, sent as `Authorization: Bearer <token>`. Cookies and API keys are not accepted. The tokens are the ones the CLI and MCP clients get when a user signs in to Fortrip; <code><Fact path="ROUTES.authConfig" /></code> returns the OAuth settings a client signs in with (the CLI uses the device authorization flow).
+Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a Fortrip OAuth access token, sent as `Authorization: Bearer <token>`. Cookies are not accepted.
 
-To get a token for your own integration:
+### Choose a sign-in flow [#sign-in-flow]
+
+- **An app without a browser of its own, such as a CLI or a script:** the device flow below, with the `clientId` from <code><Fact path="ROUTES.authConfig" /></code>, the OAuth sign-in settings.
+- **A web app:** the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints.
+
+There are no API keys, service accounts or partner accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to that account.
+
+### Device flow [#device-flow]
 
 1. <code><Fact path="ROUTES.authConfig" /></code> returns `issuer`, `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
 2. Run the OAuth device authorization flow (RFC 8628) with them: post `client_id` and `scope` as a form to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete` (or `verification_uri` and `user_code`), then poll `tokenEndpoint` every `interval` seconds with `grant_type=urn:ietf:params:oauth:grant-type:device_code`, the `device_code` and `client_id` until the user approves.
 3. Request `offline_access`, which `scopes` includes, to get a refresh token with the access token.
 4. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token` and your `client_id`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again. To sign out, revoke the refresh token at `revocationEndpoint`, again with your `client_id`.
+
+The [API quickstart](/api-quickstart#sign-in) runs this flow in curl, TypeScript and Python.
 
 A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
 
@@ -34,10 +43,18 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 
 - Fields are camelCase. Ids are opaque strings with a prefix: `htl_` hotels, `off_` offers, `ord_` orders and `plc_` places. Pass them back exactly as received.
 - Instants end in `At` and are RFC 3339 in UTC. Dates are `yyyy-MM-dd` in the hotel's calendar, and times of day `HH:mm` in the hotel's time zone, its IANA `timeZone`.
-- Money is `{ amount: "132.40", currency: "USD" }`, the amount a decimal string. Money in a request must be USD. An `approx` amount is an estimate in the requested `displayCurrency`, with the date of its rate; it never changes what is charged.
 - Coordinates are `{ lat, lng }` in WGS84; distances are in meters.
 - Names with an English and a Chinese form are `name`, in the requested `locale`, plus `names: { en, zh }`. Other text from the catalogue is `{ text, locale }`, with `locale` `null` when unknown. Messages the API writes are in English.
 - **Unknown is not no.** A list or flag the source didn't state is `null`, or comes with `known`, `listed`, `disclosure` or `status` saying so. An amenity that isn't listed may still exist.
+- **Read responses tolerantly.** Objects can gain fields, enums can gain values and unions can gain branches. Allow fields you don't know, treat an unknown enum value or error code as its raw string (or by its HTTP status and `retryable`), and don't fail on them.
+
+### Money [#money]
+
+- Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float. Money in a request must be USD.
+- An `approx` amount is an estimate in the requested `displayCurrency` (USD or <OtherDisplayCurrencies />), with the date of its rate. It is for display only and never changes what is charged.
+- An order is charged in its `payment.chargeCurrency`. Orders made through the API are charged in USD; orders made on the Fortrip website, which the order list includes, may be in another currency.
+- The amount to show the user before they pay is the order's `price.total`, in its charge currency. Fees paid at the property, `payAtProperty`, come on top, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
+- One exception: `maximumPenalty` in a cancel request is a JSON number equal to the order's `cancel.penalty.amount`, such as `120.5` for `"120.50"`.
 
 ## Headers [#headers]
 
@@ -54,25 +71,31 @@ Search results and the order list are pages: `{ data, nextCursor }` for orders, 
 
 Live offers are not a page: they are grouped by hotel, under `hotels`, with the hotels that have nothing to offer under `unavailable` and the reason.
 
-## Orders and payment [#orders]
+## Retries and idempotency [#retries]
 
-- <code><Fact path="ROUTES.book_hotel" /></code> checks the offer with the hotel supplier once. If nothing changed, it answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, its `price.total` in USD and the ways it can be paid. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
-- If the price or any term changed, it answers `409 offer_changed` with every change and a new offer. No order is made at a price the user hasn't seen.
-- Sending the same details for the same offer again answers the same order with <Fact path="ORDER_HTTP.replayedStatus" /> and <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>. Different details for an ordered offer answer `409 offer_already_ordered`.
-- Before the user pays, show them the total and every term and wait for a clear yes. The MCP tools carry this rule with every answer that holds a `payment.url`, as `nextStep`:
+There is no `Idempotency-Key` header. Every call is safe to send again with the same details, and the details decide what the repeat answers:
 
-> <Fact path="ORDER_NEXT_STEP" />
+<RetryTable />
 
-An order is paid one of the ways below. Pay one way only: once the order is paid another way, `payment.url` stops working; a payment that fails leaves it open.
+Retry the codes a retry can help, <RetryableCodes />, once, with the same details, after `retryAfterSeconds`. Any other code needs a change first: the [error codes](/errors#codes) say what to do.
 
-<PayWays variant="full" />
+## Polling [#polling]
 
-<code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, as its way above says. A `total` other than the order's answers `payment_total_changed` and charges nothing. The answer is the order; read it again with <code><Fact path="ROUTES.get_order" /></code> to follow its `status` and `payment.status`. A payment that can't go ahead answers `order_not_payable` or one of the `payment_` [error codes](/errors#codes).
+There are no webhooks. After the user pays, read the order with <code><Fact path="ROUTES.get_order" /></code> every few seconds while it is `confirming`. Each read counts against the `orders_read` limit of <Fact path="RATE_LIMITS.orders_read.limit" /> calls a minute. How long the hotel may take is in the offer's `confirmation`: `instant`, or `on_request` within `withinMinutes`.
 
-Orders can't be changed through the API. <code><Fact path="ROUTES.cancel_order" /></code> cancels one under its terms while `cancel.available` is `true`, with `maximumPenalty` a number equal to `cancel.penalty.amount`. <code><Fact path="ROUTES.list_orders" /></code> lists the user's hotel orders, newest first, including those made on the Fortrip website.
+## Orders [#orders]
+
+- <code><Fact path="ROUTES.book_hotel" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
+- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; `409 offer_already_ordered` when the offer was ordered with other details; and `409 order_exists` when the stay already has an open order for these guests.
+- <code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, as the way it pays by needs.
+- Orders can't be changed through the API.
+
+The whole flow, the ways to pay, the order statuses and cancelling are in [Orders and payment](/payments).
+
+## TypeScript types [#typescript]
+
+[`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract) on npm exports the zod schemas and TypeScript types for every input and response.
 
 ## Changes within v1 [#evolution]
 
-<PreReleasePolicy />
-
-Read responses tolerantly either way: allow fields you don't know, treat an unknown enum value or error code as its raw string (or by its HTTP status and `retryable`), and don't fail on them.
+Pre-release: breaking changes ship as a new major version; see the [changelog](/changelog).
