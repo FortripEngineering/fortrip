@@ -6,7 +6,7 @@ const token = process.env.FORTRIP_TOKEN;
 if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip access token");
 
 const body = {
-  "method": "alipay_wechat_pay",
+  "method": "stripe_alipay_wechat_pay",
   "total": {
     "amount": "132.40",
     "currency": "USD"

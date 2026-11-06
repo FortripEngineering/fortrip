@@ -28,6 +28,7 @@ import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
+  CALLS,
   CANCEL_NEXT_STEP,
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
@@ -188,16 +189,13 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    handlers: [],
-    credentialLimits: null,
-    wallets: null,
+    methods: [],
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
 const TOOL_NAMES = [
-  "get_planning_guide",
   "search_hotels",
   "get_hotel",
   "get_hotel_offers",
@@ -209,7 +207,7 @@ const TOOL_NAMES = [
 ] as const;
 
 describe("TOOLS", () => {
-  it("lists the nine tools in call order", () => {
+  it("lists the eight tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
       [...TOOL_NAMES],
@@ -221,7 +219,6 @@ describe("TOOLS", () => {
     assert.deepEqual(
       Object.fromEntries(TOOLS.map((spec) => [spec.name, spec.title])),
       {
-        get_planning_guide: "Planning guide",
         search_hotels: "Search hotels",
         get_hotel: "Hotel details",
         get_hotel_offers: "Live offers",
@@ -242,10 +239,12 @@ describe("TOOLS", () => {
     );
   });
 
-  it("pay_order describes both forms: a token and method alipay_wechat_pay", () => {
+  it("pay_order describes both forms: a token and method stripe_alipay_wechat_pay", () => {
     const pay = TOOLS.find((t) => t.name === "pay_order");
-    assert.match(pay?.description ?? "", /method alipay_wechat_pay/);
-    assert.match(pay?.description ?? "", /payment\.wallets/);
+    assert.match(pay?.description ?? "", /by one of its payment\.methods/);
+    assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
+    assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
+    assert.match(pay?.description ?? "", /show the wallet entry/);
     assert.match(pay?.description ?? "", /WeChat code as an image if you can, both links/);
     assert.match(pay?.description ?? "", /ask them to confirm and wait for a clear yes/);
     assert.match(pay?.description ?? "", /a code lasts 120 minutes/);
@@ -265,7 +264,6 @@ describe("TOOLS", () => {
 
   // Spec §6: MCP tool inputs mirror the HTTP bodies and query exactly.
   it("every tool's input is the HTTP request schema", () => {
-    assert.equal(tool("get_planning_guide").input, null);
     assert.equal(tool("search_hotels").input, searchHotelsInput);
     assert.equal(tool("get_hotel").input, getHotelInput);
     assert.equal(tool("get_hotel_offers").input, hotelOffersInput);
@@ -276,8 +274,7 @@ describe("TOOLS", () => {
     assert.equal(tool("pay_order").input, payOrderInput);
   });
 
-  it("every tool but the planning guide has an output schema", () => {
-    assert.equal(tool("get_planning_guide").output, null);
+  it("every tool has an output schema", () => {
     assert.equal(tool("search_hotels").output, searchResult);
     assert.equal(tool("get_hotel").output, hotel);
     assert.equal(tool("get_hotel_offers").output, hotelOffersResult);
@@ -316,7 +313,6 @@ describe("TOOLS", () => {
         TOOLS.map((spec) => [spec.name, spec.annotations.openWorldHint]),
       ),
       {
-        get_planning_guide: false,
         search_hotels: true,
         get_hotel: true,
         get_hotel_offers: true,
@@ -369,10 +365,21 @@ describe("TOOLS", () => {
   it("cancel_order carries the consent rule, says what it answers and what a refusal leaves", () => {
     const { description } = tool("cancel_order");
     assert.ok(description.includes(CANCEL_NEXT_STEP), description);
-    assert.match(description, /status cancelling, then cancelled/);
-    assert.match(description, /poll get_order/);
-    assert.match(description, /back to confirmed with cancel\.reason refused/);
+    assert.match(description, /Then poll get_order: cancelling, then cancelled\./);
+    assert.match(description, /Hotel refused: confirmed, reason refused\./);
     assert.match(description, /cancellation_changed/);
+  });
+
+  it("cancel_order closes an unpaid order only on the user's word, and never races a payment", () => {
+    const { description, annotations } = tool("cancel_order");
+    assert.match(description, /^Cancel a paid order under its terms, or close an unpaid one\./);
+    assert.match(description, /close it only once the user says they no longer want it, without maximumPenalty; nothing is charged; it becomes expired\./);
+    assert.match(description, /payment_in_progress: read it again shortly\./);
+    assert.ok(description.length <= 1024, String(description.length));
+    assert.equal(annotations.destructiveHint, true);
+    assert.equal(annotations.idempotentHint, true);
+    assert.equal(CALLS.mcp.close, "call cancel_order");
+    assert.equal(CALLS.cli.close, "run `fortrip orders cancel <orderId> --close`");
   });
 
   it("a description names only tools there are", () => {
@@ -436,7 +443,7 @@ describe("CANCEL_NEXT_STEP", () => {
       /^Before you call cancel_order, show the user [^.]*stay[^.]*cancel\.penalty and cancel\.refund \(amount and currency\)/,
     );
     assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
-    assert.ok(CANCEL_NEXT_STEP.includes('Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).'));
+    assert.ok(CANCEL_NEXT_STEP.includes("Pass maximumPenalty as cancel.penalty, exactly as returned."));
     assert.match(CANCEL_NEXT_STEP, /Never state a refund the order did not return\.$/);
   });
 });
@@ -559,7 +566,6 @@ describe("COMMANDS", () => {
       login: null,
       logout: null,
       whoami: null,
-      guide: "get_planning_guide",
       mcp: null,
     };
     assert.deepEqual(COMMANDS.map(typed), Object.keys(tools));
@@ -615,7 +621,7 @@ describe("COMMANDS", () => {
       limit: "limit",
       cursor: "cursor",
       locale: "locale",
-      "display-currency": "displayCurrency",
+      currency: "currency",
     });
     assert.deepEqual(fields("hotels get"), {
       rooms: "include",
@@ -630,7 +636,7 @@ describe("COMMANDS", () => {
       "require-free-cancellation": "filters.requireFreeCancellation",
       "limit-per-hotel": "limitPerHotel",
       locale: "locale",
-      "display-currency": "displayCurrency",
+      currency: "currency",
     });
     assert.deepEqual(fields("hotels book"), {
       offer: "items.offerId",
@@ -648,8 +654,8 @@ describe("COMMANDS", () => {
       locale: "locale",
     });
     assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
-    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", wallet: "method", total: "total" });
-    for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", method: "method", total: "total" });
+    for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
   });
@@ -659,7 +665,7 @@ describe("COMMANDS", () => {
       COMMANDS.map((spec) => [
         typed(spec),
         (spec.positionals ?? []).map(
-          (p) => `${p.optional ? `[${p.name}]` : `<${p.name}>`} ${p.field}`,
+          (p) => `<${p.name}> ${p.field}`,
         ),
       ]),
     );
@@ -675,7 +681,6 @@ describe("COMMANDS", () => {
       login: [],
       logout: [],
       whoami: [],
-      guide: ["[topic] null"],
       mcp: [],
     });
     for (const spec of COMMANDS) {
@@ -775,12 +780,13 @@ describe("COMMANDS", () => {
 
   it("types each flag after its field", () => {
     // One flag value the CLI parses into an object: `lat,lng`,
-    // `adults[:age,…]`, a USD amount, `room:first:last`.
+    // `adults[:age,…]`, an amount, `room:first:last`.
     const composite = new Set([
       "hotels search point",
       "hotels search room",
       "hotels search price-max-per-room-night",
       "orders pay total",
+      "orders cancel max-penalty",
       "hotels offers room",
       "hotels book guest",
     ]);
@@ -810,13 +816,13 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("only --rooms and --wallet send a value instead of true", () => {
+  it("only --rooms sends a value instead of true", () => {
     const valued = COMMANDS.flatMap((spec) =>
       spec.flags
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=rooms", "orders pay --wallet=alipay_wechat_pay"]);
+    assert.deepEqual(valued, ["hotels get --rooms=rooms"]);
   });
 
   it("every flag description is non-empty", () => {
@@ -863,12 +869,13 @@ describe("COMMANDS", () => {
       "hotels search --amenity",
       "hotels search --sort",
       "hotels search --locale",
-      "hotels search --display-currency",
+      "hotels search --currency",
       "hotels get --locale",
       "hotels offers --locale",
-      "hotels offers --display-currency",
+      "hotels offers --currency",
       "orders get --locale",
       "orders list --locale",
+      "orders pay --method",
     ]);
   });
 
@@ -882,7 +889,7 @@ describe("COMMANDS", () => {
     assert.equal(placeholder("hotels search", "point"), "<lat,lng>");
     assert.equal(placeholder("hotels search", "country-only"), "<CC>");
     assert.equal(placeholder("hotels search", "room"), "<adults[:age,…]>");
-    assert.equal(placeholder("hotels search", "price-max-per-room-night"), "<USD decimal>");
+    assert.equal(placeholder("hotels search", "price-max-per-room-night"), "<decimal>");
     assert.equal(placeholder("hotels search", "check-in"), "YYYY-MM-DD");
     assert.equal(placeholder("hotels offers", "hotel"), "<htl_>");
     assert.equal(placeholder("hotels offers", "room"), "<adults[:age,…]>");
@@ -932,10 +939,9 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("the guide command takes no input", () => {
-    assert.equal(tool("get_planning_guide").input, null);
-    assert.equal(tool("get_planning_guide").output, null);
-    assert.deepEqual(command("guide").flags, []);
+  it("nothing points to a runtime guide", () => {
+    assert.equal(TOOLS.some((spec) => (spec.name as string) === "get_planning_guide"), false);
+    assert.equal(COMMANDS.some((spec) => (spec.name as string) === "guide"), false);
   });
 });
 
@@ -955,8 +961,8 @@ describe("CLI-only options", () => {
   });
 
   // `orders cancel` sends one field, the penalty the user agreed to, and only
-  // from its flag (C7).
-  it("--body is taken by the commands that send a body, but cancel, --no-browser by login", () => {
+  // from its flag (C7); `--close` closes an unpaid order and is never sent.
+  it("--body is taken by the commands that send a body, but cancel, --close by cancel, --no-browser by login", () => {
     const options = Object.fromEntries(
       COMMANDS.map((spec) => [typed(spec), all(spec.options ?? [])]),
     );
@@ -967,15 +973,15 @@ describe("CLI-only options", () => {
       "hotels book": ["body"],
       "orders get": [],
       "orders list": [],
-      "orders cancel": [],
+      "orders cancel": ["close"],
       "orders pay": [],
       login: ["no-browser"],
       logout: [],
       whoami: [],
-      guide: [],
       mcp: [],
     });
     assert.equal(command("login").options?.[0]?.type, "boolean");
+    assert.equal(command("orders cancel").options?.[0]?.type, "boolean");
     assert.equal(command("hotels search").options?.[0]?.type, "string");
   });
 

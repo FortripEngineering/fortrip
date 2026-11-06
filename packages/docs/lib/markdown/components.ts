@@ -5,7 +5,7 @@ import {
   ACCOUNT_ROUTES,
   type Destination,
   destination,
-  DISPLAY_CURRENCIES,
+  CURRENCIES,
   type ErrorCode,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
@@ -378,7 +378,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
             " puts the WeChat Pay code first, as a PNG image, while its answer holds a live code, unless the image couldn't be fetched. The code and its links are in `structuredContent` either way.",
           ),
         ],
-        [...codeList(having("guide")), ...inline(" returns the planning guide as Markdown.")],
         inline("So find a block by its `type` (`text`, `image`), not by its position."),
       ]),
     ];
@@ -617,9 +616,9 @@ export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
   PayInputs: () => codeList(Object.keys(PAY_INPUT_WAYS), "or"),
   /** The amenity codes a search can filter by. */
   FilterableAmenities: () => joined(FILTERABLE_AMENITIES.map((c) => [code(c)]), ", "),
-  /** The currencies a price can also be shown in, besides USD. */
-  OtherDisplayCurrencies: () => {
-    const others = DISPLAY_CURRENCIES.filter((c) => c !== "USD");
+  /** The currencies a request can ask for, besides USD. */
+  OtherCurrencies: () => {
+    const others = CURRENCIES.filter((c) => c !== "USD");
     return [text(others.length > 1 ? `${others.slice(0, -1).join(", ")} or ${others.at(-1)}` : others.join(""))];
   },
   NextStepTools: () => codeList(nextStepTools()),

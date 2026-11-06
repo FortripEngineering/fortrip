@@ -11,7 +11,7 @@ export {
   type PositionalSpec,
 } from "./commands.ts";
 export { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-export { formatMoney, money, usdMoney, type Money } from "./conventions/money.ts";
+export { formatMoney, money, requestMoney, type Money } from "./conventions/money.ts";
 export {
   openEnum,
   openObject,
@@ -65,7 +65,7 @@ export {
   type SearchHotelsInput,
   type Stay,
 } from "./inputs.ts";
-export { DISPLAY_CURRENCIES, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
+export { CURRENCIES, type Currency, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
 export {
   authConfig,
   meResult,
@@ -116,8 +116,10 @@ export {
   orderList,
   orderReference,
   ORDER_STATUSES,
+  PAYMENT_METHOD_IDS,
   PAYMENT_STATUSES,
   paymentHandler,
+  paymentMethod,
   type CancelReason,
   type CredentialInvalidReason,
   type OfferChange,
@@ -125,6 +127,8 @@ export {
   type OrderList,
   type OrderStatus,
   type PaymentHandler,
+  type PaymentMethod,
+  type PaymentMethodId,
   type PaymentStatus,
 } from "./outputs/order.ts";
 export {

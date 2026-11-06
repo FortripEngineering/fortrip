@@ -16,7 +16,7 @@ import {
 import { raw } from "./format.ts";
 import { renderHotel } from "./hotel.ts";
 import { renderOffers } from "./offers.ts";
-import { renderOrder, renderOrderList } from "./order.ts";
+import { methodOf, renderOrder, renderOrderList } from "./order.ts";
 import { renderSearch } from "./search.ts";
 
 export { renderError } from "./errors.ts";
@@ -28,7 +28,7 @@ export { renderError } from "./errors.ts";
  * MCP, a command and its flags on the CLI.
  */
 
-export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
+export type RenderedTool = ToolName;
 
 /**
  * Renders `data`, the answer of `tool`, after parsing it with the tool's
@@ -36,12 +36,15 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * as they came. A result that does not parse is shown as JSON, never thrown.
  * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
  * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
- * follows it when a result holds an order with non-empty `payment.handlers`;
- * the wallet rule (`WALLET_NEXT_STEP`) follows that when it holds an order
- * whose `payment.wallets` is offered and not open;
+ * follows it when a result holds an order whose `payment.methods` has the
+ * `stripe_shared_payment_token` entry; the wallet rule (`WALLET_NEXT_STEP`)
+ * follows that when it holds an order whose `stripe_alipay_wechat_pay` entry
+ * is not open;
  * the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order` or
- * `list_orders` result holds an order with `cancel.available`. `surface`
- * names the next calls: tools (`mcp`, the default) or commands (`cli`).
+ * `list_orders` result holds an order with `cancel.available`, other than
+ * an unpaid one (`cancel.reason` `unpaid`), which is closed with no
+ * penalty. `surface` names the next calls: tools (`mcp`, the default) or
+ * commands (`cli`).
  */
 export function renderToolResult(
   tool: RenderedTool,
@@ -60,8 +63,8 @@ export function renderToolResult(
     return [
       text,
       ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",
-      ORDER_TOOLS.has(tool) && holdsHandlers(data) ? payNextStep(surface) : "",
-      ORDER_TOOLS.has(tool) && holdsWalletOffer(data) ? walletNextStep(surface) : "",
+      ORDER_TOOLS.has(tool) && holdsMethod(data, isTokenMethod) ? payNextStep(surface) : "",
+      ORDER_TOOLS.has(tool) && holdsMethod(data, isWalletOffer) ? walletNextStep(surface) : "",
       CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? cancelNextStep(surface) : "",
     ]
       .filter(Boolean)
@@ -110,37 +113,32 @@ function holdsPaymentUrl(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsPaymentUrl(v, seen));
 }
 
-/** Whether a raw value holds a non-empty `payment.handlers` anywhere inside it. */
-function holdsHandlers(value: unknown, seen = new Set<unknown>()): boolean {
+/** A raw `payment.methods` entry. */
+type RawMethod = { id?: unknown; open?: unknown };
+
+const isTokenMethod = (m: RawMethod) => m.id === "stripe_shared_payment_token";
+const isWalletOffer = (m: RawMethod) => m.id === "stripe_alipay_wechat_pay" && m.open === false;
+
+/** Whether a raw value holds a `payment.methods` entry that `match` takes,
+ *  anywhere inside it. */
+function holdsMethod(
+  value: unknown,
+  match: (m: RawMethod) => boolean,
+  seen = new Set<unknown>(),
+): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
   seen.add(value);
   const payment = (value as { payment?: unknown }).payment;
-  if (
-    typeof payment === "object" &&
-    payment !== null &&
-    Array.isArray((payment as { handlers?: unknown }).handlers) &&
-    (payment as { handlers: unknown[] }).handlers.length > 0
-  ) {
+  const methods =
+    typeof payment === "object" && payment !== null ? (payment as { methods?: unknown }).methods : undefined;
+  if (Array.isArray(methods) && methods.some((m) => typeof m === "object" && m !== null && match(m))) {
     return true;
   }
-  return Object.values(value).some((v) => holdsHandlers(v, seen));
+  return Object.values(value).some((v) => holdsMethod(v, match, seen));
 }
 
-/** Whether a raw value holds a `payment.wallets` that is offered but not open. */
-function holdsWalletOffer(value: unknown, seen = new Set<unknown>()): boolean {
-  if (typeof value !== "object" || value === null || seen.has(value)) return false;
-  seen.add(value);
-  const payment = (value as { payment?: unknown }).payment;
-  if (typeof payment === "object" && payment !== null) {
-    const wallets = (payment as { wallets?: unknown }).wallets;
-    if (typeof wallets === "object" && wallets !== null && (wallets as { open?: unknown }).open === false) {
-      return true;
-    }
-  }
-  return Object.values(value).some((v) => holdsWalletOffer(v, seen));
-}
-
-/** Whether a raw value holds an order whose `cancel.available` is true. */
+/** Whether a raw value holds an order whose `cancel.available` is true,
+ *  other than an unpaid one, which is closed with no penalty. */
 function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
   seen.add(value);
@@ -148,7 +146,8 @@ function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (
     typeof cancel === "object" &&
     cancel !== null &&
-    (cancel as { available?: unknown }).available === true
+    (cancel as { available?: unknown }).available === true &&
+    (cancel as { reason?: unknown }).reason !== "unpaid"
   ) {
     return true;
   }
@@ -164,9 +163,9 @@ function withConsent(
   return [
     text,
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
-    orders.some((o) => o.payment.handlers.length > 0) ? payNextStep(surface) : "",
-    orders.some((o) => o.payment.wallets?.open === false) ? walletNextStep(surface) : "",
-    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
+    orders.some((o) => methodOf(o, "stripe_shared_payment_token")) ? payNextStep(surface) : "",
+    orders.some((o) => methodOf(o, "stripe_alipay_wechat_pay")?.open === false) ? walletNextStep(surface) : "",
+    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available && o.cancel.reason !== "unpaid")
       ? cancelNextStep(surface)
       : "",
   ]

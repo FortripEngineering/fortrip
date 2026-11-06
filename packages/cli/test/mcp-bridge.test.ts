@@ -87,9 +87,8 @@ function hostedPassThrough(schema: StandardSchemaWithJSON): StandardSchemaWithJS
 /**
  * The hosted MCP server as its route registers it (`serverInfo`,
  * `instructions`, then each contract tool with its title, description,
- * annotations and wrapped schemas: an output schema on every tool but the
- * guide, no input schema on the guide), with handlers that are never
- * called.
+ * annotations and wrapped schemas: an input and an output schema on every
+ * tool), with handlers that are never called.
  */
 function hostedServer(): McpServer {
   const server = new McpServer(
@@ -102,19 +101,13 @@ function hostedServer(): McpServer {
       title: spec.title,
       description: spec.description,
       annotations: spec.annotations,
-      ...(spec.output
-        ? { outputSchema: hostedPassThrough(spec.output as unknown as StandardSchemaWithJSON) }
-        : {}),
+      outputSchema: hostedPassThrough(spec.output as unknown as StandardSchemaWithJSON),
     };
-    if (spec.input === null) {
-      server.registerTool(spec.name, config, handler);
-    } else {
-      server.registerTool(
-        spec.name,
-        { ...config, inputSchema: hostedPassThrough(spec.input as unknown as StandardSchemaWithJSON) },
-        handler as ToolCallback<StandardSchemaWithJSON>,
-      );
-    }
+    server.registerTool(
+      spec.name,
+      { ...config, inputSchema: hostedPassThrough(spec.input as unknown as StandardSchemaWithJSON) },
+      handler as ToolCallback<StandardSchemaWithJSON>,
+    );
   }
   return server;
 }
@@ -166,17 +159,16 @@ async function hostedAnswers(...requests: Message[]): Promise<Message[]> {
 /**
  * The tools the hosted server lists, built from the contract alone (the
  * hosted route test's oracle): each tool's title, description and
- * annotations, its input as `z.toJSONSchema(input, { io: "input" })` (the
- * guide's an empty object) and its output as `{ io: "output" }` (none for
- * the guide).
+ * annotations, its input as `z.toJSONSchema(input, { io: "input" })` and
+ * its output as `{ io: "output" }`.
  */
 function contractTools(): unknown[] {
   return TOOLS.map((spec) => ({
     name: spec.name,
     title: spec.title,
     description: spec.description,
-    inputSchema: spec.input ? z.toJSONSchema(spec.input, { io: "input" }) : { type: "object", properties: {} },
-    ...(spec.output ? { outputSchema: z.toJSONSchema(spec.output, { io: "output" }) } : {}),
+    inputSchema: z.toJSONSchema(spec.input, { io: "input" }),
+    outputSchema: z.toJSONSchema(spec.output, { io: "output" }),
     annotations: spec.annotations,
   }));
 }
@@ -695,9 +687,6 @@ describe("fortrip mcp bridge, signed out", () => {
       tools.map((tool) => tool.name),
       TOOLS.map((spec) => spec.name),
     );
-    const guide = tools.find((tool) => tool.name === "get_planning_guide");
-    assert.deepEqual(guide?.inputSchema, { type: "object", properties: {} });
-    assert.ok(!("outputSchema" in (guide ?? {})));
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
     // The MCP variants: get_hotel_offers' own default, book_hotel's nextStep.
     assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, 10);
@@ -705,7 +694,7 @@ describe("fortrip mcp bridge, signed out", () => {
     assert.deepEqual(api.mcpRequests, []);
   });
 
-  it("registers each tool as the hosted server does: pass-through schemas, an output schema on all but the guide", async () => {
+  it("registers each tool as the hosted server does: pass-through schemas, an output schema on every tool", async () => {
     const register = mock.method(McpServer.prototype, "registerTool");
     const bridge = startBridge();
     await bridge.request(initialize());
@@ -728,13 +717,10 @@ describe("fortrip mcp bridge, signed out", () => {
     for (const [name, config] of local) {
       const spec = TOOLS.find((tool) => tool.name === name);
       assert.ok(spec);
-      assert.equal("outputSchema" in config, spec.output !== null, name);
-      assert.equal("inputSchema" in config, spec.input !== null, name);
       for (const [schema, published] of [
         [config.inputSchema, spec.input],
         [config.outputSchema, spec.output],
       ] as const) {
-        if (!published) continue;
         // Never enforced: any value passes through, as on the hosted server.
         assert.deepEqual(schema["~standard"].validate(notTheInput), { value: notTheInput }, name);
         assert.deepEqual(json(schema), json(published), name);
@@ -748,7 +734,7 @@ describe("fortrip mcp bridge, signed out", () => {
     bridge.send(initialized);
     const calls: Message[] = [
       { ...callTool(2), params: { name: "search_hotels", arguments: { notAField: true } } },
-      { ...callTool(3), params: { name: "get_planning_guide" } },
+      { ...callTool(3), params: { name: "get_hotel" } },
       callTool(4, "no_such_tool"),
     ];
 

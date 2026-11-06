@@ -3,7 +3,7 @@ import { z } from "zod";
 import { hotelId, offerId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject } from "../conventions/open.ts";
-import { instant, localDate } from "../conventions/time.ts";
+import { instant } from "../conventions/time.ts";
 import { localizedText, names, stayEcho } from "./common.ts";
 import { roomFacts } from "./hotel.ts";
 
@@ -89,11 +89,6 @@ export const offer = openObject({
     perNightAllRooms: money.describe(
       "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare.",
     ),
-    approx: openObject({
-      total: money,
-      perNightAllRooms: money,
-      rateDate: localDate,
-    }).nullable(),
     payAtProperty,
   }),
   cancellation,

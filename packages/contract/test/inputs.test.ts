@@ -310,12 +310,12 @@ describe("searchHotelsInput", () => {
       filters: {
         stars: { min: 3.5, max: 5 },
         amenities: ["pool", "spa"],
-        price: { maxPerRoomNight: { amount: "200.00", currency: "USD" } },
+        price: { maxPerRoomNight: { amount: "200.00", currency: "CNY" } },
       },
       sort: "price_asc",
       limit: 50,
       locale: "zh",
-      displayCurrency: "CNY",
+      currency: "CNY",
     });
   });
 
@@ -421,18 +421,38 @@ describe("searchHotelsInput", () => {
     });
   });
 
-  it("the price filter is USD", () => {
-    assertRefusedAt(
-      searchHotelsInput,
-      {
+  it("the price filter is in the search's currency", () => {
+    const price = (currency: string) => ({
+      maxPerRoomNight: { amount: "200", currency },
+    });
+    for (const input of [
+      { currency: "CNY", filters: { price: price("USD") } },
+      { filters: { price: price("CNY") } },
+    ]) {
+      const result = searchHotelsInput.safeParse({
         destination: tokyo,
         stay: goodStay,
-        filters: {
-          price: { maxPerRoomNight: { amount: "200", currency: "CNY" } },
-        },
-      },
-      "filters.price.maxPerRoomNight.currency",
-    );
+        ...input,
+      });
+      assert.equal(result.success, false);
+      const issue = result.error?.issues.find(
+        (found) => found.path.join(".") === "filters.price.maxPerRoomNight.currency",
+      );
+      assert.ok(issue, JSON.stringify(result.error?.issues));
+      assert.match(issue.message, /CNY/);
+      assert.match(issue.message, /USD/);
+    }
+    for (const input of [
+      { currency: "CNY", filters: { price: price("CNY") } },
+      { currency: "USD", filters: { price: price("USD") } },
+      { filters: { price: price("USD") } },
+    ]) {
+      assertAccepted(searchHotelsInput, {
+        destination: tokyo,
+        stay: goodStay,
+        ...input,
+      });
+    }
   });
 
   it("stars run from 1 to 5 in half steps, min not above max", () => {
@@ -552,13 +572,31 @@ describe("getHotelInput", () => {
 describe("hotelOffersInput", () => {
   const base = { hotelIds: [hotel], stay: goodStay };
 
+  it("currency is USD or CNY", () => {
+    assertAccepted(hotelOffersInput, { ...base, currency: "CNY" });
+    assertAccepted(searchHotelsInput, { destination: tokyo, stay: goodStay, currency: "CNY" });
+    for (const [schema, value] of [
+      [hotelOffersInput, base],
+      [searchHotelsInput, { destination: tokyo, stay: goodStay }],
+    ] as const) {
+      const issues = refusalOf(schema, { ...value, currency: "EUR" });
+      const issue = issues.find((candidate) => candidate.path === "currency");
+      assert.match(issue?.message ?? "", /USD/);
+      assert.match(issue?.message ?? "", /CNY/);
+      assert.equal(
+        refusalOf(schema, { ...value, displayCurrency: "CNY" })[0]?.message,
+        "Unknown argument(s): displayCurrency",
+      );
+    }
+  });
+
   it("accepts the full request and defaults limitPerHotel to 10", () => {
     assertAccepted(hotelOffersInput, {
       ...base,
       filters: { requireBreakfast: true, requireFreeCancellation: false },
       limitPerHotel: 20,
       locale: "en",
-      displayCurrency: "USD",
+      currency: "USD",
     });
     assert.equal(hotelOffersInput.parse(base).limitPerHotel, 10);
     assert.equal(LIMITS.offersPerHotelDefault, 10);
@@ -866,25 +904,37 @@ describe("getOrderInput and listOrdersInput", () => {
 describe("cancelOrderInput", () => {
   const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
 
-  it("takes an order id and the penalty the user agreed to, 0 or more", () => {
-    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 0 });
-    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 12.5 });
-    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: -1 }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: "12.50" }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId: hotel, maximumPenalty: 0 }, "orderId");
+  it("takes an order id and, to cancel a paid order, the penalty the user agreed to as Money", () => {
+    // Closing an unpaid order sends the order alone.
+    assertAccepted(cancelOrderInput, { orderId });
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "CNY" } });
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "0.00", currency: "USD" } });
+    // The order's cancel.penalty as returned: a website order's may be in any currency.
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "EUR" } });
+    assert.deepEqual(refusalOf(cancelOrderInput, { orderId, maximumPenalty: 12.5 }), [
+      {
+        path: "maximumPenalty",
+        message: 'maximumPenalty must be Money as returned: { amount: "132.40", currency: "USD" }',
+      },
+    ]);
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "-1", currency: "USD" } }, "maximumPenalty.amount");
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "eur" } }, "maximumPenalty.currency");
+    assertRefusedAt(cancelOrderInput, { orderId: hotel }, "orderId");
     assert.equal(
-      refusalOf(cancelOrderInput, { orderId, maximumPenalty: 0, refund: 1 })[0]?.message,
+      refusalOf(cancelOrderInput, { orderId, refund: 1 })[0]?.message,
       "Unknown argument(s): refund",
     );
+    // Closing is the order alone, never a field.
+    assert.equal(refusalOf(cancelOrderInput, { orderId, close: true })[0]?.message, "Unknown argument(s): close");
   });
 
-  it("describes maximumPenalty as a JSON number equal to the order's cancel.penalty.amount", () => {
+  it("describes maximumPenalty as the order's cancel.penalty, exactly as returned", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      'The penalty the user agreed to: a JSON number equal to the order\'s cancel.penalty.amount, e.g. 120.5 for "120.50".',
+      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
     );
+    assert.deepEqual(json.required, ["orderId"]);
   });
 });
 
@@ -1017,22 +1067,25 @@ describe("payOrderInput", () => {
     assertAccepted(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...phone }] }, total });
   });
 
-  it("takes method alipay_wechat_pay with the total", () => {
-    assertAccepted(payOrderInput, { orderId, method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
+  it("takes method stripe_alipay_wechat_pay with the total", () => {
+    assertAccepted(payOrderInput, { orderId, method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
   });
 
-  it("refuses an unknown method", () => {
-    const issues = refusalOf(payOrderInput, { orderId, method: "card", total });
-    assert.deepEqual(
-      issues.map((i) => [i.path, i.message]),
-      [["method", "method must be one of: alipay_wechat_pay"]],
-    );
+  it("refuses an unknown method, and the token's id: a token is sent as sharedPaymentToken or payment", () => {
+    for (const method of ["card", "stripe_shared_payment_token"]) {
+      const issues = refusalOf(payOrderInput, { orderId, method, total });
+      assert.deepEqual(
+        issues.map((i) => [i.path, i.message]),
+        [["method", "method must be one of: stripe_alipay_wechat_pay"]],
+        method,
+      );
+    }
   });
 
   it("takes exactly one of the three", () => {
     const both = "Send exactly one of sharedPaymentToken, payment and method";
     const payment = { instruments: [card(true)] };
-    const method = "alipay_wechat_pay";
+    const method = "stripe_alipay_wechat_pay";
     const messageAt = (input: object, at: string) =>
       refusalOf(payOrderInput, { orderId, total, ...input }).find((i) => i.path === at)?.message;
     assert.equal(messageAt({ sharedPaymentToken: token, payment }, "payment"), both);

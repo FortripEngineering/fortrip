@@ -9,6 +9,7 @@ import {
 
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { inputRows, outputRows } from "../lib/reference/schema-rows.ts";
+import { pageText } from "./built-page.ts";
 
 test("every tool input field has a description", () => {
   for (const [tool, schema] of Object.entries(TOOL_INPUTS)) {
@@ -39,7 +40,7 @@ test("input rows carry type, required and constraints", () => {
   assert.equal(rows.get("stay.checkIn")?.badge, "required");
   assert.equal(rows.get("text")?.badge, undefined);
   assert.deepEqual(rows.get("limit")?.meta, ["1–50"]);
-  assert.equal(rows.get("displayCurrency")?.type, '"USD" | "CNY"');
+  assert.equal(rows.get("currency")?.type, '"USD" | "CNY"');
   assert.equal(rows.get("stay.rooms[].adults")?.depth, 2);
   assert.deepEqual(rows.get("stay.rooms[].adults")?.meta, ["1–8"]);
 
@@ -105,4 +106,19 @@ test("an open union in an output lists its known branches", () => {
   assert.ok(
     rows.some((row) => row.key === "items[]<hotel>.hotel.confirmationNumber"),
   );
+});
+
+test("a union branch without a described discriminator shows its own description", () => {
+  const methods = outputRows(order).filter((row) => row.variant && row.path === "payment.methods[]");
+  assert.deepEqual(
+    methods.map((row) => row.type),
+    ['id: "stripe_shared_payment_token"', 'id: "stripe_alipay_wechat_pay"'],
+  );
+  const [token, wallet] = methods.map((row) => row.description);
+  assert.match(token ?? "", /The entry is absent when a token can't pay the order/);
+  assert.match(wallet ?? "", /The entry is absent when the order can't be paid this way and none is open\./);
+  // The /schemas page shows both, as the pay ways' docs say it does.
+  const text = pageText("/schemas");
+  assert.ok(text.includes("The entry is absent when a token can't pay the order"));
+  assert.ok(text.includes("The entry is absent when the order can't be paid this way and none is open."));
 });

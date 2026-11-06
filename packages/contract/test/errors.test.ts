@@ -8,7 +8,7 @@ import { SUPPLIER_OUTCOME_STATUS } from "../src/index.ts";
 import { ERROR_DETAILS } from "../src/outputs/error-details.ts";
 import { API, MCP_PATH, PUBLIC_ORIGINS } from "../src/paths.ts";
 import {
-  DISPLAY_CURRENCIES,
+  CURRENCIES,
   LIMITS,
   SUPPORT_EMAIL,
 } from "../src/limits.ts";
@@ -42,6 +42,7 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   stay_unsupported: [[422], false],
   stay_in_past: [[422], false],
   offer_unavailable: [[422], false],
+  currency_unavailable: [[422], false],
   rate_limited: [[429], true],
   ordering_paused: [[503], true],
   service_unavailable: [[503], true],
@@ -60,6 +61,15 @@ describe("ERROR_CODES", () => {
       assert.deepEqual([...got.status], status, code);
       assert.equal(got.retryable, retryable, code);
     }
+  });
+});
+
+describe("currency_unavailable", () => {
+  it("is a 422 whose details are the currency asked for", () => {
+    assert.deepEqual(ERROR_CODES.currency_unavailable, { status: [422], retryable: false });
+    assert.deepEqual(Object.keys(ERROR_DETAILS.currency_unavailable.shape), ["currency"]);
+    assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "CNY" }).success);
+    assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "EUR" }).success);
   });
 });
 
@@ -114,7 +124,7 @@ describe("LIMITS and friends", () => {
       wechatCodeMinutes: 120,
       ordersPerStay: 20,
     });
-    assert.deepEqual([...DISPLAY_CURRENCIES], ["USD", "CNY"]);
+    assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");
   });
 });

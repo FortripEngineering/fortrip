@@ -7,6 +7,68 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 5.0.0
+
+Not released yet.
+
+A major release. A request is priced and charged in one currency, USD or CNY, and `payment.methods` replaces the three payment fields.
+
+### Breaking changes
+
+- `displayCurrency` is now `currency` on `search_hotels` and `get_hotel_offers`. It sets the currency of every price in the answer and of the order made from the offers: a search in CNY gets offers in CNY, and the order is charged in CNY. The default is `USD`.
+- `approx` is removed from search hits and offers. Prices are in the request's currency, not converted.
+- Money in a request is in the request's or the order's currency, not always USD:
+  - `filters.price.maxPerRoomNight` is in the search's `currency`. A different currency is `invalid_request`.
+  - `total` on `pay_order` is the order's `price.total`, in its currency.
+- `payment.handlers`, `payment.credentialLimits` and `payment.wallets` are removed. `payment.methods` lists what `pay_order` accepts for the order now, one entry per way, by `id`:
+  - `payment.handlers` and `payment.credentialLimits` → the `stripe_shared_payment_token` entry, with `handler` and `limits { maxAmount, currency, expiresAt }`. The entry is absent where `handlers` was `[]`.
+  - `payment.wallets` → the `stripe_alipay_wechat_pay` entry, with `open`, `current`, `wechatPay` and `alipay`. The entry is absent where `wallets` was `null`.
+  - `[]` means: give the user `payment.url`.
+- `pay_order`'s `method: "alipay_wechat_pay"` is now `method: "stripe_alipay_wechat_pay"`. A token is sent as before.
+- `maximumPenalty` on `cancel_order` is Money, the order's `cancel.penalty` exactly as returned, in whatever currency it is, instead of a JSON number. It is optional: an unpaid order is closed without it.
+- `get_planning_guide` is removed, and so is `fortrip guide`. The planning guide is a file in the Claude plugin and the CLI skill, `references/planning.md`.
+- CLI:
+  - `--display-currency` is now `--currency`, and `FORTRIP_DISPLAY_CURRENCY` is now `FORTRIP_CURRENCY`.
+  - `orders pay --wallet` is now `--method stripe_alipay_wechat_pay`.
+  - `orders cancel --max-penalty` takes the amount as before, e.g. `12.50`; the CLI now reads the order for the currency, that of the order's `cancel.penalty`, else of its `price.total`. `orders pay --total` is likewise in the order's currency.
+  - `--price-max-per-room-night` is in the search's `--currency`.
+
+### New
+
+- `cancel_order` closes an unpaid order. Such an order has `cancel.available` `true` with `cancel.reason` `unpaid`; `cancel_order` with the `orderId` alone makes it `expired`, and nothing is charged. A paid order is cancelled as before, with `maximumPenalty`.
+- `orders cancel --close` closes an unpaid order. Exit codes:
+  - 0: the order is closed, or was already `expired`.
+  - 1: the order can't be closed, or was paid meanwhile.
+  - 2: the order is paid (cancel it with `--max-penalty`), or `--close` is given with `--max-penalty`.
+- `orders cancel --max-penalty` on an unpaid order cancels nothing and exits 2, as `orders cancel` with neither option does.
+- `expired` also means an order that was closed.
+- The error `currency_unavailable` (422), with `details { currency }`: prices in that currency aren't available. Offer the user USD.
+- `payment.url` is `null` for an order awaiting payment only while its payment is `unpaid` and the link couldn't be read this time; read the order again. A held payment (`payment.status` `authorized`) has no link: the link stops working once a payment succeeds.
+- A CNY order is charged in CNY: `payment.localCurrencyAtCheckout` is `false`, `payment.localCharge` is `null`, and `payment.methods` has no `stripe_shared_payment_token` entry, because a token is charged in USD.
+- With `fortrip guide` gone, nothing pins the CLI version any more: the CLI skill runs `npx -y fortrip@latest`, as before.
+
+### Migration
+
+- Send `currency` instead of `displayCurrency`, and read every price in that currency without converting it. `approx` is gone.
+- Send `filters.price.maxPerRoomNight` and `total` as Money in the search's and the order's currency.
+- Send `maximumPenalty` as Money, the order's `cancel.penalty` exactly as returned.
+- Read `payment.methods` instead of `payment.handlers`, `payment.credentialLimits` and `payment.wallets`, and send `method: "stripe_alipay_wechat_pay"` to open an Alipay or WeChat Pay payment.
+- Handle `currency_unavailable`.
+- `cancel.available` is also true for an unpaid order (`reason` `unpaid`, `penalty` null): check `reason`.
+- Close an unpaid order with `cancel_order` when the user no longer wants it.
+- Stop calling `get_planning_guide` and `fortrip guide`.
+- Update the CLI to 5.0.0, and use `--currency`, `FORTRIP_CURRENCY` and `--method`. A 4.x CLI shows this server's searches, offers and orders only as raw JSON, and its cancel, Alipay or WeChat Pay and `--display-currency` requests are refused, as is its token payment of a CNY order.
+
+### Package
+
+- `usdMoney` is now `requestMoney(name)`: Money in USD or CNY, whose refusal names the field.
+- `DISPLAY_CURRENCIES` is now `CURRENCIES`, with the type `Currency`.
+- New: `PAYMENT_METHOD_IDS`, `paymentMethod`, and the types `PaymentMethod` and `PaymentMethodId`.
+- The `PAY_WAYS` values are `payment_link`, `stripe_shared_payment_token` and `stripe_alipay_wechat_pay`.
+- `RenderedTool` and `HttpToolName` are every tool name, `get_planning_guide` being removed.
+- `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `payment.handlers` and `payment.wallets.open` are now `payment.methods` and `payment.methods.open`.
+- `ToolSpec.input` and `ToolSpec.output` are required, not `null`. `PositionalSpec.field` is a `string`, and `PositionalSpec.optional` and `FlagSpec.optional` are removed. The `guide` command is removed from `COMMANDS`.
+
 ## 4.3.1
 
 Released 2026-11-06.

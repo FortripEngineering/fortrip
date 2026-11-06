@@ -1,10 +1,13 @@
 import {
+  API,
   COMMAND_GROUPS,
   COMMANDS,
   type CommandGroupSpec,
   commandInvocation,
   type CommandSpec,
+  CURRENCIES,
   GLOBAL_FLAGS,
+  HTTP_ROUTES,
   order as orderSchema,
   type RenderedTool,
   renderToolResult,
@@ -12,7 +15,7 @@ import {
 
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
-import { cancelPreview, parseCommand, parseOptions } from "./commands.ts";
+import { cancelPreview, check, parseCommand, parseOptions } from "./commands.ts";
 import { resolveApiUrl, resolveMcpUrl } from "./credentials.ts";
 import {
   CliError,
@@ -23,7 +26,6 @@ import {
   notices,
   usageError,
 } from "./errors.ts";
-import { readGuide } from "./guide.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
 import { terminalQr } from "./qr.ts";
 import { VERSION } from "./version.ts";
@@ -100,15 +102,6 @@ async function run(argv: string[]): Promise<Answer> {
     process.stdout.write(commandHelp(spec));
     return undefined;
   }
-  if (spec.group === null && spec.name === "guide") {
-    const { positionals } = parseOptions(spec, rest);
-    const topic = positionals.join(" ");
-    if (topic !== "" && topic !== "planning") {
-      throw usageError("Usage: fortrip guide [planning]");
-    }
-    process.stdout.write(readGuide(topic || "main"));
-    return undefined;
-  }
 
   const apiUrl = resolveApiUrl();
   const log = (line: string) => process.stderr.write(`${line}\n`);
@@ -139,35 +132,117 @@ async function run(argv: string[]): Promise<Answer> {
       }
     }
   }
-  const preview = cancelPreview(spec, rest);
-  if (preview) {
-    const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
-    throw usageError(notCancelled(spec, preview.flag, preview.orderId, order));
-  }
+  const preview = cancelPreview(spec, rest, process.env);
+  if (preview) return cancelOrder(apiUrl, spec, preview);
   const { method, path, body } = parseCommand(spec, rest, process.env);
+  if (spec.tool === "pay_order" && body) await inOrderCurrency(apiUrl, spec, rest, body);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
   return { data, text: renderToolResult(spec.tool as RenderedTool, data, "cli") };
 }
 
-/** What `orders cancel` without its penalty flag says instead of
- *  cancelling: the order's hotel and Cancel lines and, when it can be
- *  cancelled now, the consent step and the command with the order's own
- *  penalty. */
-function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
-  const lines = renderToolResult("get_order", order, "cli")
+/** `orders pay`'s total is in the order's currency: read the order for it,
+ *  set it on the total, and check the request again before it is sent. */
+async function inOrderCurrency(
+  apiUrl: string,
+  spec: CommandSpec,
+  rest: string[],
+  body: Record<string, unknown>,
+): Promise<void> {
+  const [orderId] = parseOptions(spec, rest).positionals as [string];
+  const order = unwrap(await authorizedRequest(apiUrl, API.order(orderId), { method: "GET" }));
+  const currency = (order as { price?: { total?: { currency?: unknown } } } | null)?.price?.total?.currency;
+  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
+    throw new CliError(
+      `Not sent: the order ${orderId} has no price.total.currency in USD or CNY to pay in.`,
+      EXIT.error,
+    );
+  }
+  body.total = { ...(body.total as Record<string, unknown>), currency };
+  check(spec, { ...body, orderId }, HTTP_ROUTES.pay_order, new Map());
+}
+
+/** An order as `orders cancel` reads it, field by field: the read may not
+ *  be in the contract's shape. */
+type ReadOrder = {
+  status?: unknown;
+  price?: { total?: { currency?: unknown } };
+  payment?: { status?: unknown };
+  cancel?: { available?: unknown; reason?: unknown; penalty?: { currency?: unknown } | null };
+} | null;
+
+/**
+ * `orders cancel`, after one read of the order: without `--max-penalty` or
+ * `--close`, or with `--max-penalty` on an unpaid order, it says what the
+ * order allows and exits 2. `--close` closes an unpaid order, and answers
+ * an expired one as it is. `--max-penalty` cancels in the currency of the
+ * order's penalty, else of its total.
+ */
+async function cancelOrder(
+  apiUrl: string,
+  spec: CommandSpec,
+  preview: NonNullable<ReturnType<typeof cancelPreview>>,
+): Promise<Answer> {
+  const { flag, orderId, close, request } = preview;
+  const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
+  const read = order as ReadOrder;
+  const closable = read?.cancel?.available === true && read.cancel.reason === "unpaid";
+  if (!request || (!close && closable)) throw usageError(notCancelled(spec, flag, orderId, order));
+  if (close) {
+    if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
+    if (!closable) {
+      if (read?.cancel?.available === true && read.cancel.reason === "cancellable") {
+        throw usageError(
+          `Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`${commandInvocation(spec)} ${orderId} ${flag} <amount>\`.`,
+        );
+      }
+      throw new CliError(["Not closed: nothing was sent.", ...orderLines(order)].join("\n"), EXIT.error);
+    }
+    const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body: request.body }));
+    const text = renderToolResult("cancel_order", data, "cli");
+    if ((data as ReadOrder)?.status !== "expired") {
+      throw new CliError(["Not closed: it was paid meanwhile.", text].join("\n"), EXIT.error);
+    }
+    return { data, text };
+  }
+  const penalty = read?.cancel?.penalty?.currency;
+  const currency = typeof penalty === "string" ? penalty : read?.price?.total?.currency;
+  if (typeof currency !== "string") {
+    throw new CliError(`Not sent: the order ${orderId} has no currency to send the penalty in.`, EXIT.error);
+  }
+  const body = request.body as Record<string, unknown>;
+  body.maximumPenalty = { ...(body.maximumPenalty as Record<string, unknown>), currency };
+  check(spec, { ...body, orderId }, HTTP_ROUTES.cancel_order, new Map());
+  const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body }));
+  return { data, text: renderToolResult("cancel_order", data, "cli") };
+}
+
+/** An order's hotel and Cancel lines, as `orders get` prints them. */
+function orderLines(order: unknown): string[] {
+  return renderToolResult("get_order", order, "cli")
     .split("\n")
     .filter((text) => text.startsWith("Hotel: ") || text.startsWith("Cancel: "));
+}
+
+/** What `orders cancel` says instead of cancelling: the order's hotel and
+ *  Cancel lines and, when it can be cancelled now, the consent step and the
+ *  command with the order's own penalty, or, when it can be closed, the
+ *  command that closes it. */
+function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
   const parsed = orderSchema.safeParse(order);
   const cancel = parsed.success ? parsed.data.cancel : undefined;
   const next =
-    cancel?.available && cancel.penalty
+    cancel?.available && cancel.reason === "unpaid"
       ? [
-          `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
+          `Only once the user says they no longer want this order, run \`${commandInvocation(spec)} ${orderId} --close\`.`,
         ]
-      : cancel
-        ? []
-        : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
-  return ["Not cancelled: nothing was sent.", ...lines, ...next].join("\n");
+      : cancel?.available && cancel.penalty
+        ? [
+            `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
+          ]
+        : cancel
+          ? []
+          : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
+  return ["Not cancelled: nothing was sent.", ...orderLines(order), ...next].join("\n");
 }
 
 /** `whoami`, and `login` once signed in: the account,
@@ -203,12 +278,16 @@ function takeJson(argv: string[]): { json: boolean; argv: string[] } {
   return { json: kept.length < before.length, argv: [...kept, ...after] };
 }
 
-/** The WeChat Pay code of an `orders pay` answer, drawn for the terminal;
+/** The WeChat Pay code of an `orders pay` answer's Alipay or WeChat Pay
+ *  entry in `payment.methods`, drawn for the terminal;
  *  null when it isn't one, there is no code, or it doesn't fit. */
 function walletCode(argv: string[], data: unknown): string | null {
   if (argv[0] !== "orders" || argv[1] !== "pay" || !process.stdout.isTTY) return null;
-  const wallets = (data as { payment?: { wallets?: { wechatPay?: { qrData?: unknown } } } } | null)?.payment?.wallets;
-  const qrData = wallets?.wechatPay?.qrData;
+  const methods = (data as { payment?: { methods?: unknown } } | null)?.payment?.methods;
+  const wallet = Array.isArray(methods)
+    ? (methods as { id?: unknown; wechatPay?: { qrData?: unknown } }[]).find((m) => m?.id === "stripe_alipay_wechat_pay")
+    : undefined;
+  const qrData = wallet?.wechatPay?.qrData;
   return typeof qrData === "string" ? terminalQr(qrData, process.stdout.columns) : null;
 }
 

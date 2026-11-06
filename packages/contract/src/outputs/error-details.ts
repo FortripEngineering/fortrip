@@ -122,6 +122,7 @@ export const ERROR_DETAILS = {
     offerId,
     reason: openEnum(["sold_out", "refused"]),
   }),
+  currency_unavailable: openObject({ currency: z.string() }),
   rate_limited: openObject({
     scope: openEnum([
       "search",

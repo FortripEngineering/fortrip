@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { formatMoney, money, usdMoney } from "../src/conventions/money.ts";
+import { formatMoney, money, requestMoney } from "../src/conventions/money.ts";
 import {
   hotelId,
   offerId,
@@ -35,12 +35,21 @@ describe("money", () => {
     assert.deepEqual(parsed, { amount: "1.00", currency: "USD", extra: 1 });
   });
 
-  it("requires USD in a request Money and rejects unknown fields", () => {
-    assert.equal(usdMoney.safeParse({ amount: "10.00", currency: "USD" }).success, true);
-    assert.equal(usdMoney.safeParse({ amount: "10.00", currency: "CNY" }).success, false);
+  it("takes a request Money in USD or CNY, strict, naming the field", () => {
+    const total = requestMoney("total");
+    assert.equal(total.safeParse({ amount: "880.00", currency: "CNY" }).success, true);
+    assert.equal(total.safeParse({ amount: "10.00", currency: "USD" }).success, true);
+    const eur = total.safeParse({ amount: "10.00", currency: "EUR" });
+    assert.equal(eur.success, false);
+    assert.equal(eur.error?.issues[0]?.message, "currency must be USD or CNY");
+    assert.equal(total.safeParse({ amount: 10, currency: "USD" }).success, false);
     assert.equal(
-      usdMoney.safeParse({ amount: "10.00", currency: "USD", extra: 1 }).success,
+      total.safeParse({ amount: "10.00", currency: "USD", extra: 1 }).success,
       false,
+    );
+    assert.equal(
+      total.safeParse("10.00").error?.issues[0]?.message,
+      'total must be Money: { amount: "132.40", currency: "USD" or "CNY" }',
     );
   });
 

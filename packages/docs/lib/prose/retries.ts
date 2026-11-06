@@ -47,7 +47,7 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
   },
   {
     tools: ["cancel_order"],
-    again: "Safe. It answers the order as it is now: `cancelling`, then `cancelled`.",
+    again: "Safe. It answers the order as it is now: `cancelling`, then `cancelled`; a repeated close answers `expired`.",
   },
   {
     tools: ["search_hotels", "get_hotel", "get_hotel_offers", "get_order", "list_orders"],

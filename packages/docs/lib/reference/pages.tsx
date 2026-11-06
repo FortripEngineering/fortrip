@@ -48,8 +48,8 @@ function outline(
 }
 
 const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
-  const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
-  const returns = typeof tool.returns === "string" ? tool.returns : `${tool.returns.title} object`;
+  const input = TOOL_INPUTS[tool.name];
+  const returns = `${tool.returns.title} object`;
   return {
     type: "page",
     path: `mcp/${tool.slug}.mdx`,
@@ -64,9 +64,7 @@ const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
           {
             id: "input",
             title: "Input",
-            content: input
-              ? inputRows(input).map((row) => `${row.path}: ${row.description}`)
-              : ["None."],
+            content: inputRows(input).map((row) => `${row.path}: ${row.description}`),
           },
           { id: "output", title: "Output", content: [returns] },
         ],

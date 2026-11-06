@@ -3,7 +3,6 @@ import { z } from "zod";
 import { hotelId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject, openUnion } from "../conventions/open.ts";
-import { localDate } from "../conventions/time.ts";
 import { LIMITS } from "../limits.ts";
 import { knownLocaleText, latLng, names, photo, stayEcho } from "./common.ts";
 import { center, place, placeRef } from "./place.ts";
@@ -36,11 +35,6 @@ export const indicativePrice = openObject({
   basis: openEnum(["lowest_unit"]),
   fromPerRoomNight: money,
   fromPerRoomStay: money,
-  approx: openObject({
-    fromPerRoomNight: money,
-    fromPerRoomStay: money,
-    rateDate: localDate,
-  }).nullable(),
 });
 
 export type IndicativePrice = z.infer<typeof indicativePrice>;

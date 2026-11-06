@@ -199,7 +199,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       ];
     case "payment_credential_invalid":
       return [
-        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the order's payment.credentialLimits. Nothing was charged.`,
+        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the limits of the order's stripe_shared_payment_token method. Nothing was charged.`,
       ];
     case "payment_declined":
       return [
@@ -225,6 +225,8 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       return [
         `Offer ${e.details.offerId}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason)}. Get fresh offers.`,
       ];
+    case "currency_unavailable":
+      return [`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`];
     case "rate_limited":
       return [`Limit reached for: ${e.details.scope}.`];
     case "supplier_unavailable":

@@ -271,7 +271,7 @@ function unionRows(
         path: at.path,
         depth,
         type: `${union.key}: ${JSON.stringify(value)}`,
-        description: schema.properties?.[union.key]?.description ?? "",
+        description: schema.properties?.[union.key]?.description || schema.description || "",
         meta: [],
         variant: true,
       },

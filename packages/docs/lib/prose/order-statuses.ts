@@ -9,7 +9,7 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
   awaiting_payment:
     "Created and unpaid; nothing is charged. It can be paid until `payment.expiresAt`, by `payment.url` or another way the order offers.",
   expired:
-    "The time to pay ran out with nothing paid, and nothing was charged. It can't be paid any more: get offers again and order anew.",
+    "Not paid: the time to pay ran out, or the order was closed, and nothing was charged. It can't be paid any more: get offers again and order anew.",
   confirming:
     "Paid, or the amount held, and the booking is with the hotel. Next comes `confirmed` once the hotel confirms and the payment is charged, `failed` if the hotel can't confirm, or `needs_attention` if a person has to resolve it.",
   confirmed:

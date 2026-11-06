@@ -43,17 +43,17 @@ token into the chat.
 
 1. Claude searches hotels. Search prices are indicative minimums; live prices
    come from checking offers.
-2. Offers are priced in USD, which is what you're charged. Claude can add an
-   approximate amount in CNY, which is an estimate, not the charge.
+2. Offers are priced in the currency you ask for, USD or CNY where
+   available, and that is the currency you're charged.
 3. When you pick an offer and give the guest names and a contact name, email
    and phone, Claude creates an unpaid order and shows you the stay, the
-   amount and currency you'll be charged (USD), the meals, cancellation
+   amount and currency you'll be charged, the meals, cancellation
    rules, confirmation time and any fees payable at the hotel.
 4. After you confirm, Claude gives you a payment link. It opens a Fortrip page
-   that recaps the order and continues to Stripe Checkout, which may also
-   show the amount in your local currency. Nothing is charged until you pay
-   there. The link is for you only and expires after a few hours; the order
-   shows when.
+   that recaps the order and continues to payment; for a USD order, Stripe
+   Checkout may also show the amount in your local currency. Nothing is
+   charged until you pay there. The link is for you only and expires after a
+   few hours; the order shows when.
 
 Stays are 1 to 15 nights, with 1 to 8 rooms per order and the same number of
 adults and children in each room. After you pay, Claude can check the order's
@@ -96,8 +96,9 @@ Flights, activities and changes to existing orders aren't supported.
   name, phone and email, and any special requests.
 - **Payment** happens on Stripe's checkout page: in Claude you'll usually
   pay by link. Paying without the link needs a one-time token you approve in
-  your Link wallet, which only works for US and Canadian Link accounts and up
-  to $500 per payment, and only where Claude has a tool that can request one.
+  your Link wallet, which only works for US and Canadian Link accounts and a
+  USD order of up to $500, and only where Claude has a tool that can request
+  one.
   Claude never sees your card details; don't paste them into the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip

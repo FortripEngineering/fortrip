@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 
 import {
   destination,
-  DISPLAY_CURRENCIES,
+  CURRENCIES,
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
@@ -218,7 +218,6 @@ describe("Markdown pages", () => {
     for (const [block, phrase] of [
       ["presentation_hint", "the presentation hint"],
       ["wechat_code", "WeChat Pay code first"],
-      ["guide", "planning guide as Markdown"],
     ] as const) {
       const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
       assert.ok(tools.length > 0, block);
@@ -277,16 +276,15 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("/index.md: the ways to pay and the ways to connect; /api.md: the display currencies", () => {
+  it("/index.md: the ways to pay and the ways to connect; /api.md: the currencies", () => {
     const markdown = pageMarkdown("/");
     includesAll(markdown, PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short), "pay ways");
     assert.ok(markdown.includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
-    includesAll(pageMarkdown("/api"), DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
+    includesAll(pageMarkdown("/api"), CURRENCIES.filter((c) => c !== "USD"), "currencies");
   });
 
   it("a tool page has its input fields; a command page its usage", () => {
     for (const tool of MCP_TOOLS) {
-      if (tool.name === "get_planning_guide") continue;
       const rows = inputRows(TOOL_INPUTS[tool.name]);
       includesAll(pageMarkdown(`/mcp/${tool.slug}`), [`# ${tool.title}`, ...rows.map((r) => `\`${r.path}\``)], tool.slug);
     }

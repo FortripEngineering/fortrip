@@ -8,17 +8,16 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  * rendered for each surface that states the rules:
  *
  * - `mcp`: the hosted MCP server. Its `main` is the server instructions, a
- *   condensed form; its `planning` is what `get_planning_guide` returns.
+ *   condensed form.
  * - `claude-skill`: the Claude plugin's skill and its planning reference.
- * - `cli`: what `fortrip guide [planning]` prints, and the CLI skill.
+ * - `cli`: the CLI skill and its planning reference.
  *
  * In a fragment:
  *
  * - `{{tool:<command>}}` names a command's tool, the command as typed after
  *   `fortrip` (`{{tool:hotels search}}`): `search_hotels` (mcp),
  *   `fortrip:search_hotels` (claude-skill), `fortrip hotels search` (cli).
- *   It throws on a surface without that tool: the Claude plugin has no
- *   `get_planning_guide` (Directory Policy §2F), MCP has no `whoami`.
+ *   It throws on a surface without that tool: MCP has no `whoami`.
  * - `{{arg:<field>}}` names an input field: `rooms`, or the CLI's `--rooms`.
  * - `{{limit:<key>}}` is a number from `LIMITS`; `{{support}}` is the
  *   support address.
@@ -154,11 +153,7 @@ function toolName(
   token: string,
 ): string {
   if (surface === "cli") return commandInvocation(spec);
-  // The Claude plugin ships the planning guide as a file instead.
-  if (
-    spec.tool === null ||
-    (surface === "claude-skill" && spec.tool === "get_planning_guide")
-  ) {
+  if (spec.tool === null) {
     throw new Error(`Guide token ${token} has no tool on ${surface}`);
   }
   return surface === "mcp" ? spec.tool : `fortrip:${spec.tool}`;

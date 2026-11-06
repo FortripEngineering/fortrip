@@ -101,7 +101,7 @@ const CASES: {
       ...["--text", "Riverside", ...STAY, "--room", "2:6,9", "--room", "1"],
       ...["--pricing", "indicative", "--stars-min", "4", "--stars-max", "5"],
       ...["--amenity", "pool", "--amenity", "wifi", "--price-max-per-room-night", "149.50"],
-      ...["--sort", "price_asc", "--limit", "10", "--locale", "en", "--display-currency", "cny"],
+      ...["--sort", "price_asc", "--limit", "10", "--locale", "en", "--currency", "cny"],
     ],
     method: "POST",
     path: API.hotelSearch,
@@ -120,12 +120,12 @@ const CASES: {
       filters: {
         stars: { min: 4, max: 5 },
         amenities: ["pool", "wifi"],
-        price: { maxPerRoomNight: { amount: "149.50", currency: "USD" } },
+        price: { maxPerRoomNight: { amount: "149.50", currency: "CNY" } },
       },
       sort: "price_asc",
       limit: 10,
       locale: "en",
-      displayCurrency: "CNY",
+      currency: "CNY",
     },
   },
   {
@@ -180,7 +180,7 @@ const CASES: {
     argv: [
       ...["--hotel", HOTEL, "--hotel", HOTEL_2, ...STAY, "--room", "2:6", "--room", "2:6"],
       ...["--require-breakfast", "--require-free-cancellation", "--limit-per-hotel", "3"],
-      ...["--locale", "en", "--display-currency", "usd"],
+      ...["--locale", "en", "--currency", "usd"],
     ],
     method: "POST",
     path: API.hotelOffers,
@@ -197,7 +197,7 @@ const CASES: {
       filters: { requireBreakfast: true, requireFreeCancellation: true },
       limitPerHotel: 3,
       locale: "en",
-      displayCurrency: "USD",
+      currency: "USD",
     },
   },
   {
@@ -258,12 +258,14 @@ const CASES: {
     method: "GET",
     path: "/v1/orders",
   },
+  // The penalty's currency is the order's, which the CLI reads first: USD
+  // stands in for it here.
   {
     name: "orders cancel",
     argv: [ORDER, "--max-penalty", "12.50"],
     method: "POST",
     path: `/v1/orders/${ORDER}/cancel`,
-    body: { maximumPenalty: 12.5 },
+    body: { maximumPenalty: { amount: "12.50", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
   {
@@ -271,7 +273,16 @@ const CASES: {
     argv: [ORDER, "--max-penalty", "0"],
     method: "POST",
     path: `/v1/orders/${ORDER}/cancel`,
-    body: { maximumPenalty: 0 },
+    body: { maximumPenalty: { amount: "0", currency: "USD" } },
+    inPath: { orderId: ORDER },
+  },
+  // Closing an unpaid order sends the order alone: --close is never sent.
+  {
+    name: "orders cancel",
+    argv: [ORDER, "--close"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/cancel`,
+    body: {},
     inPath: { orderId: ORDER },
   },
   {
@@ -284,10 +295,10 @@ const CASES: {
   },
   {
     name: "orders pay",
-    argv: [ORDER, "--wallet", "--total", "125.00"],
+    argv: [ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "125.00"],
     method: "POST",
     path: `/v1/orders/${ORDER}/pay`,
-    body: { method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
+    body: { method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
 ];
@@ -339,7 +350,7 @@ describe("every command builds the request the contract accepts", () => {
   });
 
   it("a command that sends no request has nothing to parse", () => {
-    for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
+    for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.throws(() => parse(name, []), /sends no request/);
     }
   });
@@ -402,11 +413,7 @@ describe("a request the contract refuses is not sent", () => {
       ["/path/orderId"],
     );
     assert.deepEqual(issuesOf(() => parse("orders cancel", [ORDER, "--max-penalty=-1"])), [
-      {
-        pointer: "/maximumPenalty",
-        message:
-          "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50",
-      },
+      { pointer: "/maximumPenalty/amount", message: "amount must be a decimal string such as 132.40" },
     ]);
   });
 
@@ -656,60 +663,88 @@ describe("--body", () => {
   });
 });
 
-describe("display currency", () => {
+describe("currency", () => {
   const SEARCH = ["--text", "x"];
   const OFFERS = ["--hotel", HOTEL, ...STAY, "--room", "2"];
 
-  it("FORTRIP_DISPLAY_CURRENCY is the default of search and offers", () => {
-    const env = { FORTRIP_DISPLAY_CURRENCY: " cny " };
-    assert.equal(body("hotels search", SEARCH, env).displayCurrency, "CNY");
-    assert.equal(body("hotels offers", OFFERS, env).displayCurrency, "CNY");
+  it("FORTRIP_CURRENCY is the default of search and offers", () => {
+    const env = { FORTRIP_CURRENCY: " cny " };
+    assert.equal(body("hotels search", SEARCH, env).currency, "CNY");
+    assert.equal(body("hotels offers", OFFERS, env).currency, "CNY");
   });
 
-  it("--display-currency beats --body, which beats the environment", () => {
-    const env = { FORTRIP_DISPLAY_CURRENCY: "CNY" };
-    assert.equal(body("hotels search", [...SEARCH, "--display-currency", "usd"], env).displayCurrency, "USD");
+  it("--currency beats --body, which beats the environment", () => {
+    const env = { FORTRIP_CURRENCY: "CNY" };
+    assert.equal(body("hotels search", [...SEARCH, "--currency", "usd"], env).currency, "USD");
     assert.equal(
-      body("hotels search", [...SEARCH, "--body", '{"displayCurrency":"USD"}'], env).displayCurrency,
+      body("hotels search", [...SEARCH, "--body", '{"currency":"USD"}'], env).currency,
       "USD",
     );
   });
 
-  it("a blank FORTRIP_DISPLAY_CURRENCY sets nothing", () => {
-    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
+  it("the price bound is in the request's currency: --currency, --body, the environment, else USD", () => {
+    const price = (argv: string[], env: NodeJS.ProcessEnv = {}) =>
+      (
+        body("hotels search", [...argv, ...STAY, "--room", "2", "--price-max-per-room-night", "600"], env)
+          .filters as { price: { maxPerRoomNight: unknown } }
+      ).price.maxPerRoomNight;
+    const at = (currency: string) => ({ amount: "600", currency });
+    assert.deepEqual(price([...SEARCH, "--currency", "CNY"]), at("CNY"));
+    assert.deepEqual(price([...SEARCH, "--currency", "cny"], { FORTRIP_CURRENCY: "USD" }), at("CNY"));
+    assert.deepEqual(price([...SEARCH, "--body", '{"currency":"CNY"}'], { FORTRIP_CURRENCY: "USD" }), at("CNY"));
+    assert.deepEqual(price(SEARCH, { FORTRIP_CURRENCY: " cny " }), at("CNY"));
+    assert.deepEqual(price(SEARCH), at("USD"));
+  });
+
+  it("a --body currency is upper-cased like --currency, and so is the price bound's", () => {
+    const sent = body("hotels search", [...SEARCH, ...STAY, "--room", "2", "--body", '{"currency":"cny"}', "--price-max-per-room-night", "100"]);
+    assert.equal(sent.currency, "CNY");
+    assert.deepEqual((sent.filters as { price: { maxPerRoomNight: unknown } }).price.maxPerRoomNight, {
+      amount: "100",
+      currency: "CNY",
+    });
+  });
+
+  it("--display-currency is gone", () => {
+    assert.throws(() => parse("hotels search", [...SEARCH, "--display-currency", "cny"]), isUsage);
+    assert.throws(() => parse("hotels offers", [...OFFERS, "--display-currency", "cny"]), isUsage);
+  });
+
+  it("a blank FORTRIP_CURRENCY sets nothing", () => {
+    assert.equal("currency" in body("hotels search", SEARCH, { FORTRIP_CURRENCY: " " }), false);
   });
 
   it("an unknown currency is refused, not sent, naming the variable when it came from there", () => {
-    assert.deepEqual(issuesOf(() => body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: "EUR" })), [
+    assert.deepEqual(issuesOf(() => body("hotels search", SEARCH, { FORTRIP_CURRENCY: "EUR" })), [
       {
-        pointer: "/displayCurrency",
-        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+        pointer: "/currency",
+        message: "FORTRIP_CURRENCY: currency must be one of: USD, CNY",
       },
     ]);
-    assert.deepEqual(issuesOf(() => body("hotels offers", OFFERS, { FORTRIP_DISPLAY_CURRENCY: "eur" })), [
+    assert.deepEqual(issuesOf(() => body("hotels offers", OFFERS, { FORTRIP_CURRENCY: "eur" })), [
       {
-        pointer: "/displayCurrency",
-        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+        pointer: "/currency",
+        message: "FORTRIP_CURRENCY: currency must be one of: USD, CNY",
       },
     ]);
     // From a flag, it is the flag's own value: the variable isn't named.
-    for (const argv of [["--display-currency", ""], ["--display-currency", "EUR"]]) {
+    for (const argv of [["--currency", ""], ["--currency", "EUR"]]) {
       const issues = issuesOf(() =>
-        body("hotels search", [...SEARCH, ...argv], { FORTRIP_DISPLAY_CURRENCY: "CNY" }),
+        body("hotels search", [...SEARCH, ...argv], { FORTRIP_CURRENCY: "CNY" }),
       );
       assert.deepEqual(issues, [
-        { pointer: "/displayCurrency", message: "displayCurrency must be one of: USD, CNY" },
+        { pointer: "/currency", message: "currency must be one of: USD, CNY" },
       ]);
     }
   });
 
-  it("orders never take one: they are charged in USD", () => {
+  it("orders never take one: they are charged in the currency of their offer", () => {
     const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT], {
-      FORTRIP_DISPLAY_CURRENCY: "CNY",
+      FORTRIP_CURRENCY: "CNY",
     });
-    assert.equal("displayCurrency" in sent, false);
+    assert.equal("currency" in sent, false);
     assert.throws(
-      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--display-currency", "CNY"]),
+      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--currency", "CNY"]),
       isUsage,
     );
   });
@@ -720,7 +755,7 @@ describe("parseOptions", () => {
     const login = parseOptions(command("login"), ["--no-browser"]);
     assert.equal(login.values["no-browser"], true);
     assert.equal(parseOptions(command("login"), []).values["no-browser"], undefined);
-    assert.deepEqual(parseOptions(command("guide"), ["planning"]).positionals, ["planning"]);
+    assert.deepEqual(parseOptions(command("hotels get"), ["h1"]).positionals, ["h1"]);
   });
 
   it("refuses what the spec doesn't declare", () => {
@@ -728,7 +763,6 @@ describe("parseOptions", () => {
       ["login", ["--browser"]],
       ["logout", ["--no-browser"]],
       ["whoami", ["now"]],
-      ["guide", ["--topic", "x"]],
     ] as const) {
       assert.throws(() => parseOptions(command(name), [...argv]), isUsage, `${name} ${argv}`);
     }

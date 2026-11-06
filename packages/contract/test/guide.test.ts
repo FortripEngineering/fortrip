@@ -48,7 +48,7 @@ describe("renderGuide", () => {
     );
     assert.match(PRESENTATION_HINT, /estimate per room-night/);
     assert.match(PRESENTATION_HINT, /never invent photos, ratings, reviews, prices, terms or coordinates/);
-    assert.match(PRESENTATION_HINT, /whole stay for all rooms, in USD/);
+    assert.match(PRESENTATION_HINT, /whole stay for all rooms, in its currency/);
   });
 
   for (const { surface, topic, label } of RENDERINGS) {
@@ -78,6 +78,17 @@ describe("renderGuide", () => {
       assert.doesNotMatch(text, /\bnpx\b|fortrip@latest|get_planning_guide/);
     });
   }
+
+  it("nothing points to a runtime guide", () => {
+    for (const surface of SURFACES) {
+      for (const topic of TOPICS) {
+        const text = renderGuide(surface, topic);
+        assert.doesNotMatch(text, /fortrip guide|get_planning_guide/, `${surface} ${topic}`);
+      }
+    }
+    assert.equal(TOOLS.some((tool) => (tool.name as string) === "get_planning_guide"), false);
+    assert.equal(COMMANDS.some((command) => (command.name as string) === "guide"), false);
+  });
 
   it("the MCP instructions are at most 2,500 characters", () => {
     const text = renderGuide("mcp", "main");
@@ -115,21 +126,30 @@ describe("the settled rules (design §3.4)", () => {
     }
   }
 
-  it("price units: price.total is the whole stay for all rooms, charged in USD for offers and their orders", () => {
+  it("price units: price.total is the whole stay for all rooms, charged in the request's currency", () => {
     for (const surface of SURFACES) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /`price\.total` is the whole stay for all rooms and is what is charged, in USD for offers and the orders made from them/,
+        /`price\.total` is the whole stay for all rooms and is what is charged, in the request's `(--)?currency`/,
         surface,
       );
     }
   });
 
-  it("USD and Adaptive Pricing, stated plainly", () => {
+  it("no surface or topic mentions approx or 'in USD for offers'; the currency rule is stated once", () => {
+    for (const { surface, topic } of RENDERINGS) {
+      const text = flat(renderGuide(surface, topic));
+      assert.doesNotMatch(text, /approx|in USD for offers|display-?currency/i, `${surface} ${topic}`);
+    }
+    for (const surface of SURFACES) {
+      assert.equal(count(renderGuide(surface, "main"), /in the request's `(--)?currency`/), 1, surface);
+    }
+  });
+
+  it("Adaptive Pricing, stated plainly", () => {
     for (const surface of SURFACES) {
       const text = flat(renderGuide(surface, "main"));
       assert.match(text, /pay in (their|the) card's (local )?currency at Stripe's rate/, surface);
-      assert.match(text, /`approx`[^.]*never the charge/, surface);
     }
   });
 
@@ -270,28 +290,39 @@ describe("consent before cancelling an order", () => {
       assert.ok(
         text.includes("End that reply by asking the user to confirm the cancellation, and wait for a clear yes"),
       );
-      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty.amount\` as shown`));
+      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty\` as shown`));
       assert.match(text, /Never state a refund the order didn't return, and never choose or work out an amount yourself/);
       assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
     });
   }
 
   // C7: the CLI never cancels without the penalty the user agreed to.
-  it("the CLI guide says orders cancel without --max-penalty cancels nothing", () => {
+  it("the CLI guide says orders cancel without --max-penalty or --close changes nothing", () => {
     assert.match(
       flat(renderGuide("cli", "main")),
-      /Without `--max-penalty`, `fortrip orders cancel` cancels nothing/,
+      /Without `--max-penalty` or `--close`, `fortrip orders cancel` changes nothing/,
     );
   });
+
+  // An unpaid order is closed only on the user's word, and never with a penalty.
+  for (const surface of ["claude-skill", "cli"] as const) {
+    it(`${surface} main: close an unpaid order only once the user says they no longer want it`, () => {
+      const text = flat(renderGuide(surface, "main"));
+      const close = surface === "cli" ? "with `--close`" : "without `maximumPenalty`";
+      assert.ok(
+        text.includes(
+          `Close an unpaid order only once the user says they no longer want it: ${surface === "cli" ? "run" : "call"} \`${renderText("{{tool:orders cancel}}", surface)}\` ${close}.`,
+        ),
+        surface,
+      );
+      assert.match(text, /It becomes `expired`, and nothing is charged\./);
+      assert.match(text, /`payment_in_progress` \(409\) means a payment of it is under way: read it again shortly\./);
+    });
+  }
 });
 
 describe("the MCP instructions", () => {
   const text = flat(renderGuide("mcp", "main"));
-
-  it("say what get_planning_guide is, never order a fetch of it", () => {
-    assert.match(text, /`get_planning_guide` returns Fortrip's guidance for flexible dates/);
-    assert.doesNotMatch(text, /follow it|call `?get_planning_guide/);
-  });
 
   it("carry the cross-tool rules", () => {
     for (const phrase of [
@@ -306,7 +337,7 @@ describe("the MCP instructions", () => {
   });
 
   it("name every tool as the server does", () => {
-    assert.equal(TOOLS.length, 9);
+    assert.equal(TOOLS.length, 8);
     for (const { name } of TOOLS) {
       assert.match(text, new RegExp(`\`${name}\``), name);
     }
@@ -325,7 +356,7 @@ describe("the Claude skill", () => {
 
   it("keeps the tools table and the payment-link sequence", () => {
     assert.match(main, /^\| Tool \| Returns \|$/m);
-    for (const { name } of TOOLS.filter((tool) => tool.name !== "get_planning_guide")) {
+    for (const { name } of TOOLS) {
       assert.match(main, new RegExp(`^\\| \`fortrip:${name}\` \\|`, "m"), name);
     }
     assert.match(main, /^## Before giving the payment link$/m);
@@ -370,7 +401,6 @@ describe("the CLI guide", () => {
       "`userCode`",
       "Never ask the user to paste a token",
       "`--body",
-      "`fortrip guide planning`",
       "`--json`",
       "`fortrip orders get`",
       "info@fortrip.ai",
@@ -383,7 +413,7 @@ describe("the CLI guide", () => {
     for (const text of [main, planning]) {
       assert.doesNotMatch(text, /fortrip skill|fth_|\/api\//);
     }
-    assert.doesNotMatch(main, /--rooms \d|--adults|--currency|FORTRIP_CURRENCY/);
+    assert.doesNotMatch(main, /--rooms \d|--adults/);
   });
 
   it("the planning guide asks for confirmation of what book returned", () => {
@@ -492,8 +522,6 @@ describe("renderText", () => {
     assert.equal(renderText("{{tool:orders get}}", "mcp"), "get_order");
     assert.equal(renderText("{{tool:hotels book}}", "mcp"), "book_hotel");
     assert.equal(renderText("{{tool:hotels book}}", "claude-skill"), "fortrip:book_hotel");
-    assert.equal(renderText("{{tool:guide}}", "mcp"), "get_planning_guide");
-    assert.equal(renderText("{{tool:guide}}", "cli"), "fortrip guide");
     assert.equal(renderText("{{tool:whoami}}", "cli"), "fortrip whoami");
   });
 
@@ -551,6 +579,7 @@ describe("renderText", () => {
       // A hotel command is named with its group.
       "{{tool:search}}",
       "{{tool:book}}",
+      "{{tool:guide}}",
       "{{tool:hotels}}",
       "{{tool:hotels whoami}}",
       "{{tool:hotels  search}}",
@@ -570,8 +599,6 @@ describe("renderText", () => {
   });
 
   it("throws on a tool the surface doesn't have", () => {
-    // The Claude plugin ships the planning guide as a file (Directory Policy §2F).
-    assert.throws(() => renderText("{{tool:guide}}", "claude-skill"), /guide/i);
     assert.throws(() => renderText("{{tool:whoami}}", "mcp"), /guide/i);
     assert.throws(() => renderText("{{tool:login}}", "claude-skill"), /guide/i);
   });

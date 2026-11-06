@@ -73,7 +73,7 @@ describe("README", () => {
     const variables = [...overallHelp().matchAll(/^ {2}(FORTRIP_[A-Z_]+) /gm)].map((m) => m[1] as string);
     assert.deepEqual(variables.sort(), [
       "FORTRIP_API_URL",
-      "FORTRIP_DISPLAY_CURRENCY",
+      "FORTRIP_CURRENCY",
       "FORTRIP_MCP_URL",
       "FORTRIP_TOKEN",
     ]);

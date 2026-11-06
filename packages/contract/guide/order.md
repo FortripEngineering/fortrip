@@ -68,7 +68,7 @@
 
 - Stars run from 1 to 5 in half steps{{#if mcp claude-skill}} (`filters.stars`){{/if}}. "4 stars" as {{#if mcp claude-skill}}`{ min: 4, max: 4 }`{{/if}}{{#if cli}}`--stars-min 4 --stars-max 4`{{/if}} leaves out 4.5: unless the user means exactly 4, use {{#if mcp claude-skill}}`{ min: 4 }`{{/if}}{{#if cli}}`--stars-min 4`{{/if}} or ask. Unrated hotels are left out whenever stars are filtered.
 - `{{arg:filters.amenities}}` takes only the amenities that can filter (such as pool, parking, wifi); others, such as gym or spa, show in `{{tool:hotels get}}` but can't filter. A hotel matches only when it lists the amenity, and about half the hotels list no amenities at all (`coverage.excludedNoFacilityData` counts those left out): "not listed" is not "absent".
-- `{{arg:filters.price.maxPerRoomNight}}` bounds the indicative price per room per night, in USD; hotels without one are left out and counted.
+- `{{arg:filters.price.maxPerRoomNight}}` bounds the indicative price per room per night, in the search's currency; hotels without one are left out and counted.
 
 ### Results
 

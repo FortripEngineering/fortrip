@@ -69,11 +69,6 @@ const DOCS: Record<string, { title: string; group: string; output?: string }> =
       output:
         "The signed-in account on stdout. With `--json`, the response as JSON on one line.",
     },
-    guide: {
-      title: "Agent guide",
-      group: "Guides",
-      output: "Markdown on stdout.",
-    },
     mcp: {
       title: "Local MCP server",
       group: "Local MCP",
@@ -103,13 +98,13 @@ function flagSyntax(option: FlagSpec | OptionSpec): string {
   return `--${option.flag}${placeholder}${repeats}`;
 }
 
-function positional({ name, optional }: PositionalSpec): string {
-  return optional ? `[${name}]` : `<${name}>`;
+function positional({ name }: PositionalSpec): string {
+  return `<${name}>`;
 }
 
 /** `fortrip hotels offers --hotel <htl_>... --check-in YYYY-MM-DD ... [options]`: the
- *  positionals and the flags of required fields (in brackets when the command
- *  runs without one), then `[options]` when more can be given. */
+ *  positionals and the flags of required fields, then `[options]` when more
+ *  can be given. */
 function usageOf(spec: CommandSpec): string {
   const tool = TOOLS.find((candidate) => candidate.name === spec.tool);
   const required = new Set(
@@ -121,7 +116,7 @@ function usageOf(spec: CommandSpec): string {
   return [
     commandInvocation(spec),
     ...(spec.positionals ?? []).map(positional),
-    ...mandatory.map((flag) => (flag.optional ? `[${flagSyntax(flag)}]` : flagSyntax(flag))),
+    ...mandatory.map(flagSyntax),
     ...(more ? ["[options]"] : []),
   ].join(" ");
 }
@@ -129,7 +124,7 @@ function usageOf(spec: CommandSpec): string {
 function flagRows(spec: CommandSpec): CliFlag[] {
   return [
     ...(spec.positionals ?? []).map(
-      (item): CliFlag => [positional(item), item.field ?? "", item.description],
+      (item): CliFlag => [positional(item), item.field, item.description],
     ),
     ...spec.flags.map(
       (flag): CliFlag => [flagSyntax(flag), flag.field, flag.description],

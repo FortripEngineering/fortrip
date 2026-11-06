@@ -116,10 +116,7 @@ function roomText(r: Room): string {
 /** One offer on one line, its id first. */
 export function offerLine(o: Offer): string {
   const p = o.price;
-  let price = `${money(p.total)} total (${money(p.perNightAllRooms)} per night, all rooms)`;
-  if (p.approx) {
-    price += ` ≈ ${money(p.approx.total)} (${money(p.approx.perNightAllRooms)} per night), exchange rate of ${p.approx.rateDate}`;
-  }
+  const price = `${money(p.total)} total (${money(p.perNightAllRooms)} per night, all rooms)`;
   return [
     `${o.offerId}${o.type === "hotel" ? "" : ` (${o.type})`}`,
     `${plural(o.hotel.roomCount, "room")}: ${roomText(o.hotel.room)}`,

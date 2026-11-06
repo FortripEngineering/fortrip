@@ -141,7 +141,7 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
   order: { answer: order, paths: ["orderId", "reference", "status", "price.total", "payment.url", "payment.expiresAt"] },
   "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
-  "pay-wallet": { answer: walletOpen, paths: ["orderId", "status", "payment.wallets"] },
+  "pay-wallet": { answer: walletOpen, paths: ["orderId", "status", "payment.methods"] },
   "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },
   cancel: { answer: cancelling, paths: ["orderId", "status", "cancel"] },
 };

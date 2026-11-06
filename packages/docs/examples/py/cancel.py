@@ -8,7 +8,10 @@ import httpx
 token = os.environ["FORTRIP_TOKEN"]
 
 body = {
-  "maximumPenalty": 0
+  "maximumPenalty": {
+    "amount": "0.00",
+    "currency": "USD"
+  }
 }
 
 response = httpx.post(

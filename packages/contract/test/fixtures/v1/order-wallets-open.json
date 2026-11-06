@@ -85,24 +85,25 @@
       "chargeCurrency": "USD",
       "localCurrencyAtCheckout": true,
       "localCharge": null,
-      "handlers": [],
-      "credentialLimits": null,
-      "wallets": {
-        "open": true,
-        "current": "wechat_pay",
-        "wechatPay": {
-          "qrData": "weixin://wxpay/bizpayurl?pr=Xk3dQ9fAB",
-          "qrImageUrl": "https://fortrip.ai/pay/ord_BundAwaiting00000000/wechat/qr.png",
-          "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000/wechat"
-        },
-        "alipay": {
-          "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000/alipay"
+      "methods": [
+        {
+          "id": "stripe_alipay_wechat_pay",
+          "open": true,
+          "current": "wechat_pay",
+          "wechatPay": {
+            "qrData": "weixin://wxpay/bizpayurl?pr=Xk3dQ9fAB",
+            "qrImageUrl": "https://fortrip.ai/pay/ord_BundAwaiting00000000/wechat/qr.png",
+            "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000/wechat"
+          },
+          "alipay": {
+            "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000/alipay"
+          }
         }
-      }
+      ]
     },
     "cancel": {
-      "available": false,
-      "reason": "not_confirmed",
+      "available": true,
+      "reason": "unpaid",
       "penalty": null,
       "refund": null
     },

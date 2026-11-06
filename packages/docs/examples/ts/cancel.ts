@@ -6,7 +6,10 @@ const token = process.env.FORTRIP_TOKEN;
 if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip access token");
 
 const body = {
-  "maximumPenalty": 0
+  "maximumPenalty": {
+    "amount": "0.00",
+    "currency": "USD"
+  }
 };
 
 const response = await fetch("https://api.fortrip.ai/v1/orders/ord_Wr4tY7uI0oPa3SdF6gHj/cancel", {

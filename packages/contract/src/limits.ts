@@ -28,7 +28,7 @@ export const LIMITS = {
   tokenPaymentMaxUsd: 500,
   /** Minutes that must be left before the order's payment window closes
    *  (`payment.expiresAt`) for the order to offer a token or wallet payment
-   *  (`payment.handlers`, `payment.wallets`). */
+   *  (an entry of `payment.methods`). */
   payMinMinutesLeft: 15,
   /** `pay_order` refuses (`order_not_payable`), by token or wallet, when the
    *  order's payment window (`payment.expiresAt`) closes within this many
@@ -41,8 +41,10 @@ export const LIMITS = {
   ordersPerStay: 20,
 } as const;
 
-/** Currencies a v1 response can show prices in (USD is also what is paid). */
-export const DISPLAY_CURRENCIES = ["USD", "CNY"] as const;
+/** Currencies a v1 request can price and charge in (USD is the default). */
+export const CURRENCIES = ["USD", "CNY"] as const;
+
+export type Currency = (typeof CURRENCIES)[number];
 
 /** Where a person goes when an agent gets stuck. */
 export const SUPPORT_EMAIL = "info@fortrip.ai";

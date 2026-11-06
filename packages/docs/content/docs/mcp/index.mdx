@@ -15,7 +15,7 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 ## What a tool returns [#results]
 
-`structuredContent` is the full response object, the same as the [HTTP API](/api)'s; every tool but `get_planning_guide` declares its `outputSchema`. `content` holds the answer as compact text written for the model: one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. The exceptions:
+`structuredContent` is the full response object, the same as the [HTTP API](/api)'s; every tool declares its `outputSchema`. `content` holds the answer as compact text written for the model: one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. The exceptions:
 
 <McpContentExceptions />
 
@@ -39,7 +39,7 @@ On an error, the request id support asks for is the envelope's `requestId`; a su
 
 ## Server instructions [#instructions]
 
-On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. The full agent guide is what `fortrip guide` prints. `get_planning_guide` returns a separate guide, for requests that are more than one hotel for fixed dates.
+On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt.
 
 ## Timeouts and retries [#retries]
 

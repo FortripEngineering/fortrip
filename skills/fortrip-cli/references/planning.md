@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in `fortrip guide` still apply (call order, destinations, one party per offer and order, confirming the order `fortrip hotels book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply (call order, destinations, one party per offer and order, confirming the order `fortrip hotels book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
 
 ## What to collect
 
@@ -15,11 +15,11 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `-
 - A `fortrip hotels search` price is an indicative estimate per room per night, not a quote. Never call a search result available or bookable, and once you have offers, compare offers only. A hotel without a search price can still have offers.
 - Use `fortrip hotels get` only when a stated preference needs evidence (a pool, a policy, room size). An amenity or policy it doesn't list is unknown, not absent.
 - A hotel is available only once `fortrip hotels offers` returned an offer for it.
-- Anything the CLI didn't return, such as reviews, style, price trends or exchange rates other than `approx`, is unknown. Say so instead of filling it in.
+- Anything the CLI didn't return, such as reviews, style, price trends or exchange rates, is unknown. Say so instead of filling it in.
 
 ## Ranking
 
-1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in USD.
+1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in the offer's currency.
 2. Keep only options with a live offer.
 3. Order by the user's stated main goal. Goals they didn't state don't count.
 4. Use other preferences only to break ties.

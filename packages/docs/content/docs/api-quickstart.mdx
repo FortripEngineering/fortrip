@@ -91,7 +91,7 @@ The answer, abridged:
 
 ## Cancel [#cancel]
 
-Cancel only while the order's `cancel.available` is `true`, with `maximumPenalty` the number in `cancel.penalty.amount` that the user agreed to.
+Cancel a paid order only while its `cancel.available` is `true`, with `maximumPenalty` the order's `cancel.penalty` that the user agreed to, exactly as returned. An unpaid order (`cancel.reason` `unpaid`) is closed instead, without `maximumPenalty`, once the user says they no longer want it.
 
 <Example name="cancel" />
 

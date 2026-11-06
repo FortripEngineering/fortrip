@@ -56,13 +56,13 @@ const MEANINGS: Record<ErrorCode, string> = {
   payment_total_changed:
     "The `total` sent isn't the order's; `details.total` is. Confirm that total with the user, then call again with it: with the same token, or with `method` again for Alipay or WeChat Pay. This call charged nothing.",
   payment_credential_invalid:
-    "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the order's `payment.credentialLimits`), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
+    "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the `limits` of the order's `stripe_shared_payment_token` method), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
   payment_declined:
     "The card was declined; `declineCode` is the bank's reason when it gives one. The user can pick another payment method in their wallet, or pay by `payment.url`, which stays open.",
   payment_action_required:
     "The card needs a verification (such as 3-D Secure) that a token payment can't give. The user pays by `payment.url`, which stays open.",
   payment_method_unavailable:
-    "The order can't be paid the way asked. With a token: its `payment.handlers` is empty, it took its limit of tokens, Stripe refused the token for a reason a new one wouldn't fix, or an Alipay or WeChat Pay payment was opened on it (use `payment.wallets`). With `method`: Alipay and WeChat Pay aren't offered for it (`payment.wallets` is `null`), or too little of its payment window is left to start a payment. Otherwise give the user `payment.url`.",
+    "The order can't be paid the way asked. With a token: its `payment.methods` has no `stripe_shared_payment_token` entry, it took its limit of tokens, Stripe refused the token for a reason a new one wouldn't fix, or an Alipay or WeChat Pay payment was opened on it (use its `stripe_alipay_wechat_pay` entry). With `method`: the method isn't in its `payment.methods`, or too little of its payment window is left to start a payment. Otherwise give the user `payment.url`.",
   destination_ambiguous:
     `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:
@@ -75,6 +75,8 @@ const MEANINGS: Record<ErrorCode, string> = {
     "Check-in is already past in the hotel's time zone. Ask the user for new dates.",
   offer_unavailable:
     "The hotel supplier no longer sells the offer (`sold_out`), or refused it (`refused`). Get offers again.",
+  currency_unavailable:
+    "Prices in the currency asked for (`currency`) aren't available yet. Tell the user, and ask whether to see USD prices.",
   rate_limited:
     "Too many calls of one kind (`scope`) in a minute. Retry after `retryAfterSeconds`.",
   ordering_paused:

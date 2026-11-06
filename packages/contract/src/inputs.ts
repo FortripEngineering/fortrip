@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CARD_NUMBER_MESSAGE, containsCardNumber } from "./card-number.ts";
 import { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
 import { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-import { usdMoney } from "./conventions/money.ts";
+import { echoedMoney, requestMoney } from "./conventions/money.ts";
 import { localDate } from "./conventions/time.ts";
 import {
   flag,
@@ -18,7 +18,7 @@ import {
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
-import { LIMITS } from "./limits.ts";
+import { CURRENCIES, LIMITS } from "./limits.ts";
 import { AMENITY_CODES, SEARCH_SORTS } from "./vocabulary.ts";
 
 /*
@@ -34,12 +34,8 @@ const locale = oneOf("locale", ["en", "zh"] as const).describe(
   "Language for names and text in the response: en or zh.",
 );
 
-const displayCurrency = oneOf("displayCurrency", [
-  "USD",
-  "CNY",
-] as const).describe(
-  "Currency to show prices in, USD or CNY. It never changes what is charged: payment is in USD.",
-);
+const currencyDescription =
+  "The currency to price and charge in: USD (default) or CNY, where available (otherwise the answer is currency_unavailable).";
 
 /** An opaque cursor from a previous response. */
 const cursor = nonEmpty("cursor");
@@ -236,8 +232,8 @@ const searchFilters = strictInput({
       "Amenities every hotel must list. Only some codes can filter; asking for one that cannot is answered with the list that can.",
     ),
   price: strictInput({
-    maxPerRoomNight: usdMoney.describe(
-      "Highest price per room per night, in USD.",
+    maxPerRoomNight: requestMoney("filters.price.maxPerRoomNight").describe(
+      "Highest price per room per night, in the search's currency.",
     ),
   })
     .optional()
@@ -290,7 +286,7 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
         "`nextCursor` from the previous response. A next page is the cursor and, optionally, `limit`; nothing else.",
       ),
     locale: locale.optional(),
-    displayCurrency: displayCurrency.optional(),
+    currency: oneOf("currency", CURRENCIES).optional().describe(currencyDescription),
   }).superRefine((input, ctx) => {
     const issue = (path: (string | number)[], message: string) =>
       ctx.addIssue({ code: "custom", path, message });
@@ -337,6 +333,15 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
           `filters.price needs indicative pricing, but ${reason}`,
         );
       }
+    }
+
+    const bound = input.filters?.price?.maxPerRoomNight;
+    const searchCurrency = input.currency ?? "USD";
+    if (bound !== undefined && bound.currency !== searchCurrency) {
+      issue(
+        ["filters", "price", "maxPerRoomNight", "currency"],
+        `filters.price.maxPerRoomNight.currency is ${bound.currency}, but the search is in ${searchCurrency}${input.currency === undefined ? " (the default)" : ""}: send the price in ${searchCurrency}`,
+      );
     }
 
     const checkIn = input.stay?.checkIn;
@@ -405,7 +410,9 @@ export const hotelOffersInput = strictInput({
       `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Default ${LIMITS.offersPerHotelDefault}.`,
     ),
   locale: locale.optional(),
-  displayCurrency: displayCurrency.optional(),
+  currency: oneOf("currency", CURRENCIES)
+    .optional()
+    .describe(`${currencyDescription} An order made from these offers is charged in this currency.`),
 });
 
 export type HotelOffersInput = z.input<typeof hotelOffersInput>;
@@ -571,19 +578,16 @@ export const listOrdersInput = strictInput({
 
 export type ListOrdersInput = z.input<typeof listOrdersInput>;
 
-const maximumPenaltyError =
-  "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50";
-
 /** `POST /v1/orders/{orderId}/cancel` and the MCP `cancel_order` arguments:
- *  the order, and the penalty the user agreed to as a ceiling. The server
+ *  the order and, to cancel a paid order, the penalty the user agreed to as a
+ *  ceiling; an unpaid order is closed with the order alone. The server
  *  computes the refund; a higher penalty now answers `cancellation_changed`. */
 export const cancelOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to cancel."),
-  maximumPenalty: z
-    .number({ error: maximumPenaltyError })
-    .min(0, { error: maximumPenaltyError })
+  maximumPenalty: echoedMoney("maximumPenalty")
+    .optional()
     .describe(
-      "The penalty the user agreed to: a JSON number equal to the order's cancel.penalty.amount, e.g. 120.5 for \"120.50\".",
+      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
     ),
 });
 
@@ -631,7 +635,7 @@ const ucpInstrument = z
               .string({ error: instrumentTokenError })
               .optional()
               .describe(
-                "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits.",
+                "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
               ),
           },
           { error: "credential must be a JSON object" },
@@ -680,16 +684,17 @@ function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) 
   return chosen;
 }
 
-/** The ways an order is paid: the order's own link, a shared payment token
- *  through `pay_order`, or Alipay/WeChat Pay through `pay_order`. */
-export const PAY_WAYS = ["payment_link", "shared_payment_token", "alipay_wechat_pay"] as const;
+/** The ways an order is paid: the order's own link, or through `pay_order`
+ *  one of its `payment.methods`, by id (a shared payment token, or
+ *  Alipay/WeChat Pay). */
+export const PAY_WAYS = ["payment_link", "stripe_shared_payment_token", "stripe_alipay_wechat_pay"] as const;
 export type PayWay = (typeof PAY_WAYS)[number];
 
 /** The way each exclusive field of `payOrderInput` pays by. */
 export const PAY_INPUT_WAYS: Record<"sharedPaymentToken" | "payment" | "method", PayWay> = {
-  sharedPaymentToken: "shared_payment_token",
-  payment: "shared_payment_token",
-  method: "alipay_wechat_pay",
+  sharedPaymentToken: "stripe_shared_payment_token",
+  payment: "stripe_shared_payment_token",
+  method: "stripe_alipay_wechat_pay",
 };
 
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
@@ -706,7 +711,7 @@ export const payOrderInput = strictInput({
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
     .optional()
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the order's payment.credentialLimits. Exactly one of sharedPaymentToken, payment and method.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method. Exactly one of sharedPaymentToken, payment and method.",
     ),
   payment: strictInput({
     instruments: z
@@ -755,13 +760,13 @@ export const payOrderInput = strictInput({
     .describe(
       "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken, payment and method.",
     ),
-  method: oneOf("method", ["alipay_wechat_pay"] as const)
+  method: oneOf("method", ["stripe_alipay_wechat_pay"] as const)
     .optional()
     .describe(
-      "Pay with Alipay or WeChat Pay instead of a token: opens the payment and returns payment.wallets. Exactly one of sharedPaymentToken, payment and method.",
+      "Pay by a method in payment.methods other than the token, which is paid with sharedPaymentToken or payment. Exactly one of sharedPaymentToken, payment and method.",
     ),
-  total: usdMoney.describe(
-    "The total the user approved: the order's price.total, exactly as returned.",
+  total: requestMoney("total").describe(
+    "The total the user approved: the order's price.total, in its currency, exactly as returned.",
   ),
 }).superRefine((input, ctx) => {
   // Of the three ways to pay, in order: the last one given is the extra.

@@ -64,7 +64,6 @@
               "amount": "66.20",
               "currency": "USD"
             },
-            "approx": null,
             "payAtProperty": {
               "disclosure": "complete",
               "items": [
@@ -150,7 +149,6 @@
               "amount": "74.90",
               "currency": "USD"
             },
-            "approx": null,
             "payAtProperty": {
               "disclosure": "complete",
               "items": [

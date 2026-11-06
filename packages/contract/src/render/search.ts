@@ -172,9 +172,6 @@ function priceWords(h: HotelSummary, status: string | null): string {
     return status === "ok" ? "no indicative price" : "price unavailable this time";
   }
   let text = `from ${money(p.fromPerRoomNight)}/room-night (${money(p.fromPerRoomStay)} per room for the stay)`;
-  if (p.approx) {
-    text += ` ≈ ${money(p.approx.fromPerRoomNight)}/room-night (${money(p.approx.fromPerRoomStay)}), exchange rate of ${p.approx.rateDate}`;
-  }
   if (p.kind !== "indicative" || p.basis !== "lowest_unit") {
     text += ` [${p.kind}, ${p.basis}]`;
   }

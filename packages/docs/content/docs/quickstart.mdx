@@ -47,7 +47,7 @@ Find a quiet hotel in Kyoto for two adults, two nights next month, with free can
 - You pay on a Stripe, Alipay or WeChat Pay page. The agent never sees your card.
 - A card is held until the hotel confirms, then charged. If the hotel can't confirm, the hold is released, or a payment already taken is refunded in full.
 - The payment link is for you alone: anyone who has it can pay, so don't share it.
-- Prices are in US dollars. The payment page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
+- Prices are in the currency you ask for, USD (the default) or CNY where available, and you pay in it. On a USD order, the payment page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
 
 Questions about a booking, or a payment that didn't go through? See [Help and support](/faq#support).
 
@@ -66,10 +66,10 @@ npx fortrip orders get ord_…
 
 `hotels book` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
 
-If the order offers Alipay or WeChat Pay (its `payment.wallets` isn't `null`), you can pay that way instead. Use the total exactly as `orders get` shows it:
+If the order offers Alipay or WeChat Pay (its `payment.methods` has the `stripe_alipay_wechat_pay` entry), you can pay that way instead. Use the total exactly as `orders get` shows it:
 
 ```sh
-npx fortrip orders pay ord_… --wallet --total <total>
+npx fortrip orders pay ord_… --method stripe_alipay_wechat_pay --total <total>
 ```
 
 It prints a WeChat Pay code, an Alipay link and a WeChat Pay link; pay once, by one of them. Each command's usage and options are in the [CLI reference](/cli).

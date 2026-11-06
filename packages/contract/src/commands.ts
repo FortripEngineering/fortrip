@@ -10,7 +10,7 @@ import {
   listOrdersInput,
   searchHotelsInput,
 } from "./inputs.ts";
-import { DISPLAY_CURRENCIES, LIMITS } from "./limits.ts";
+import { CURRENCIES, LIMITS } from "./limits.ts";
 import type { ToolName } from "./tools.ts";
 import { FILTERABLE_AMENITIES, SEARCH_SORTS } from "./vocabulary.ts";
 
@@ -41,15 +41,13 @@ export interface FlagSpec {
    * or `value` when it has one. A `string` flag whose field is an object or
    * a list of objects is one value the CLI parses into that shape:
    * `--point` `lat,lng`; `--room` `adults[:age,…]` (`2:6,9` is two adults
-   * and children of 6 and 9); `--price-max-per-room-night` a USD amount;
-   * `--guest` `room:first:last`, into that room's guests.
+   * and children of 6 and 9); `--price-max-per-room-night` an amount in
+   * the request's currency; `--guest` `room:first:last`, into that room's
+   * guests.
    */
   type: "string" | "number" | "boolean";
   /** Given once per item; its field is a list. */
   multiple?: boolean;
-  /** The command runs without it though the tool needs its field:
-   *  `orders cancel` without `--max-penalty` cancels nothing. */
-  optional?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
    *  `--rooms` sends `include: "rooms"`. */
   value?: string;
@@ -70,12 +68,10 @@ export interface FlagSpec {
 
 /** An argument given by position. */
 export interface PositionalSpec {
-  /** As help shows it: `<hotelId>`, or `[topic]` when optional. */
+  /** As help shows it: `<hotelId>`. */
   name: string;
-  /** The input field it sets; `null` for one the CLI reads itself. */
-  field: string | null;
-  /** Can be left out. */
-  optional?: boolean;
+  /** The input field it sets. */
+  field: string;
   description: string;
 }
 
@@ -112,7 +108,6 @@ export interface CommandSpec {
     | "login"
     | "logout"
     | "whoami"
-    | "guide"
     | "mcp";
   summary: string;
   /** The MCP tool the command mirrors; `null` for one that is the CLI's own. */
@@ -217,11 +212,11 @@ const localeFlag: FlagDef = {
   placeholder: LOCALES,
 };
 
-const displayCurrencyFlag: FlagDef = {
-  flag: "display-currency",
-  field: "displayCurrency",
+const currencyFlag: FlagDef = {
+  flag: "currency",
+  field: "currency",
   type: "string",
-  placeholder: DISPLAY_CURRENCIES.join("|"),
+  placeholder: CURRENCIES.join("|"),
 };
 
 /** `stay` as flags, the same in search and offers. */
@@ -330,9 +325,9 @@ const searchFlags = flagsOf(searchHotelsInput, [
     flag: "price-max-per-room-night",
     field: "filters.price.maxPerRoomNight",
     type: "string",
-    placeholder: "<USD decimal>",
+    placeholder: "<decimal>",
     description:
-      "Highest indicative price per room per night, in USD, e.g. `150` or `149.50`. Needs a stay.",
+      "Highest indicative price per room per night, in the search's currency (`--currency`, else USD), e.g. `150` or `149.50`. Needs a stay.",
   },
   {
     flag: "sort",
@@ -350,7 +345,7 @@ const searchFlags = flagsOf(searchHotelsInput, [
       "`nextCursor` from the previous page. A next page takes only `--cursor` and `--limit`.",
   },
   localeFlag,
-  displayCurrencyFlag,
+  currencyFlag,
 ]);
 
 const hotelFlags = flagsOf(getHotelInput, [
@@ -384,7 +379,7 @@ const offersFlags = flagsOf(hotelOffersInput, [
   },
   { flag: "limit-per-hotel", field: "limitPerHotel", type: "number", placeholder: COUNT },
   localeFlag,
-  displayCurrencyFlag,
+  currencyFlag,
 ]);
 
 const bookFlags = flagsOf(createOrderInput, [
@@ -428,11 +423,10 @@ const cancelFlags = flagsOf(cancelOrderInput, [
   {
     flag: "max-penalty",
     field: "maximumPenalty",
-    type: "number",
-    optional: true,
+    type: "string",
     placeholder: "<amount>",
     description:
-      "The penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it, the command cancels nothing: it shows the penalty and the refund.",
+      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it or --close, the command changes nothing: it shows the penalty and the refund, or that the order can be closed.",
   },
 ]);
 
@@ -443,23 +437,24 @@ const payFlags = flagsOf(payOrderInput, [
     type: "string",
     placeholder: "<spt_…>",
     description:
-      "Required unless --wallet. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --wallet.",
+      "Required unless --method. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --method.",
   },
   {
-    flag: "wallet",
+    flag: "method",
     field: "method",
-    type: "boolean",
-    value: "alipay_wechat_pay",
-    description: "Pay with Alipay or WeChat Pay instead of a token: prints the WeChat Pay code and both links.",
+    type: "string",
+    placeholder: "stripe_alipay_wechat_pay",
+    description:
+      "Pay by a method in the order's payment.methods instead of a token: stripe_alipay_wechat_pay is Alipay or WeChat Pay, and prints the WeChat Pay code and both links.",
   },
   {
     flag: "total",
     field: "total",
     type: "string",
-    placeholder: "<USD decimal>",
+    placeholder: "<decimal>",
     required: "always",
     description:
-      "The total the user approved, exactly as `orders get` shows it, in USD, e.g. `125.00`.",
+      "The total the user approved, exactly as `orders get` shows it, in the order's currency, e.g. `125.00`.",
   },
 ]);
 
@@ -529,10 +524,18 @@ export const COMMANDS: readonly CommandSpec[] = [
     group: "orders",
     name: "cancel",
     summary:
-      "Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms",
+      "With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows",
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],
+    options: [
+      {
+        flag: "close",
+        type: "boolean",
+        description:
+          "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
+      },
+    ],
   },
   {
     group: "orders",
@@ -570,21 +573,6 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "Show the signed-in account",
     tool: null,
     flags: [],
-  },
-  {
-    group: null,
-    name: "guide",
-    summary: "Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide",
-    tool: "get_planning_guide",
-    flags: [],
-    positionals: [
-      {
-        name: "topic",
-        field: null,
-        optional: true,
-        description: "`planning` for the planning guide; left out, the main guide.",
-      },
-    ],
   },
   {
     group: null,

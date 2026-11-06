@@ -6,12 +6,10 @@ import { ACCOUNT_ROUTES, HTTP_ROUTES, routePath } from "../src/routes.ts";
 import { TOOLS } from "../src/tools.ts";
 
 describe("HTTP routes", () => {
-  it("cover every tool but the planning guide", () => {
+  it("cover every tool", () => {
     assert.deepEqual(
       Object.keys(HTTP_ROUTES).sort(),
-      TOOLS.map((tool) => tool.name)
-        .filter((name) => name !== "get_planning_guide")
-        .sort(),
+      TOOLS.map((tool) => tool.name).sort(),
     );
   });
 

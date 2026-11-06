@@ -8,7 +8,7 @@ curl -sS --fail-with-body --max-time 180 -X POST "https://api.fortrip.ai/v1/orde
   -H "Content-Type: application/json" \
   --data @- <<'JSON'
 {
-  "method": "alipay_wechat_pay",
+  "method": "stripe_alipay_wechat_pay",
   "total": {
     "amount": "132.40",
     "currency": "USD"

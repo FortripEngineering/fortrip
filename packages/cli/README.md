@@ -82,12 +82,11 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels book` | Order an offer: an unpaid order with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
-| `orders cancel <orderId>` | Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms |
+| `orders cancel <orderId>` | With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows |
 | `orders pay <orderId>` | Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
-| `guide [topic]` | Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide |
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
@@ -107,32 +106,26 @@ same.
 `hotels book` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens, or
 approves a shared payment token for `orders pay` in their wallet, or
-scans the WeChat Pay code or opens the Alipay link that `orders pay --wallet`
-prints. Orders
-are paid in USD whatever `--display-currency` shows.
+scans the WeChat Pay code or opens the Alipay link that
+`orders pay --method stripe_alipay_wechat_pay` prints. Orders
+are paid in the currency of the offers they come from (`--currency`).
 
 `orders get` and `orders list` say of each order whether it can be cancelled
 now and, if so, the penalty under its terms and the refund.
 `orders cancel <orderId> --max-penalty <amount>` cancels it, with the penalty
 the person agreed to exactly as shown; if the penalty has gone up since,
-nothing changes and the command exits 1 with `cancellation_changed`. Without
-`--max-penalty` it cancels nothing: it prints the order's penalty and refund
-and exits 2.
+nothing changes and the command exits 1 with `cancellation_changed`. An
+unpaid order is closed instead, once the person says they no longer want it:
+`orders cancel <orderId> --close` closes it, nothing is charged, and it
+becomes `expired`. Without `--max-penalty` or `--close` it changes nothing:
+it prints the order's penalty and refund, or that it can be closed, and
+exits 2.
 
 ## For AI agents
 
-```bash
-npx -y fortrip guide            # when to use the CLI, call order, sign-in, what to show before a payment link
-npx -y fortrip guide planning   # flexible dates, budgets, split stays, several destinations
-```
-
-Both print Markdown, with `fortrip@latest` replaced by the running version, so
-an agent keeps using the same CLI for the whole conversation. The guide is
-written once in
+The agent guide is written once in
 [`@fortrip/agent-contract`](https://github.com/FortripEngineering/fortrip/tree/main/packages/contract/guide)
-and compiled into the CLI.
-
-For agents that can run shell commands, the same guide is also a skill:
+and ships as a skill, with the planning guide as `references/planning.md`:
 
 ```bash
 npx skills add FortripEngineering/fortrip --skill fortrip-cli
@@ -140,8 +133,8 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has nine tools:
-`get_planning_guide`, `search_hotels`, `get_hotel`, `get_hotel_offers`,
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
+`search_hotels`, `get_hotel`, `get_hotel_offers`,
 `book_hotel`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
@@ -200,14 +193,13 @@ args = ["-y", "fortrip", "mcp"]
 | `FORTRIP_TOKEN` | An access token, used instead of the saved sign-in. It is short-lived, so it suits a remote agent environment or a CI run; for longer, sign in. It isn't tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If Fortrip doesn't accept it, or it contains a line break or another character that can't be sent in a header, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"` and no `loginUrl`; the error never repeats the token. |
 | `FORTRIP_API_URL` | The API's base URL (default `https://api.fortrip.ai`). It must be `https`, except for `localhost`, `127.0.0.1` and `[::1]`, which may use plain `http`. It may end in a path prefix (`http://localhost:3000/api/public`), which every request path follows; a query or fragment is dropped. |
 | `FORTRIP_MCP_URL` | The MCP server `fortrip mcp` bridges to (default `https://mcp.fortrip.ai/`), under the same URL rule. Your sign-in is sent to it, so it must be the MCP server of the API you use: on the origin of `FORTRIP_API_URL`, except that the default API goes with the default MCP server, `api.fortrip.ai` and `mcp.fortrip.ai`. When you set `FORTRIP_API_URL` to a local or preview API, set `FORTRIP_MCP_URL` too; `fortrip mcp` exits 2 and says so when you don't. |
-| `FORTRIP_DISPLAY_CURRENCY` | The default `--display-currency` for `hotels search` and `hotels offers` (`USD` or `CNY`). It only changes the currency prices are shown in: orders are paid in USD. |
+| `FORTRIP_CURRENCY` | The default `--currency` for `hotels search` and `hotels offers` (`USD` or `CNY`, where available). Prices are in this currency, and an order made from the offers is paid in it. |
 
 ## Output and exit codes
 
 A command prints its result as compact text on stdout, the same text the MCP
 tools return. With `--json` (anywhere before `--`) it prints the API's JSON
-instead, on one line. `guide` prints Markdown and `fortrip mcp` speaks MCP over
-stdio.
+instead, on one line. `fortrip mcp` speaks MCP over stdio.
 
 Errors go to stderr, as text, or with `--json` as one line of JSON:
 `{ "error": { "code", "message", "retryable", "requestId", … } }`, Fortrip's

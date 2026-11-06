@@ -95,9 +95,7 @@
     "chargeCurrency": "USD",
     "localCurrencyAtCheckout": false,
     "localCharge": null,
-    "handlers": [],
-    "credentialLimits": null,
-    "wallets": null
+    "methods": []
   },
   "cancel": {
     "available": false,

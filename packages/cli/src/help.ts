@@ -37,14 +37,12 @@ function wrap(text: string, indent: number): string[] {
   return lines;
 }
 
-/** `<hotelId>`, `[topic]`: a command's positionals as they are typed. */
+/** `<hotelId>`, `<orderId>`: a command's positionals as they are typed. */
 function positionals(spec: CommandSpec): string[] {
-  return (spec.positionals ?? []).map(({ name, optional }) =>
-    optional ? `[${name}]` : `<${name}>`,
-  );
+  return (spec.positionals ?? []).map(({ name }) => `<${name}>`);
 }
 
-/** `get <hotelId>`, `guide [topic]`: a command in its group's list, or in
+/** `get <hotelId>`, `login`: a command in its group's list, or in
  *  the CLI's. */
 function label(spec: CommandSpec): string {
   return [spec.name, ...positionals(spec)].join(" ");
@@ -141,8 +139,9 @@ ${optionList(GLOBAL_FLAGS)}
 Output is compact text on stdout; --json prints it as one line of JSON.
 Errors go to stderr, as text or, with --json, as JSON.
 Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
-2 invalid arguments, or orders cancel without --max-penalty (nothing is
-cancelled), 3 not signed in or sign-in not accepted, 4 rate limited.
+2 invalid arguments, or orders cancel without --max-penalty or --close
+(nothing is cancelled), 3 not signed in or sign-in not accepted, 4 rate
+limited.
 
 Environment:
 ${ENVIRONMENT_LINES}

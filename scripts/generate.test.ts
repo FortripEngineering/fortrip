@@ -83,6 +83,14 @@ describe("pnpm generate", () => {
     assert.doesNotMatch(cli, /fortrip@latest skill/);
   });
 
+  it("points no generated skill file to a runtime guide", () => {
+    const root = rendered();
+    for (const file of [CLAUDE_SKILL, CLI_SKILL, CLAUDE_PLANNING, CLI_PLANNING]) {
+      assert.doesNotMatch(read(root, file), /fortrip guide|get_planning_guide/, file);
+    }
+    assert.match(read(root, CLI_SKILL), /\]\(references\/planning\.md\)/);
+  });
+
   // The front matter is written in generate.ts, not rendered from the contract.
   it("names in each skill's description only tools the contract has", async () => {
     const { TOOLS } = await import("../packages/contract/src/index.ts");

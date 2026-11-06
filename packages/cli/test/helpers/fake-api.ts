@@ -22,7 +22,7 @@ export interface McpRequest {
 export const MCP_SESSION_ID = "fake-session-1";
 export const MCP_TOOLS = [
   { name: "search_hotels", description: "Search", inputSchema: { type: "object" } },
-  { name: "get_planning_guide", description: "Guide", inputSchema: { type: "object" } },
+  { name: "get_hotel", description: "Hotel", inputSchema: { type: "object" } },
 ];
 
 /** Where the fake MCP server answers: the path a non-production Fortrip

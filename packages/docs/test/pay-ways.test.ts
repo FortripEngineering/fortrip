@@ -13,9 +13,9 @@ describe("ways to pay", () => {
   });
 
   it("says when each way charges", () => {
-    assert.match(PAY_WAY_DOCS.shared_payment_token.charge, /held until the hotel confirms/);
-    assert.match(PAY_WAY_DOCS.alipay_wechat_pay.charge, /at once/);
-    assert.match(PAY_WAY_DOCS.alipay_wechat_pay.charge, /refunded in full/);
+    assert.match(PAY_WAY_DOCS.stripe_shared_payment_token.charge, /held until the hotel confirms/);
+    assert.match(PAY_WAY_DOCS.stripe_alipay_wechat_pay.charge, /at once/);
+    assert.match(PAY_WAY_DOCS.stripe_alipay_wechat_pay.charge, /refunded in full/);
     assert.match(PAY_WAY_DOCS.payment_link.charge, /Stripe/);
   });
 
@@ -35,10 +35,10 @@ describe("ways to pay", () => {
     );
   });
 
-  it("the Link token way is for agents that can request one, and leaves its conditions to payment.handlers", () => {
-    const { when, body } = PAY_WAY_DOCS.shared_payment_token;
+  it("the Link token way is for agents that can request one, and leaves its conditions to its payment.methods entry", () => {
+    const { when, body } = PAY_WAY_DOCS.stripe_shared_payment_token;
     assert.match(when, /^Only for agents that can request a shared payment token from the user's Stripe Link wallet/);
-    assert.match(when, /`payment\.handlers` isn't empty; that field says why it can be empty/);
+    assert.match(when, /`payment\.methods` has the `stripe_shared_payment_token` entry; that entry says why it can be absent/);
     // The eligibility conditions are the field's (A8), not repeated here.
     assert.doesNotMatch(`${when} ${body}`, /requiresSignIn|negotiated price|tokens tried/);
     assert.doesNotMatch(body, /instruments|stripe_payment_token/);

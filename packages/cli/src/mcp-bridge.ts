@@ -273,7 +273,7 @@ function passThrough(schema: z.ZodType): StandardSchemaWithJSON {
  * What answers the client while it isn't signed in: an MCP SDK server set up
  * as the hosted one is (its `serverInfo`, `instructions` and the contract's
  * tools, registered as the hosted server registers them: pass-through
- * schemas, an output schema on every tool but the guide), so `initialize`,
+ * schemas, an output schema on every tool), so `initialize`,
  * `tools/list`, `ping` and a method it lacks get the answers the hosted
  * server would give. Its tools are never called: the bridge takes a
  * `tools/call` to the hosted server.
@@ -291,17 +291,13 @@ function localServer(): McpServer {
       title: spec.title,
       description: spec.description,
       annotations: spec.annotations,
-      ...(spec.output ? { outputSchema: passThrough(spec.output) } : {}),
+      outputSchema: passThrough(spec.output),
     };
-    if (spec.input === null) {
-      server.registerTool(spec.name, config, handler);
-    } else {
-      server.registerTool(
-        spec.name,
-        { ...config, inputSchema: passThrough(spec.input) },
-        handler as ToolCallback<StandardSchemaWithJSON>,
-      );
-    }
+    server.registerTool(
+      spec.name,
+      { ...config, inputSchema: passThrough(spec.input) },
+      handler as ToolCallback<StandardSchemaWithJSON>,
+    );
   }
   return server;
 }

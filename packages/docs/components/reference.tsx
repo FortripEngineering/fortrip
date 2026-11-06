@@ -54,7 +54,7 @@ export function ModelReads({ description }: { description: string }) {
 export function ToolPage({ name }: { name: ToolName }) {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
-  const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
+  const input = TOOL_INPUTS[tool.name];
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
   const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
   return (
@@ -75,25 +75,21 @@ export function ToolPage({ name }: { name: ToolName }) {
       <Heading as="h2" id="input">
         Input
       </Heading>
-      {input ? <FieldTable rows={inputRows(input)} /> : <p>None.</p>}
+      <FieldTable rows={inputRows(input)} />
       <Heading as="h2" id="output">
         Output
       </Heading>
-      {typeof tool.returns === "string" ? (
-        <p>{tool.returns}</p>
-      ) : (
-        <p>
-          <code>structuredContent</code> is the{" "}
-          <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
-          {nextStep && (
-            <>
-              {" "}
-              It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
-            </>
-          )}{" "}
-          Errors are described in the <Link href="/mcp#errors">overview</Link>.
-        </p>
-      )}
+      <p>
+        <code>structuredContent</code> is the{" "}
+        <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
+        {nextStep && (
+          <>
+            {" "}
+            It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
+          </>
+        )}{" "}
+        Errors are described in the <Link href="/mcp#errors">overview</Link>.
+      </p>
     </>
   );
 }

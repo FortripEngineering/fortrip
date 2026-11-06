@@ -27,10 +27,10 @@ export interface ApiRequest {
 }
 
 /** Fields the API takes in upper case, which a user may type in lower. */
-const UPPER_CASE = new Set(["displayCurrency", "destination.countryCode"]);
+const UPPER_CASE = new Set(["currency", "destination.countryCode"]);
 
 /** Fields an environment variable sets when neither a flag nor `--body` does. */
-const FROM_ENV: Record<string, string> = { displayCurrency: "FORTRIP_DISPLAY_CURRENCY" };
+const FROM_ENV: Record<string, string> = { currency: "FORTRIP_CURRENCY" };
 
 /** Lists a dot steps into the one item of: a v1 order holds one item. */
 const ONE_ITEM_LISTS = new Set(["items"]);
@@ -93,7 +93,7 @@ export function parseCommand(
   argv: string[],
   env: NodeJS.ProcessEnv,
 ): ApiRequest {
-  const route = spec.tool && spec.tool !== "get_planning_guide" ? HTTP_ROUTES[spec.tool] : undefined;
+  const route = spec.tool ? HTTP_ROUTES[spec.tool] : undefined;
   if (!route) throw new Error(`${commandInvocation(spec)} sends no request`);
   const { values, positionals } = parseOptions(spec, argv);
   const input = baseBody(values.body);
@@ -101,10 +101,10 @@ export function parseCommand(
   const wanted = spec.positionals ?? [];
   if (positionals.length !== wanted.length) throw usageError(`Usage: ${usageLine(spec)}`);
   wanted.forEach((positional, index) => {
-    if (positional.field) input[positional.field] = positionals[index];
+    input[positional.field] = positionals[index];
   });
 
-  setFlags(spec, values, input);
+  setFlags(spec, values, input, requestCurrency(spec, values, input, env));
 
   /** Fields the environment set, and the variable that did. */
   const fromEnv = new Map<string, string>();
@@ -124,31 +124,62 @@ export function parseCommand(
 }
 
 /**
- * `orders cancel` without its penalty flag cancels nothing (C7): the read of
- * the order it makes instead, so the penalty and the refund can be shown,
- * and the flag. `null` for any other command, or when the flag is given. A
- * bad order id exits 2 as `orders cancel`'s own, and nothing is sent.
+ * The currency a request's money is in: the command's `--currency`, else
+ * the `--body`'s, else the environment's, else USD. A command without a
+ * currency (`orders pay` and `orders cancel`: the order's, which the CLI
+ * reads next) gets USD as a placeholder. A `--body` currency is upper-cased
+ * in the body, as `--currency` is.
+ */
+function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: NodeJS.ProcessEnv): string {
+  const flag = spec.flags.find((candidate) => candidate.field === "currency");
+  if (!flag) return "USD";
+  const given = values[flag.flag];
+  if (typeof given === "string") return given.trim().toUpperCase();
+  if (typeof input.currency === "string") {
+    const currency = input.currency.trim().toUpperCase();
+    input.currency = currency;
+    return currency;
+  }
+  return env[FROM_ENV.currency as string]?.trim().toUpperCase() || "USD";
+}
+
+/**
+ * `orders cancel` reads the order first, once (C7): to show it when neither
+ * its penalty flag nor `--close` is given, to close it only while it is
+ * unpaid, and for the penalty's currency. The read, the penalty flag, and
+ * whether `--close` is given; `request` is the cancellation or the close,
+ * a penalty's currency a placeholder until the order is read, or `null`
+ * with neither. `null` for any other command. Bad arguments exit 2 as
+ * `orders cancel`'s own, and nothing is sent.
  */
 export function cancelPreview(
   spec: CommandSpec,
   argv: string[],
-): (ApiRequest & { flag: string; orderId: string }) | null {
+  env: NodeJS.ProcessEnv,
+): (ApiRequest & { flag: string; orderId: string; close: boolean; request: ApiRequest | null }) | null {
   const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
   if (!flag) return null;
   const { values, positionals } = parseOptions(spec, argv);
-  if (values[flag.flag] !== undefined) return null;
+  const close = values.close === true;
+  const penalty = values[flag.flag] !== undefined;
+  if (close && penalty) {
+    throw usageError(
+      `--close and --${flag.flag} can't be given together: --close closes an unpaid order, --${flag.flag} cancels a paid one`,
+    );
+  }
   if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
   const input = { orderId: positionals[0] };
-  check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
+  const request = close || penalty ? parseCommand(spec, argv, env) : null;
+  if (!request) check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
   const orderId = input.orderId as string;
-  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId };
+  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId, close, request };
 }
 
 /** Refuses an input the contract's schema doesn't accept, with the issues
  *  the API's `invalid_request` would list (pointers into the body, or
  *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an
  *  environment variable set (`fromEnv`, by pointer) names the variable. */
-function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
+export function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   const result = schema?.safeParse(input);
   if (!result || result.success) return;
@@ -183,7 +214,7 @@ function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<st
  * different variants of one union can't be given together, and a variant
  * from `--body` other than the one picked is replaced, not merged into.
  */
-function setFlags(spec: CommandSpec, values: Values, input: Body): void {
+function setFlags(spec: CommandSpec, values: Values, input: Body, currency: string): void {
   const given = spec.flags.filter((flag) => values[flag.flag] !== undefined);
   const picked = new Map<string, { value: string; flag: string }>();
   for (const flag of given) {
@@ -211,7 +242,7 @@ function setFlags(spec: CommandSpec, values: Values, input: Body): void {
     if (flag.field === GUEST_FIELD) {
       setField(input, ROOMS_FIELD, withGuests(getField(input, ROOMS_FIELD), parseGuests(raw as string[])));
     } else {
-      setField(input, flag.field, readFlag(flag, raw));
+      setField(input, flag.field, readFlag(flag, raw, currency));
     }
   }
 }
@@ -282,7 +313,7 @@ function setField(body: Body, field: string, value: unknown): void {
 }
 
 /** What a flag's value means for its field. */
-function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>): unknown {
+function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>, currency: string): unknown {
   if (flag.type === "boolean") return flag.value ?? true;
   const given = (Array.isArray(raw) ? raw : [raw]) as string[];
   switch (flag.field) {
@@ -292,7 +323,8 @@ function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>): unknown {
       return given.map(parseRoom);
     case "filters.price.maxPerRoomNight":
     case "total":
-      return { amount: (given[0] as string).trim(), currency: "USD" };
+    case "maximumPenalty":
+      return { amount: (given[0] as string).trim(), currency };
   }
   const parsed = given.map((value) => {
     if (flag.type === "number") return num(flag.flag, value);

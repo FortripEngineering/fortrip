@@ -105,7 +105,6 @@ test("a command's page slug and invocation come from its group and name", () => 
     "get-hotel",
     "get-hotel-offers",
     "get-order",
-    "get-planning-guide",
     "list-orders",
     "pay-order",
     "search-hotels",
@@ -122,9 +121,8 @@ test("a usage line lists the positionals and the flags of required fields", () =
   );
   assert.equal(usage("hotels-get"), "fortrip hotels get <hotelId> [options]");
   assert.equal(usage("orders-get"), "fortrip orders get <orderId> [options]");
-  // Without --max-penalty the command shows the penalty and cancels nothing.
-  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [--max-penalty <amount>]");
-  assert.equal(usage("guide"), "fortrip guide [topic]");
+  // --max-penalty cancels a paid order, --close closes an unpaid one; without either it changes nothing.
+  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [options]");
   assert.equal(usage("logout"), "fortrip logout");
 });
 
@@ -147,7 +145,6 @@ test("a tool page links to the page of its CLI command", () => {
   assert.equal(cli("get_hotel_offers"), "fortrip hotels offers");
   assert.equal(cli("list_orders"), "fortrip orders list");
   assert.equal(cli("book_hotel"), "fortrip hotels book");
-  assert.equal(cli("get_planning_guide"), "fortrip guide planning");
 });
 
 test("a tool or command that answers an object links to its response schema", () => {
@@ -156,15 +153,9 @@ test("a tool or command that answers an object links to its response schema", ()
   );
   for (const tool of MCP_TOOLS) {
     const doc = responseDocFor(tool.name);
-    if (doc) {
-      assert.equal(typeof tool.returns, "object", tool.name);
-      if (typeof tool.returns === "object") {
-        assert.ok(anchors.has(tool.returns.href), tool.name);
-        assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
-      }
-    } else {
-      assert.equal(typeof tool.returns, "string", tool.name);
-    }
+    assert.ok(doc, tool.name);
+    assert.ok(anchors.has(tool.returns.href), tool.name);
+    assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
   }
   for (const command of CLI_COMMANDS) {
     assert.ok(command.output.trim(), command.slug);
@@ -184,7 +175,6 @@ test("a tool or command that answers an object links to its response schema", ()
     assert.deepEqual(MCP_TOOLS.find((t) => t.name === name)?.returns, { title: "Order", href: "/schemas#order" }, name);
   }
   assert.equal(schema("whoami"), "/schemas#account");
-  assert.equal(schema("guide"), undefined);
 });
 
 test("the raw-body example is a valid search request", () => {

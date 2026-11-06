@@ -54,17 +54,6 @@
                 "amount": "160.00",
                 "currency": "USD"
               },
-              "approx": {
-                "total": {
-                  "amount": "2281.60",
-                  "currency": "CNY"
-                },
-                "perNightAllRooms": {
-                  "amount": "1140.80",
-                  "currency": "CNY"
-                },
-                "rateDate": "2026-11-01"
-              },
               "payAtProperty": {
                 "disclosure": "incomplete",
                 "items": [
@@ -157,17 +146,6 @@
                 "amount": "182.50",
                 "currency": "USD"
               },
-              "approx": {
-                "total": {
-                  "amount": "2602.45",
-                  "currency": "CNY"
-                },
-                "perNightAllRooms": {
-                  "amount": "1301.23",
-                  "currency": "CNY"
-                },
-                "rateDate": "2026-11-01"
-              },
               "payAtProperty": {
                 "disclosure": "complete",
                 "items": []
@@ -238,17 +216,6 @@
               "perNightAllRooms": {
                 "amount": "205.00",
                 "currency": "USD"
-              },
-              "approx": {
-                "total": {
-                  "amount": "2923.30",
-                  "currency": "CNY"
-                },
-                "perNightAllRooms": {
-                  "amount": "1461.65",
-                  "currency": "CNY"
-                },
-                "rateDate": "2026-11-01"
               },
               "payAtProperty": {
                 "disclosure": "complete",
