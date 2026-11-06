@@ -75,6 +75,8 @@ const MEANINGS: Record<ErrorCode, string> = {
     "Check-in is already past in the hotel's time zone. Ask the user for new dates.",
   offer_unavailable:
     "The hotel supplier no longer sells the offer (`sold_out`), or refused it (`refused`). Get offers again.",
+  currency_unavailable:
+    "Prices in the currency asked for (`currency`) aren't available yet. Tell the user, and ask whether to see prices in USD.",
   rate_limited:
     "Too many calls of one kind (`scope`) in a minute. Retry after `retryAfterSeconds`.",
   ordering_paused:

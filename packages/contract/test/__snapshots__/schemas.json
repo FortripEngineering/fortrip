@@ -3771,6 +3771,52 @@
             "properties": {
               "code": {
                 "type": "string",
+                "const": "currency_unavailable"
+              },
+              "message": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "retryAfterSeconds": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "currency"
+                ],
+                "additionalProperties": {}
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "details",
+              "requestId"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
                 "const": "rate_limited"
               },
               "message": {

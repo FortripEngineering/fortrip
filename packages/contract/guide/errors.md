@@ -14,6 +14,7 @@
 | `order_attempts_exhausted` (409) | This order can't be tried again: the user emails {{support}} with its `reference` |
 | `order_removed` (410) | The order was never completed and no payment is held: get offers again and order the new offer (the order keeps its `orderId`) |
 | `stay_unsupported` (422) | `mixed_occupancy`: order once per party; `max_nights`: at most `max` nights per order |
+| `currency_unavailable` (422) | Prices in `details.currency` aren't available yet: tell the user, and ask whether to see USD prices |
 | `stay_in_past` (422) | Check-in has passed in the hotel's time zone: ask for new dates |
 | `ordering_paused` (503) | Ordering is paused on Fortrip's side: tell the user, and try again only after `retryAfterSeconds` |
 

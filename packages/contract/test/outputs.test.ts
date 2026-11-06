@@ -305,6 +305,7 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   stay_unsupported: { reason: "max_nights", max: 15 },
   stay_in_past: { checkIn: "2026-10-23", timeZone: null },
   offer_unavailable: { offerId: OFF, reason: "sold_out" },
+  currency_unavailable: { currency: "CNY" },
   rate_limited: { scope: "search" },
   ordering_paused: undefined,
   service_unavailable: undefined,

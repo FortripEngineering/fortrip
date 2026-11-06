@@ -27,6 +27,7 @@ export type ErrorCode =
   | "stay_unsupported"
   | "stay_in_past"
   | "offer_unavailable"
+  | "currency_unavailable"
   | "rate_limited"
   | "ordering_paused"
   | "service_unavailable"
@@ -68,6 +69,7 @@ export const ERROR_CODES: Readonly<
   stay_unsupported: { status: [422], retryable: false },
   stay_in_past: { status: [422], retryable: false },
   offer_unavailable: { status: [422], retryable: false },
+  currency_unavailable: { status: [422], retryable: false },
   rate_limited: { status: [429], retryable: true },
   ordering_paused: { status: [503], retryable: true },
   service_unavailable: { status: [503], retryable: true },

@@ -541,6 +541,31 @@ describe("other errors", () => {
     assert.match(text, /12\.3 %/);
   });
 
+  it("currency_unavailable says to tell the user and offer USD", () => {
+    const text = renderError(
+      envelope({ code: "currency_unavailable", retryable: false, details: { currency: "CNY" } }),
+      422,
+    );
+    assert.match(
+      text,
+      /^Prices in CNY aren't available yet\. Tell the user, and ask whether to see USD prices\.$/m,
+    );
+    assertClean(text);
+  });
+
+  it("order_exists renders its order and status only", () => {
+    const text = renderError(
+      envelope({
+        code: "order_exists",
+        retryable: false,
+        details: { orderId: "ord_0123456789abcdefABCD", status: "confirmed" },
+      }),
+      409,
+    );
+    assert.match(text, /^Order ord_0123456789abcdefABCD, confirmed\.$/m);
+    assert.ok(!/close it/i.test(text));
+  });
+
   it("order_not_cancellable words its reason as the order's Cancel line does", () => {
     const envelope = {
       error: {

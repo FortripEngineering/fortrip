@@ -225,6 +225,8 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       return [
         `Offer ${e.details.offerId}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason)}. Get fresh offers.`,
       ];
+    case "currency_unavailable":
+      return [`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`];
     case "rate_limited":
       return [`Limit reached for: ${e.details.scope}.`];
     case "supplier_unavailable":
