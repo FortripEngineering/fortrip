@@ -130,8 +130,8 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 ## Prices and currency
 
 - A search price (`price.fromPerRoomNight`) is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night, for any party and often any date, and it can be well above or below the offers. Call it an estimate, quote `fortrip hotels offers` prices, and never call a search result available or bookable. `price: null` means there is no indicative price, not that the hotel is full; about half the hotels have none for given dates.
-- In an offer or order, `price.total` is the whole stay for all rooms and is what is charged, in the request's `--currency` (`USD` by default), and so are the orders made from them. `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms. Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the total in that currency is the price.
-- Every price of a response is in that one currency, with no conversion. `--currency` (or `FORTRIP_CURRENCY`) is `USD` (the default) or `CNY`, where available; otherwise the answer is `currency_unavailable`.
+- In an offer or order, `price.total` is the whole stay for all rooms and is what is charged, in the request's `--currency` (`USD` by default); an order is in the currency of the offer it was made from. `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms. On a USD order, Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the total in that currency is the price.
+- Every price of a response is in that one currency; don't convert it. `--currency` (or `FORTRIP_CURRENCY`) is `USD` (the default) or `CNY`, where available; otherwise the answer is `currency_unavailable`.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.
 - After payment, `payment.localCharge` is what the card paid in its own currency. Orders made on the Fortrip website can be charged in another currency: `payment.chargeCurrency` says which.
 
@@ -173,7 +173,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 ## Paying without the link
 
-An order whose `payment.methods` has the `stripe_shared_payment_token` entry (in the text output, the line "Pay without the link") can also be paid through `fortrip orders pay` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so a larger order has no such entry. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
+An order whose `payment.methods` has the `stripe_shared_payment_token` entry (in the text output, the line "Pay without the link") can also be paid through `fortrip orders pay` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so only a USD order up to that has such an entry. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
 
 1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. The token comes from the user's wallet, never from card details.
 2. Request the token from the user's Link wallet with that entry's `handler.config.business_profile` and its `limits`: `maxAmount` (in cents), `currency` and `expiresAt`.

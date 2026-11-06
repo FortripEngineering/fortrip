@@ -57,9 +57,15 @@ const STALE: readonly RegExp[] = [
 const IN_USD = /\bin USD\b/;
 
 const ROOT = new URL("../../../", import.meta.url).pathname;
-const SURFACES: readonly GuideSurface[] = ["mcp", "claude-skill", "cli"];
-const TOPICS: readonly GuideTopic[] = ["main", "planning"];
-const RENDER_SURFACES: readonly RenderSurface[] = ["mcp", "cli"];
+// Every member of each union: a new surface or topic fails the typecheck
+// until it is listed here, so none is skipped.
+const SURFACES = Object.keys({
+  mcp: true,
+  "claude-skill": true,
+  cli: true,
+} satisfies Record<GuideSurface, true>) as GuideSurface[];
+const TOPICS = Object.keys({ main: true, planning: true } satisfies Record<GuideTopic, true>) as GuideTopic[];
+const RENDER_SURFACES = Object.keys({ mcp: true, cli: true } satisfies Record<RenderSurface, true>) as RenderSurface[];
 const TOKEN_METHOD = "stripe_shared_payment_token";
 
 type Text = { where: string; text: string; usdAllowed?: boolean };
@@ -190,7 +196,8 @@ function pluginText(file: string): string {
   return source;
 }
 
-function agentTexts(): Text[] {
+/** Each source of agent texts, by name. */
+function agentSources(): Record<string, Text[]> {
   const pluginFiles = textFiles("plugins");
   const skillFiles = textFiles("skills");
   // Every file under plugins/ is text or an image.
@@ -199,38 +206,44 @@ function agentTexts(): Text[] {
   }
   assert.ok(skillFiles.includes("skills/fortrip-cli/SKILL.md"), skillFiles.join(", "));
   assert.ok(pluginFiles.includes("plugins/claude/skills/fortrip/SKILL.md"), pluginFiles.join(", "));
-  return [
-    ...TOOLS.flatMap((spec) => [
-      { where: `${spec.name} description`, text: spec.description },
+  return {
+    descriptions: TOOLS.map((spec) => ({ where: `${spec.name} description`, text: spec.description })),
+    schemas: TOOLS.flatMap((spec) => [
       ...schemaTexts(`${spec.name} input`, z.toJSONSchema(spec.input, { io: "input" })),
       ...schemaTexts(`${spec.name} output`, z.toJSONSchema(spec.output, { io: "output" })),
     ]),
-    ...RENDER_SURFACES.flatMap((surface) =>
+    calls: RENDER_SURFACES.flatMap((surface) =>
       Object.entries(CALLS[surface]).map(([key, text]) => ({ where: `CALLS.${surface}.${key}`, text })),
     ),
-    { where: "ORDER_NEXT_STEP", text: ORDER_NEXT_STEP },
-    { where: "CANCEL_NEXT_STEP", text: CANCEL_NEXT_STEP },
-    { where: "PAY_NEXT_STEP", text: PAY_NEXT_STEP, usdAllowed: true },
-    { where: "WALLET_NEXT_STEP", text: WALLET_NEXT_STEP },
-    { where: "PRESENTATION_HINT", text: PRESENTATION_HINT },
-    ...RENDER_SURFACES.flatMap((surface) => [
-      { where: `cancelNextStep(${surface})`, text: cancelNextStep(surface) },
-      { where: `payNextStep(${surface})`, text: payNextStep(surface), usdAllowed: true },
-      { where: `walletNextStep(${surface})`, text: walletNextStep(surface) },
-    ]),
-    ...SURFACES.flatMap((surface) =>
+    nextSteps: [
+      { where: "ORDER_NEXT_STEP", text: ORDER_NEXT_STEP },
+      { where: "CANCEL_NEXT_STEP", text: CANCEL_NEXT_STEP },
+      { where: "PAY_NEXT_STEP", text: PAY_NEXT_STEP, usdAllowed: true },
+      { where: "WALLET_NEXT_STEP", text: WALLET_NEXT_STEP },
+      { where: "PRESENTATION_HINT", text: PRESENTATION_HINT },
+      ...RENDER_SURFACES.flatMap((surface) => [
+        { where: `cancelNextStep(${surface})`, text: cancelNextStep(surface) },
+        { where: `payNextStep(${surface})`, text: payNextStep(surface), usdAllowed: true },
+        { where: `walletNextStep(${surface})`, text: walletNextStep(surface) },
+      ]),
+    ],
+    guide: SURFACES.flatMap((surface) =>
       TOPICS.flatMap((topic) => guideTexts(`renderGuide ${surface} ${topic}`, renderGuide(surface, topic))),
     ),
-    ...errorTexts(),
-    ...skillFiles.flatMap((file) => guideTexts(file, readFileSync(join(ROOT, file), "utf8"))),
-    ...pluginFiles.flatMap((file) => guideTexts(file, pluginText(file))),
-  ];
+    errors: errorTexts(),
+    skills: skillFiles.flatMap((file) => guideTexts(file, readFileSync(join(ROOT, file), "utf8"))),
+    plugins: pluginFiles.flatMap((file) => guideTexts(file, pluginText(file))),
+  };
 }
 
 describe("no stale copy in what agents read", () => {
-  const texts = agentTexts();
+  const sources = agentSources();
+  const texts = Object.values(sources).flat();
 
   it("collects the tools, next steps, guide, errors, skills and plugins", () => {
+    for (const [name, source] of Object.entries(sources)) {
+      assert.ok(source.length > 0 && source.every((t) => t.text.trim()), name);
+    }
     assert.ok(texts.length > 300, String(texts.length));
     // The exemptions are not vacuous: each holds a statement in USD.
     for (const where of [

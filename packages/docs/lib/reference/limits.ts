@@ -100,7 +100,7 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   tokenPaymentMaxUsd: (l) => [
     "Token payment",
     `up to $${n(l.tokenPaymentMaxUsd)}`,
-    "An order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.methods` has no `stripe_shared_payment_token` entry.",
+    "A USD order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.methods`, or a CNY order's, has no `stripe_shared_payment_token` entry.",
   ],
   payMinMinutesLeft: (l) => [
     "Time left to offer a Link token or Alipay or WeChat Pay",
