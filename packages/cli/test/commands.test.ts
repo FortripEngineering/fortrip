@@ -350,7 +350,7 @@ describe("every command builds the request the contract accepts", () => {
   });
 
   it("a command that sends no request has nothing to parse", () => {
-    for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
+    for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.throws(() => parse(name, []), /sends no request/);
     }
   });
@@ -746,7 +746,7 @@ describe("parseOptions", () => {
     const login = parseOptions(command("login"), ["--no-browser"]);
     assert.equal(login.values["no-browser"], true);
     assert.equal(parseOptions(command("login"), []).values["no-browser"], undefined);
-    assert.deepEqual(parseOptions(command("guide"), ["planning"]).positionals, ["planning"]);
+    assert.deepEqual(parseOptions(command("hotels get"), ["h1"]).positionals, ["h1"]);
   });
 
   it("refuses what the spec doesn't declare", () => {
@@ -754,7 +754,6 @@ describe("parseOptions", () => {
       ["login", ["--browser"]],
       ["logout", ["--no-browser"]],
       ["whoami", ["now"]],
-      ["guide", ["--topic", "x"]],
     ] as const) {
       assert.throws(() => parseOptions(command(name), [...argv]), isUsage, `${name} ${argv}`);
     }

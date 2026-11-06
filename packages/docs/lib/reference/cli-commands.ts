@@ -69,11 +69,6 @@ const DOCS: Record<string, { title: string; group: string; output?: string }> =
       output:
         "The signed-in account on stdout. With `--json`, the response as JSON on one line.",
     },
-    guide: {
-      title: "Agent guide",
-      group: "Guides",
-      output: "Markdown on stdout.",
-    },
     mcp: {
       title: "Local MCP server",
       group: "Local MCP",

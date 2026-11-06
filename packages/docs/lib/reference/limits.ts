@@ -138,7 +138,6 @@ export function limitRows(limits: Limits): Array<[string, string, string]> {
 /** Each operation in prose. Keyed by tool, so a tool the contract gains
  *  fails the typecheck until it has a name. */
 export const OPERATION_NAMES: Record<ToolName, string> = {
-  get_planning_guide: "the planning guide",
   search_hotels: "search",
   get_hotel: "hotel details",
   get_hotel_offers: "offers",

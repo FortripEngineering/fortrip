@@ -110,7 +110,6 @@ export interface CommandSpec {
     | "login"
     | "logout"
     | "whoami"
-    | "guide"
     | "mcp";
   summary: string;
   /** The MCP tool the command mirrors; `null` for one that is the CLI's own. */
@@ -576,21 +575,6 @@ export const COMMANDS: readonly CommandSpec[] = [
     summary: "Show the signed-in account",
     tool: null,
     flags: [],
-  },
-  {
-    group: null,
-    name: "guide",
-    summary: "Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide",
-    tool: "get_planning_guide",
-    flags: [],
-    positionals: [
-      {
-        name: "topic",
-        field: null,
-        optional: true,
-        description: "`planning` for the planning guide; left out, the main guide.",
-      },
-    ],
   },
   {
     group: null,

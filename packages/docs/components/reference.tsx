@@ -54,7 +54,7 @@ export function ModelReads({ description }: { description: string }) {
 export function ToolPage({ name }: { name: ToolName }) {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
-  const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
+  const input = TOOL_INPUTS[tool.name];
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
   const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
   return (

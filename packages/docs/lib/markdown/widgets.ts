@@ -30,8 +30,8 @@ export function fieldRows(of: string): FieldRow[] {
   if (kind === "response") {
     const doc = RESPONSE_DOCS.find((d) => d.id === name);
     if (doc) return doc.rows;
-  } else if (kind === "input" && name && name !== "get_planning_guide" && TOOLS.some((t) => t.name === name)) {
-    return inputRows(TOOL_INPUTS[name as Exclude<ToolName, "get_planning_guide">]);
+  } else if (kind === "input" && name && TOOLS.some((t) => t.name === name)) {
+    return inputRows(TOOL_INPUTS[name as ToolName]);
   }
   throw new Error(`Unknown field list: ${of}`);
 }

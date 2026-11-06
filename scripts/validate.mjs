@@ -189,7 +189,7 @@ const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "-
 const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
 check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
 // Anthropic Software Directory Policy §2F: the Claude plugin must not have
-// Claude fetch instructions at run time (the CLI prints its own guide).
+// Claude fetch instructions at run time (the CLI skill bundles its own guide).
 const fetching = files.filter((f) => f.startsWith(`plugins${path.sep}claude${path.sep}`) && /\bnpx\b|fortrip@latest|get_planning_guide/.test(read(f)));
 check("plugins/claude/ never runs npx, fortrip@latest or get_planning_guide", fetching.length === 0, fetching.join(", "));
 const readmeWords = read("plugins/claude/README.md").replace(/```[\s\S]*?```/g, "").split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;

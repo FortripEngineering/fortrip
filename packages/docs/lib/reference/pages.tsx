@@ -48,7 +48,7 @@ function outline(
 }
 
 const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
-  const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
+  const input = TOOL_INPUTS[tool.name];
   const returns = typeof tool.returns === "string" ? tool.returns : `${tool.returns.title} object`;
   return {
     type: "page",

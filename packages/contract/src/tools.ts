@@ -24,7 +24,6 @@ import { searchResult } from "./outputs/search.ts";
  */
 
 export type ToolName =
-  | "get_planning_guide"
   | "search_hotels"
   | "get_hotel"
   | "get_hotel_offers"
@@ -44,10 +43,10 @@ export interface ToolSpec {
     openWorldHint: boolean;
     destructiveHint: boolean;
   };
-  /** What the tool takes; `null` for a tool without arguments. */
-  input: z.ZodType | null;
-  /** The open schema of what it answers with; `null` for the guide. */
-  output: z.ZodType | null;
+  /** What the tool takes. */
+  input: z.ZodType;
+  /** The open schema of what it answers with. */
+  output: z.ZodType;
 }
 
 /**
@@ -178,15 +177,6 @@ const READ = {
 const READ_OWN = { ...READ, openWorldHint: false } as const;
 
 export const TOOLS: readonly ToolSpec[] = [
-  {
-    name: "get_planning_guide",
-    title: "Planning guide",
-    description:
-      'Returns Fortrip\'s planning guide for a request that is more than one hotel for fixed dates (flexible dates, a budget, split stays, several destinations, "find me the best"): what to ask the user, which results count as evidence, how to rank and how to present options.',
-    annotations: READ_OWN,
-    input: null,
-    output: null,
-  },
   {
     name: "search_hotels",
     title: "Search hotels",

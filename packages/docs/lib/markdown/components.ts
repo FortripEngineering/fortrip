@@ -378,7 +378,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
             " puts the WeChat Pay code first, as a PNG image, while its answer holds a live code, unless the image couldn't be fetched. The code and its links are in `structuredContent` either way.",
           ),
         ],
-        [...codeList(having("guide")), ...inline(" returns the planning guide as Markdown.")],
         inline("So find a block by its `type` (`text`, `image`), not by its position."),
       ]),
     ];

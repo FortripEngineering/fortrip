@@ -83,14 +83,6 @@ const DOCS: Record<
     human:
       "Pays an order with a Link token (a shared payment token from the user's Stripe Link wallet), or opens an Alipay or WeChat Pay payment. A payment link needs no call.",
   },
-  get_planning_guide: {
-    group: "Guides",
-    access: "Read-only",
-    human: "Returns the guide an agent follows when a request is more than one hotel for fixed dates. It only reads.",
-    returns:
-      "A Markdown guide. It says what to ask the user, which results count as evidence, and how to rank and present options.",
-    cliArgs: "planning",
-  },
 };
 
 export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(

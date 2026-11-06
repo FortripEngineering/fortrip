@@ -63,8 +63,8 @@
             {
               "description": "Compare two check-in dates within a budget",
               "prompt": "I need 3 nights in Shanghai for 2 adults in 1 room, checking in either 30 or 37 days from today, for under 150 USD per night. Which dates and hotels give the best value?",
-              "tools_triggered": "search_hotels, get_hotel_offers (get_planning_guide optional)",
-              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with filters.price.maxPerRoomNight of 150 USD, then get_hotel_offers for a shortlist of the results on each date; it may also call get_planning_guide first. It compares each offer's price.total per night (price.total divided by 3 nights, for 1 room) with the 150 USD budget and recommends options within it, each with its dates, price.total in USD, meals and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned an offer for it."
+              "tools_triggered": "search_hotels, get_hotel_offers",
+              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with filters.price.maxPerRoomNight of 150 USD, then get_hotel_offers for a shortlist of the results on each date. It compares each offer's price.total per night (price.total divided by 3 nights, for 1 room) with the 150 USD budget and recommends options within it, each with its dates, price.total in USD, meals and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned an offer for it."
             },
             {
               "description": "Create a booking payment link after confirmation",

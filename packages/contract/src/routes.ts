@@ -1,7 +1,7 @@
 import type { ToolName } from "./tools.ts";
 
-/** The tools that are HTTP endpoints: all but the guide, which is MCP-only. */
-export type HttpToolName = Exclude<ToolName, "get_planning_guide">;
+/** The tools that are HTTP endpoints: every tool. */
+export type HttpToolName = ToolName;
 
 export interface HttpRoute {
   method: "GET" | "POST";

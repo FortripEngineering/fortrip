@@ -79,6 +79,17 @@ describe("renderGuide", () => {
     });
   }
 
+  it("nothing points to a runtime guide", () => {
+    for (const surface of SURFACES) {
+      for (const topic of TOPICS) {
+        const text = renderGuide(surface, topic);
+        assert.doesNotMatch(text, /fortrip guide|get_planning_guide/, `${surface} ${topic}`);
+      }
+    }
+    assert.equal(TOOLS.some((tool) => (tool.name as string) === "get_planning_guide"), false);
+    assert.equal(COMMANDS.some((command) => (command.name as string) === "guide"), false);
+  });
+
   it("the MCP instructions are at most 2,500 characters", () => {
     const text = renderGuide("mcp", "main");
     assert.ok(text.length <= 2500, `${text.length} characters`);
@@ -313,11 +324,6 @@ describe("consent before cancelling an order", () => {
 describe("the MCP instructions", () => {
   const text = flat(renderGuide("mcp", "main"));
 
-  it("say what get_planning_guide is, never order a fetch of it", () => {
-    assert.match(text, /`get_planning_guide` returns Fortrip's guidance for flexible dates/);
-    assert.doesNotMatch(text, /follow it|call `?get_planning_guide/);
-  });
-
   it("carry the cross-tool rules", () => {
     for (const phrase of [
       "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_offers` → `book_hotel`; after the user pays, `get_order`",
@@ -331,7 +337,7 @@ describe("the MCP instructions", () => {
   });
 
   it("name every tool as the server does", () => {
-    assert.equal(TOOLS.length, 9);
+    assert.equal(TOOLS.length, 8);
     for (const { name } of TOOLS) {
       assert.match(text, new RegExp(`\`${name}\``), name);
     }
@@ -350,7 +356,7 @@ describe("the Claude skill", () => {
 
   it("keeps the tools table and the payment-link sequence", () => {
     assert.match(main, /^\| Tool \| Returns \|$/m);
-    for (const { name } of TOOLS.filter((tool) => tool.name !== "get_planning_guide")) {
+    for (const { name } of TOOLS) {
       assert.match(main, new RegExp(`^\\| \`fortrip:${name}\` \\|`, "m"), name);
     }
     assert.match(main, /^## Before giving the payment link$/m);
@@ -395,7 +401,6 @@ describe("the CLI guide", () => {
       "`userCode`",
       "Never ask the user to paste a token",
       "`--body",
-      "`fortrip guide planning`",
       "`--json`",
       "`fortrip orders get`",
       "info@fortrip.ai",
@@ -517,8 +522,6 @@ describe("renderText", () => {
     assert.equal(renderText("{{tool:orders get}}", "mcp"), "get_order");
     assert.equal(renderText("{{tool:hotels book}}", "mcp"), "book_hotel");
     assert.equal(renderText("{{tool:hotels book}}", "claude-skill"), "fortrip:book_hotel");
-    assert.equal(renderText("{{tool:guide}}", "mcp"), "get_planning_guide");
-    assert.equal(renderText("{{tool:guide}}", "cli"), "fortrip guide");
     assert.equal(renderText("{{tool:whoami}}", "cli"), "fortrip whoami");
   });
 
@@ -576,6 +579,7 @@ describe("renderText", () => {
       // A hotel command is named with its group.
       "{{tool:search}}",
       "{{tool:book}}",
+      "{{tool:guide}}",
       "{{tool:hotels}}",
       "{{tool:hotels whoami}}",
       "{{tool:hotels  search}}",
@@ -595,8 +599,6 @@ describe("renderText", () => {
   });
 
   it("throws on a tool the surface doesn't have", () => {
-    // The Claude plugin ships the planning guide as a file (Directory Policy §2F).
-    assert.throws(() => renderText("{{tool:guide}}", "claude-skill"), /guide/i);
     assert.throws(() => renderText("{{tool:whoami}}", "mcp"), /guide/i);
     assert.throws(() => renderText("{{tool:login}}", "claude-skill"), /guide/i);
   });

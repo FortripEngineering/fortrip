@@ -218,7 +218,6 @@ describe("Markdown pages", () => {
     for (const [block, phrase] of [
       ["presentation_hint", "the presentation hint"],
       ["wechat_code", "WeChat Pay code first"],
-      ["guide", "planning guide as Markdown"],
     ] as const) {
       const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
       assert.ok(tools.length > 0, block);
@@ -286,7 +285,6 @@ describe("Markdown pages", () => {
 
   it("a tool page has its input fields; a command page its usage", () => {
     for (const tool of MCP_TOOLS) {
-      if (tool.name === "get_planning_guide") continue;
       const rows = inputRows(TOOL_INPUTS[tool.name]);
       includesAll(pageMarkdown(`/mcp/${tool.slug}`), [`# ${tool.title}`, ...rows.map((r) => `\`${r.path}\``)], tool.slug);
     }

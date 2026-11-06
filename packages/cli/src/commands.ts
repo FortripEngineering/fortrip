@@ -93,7 +93,7 @@ export function parseCommand(
   argv: string[],
   env: NodeJS.ProcessEnv,
 ): ApiRequest {
-  const route = spec.tool && spec.tool !== "get_planning_guide" ? HTTP_ROUTES[spec.tool] : undefined;
+  const route = spec.tool ? HTTP_ROUTES[spec.tool] : undefined;
   if (!route) throw new Error(`${commandInvocation(spec)} sends no request`);
   const { values, positionals } = parseOptions(spec, argv);
   const input = baseBody(values.body);

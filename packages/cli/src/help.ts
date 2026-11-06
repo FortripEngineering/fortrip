@@ -44,7 +44,7 @@ function positionals(spec: CommandSpec): string[] {
   );
 }
 
-/** `get <hotelId>`, `guide [topic]`: a command in its group's list, or in
+/** `get <hotelId>`, `login`: a command in its group's list, or in
  *  the CLI's. */
 function label(spec: CommandSpec): string {
   return [spec.name, ...positionals(spec)].join(" ");

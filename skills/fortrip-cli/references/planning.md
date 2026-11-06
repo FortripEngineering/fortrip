@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in `fortrip guide` still apply (call order, destinations, one party per offer and order, confirming the order `fortrip hotels book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply (call order, destinations, one party per offer and order, confirming the order `fortrip hotels book` returns before giving the payment link); this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
 
 ## What to collect
 

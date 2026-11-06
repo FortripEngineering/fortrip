@@ -102,7 +102,7 @@ test("the check accepts the contract's commands and rejects the 1.0 and 2.0 name
         "npx -y fortrip@latest hotels offers --hotel htl_1",
         "`fortrip hotels get <hotelId>`",
         "fortrip hotels --help",
-        "<code>fortrip login</code> and <code>fortrip guide planning</code>",
+        "<code>fortrip login</code> and <code>fortrip whoami</code>",
         "Run fortrip commands from a terminal",
         "FortripEngineering/fortrip --skill fortrip-cli, fortrip.ai, Fortrip search",
       ].join("\n"),

@@ -66,7 +66,7 @@ export function toolMarkdown(name: ToolName): string {
     ]),
     ...modelReads(tool.summary),
     heading(2, [text("Input")], "input"),
-    tool.name === "get_planning_guide" ? paragraph([text("None.")]) : fields(`input:${tool.name}`),
+    fields(`input:${tool.name}`),
     heading(2, [text("Output")], "output"),
     paragraph(output),
   ]);
@@ -147,7 +147,7 @@ export function operationMarkdown(id: string): string {
         : [text("Needs no sign-in.")],
     ),
   ];
-  if (tool && tool.name !== "get_planning_guide") {
+  if (tool) {
     blocks.push(
       heading(2, [text("Input")], inputAnchor(route)),
       paragraph([

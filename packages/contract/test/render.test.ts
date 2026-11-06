@@ -24,8 +24,7 @@ import {
  * `.txt` next to it. UPDATE_GOLDENS=1 rewrites the `.txt` files.
  */
 
-type RenderTool = Exclude<ToolName, "get_planning_guide">;
-type ToolFixture = { tool: RenderTool; data: Record<string, unknown> };
+type ToolFixture = { tool: ToolName; data: Record<string, unknown> };
 type ErrorFixture = { status: number; envelope: { error: Record<string, unknown> } };
 type Fixture = ToolFixture | ErrorFixture;
 
@@ -103,7 +102,7 @@ function render(fixture: Fixture): string {
     : renderError(fixture.envelope, fixture.status);
 }
 
-function outputOf(tool: RenderTool) {
+function outputOf(tool: ToolName) {
   const schema = TOOLS.find((t) => t.name === tool)?.output;
   assert.ok(schema, tool);
   return schema;

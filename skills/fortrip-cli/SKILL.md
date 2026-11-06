@@ -20,7 +20,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `fortrip orders pay` | Pays an order without its link, by a shared payment token from the user's wallet, or with Alipay or WeChat Pay |
 
-For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
+For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
 ## Setup
 

@@ -28,7 +28,7 @@ export { renderError } from "./errors.ts";
  * MCP, a command and its flags on the CLI.
  */
 
-export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
+export type RenderedTool = ToolName;
 
 /**
  * Renders `data`, the answer of `tool`, after parsing it with the tool's

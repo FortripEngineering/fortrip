@@ -196,7 +196,6 @@ const orderFixture = {
 };
 
 const TOOL_NAMES = [
-  "get_planning_guide",
   "search_hotels",
   "get_hotel",
   "get_hotel_offers",
@@ -208,7 +207,7 @@ const TOOL_NAMES = [
 ] as const;
 
 describe("TOOLS", () => {
-  it("lists the nine tools in call order", () => {
+  it("lists the eight tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
       [...TOOL_NAMES],
@@ -220,7 +219,6 @@ describe("TOOLS", () => {
     assert.deepEqual(
       Object.fromEntries(TOOLS.map((spec) => [spec.name, spec.title])),
       {
-        get_planning_guide: "Planning guide",
         search_hotels: "Search hotels",
         get_hotel: "Hotel details",
         get_hotel_offers: "Live offers",
@@ -266,7 +264,6 @@ describe("TOOLS", () => {
 
   // Spec §6: MCP tool inputs mirror the HTTP bodies and query exactly.
   it("every tool's input is the HTTP request schema", () => {
-    assert.equal(tool("get_planning_guide").input, null);
     assert.equal(tool("search_hotels").input, searchHotelsInput);
     assert.equal(tool("get_hotel").input, getHotelInput);
     assert.equal(tool("get_hotel_offers").input, hotelOffersInput);
@@ -277,8 +274,7 @@ describe("TOOLS", () => {
     assert.equal(tool("pay_order").input, payOrderInput);
   });
 
-  it("every tool but the planning guide has an output schema", () => {
-    assert.equal(tool("get_planning_guide").output, null);
+  it("every tool has an output schema", () => {
     assert.equal(tool("search_hotels").output, searchResult);
     assert.equal(tool("get_hotel").output, hotel);
     assert.equal(tool("get_hotel_offers").output, hotelOffersResult);
@@ -317,7 +313,6 @@ describe("TOOLS", () => {
         TOOLS.map((spec) => [spec.name, spec.annotations.openWorldHint]),
       ),
       {
-        get_planning_guide: false,
         search_hotels: true,
         get_hotel: true,
         get_hotel_offers: true,
@@ -571,7 +566,6 @@ describe("COMMANDS", () => {
       login: null,
       logout: null,
       whoami: null,
-      guide: "get_planning_guide",
       mcp: null,
     };
     assert.deepEqual(COMMANDS.map(typed), Object.keys(tools));
@@ -661,7 +655,7 @@ describe("COMMANDS", () => {
     });
     assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
     assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", method: "method", total: "total" });
-    for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
+    for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
   });
@@ -687,7 +681,6 @@ describe("COMMANDS", () => {
       login: [],
       logout: [],
       whoami: [],
-      guide: ["[topic] null"],
       mcp: [],
     });
     for (const spec of COMMANDS) {
@@ -946,10 +939,9 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("the guide command takes no input", () => {
-    assert.equal(tool("get_planning_guide").input, null);
-    assert.equal(tool("get_planning_guide").output, null);
-    assert.deepEqual(command("guide").flags, []);
+  it("nothing points to a runtime guide", () => {
+    assert.equal(TOOLS.some((spec) => (spec.name as string) === "get_planning_guide"), false);
+    assert.equal(COMMANDS.some((spec) => (spec.name as string) === "guide"), false);
   });
 });
 
@@ -986,7 +978,6 @@ describe("CLI-only options", () => {
       login: ["no-browser"],
       logout: [],
       whoami: [],
-      guide: [],
       mcp: [],
     });
     assert.equal(command("login").options?.[0]?.type, "boolean");

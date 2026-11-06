@@ -26,7 +26,6 @@ import {
   notices,
   usageError,
 } from "./errors.ts";
-import { readGuide } from "./guide.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
 import { terminalQr } from "./qr.ts";
 import { VERSION } from "./version.ts";
@@ -101,15 +100,6 @@ async function run(argv: string[]): Promise<Answer> {
   const { spec, rest } = found;
   if (wantsHelp(rest)) {
     process.stdout.write(commandHelp(spec));
-    return undefined;
-  }
-  if (spec.group === null && spec.name === "guide") {
-    const { positionals } = parseOptions(spec, rest);
-    const topic = positionals.join(" ");
-    if (topic !== "" && topic !== "planning") {
-      throw usageError("Usage: fortrip guide [planning]");
-    }
-    process.stdout.write(readGuide(topic || "main"));
     return undefined;
   }
 

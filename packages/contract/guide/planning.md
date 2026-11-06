@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in {{#if mcp}}the server instructions{{/if}}{{#if claude-skill}}SKILL.md{{/if}}{{#if cli}}`{{tool:guide}}`{{/if}} still apply (call order, destinations, one party per offer and order, confirming the order `{{tool:hotels book}}` returns before giving the payment link); this covers what to ask, how to compare and how to present.{{#if cli}} As there, `fortrip` is short for `npx -y fortrip@latest`.{{/if}}
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in {{#if mcp}}the server instructions{{/if}}{{#if claude-skill cli}}SKILL.md{{/if}} still apply (call order, destinations, one party per offer and order, confirming the order `{{tool:hotels book}}` returns before giving the payment link); this covers what to ask, how to compare and how to present.{{#if cli}} As there, `fortrip` is short for `npx -y fortrip@latest`.{{/if}}
 
 ## What to collect
 

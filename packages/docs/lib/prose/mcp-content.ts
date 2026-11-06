@@ -4,8 +4,6 @@ import type { ToolName } from "@fortrip/agent-contract";
 type Block =
   /** The answer as compact text (the contract's `renderToolResult`). */
   | "text"
-  /** The planning guide, as Markdown. */
-  | "guide"
   /** The contract's `PRESENTATION_HINT`: how to show hotels to the user. */
   | "presentation_hint"
   /** The WeChat Pay code as a PNG, while the answer holds a live one and
@@ -19,7 +17,6 @@ type Block =
  * before its text).
  */
 export const MCP_CONTENT: Record<ToolName, readonly Block[]> = {
-  get_planning_guide: ["guide"],
   search_hotels: ["text", "presentation_hint"],
   get_hotel: ["text", "presentation_hint"],
   get_hotel_offers: ["text", "presentation_hint"],
@@ -32,7 +29,6 @@ export const MCP_CONTENT: Record<ToolName, readonly Block[]> = {
 
 const WHAT: Record<Block, string> = {
   text: "the answer as compact text",
-  guide: "the planning guide, as Markdown",
   presentation_hint: "the presentation hint: how to show hotels to the user",
   wechat_code: "the WeChat Pay code as a PNG image",
 };

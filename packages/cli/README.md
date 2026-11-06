@@ -87,7 +87,6 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
-| `guide [topic]` | Print the guide for AI agents (Markdown); `fortrip guide planning` prints the planning guide |
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
@@ -124,18 +123,9 @@ exits 2.
 
 ## For AI agents
 
-```bash
-npx -y fortrip guide            # when to use the CLI, call order, sign-in, what to show before a payment link
-npx -y fortrip guide planning   # flexible dates, budgets, split stays, several destinations
-```
-
-Both print Markdown, with `fortrip@latest` replaced by the running version, so
-an agent keeps using the same CLI for the whole conversation. The guide is
-written once in
+The agent guide is written once in
 [`@fortrip/agent-contract`](https://github.com/FortripEngineering/fortrip/tree/main/packages/contract/guide)
-and compiled into the CLI.
-
-For agents that can run shell commands, the same guide is also a skill:
+and ships as a skill, with the planning guide as `references/planning.md`:
 
 ```bash
 npx skills add FortripEngineering/fortrip --skill fortrip-cli
@@ -143,8 +133,8 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has nine tools:
-`get_planning_guide`, `search_hotels`, `get_hotel`, `get_hotel_offers`,
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
+`search_hotels`, `get_hotel`, `get_hotel_offers`,
 `book_hotel`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add

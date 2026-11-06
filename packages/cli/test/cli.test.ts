@@ -861,10 +861,9 @@ describe("help", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("positionals are named in the usage; guide's is optional", async () => {
+  it("positionals are named in the usage", async () => {
     assert.match((await cli(["hotels", "get", "--help"])).stdout, /^Usage: fortrip hotels get <hotelId> /);
     assert.match((await cli(["orders", "get", "--help"])).stdout, /^Usage: fortrip orders get <orderId> /);
-    assert.match((await cli(["guide", "--help"])).stdout, /^Usage: fortrip guide \[topic\]/);
   });
 
   it("a command named like an object property is just unknown", async () => {
