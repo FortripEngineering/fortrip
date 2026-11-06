@@ -75,25 +75,21 @@ export function ToolPage({ name }: { name: ToolName }) {
       <Heading as="h2" id="input">
         Input
       </Heading>
-      {input ? <FieldTable rows={inputRows(input)} /> : <p>None.</p>}
+      <FieldTable rows={inputRows(input)} />
       <Heading as="h2" id="output">
         Output
       </Heading>
-      {typeof tool.returns === "string" ? (
-        <p>{tool.returns}</p>
-      ) : (
-        <p>
-          <code>structuredContent</code> is the{" "}
-          <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
-          {nextStep && (
-            <>
-              {" "}
-              It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
-            </>
-          )}{" "}
-          Errors are described in the <Link href="/mcp#errors">overview</Link>.
-        </p>
-      )}
+      <p>
+        <code>structuredContent</code> is the{" "}
+        <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
+        {nextStep && (
+          <>
+            {" "}
+            It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
+          </>
+        )}{" "}
+        Errors are described in the <Link href="/mcp#errors">overview</Link>.
+      </p>
     </>
   );
 }

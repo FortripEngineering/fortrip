@@ -153,15 +153,9 @@ test("a tool or command that answers an object links to its response schema", ()
   );
   for (const tool of MCP_TOOLS) {
     const doc = responseDocFor(tool.name);
-    if (doc) {
-      assert.equal(typeof tool.returns, "object", tool.name);
-      if (typeof tool.returns === "object") {
-        assert.ok(anchors.has(tool.returns.href), tool.name);
-        assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
-      }
-    } else {
-      assert.equal(typeof tool.returns, "string", tool.name);
-    }
+    assert.ok(doc, tool.name);
+    assert.ok(anchors.has(tool.returns.href), tool.name);
+    assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
   }
   for (const command of CLI_COMMANDS) {
     assert.ok(command.output.trim(), command.slug);

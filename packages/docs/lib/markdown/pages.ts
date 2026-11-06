@@ -42,22 +42,19 @@ export function toolMarkdown(name: ToolName): string {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
-  const output =
-    typeof tool.returns === "string"
-      ? [text(tool.returns)]
-      : [
-          code("structuredContent"),
-          text(" is the "),
-          link(tool.returns.href, text(tool.returns.title)),
-          text(" object. "),
-          ...inline(contentSentence(tool.name)),
-          ...(responseDocFor(tool.name)?.mcpNextStep
-            ? [text(" It also carries "), code("nextStep"), text(", the rule for sharing "), code("payment.url"), text(".")]
-            : []),
-          text(" Errors are described in the "),
-          link("/mcp#errors", text("overview")),
-          text("."),
-        ];
+  const output = [
+    code("structuredContent"),
+    text(" is the "),
+    link(tool.returns.href, text(tool.returns.title)),
+    text(" object. "),
+    ...inline(contentSentence(tool.name)),
+    ...(responseDocFor(tool.name)?.mcpNextStep
+      ? [text(" It also carries "), code("nextStep"), text(", the rule for sharing "), code("payment.url"), text(".")]
+      : []),
+    text(" Errors are described in the "),
+    link("/mcp#errors", text("overview")),
+    text("."),
+  ];
   return toMarkdown([
     paragraph([
       code(tool.name),

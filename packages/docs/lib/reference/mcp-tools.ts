@@ -27,15 +27,15 @@ export interface McpTool {
   /** The slug of that command's page. */
   cliSlug: string;
   /** The response schema, or a description when there is none. */
-  returns: { title: string; href: string } | string;
+  /** The response schema. */
+  returns: { title: string; href: string };
 }
 
-/** What the contract doesn't say about a tool: where the docs list it, and
- *  what a tool without an output schema returns. The keys are in docs order,
+/** What the contract doesn't say about a tool: where the docs list it. The keys are in docs order,
  *  and a tool added to the contract fails the typecheck until it is listed. */
 const DOCS: Record<
   ToolName,
-  { group: string; access: string; human: string; returns?: string; cliArgs?: string }
+  { group: string; access: string; human: string }
 > = {
   search_hotels: {
     group: "Hotels",
@@ -92,9 +92,9 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
     if (!tool || !command) {
       throw new Error(`${name} is not in the contract's TOOLS and COMMANDS`);
     }
-    const { group, access, human, returns, cliArgs } = DOCS[name];
+    const { group, access, human } = DOCS[name];
     const response = responseDocFor(name);
-    if (!response && !returns) throw new Error(`${name}: what does it return?`);
+    if (!response) throw new Error(`${name}: what does it return?`);
     return {
       slug: name.replaceAll("_", "-"),
       name,
@@ -104,13 +104,9 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
       human,
       readOnly: tool.annotations.readOnlyHint,
       access,
-      cli: cliArgs
-        ? `${commandInvocation(command)} ${cliArgs}`
-        : commandInvocation(command),
+      cli: commandInvocation(command),
       cliSlug: commandSlug(command),
-      returns: response
-        ? { title: schemaTitle(response), href: schemaHref(response) }
-        : (returns as string),
+      returns: { title: schemaTitle(response), href: schemaHref(response) },
     };
   },
 );
