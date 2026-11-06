@@ -171,8 +171,19 @@ describe("requests", () => {
     replies = [{ status: 200, body: order }, reply];
     const none = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(none.code, 1);
-    assert.match(none.stderr, /currency/);
+    assert.equal(none.stderr, `Error: Not sent: the order ${ORDER} has no currency to send the penalty in.\n`);
     assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  });
+
+  it("orders cancel --max-penalty on a confirmed order in another currency posts the penalty in that currency", async () => {
+    const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
+    order.cancel.penalty = { amount: "12.50", currency: "EUR" };
+    order.price.total = { amount: "880.00", currency: "EUR" };
+    replies = [{ status: 200, body: order }, reply];
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
+    assert.equal(code, 0, stderr);
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+    assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "EUR" } });
   });
 
   it("orders cancel --close with --max-penalty exits 2 and sends nothing", async () => {

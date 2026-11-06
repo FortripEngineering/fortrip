@@ -65,7 +65,7 @@ export {
   type SearchHotelsInput,
   type Stay,
 } from "./inputs.ts";
-export { CURRENCIES, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
+export { CURRENCIES, type Currency, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
 export {
   authConfig,
   meResult,

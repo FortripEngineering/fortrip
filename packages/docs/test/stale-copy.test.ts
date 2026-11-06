@@ -128,17 +128,29 @@ describe("stale statements stay fixed", () => {
   // The facts contract 5 changed, as packages/contract/test/no-stale-copy.test.ts
   // keeps them out of what agents read. Pages say "in USD" of nothing: only
   // the token is USD-only, and no page needs the phrase for it.
-  it("no page or fixture states an old fact, or says what is in USD", () => {
+  // The lib's text (error meanings, pay ways, limits, environment…) renders
+  // into pages too.
+  it("no page, fixture or lib text states an old fact, or says what is in USD", () => {
     const docs = new URL("../content/docs/", import.meta.url).pathname;
     const fixtures = new URL("../lib/reference/fixtures/", import.meta.url).pathname;
+    const lib = new URL("../lib/", import.meta.url).pathname;
     const pages = readdirSync(docs, { recursive: true, encoding: "utf8" })
       .filter((f) => f.endsWith(".mdx") && f !== "changelog.mdx")
       .map((f) => ({ file: f, text: readFileSync(join(docs, f), "utf8") }));
     const fixtureTexts = readdirSync(fixtures)
       .filter((f) => f.endsWith(".json"))
       .map((f) => ({ file: f, text: fixtureText(f, readFileSync(join(fixtures, f), "utf8")) }));
-    assert.ok(pages.length > 10 && fixtureTexts.length > 5, `${pages.length} ${fixtureTexts.length}`);
-    const found = [...pages, ...fixtureTexts].flatMap(({ file, text }) =>
+    const libTexts = readdirSync(lib, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => ({ file: `lib/${f}`, text: readFileSync(join(lib, f), "utf8") }));
+    assert.ok(
+      pages.length > 10 && fixtureTexts.length > 5 && libTexts.length > 20,
+      `${pages.length} ${fixtureTexts.length} ${libTexts.length}`,
+    );
+    for (const file of ["error-docs.ts", "pay-ways.ts", "limits.ts", "environment.ts"]) {
+      assert.ok(libTexts.some((t) => t.file.endsWith(`/${file}`)), file);
+    }
+    const found = [...pages, ...fixtureTexts, ...libTexts].flatMap(({ file, text }) =>
       [...STALE, /\bin USD\b/].filter((pattern) => pattern.test(text)).map((pattern) => `${file}: ${pattern}`),
     );
     assert.deepEqual(found, []);

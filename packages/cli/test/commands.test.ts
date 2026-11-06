@@ -696,6 +696,15 @@ describe("currency", () => {
     assert.deepEqual(price(SEARCH), at("USD"));
   });
 
+  it("a --body currency is upper-cased like --currency, and so is the price bound's", () => {
+    const sent = body("hotels search", [...SEARCH, ...STAY, "--room", "2", "--body", '{"currency":"cny"}', "--price-max-per-room-night", "100"]);
+    assert.equal(sent.currency, "CNY");
+    assert.deepEqual((sent.filters as { price: { maxPerRoomNight: unknown } }).price.maxPerRoomNight, {
+      amount: "100",
+      currency: "CNY",
+    });
+  });
+
   it("--display-currency is gone", () => {
     assert.throws(() => parse("hotels search", [...SEARCH, "--display-currency", "cny"]), isUsage);
     assert.throws(() => parse("hotels offers", [...OFFERS, "--display-currency", "cny"]), isUsage);

@@ -206,11 +206,8 @@ async function cancelOrder(
   }
   const penalty = read?.cancel?.penalty?.currency;
   const currency = typeof penalty === "string" ? penalty : read?.price?.total?.currency;
-  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
-    throw new CliError(
-      `Not sent: the order ${orderId} has no cancel.penalty or price.total currency in USD or CNY to cancel in.`,
-      EXIT.error,
-    );
+  if (typeof currency !== "string") {
+    throw new CliError(`Not sent: the order ${orderId} has no currency to send the penalty in.`, EXIT.error);
   }
   const body = request.body as Record<string, unknown>;
   body.maximumPenalty = { ...(body.maximumPenalty as Record<string, unknown>), currency };

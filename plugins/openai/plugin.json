@@ -58,7 +58,7 @@
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY.",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room, meals, free-cancellation deadline and price.total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so."
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room, meals, free-cancellation deadline and price.total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so. If the answer is currency_unavailable, it says CNY prices aren't available yet and offers USD prices."
             },
             {
               "description": "Compare two check-in dates within a budget",

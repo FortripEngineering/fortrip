@@ -196,7 +196,7 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again.",
+        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again.",
       ),
     requiresSignIn: z.boolean(),
     expiresAt: instant
@@ -235,7 +235,7 @@ export const order = openObject({
     penalty: money
       .nullable()
       .describe(
-        "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated.",
+        "The penalty if cancelled now, under the accepted terms, in the charge currency; null when not stated, except on an unpaid order (reason unpaid), where null means closing it charges nothing.",
       ),
     refund: money
       .nullable()

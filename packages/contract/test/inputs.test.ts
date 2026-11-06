@@ -909,14 +909,16 @@ describe("cancelOrderInput", () => {
     assertAccepted(cancelOrderInput, { orderId });
     assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "CNY" } });
     assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "0.00", currency: "USD" } });
+    // The order's cancel.penalty as returned: a website order's may be in any currency.
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "EUR" } });
     assert.deepEqual(refusalOf(cancelOrderInput, { orderId, maximumPenalty: 12.5 }), [
       {
         path: "maximumPenalty",
-        message: 'maximumPenalty must be Money: { amount: "132.40", currency: "USD" or "CNY" }',
+        message: 'maximumPenalty must be Money as returned: { amount: "132.40", currency: "USD" }',
       },
     ]);
     assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "-1", currency: "USD" } }, "maximumPenalty.amount");
-    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "1.00", currency: "EUR" } }, "maximumPenalty.currency");
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "eur" } }, "maximumPenalty.currency");
     assertRefusedAt(cancelOrderInput, { orderId: hotel }, "orderId");
     assert.equal(
       refusalOf(cancelOrderInput, { orderId, refund: 1 })[0]?.message,

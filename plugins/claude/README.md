@@ -43,8 +43,8 @@ token into the chat.
 
 1. Claude searches hotels. Search prices are indicative minimums; live prices
    come from checking offers.
-2. Offers are priced in the currency you ask for, USD or CNY, and that is
-   the currency you're charged.
+2. Offers are priced in the currency you ask for, USD or CNY where
+   available, and that is the currency you're charged.
 3. When you pick an offer and give the guest names and a contact name, email
    and phone, Claude creates an unpaid order and shows you the stay, the
    amount and currency you'll be charged, the meals, cancellation

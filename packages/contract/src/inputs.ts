@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CARD_NUMBER_MESSAGE, containsCardNumber } from "./card-number.ts";
 import { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
 import { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-import { requestMoney } from "./conventions/money.ts";
+import { echoedMoney, requestMoney } from "./conventions/money.ts";
 import { localDate } from "./conventions/time.ts";
 import {
   flag,
@@ -584,7 +584,7 @@ export type ListOrdersInput = z.input<typeof listOrdersInput>;
  *  computes the refund; a higher penalty now answers `cancellation_changed`. */
 export const cancelOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to cancel."),
-  maximumPenalty: requestMoney("maximumPenalty")
+  maximumPenalty: echoedMoney("maximumPenalty")
     .optional()
     .describe(
       "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
