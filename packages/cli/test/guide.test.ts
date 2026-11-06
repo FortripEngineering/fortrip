@@ -27,7 +27,11 @@ describe("guide", () => {
   });
 
   it("`fortrip guide` is an unknown command", async () => {
-    await assert.rejects(cli("guide"), (error: { code?: number }) => error.code === 2);
+    await assert.rejects(cli("guide"), (error: { code?: number; stderr?: string }) => {
+      assert.equal(error.code, 2);
+      assert.match(error.stderr ?? "", /^Error: Unknown command/);
+      return true;
+    });
   });
 
   it("--version reports package.json's version", async () => {

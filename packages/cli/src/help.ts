@@ -37,11 +37,9 @@ function wrap(text: string, indent: number): string[] {
   return lines;
 }
 
-/** `<hotelId>`, `[topic]`: a command's positionals as they are typed. */
+/** `<hotelId>`, `<orderId>`: a command's positionals as they are typed. */
 function positionals(spec: CommandSpec): string[] {
-  return (spec.positionals ?? []).map(({ name, optional }) =>
-    optional ? `[${name}]` : `<${name}>`,
-  );
+  return (spec.positionals ?? []).map(({ name }) => `<${name}>`);
 }
 
 /** `get <hotelId>`, `login`: a command in its group's list, or in

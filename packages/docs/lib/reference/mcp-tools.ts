@@ -26,13 +26,13 @@ export interface McpTool {
   cli: string;
   /** The slug of that command's page. */
   cliSlug: string;
-  /** The response schema, or a description when there is none. */
   /** The response schema. */
   returns: { title: string; href: string };
 }
 
-/** What the contract doesn't say about a tool: where the docs list it. The keys are in docs order,
- *  and a tool added to the contract fails the typecheck until it is listed. */
+/** What the contract doesn't say about a tool: where the docs list it. The
+ *  keys are in docs order, and a tool added to the contract fails the
+ *  typecheck until it is listed. */
 const DOCS: Record<
   ToolName,
   { group: string; access: string; human: string }

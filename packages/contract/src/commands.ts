@@ -68,12 +68,10 @@ export interface FlagSpec {
 
 /** An argument given by position. */
 export interface PositionalSpec {
-  /** As help shows it: `<hotelId>`, or `[topic]` when optional. */
+  /** As help shows it: `<hotelId>`. */
   name: string;
-  /** The input field it sets; `null` for one the CLI reads itself. */
-  field: string | null;
-  /** Can be left out. */
-  optional?: boolean;
+  /** The input field it sets. */
+  field: string;
   description: string;
 }
 

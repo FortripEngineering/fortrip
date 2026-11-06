@@ -101,7 +101,7 @@ export function parseCommand(
   const wanted = spec.positionals ?? [];
   if (positionals.length !== wanted.length) throw usageError(`Usage: ${usageLine(spec)}`);
   wanted.forEach((positional, index) => {
-    if (positional.field) input[positional.field] = positionals[index];
+    input[positional.field] = positionals[index];
   });
 
   setFlags(spec, values, input, requestCurrency(spec, values, input, env));

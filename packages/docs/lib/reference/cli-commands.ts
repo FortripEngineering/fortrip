@@ -98,8 +98,8 @@ function flagSyntax(option: FlagSpec | OptionSpec): string {
   return `--${option.flag}${placeholder}${repeats}`;
 }
 
-function positional({ name, optional }: PositionalSpec): string {
-  return optional ? `[${name}]` : `<${name}>`;
+function positional({ name }: PositionalSpec): string {
+  return `<${name}>`;
 }
 
 /** `fortrip hotels offers --hotel <htl_>... --check-in YYYY-MM-DD ... [options]`: the
@@ -124,7 +124,7 @@ function usageOf(spec: CommandSpec): string {
 function flagRows(spec: CommandSpec): CliFlag[] {
   return [
     ...(spec.positionals ?? []).map(
-      (item): CliFlag => [positional(item), item.field ?? "", item.description],
+      (item): CliFlag => [positional(item), item.field, item.description],
     ),
     ...spec.flags.map(
       (flag): CliFlag => [flagSyntax(flag), flag.field, flag.description],

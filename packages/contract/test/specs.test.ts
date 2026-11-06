@@ -665,7 +665,7 @@ describe("COMMANDS", () => {
       COMMANDS.map((spec) => [
         typed(spec),
         (spec.positionals ?? []).map(
-          (p) => `${p.optional ? `[${p.name}]` : `<${p.name}>`} ${p.field}`,
+          (p) => `<${p.name}> ${p.field}`,
         ),
       ]),
     );
