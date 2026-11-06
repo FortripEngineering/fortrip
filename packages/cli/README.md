@@ -199,8 +199,7 @@ args = ["-y", "fortrip", "mcp"]
 
 A command prints its result as compact text on stdout, the same text the MCP
 tools return. With `--json` (anywhere before `--`) it prints the API's JSON
-instead, on one line. `guide` prints Markdown and `fortrip mcp` speaks MCP over
-stdio.
+instead, on one line. `fortrip mcp` speaks MCP over stdio.
 
 Errors go to stderr, as text, or with `--json` as one line of JSON:
 `{ "error": { "code", "message", "retryable", "requestId", … } }`, Fortrip's
