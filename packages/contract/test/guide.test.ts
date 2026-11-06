@@ -115,21 +115,30 @@ describe("the settled rules (design §3.4)", () => {
     }
   }
 
-  it("price units: price.total is the whole stay for all rooms, charged in USD for offers and their orders", () => {
+  it("price units: price.total is the whole stay for all rooms, charged in the request's currency", () => {
     for (const surface of SURFACES) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /`price\.total` is the whole stay for all rooms and is what is charged, in USD for offers and the orders made from them/,
+        /`price\.total` is the whole stay for all rooms and is what is charged, in the request's `(--)?currency`/,
         surface,
       );
     }
   });
 
-  it("USD and Adaptive Pricing, stated plainly", () => {
+  it("no surface or topic mentions approx or 'in USD for offers'; the currency rule is stated once", () => {
+    for (const { surface, topic } of RENDERINGS) {
+      const text = flat(renderGuide(surface, topic));
+      assert.doesNotMatch(text, /approx|in USD for offers|display-?currency/i, `${surface} ${topic}`);
+    }
+    for (const surface of SURFACES) {
+      assert.equal(count(renderGuide(surface, "main"), /in the request's `(--)?currency`/), 1, surface);
+    }
+  });
+
+  it("Adaptive Pricing, stated plainly", () => {
     for (const surface of SURFACES) {
       const text = flat(renderGuide(surface, "main"));
       assert.match(text, /pay in (their|the) card's (local )?currency at Stripe's rate/, surface);
-      assert.match(text, /`approx`[^.]*never the charge/, surface);
     }
   });
 
@@ -383,7 +392,7 @@ describe("the CLI guide", () => {
     for (const text of [main, planning]) {
       assert.doesNotMatch(text, /fortrip skill|fth_|\/api\//);
     }
-    assert.doesNotMatch(main, /--rooms \d|--adults|--currency|FORTRIP_CURRENCY/);
+    assert.doesNotMatch(main, /--rooms \d|--adults/);
   });
 
   it("the planning guide asks for confirmation of what book returned", () => {

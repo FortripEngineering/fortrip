@@ -95,11 +95,6 @@ const searchFixture = {
         basis: "lowest_unit",
         fromPerRoomNight: usd("66.20"),
         fromPerRoomStay: usd("132.40"),
-        approx: {
-          fromPerRoomNight: { amount: "471.33", currency: "CNY" },
-          fromPerRoomStay: { amount: "942.66", currency: "CNY" },
-          rateDate: "2026-10-23",
-        },
       },
       photo: { url: "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp", caption: null },
     },
@@ -204,7 +199,6 @@ const offerFixture = {
   price: {
     total: usd("132.40"),
     perNightAllRooms: usd("66.20"),
-    approx: null,
     payAtProperty,
   },
   cancellation,
@@ -559,6 +553,15 @@ describe("open where the spec says, strict in server tests", () => {
 });
 
 describe("shape rules", () => {
+  it("no approx: a price is in one currency, in the search-hotel and offer shapes", () => {
+    for (const [name, schema] of [
+      ["search_hotels", searchResult],
+      ["get_hotel_offers", hotelOffersResult],
+    ] as const) {
+      assert.doesNotMatch(JSON.stringify(jsonSchemaOf(schema)), /approx/, name);
+    }
+  });
+
   it("an order has at least one item", () => {
     assert.equal(order.safeParse({ ...orderFixture, items: [] }).success, false);
   });
@@ -604,7 +607,7 @@ describe("shape rules", () => {
 /** Every key an output schema declares. A new key fails the test below until it
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
-  "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "approx", "areaSqm", "asOf",
+  "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "areaSqm", "asOf",
   "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
@@ -621,7 +624,7 @@ const PUBLIC_KEYS = new Set([
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
   "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "open", "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
-  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "rateDate", "reason", "reference", "refund",
+  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
   "sort", "spec", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",

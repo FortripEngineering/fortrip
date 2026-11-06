@@ -18,7 +18,7 @@ import {
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
-import { LIMITS } from "./limits.ts";
+import { CURRENCIES, LIMITS } from "./limits.ts";
 import { AMENITY_CODES, SEARCH_SORTS } from "./vocabulary.ts";
 
 /*
@@ -34,12 +34,8 @@ const locale = oneOf("locale", ["en", "zh"] as const).describe(
   "Language for names and text in the response: en or zh.",
 );
 
-const displayCurrency = oneOf("displayCurrency", [
-  "USD",
-  "CNY",
-] as const).describe(
-  "Currency to show prices in, USD or CNY. It never changes what is charged: payment is in USD.",
-);
+const currencyDescription =
+  "The currency to price and charge in: USD (default) or CNY, where available (otherwise the answer is currency_unavailable).";
 
 /** An opaque cursor from a previous response. */
 const cursor = nonEmpty("cursor");
@@ -290,7 +286,7 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
         "`nextCursor` from the previous response. A next page is the cursor and, optionally, `limit`; nothing else.",
       ),
     locale: locale.optional(),
-    displayCurrency: displayCurrency.optional(),
+    currency: oneOf("currency", CURRENCIES).optional().describe(currencyDescription),
   }).superRefine((input, ctx) => {
     const issue = (path: (string | number)[], message: string) =>
       ctx.addIssue({ code: "custom", path, message });
@@ -405,7 +401,9 @@ export const hotelOffersInput = strictInput({
       `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Default ${LIMITS.offersPerHotelDefault}.`,
     ),
   locale: locale.optional(),
-  displayCurrency: displayCurrency.optional(),
+  currency: oneOf("currency", CURRENCIES)
+    .optional()
+    .describe(`${currencyDescription} An order made from these offers is charged in this currency.`),
 });
 
 export type HotelOffersInput = z.input<typeof hotelOffersInput>;

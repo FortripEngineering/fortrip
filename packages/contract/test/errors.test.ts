@@ -8,7 +8,7 @@ import { SUPPLIER_OUTCOME_STATUS } from "../src/index.ts";
 import { ERROR_DETAILS } from "../src/outputs/error-details.ts";
 import { API, MCP_PATH, PUBLIC_ORIGINS } from "../src/paths.ts";
 import {
-  DISPLAY_CURRENCIES,
+  CURRENCIES,
   LIMITS,
   SUPPORT_EMAIL,
 } from "../src/limits.ts";
@@ -114,7 +114,7 @@ describe("LIMITS and friends", () => {
       wechatCodeMinutes: 120,
       ordersPerStay: 20,
     });
-    assert.deepEqual([...DISPLAY_CURRENCIES], ["USD", "CNY"]);
+    assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");
   });
 });

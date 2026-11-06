@@ -10,7 +10,7 @@ import {
   listOrdersInput,
   searchHotelsInput,
 } from "./inputs.ts";
-import { DISPLAY_CURRENCIES, LIMITS } from "./limits.ts";
+import { CURRENCIES, LIMITS } from "./limits.ts";
 import type { ToolName } from "./tools.ts";
 import { FILTERABLE_AMENITIES, SEARCH_SORTS } from "./vocabulary.ts";
 
@@ -217,11 +217,11 @@ const localeFlag: FlagDef = {
   placeholder: LOCALES,
 };
 
-const displayCurrencyFlag: FlagDef = {
-  flag: "display-currency",
-  field: "displayCurrency",
+const currencyFlag: FlagDef = {
+  flag: "currency",
+  field: "currency",
   type: "string",
-  placeholder: DISPLAY_CURRENCIES.join("|"),
+  placeholder: CURRENCIES.join("|"),
 };
 
 /** `stay` as flags, the same in search and offers. */
@@ -350,7 +350,7 @@ const searchFlags = flagsOf(searchHotelsInput, [
       "`nextCursor` from the previous page. A next page takes only `--cursor` and `--limit`.",
   },
   localeFlag,
-  displayCurrencyFlag,
+  currencyFlag,
 ]);
 
 const hotelFlags = flagsOf(getHotelInput, [
@@ -384,7 +384,7 @@ const offersFlags = flagsOf(hotelOffersInput, [
   },
   { flag: "limit-per-hotel", field: "limitPerHotel", type: "number", placeholder: COUNT },
   localeFlag,
-  displayCurrencyFlag,
+  currencyFlag,
 ]);
 
 const bookFlags = flagsOf(createOrderInput, [

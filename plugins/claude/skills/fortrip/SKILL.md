@@ -85,8 +85,8 @@ If a tool says the user isn't signed in, ask them to reconnect.
 ## Prices and currency
 
 - A search price (`price.fromPerRoomNight`) is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night, for any party and often any date, and it can be well above or below the offers. Call it an estimate, quote `fortrip:get_hotel_offers` prices, and never call a search result available or bookable. `price: null` means there is no indicative price, not that the hotel is full; about half the hotels have none for given dates.
-- In an offer or order, `price.total` is the whole stay for all rooms and is what is charged, in USD for offers and the orders made from them. `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms. Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the USD total is the price. `approx`, in `displayCurrency`, with its `rateDate`, is an estimate, never the charge.
-- `displayCurrency` is `USD` or `CNY`: `CNY` adds `approx` in yuan to suit a user who thinks in it. It never changes the charge.
+- In an offer or order, `price.total` is the whole stay for all rooms and is what is charged, in the request's `currency` (`USD` by default), and so are the orders made from them. `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms. Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the total in that currency is the price.
+- Every price of a response is in that one currency, with no conversion. `currency` is `USD` (the default) or `CNY`, where available; otherwise the answer is `currency_unavailable`.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.
 - After payment, `payment.localCharge` is what the card paid in its own currency. Orders made on the Fortrip website can be charged in another currency: `payment.chargeCurrency` says which.
 

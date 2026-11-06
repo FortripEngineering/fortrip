@@ -101,7 +101,7 @@ const CASES: {
       ...["--text", "Riverside", ...STAY, "--room", "2:6,9", "--room", "1"],
       ...["--pricing", "indicative", "--stars-min", "4", "--stars-max", "5"],
       ...["--amenity", "pool", "--amenity", "wifi", "--price-max-per-room-night", "149.50"],
-      ...["--sort", "price_asc", "--limit", "10", "--locale", "en", "--display-currency", "cny"],
+      ...["--sort", "price_asc", "--limit", "10", "--locale", "en", "--currency", "cny"],
     ],
     method: "POST",
     path: API.hotelSearch,
@@ -125,7 +125,7 @@ const CASES: {
       sort: "price_asc",
       limit: 10,
       locale: "en",
-      displayCurrency: "CNY",
+      currency: "CNY",
     },
   },
   {
@@ -180,7 +180,7 @@ const CASES: {
     argv: [
       ...["--hotel", HOTEL, "--hotel", HOTEL_2, ...STAY, "--room", "2:6", "--room", "2:6"],
       ...["--require-breakfast", "--require-free-cancellation", "--limit-per-hotel", "3"],
-      ...["--locale", "en", "--display-currency", "usd"],
+      ...["--locale", "en", "--currency", "usd"],
     ],
     method: "POST",
     path: API.hotelOffers,
@@ -197,7 +197,7 @@ const CASES: {
       filters: { requireBreakfast: true, requireFreeCancellation: true },
       limitPerHotel: 3,
       locale: "en",
-      displayCurrency: "USD",
+      currency: "USD",
     },
   },
   {
@@ -656,60 +656,65 @@ describe("--body", () => {
   });
 });
 
-describe("display currency", () => {
+describe("currency", () => {
   const SEARCH = ["--text", "x"];
   const OFFERS = ["--hotel", HOTEL, ...STAY, "--room", "2"];
 
-  it("FORTRIP_DISPLAY_CURRENCY is the default of search and offers", () => {
-    const env = { FORTRIP_DISPLAY_CURRENCY: " cny " };
-    assert.equal(body("hotels search", SEARCH, env).displayCurrency, "CNY");
-    assert.equal(body("hotels offers", OFFERS, env).displayCurrency, "CNY");
+  it("FORTRIP_CURRENCY is the default of search and offers", () => {
+    const env = { FORTRIP_CURRENCY: " cny " };
+    assert.equal(body("hotels search", SEARCH, env).currency, "CNY");
+    assert.equal(body("hotels offers", OFFERS, env).currency, "CNY");
   });
 
-  it("--display-currency beats --body, which beats the environment", () => {
-    const env = { FORTRIP_DISPLAY_CURRENCY: "CNY" };
-    assert.equal(body("hotels search", [...SEARCH, "--display-currency", "usd"], env).displayCurrency, "USD");
+  it("--currency beats --body, which beats the environment", () => {
+    const env = { FORTRIP_CURRENCY: "CNY" };
+    assert.equal(body("hotels search", [...SEARCH, "--currency", "usd"], env).currency, "USD");
     assert.equal(
-      body("hotels search", [...SEARCH, "--body", '{"displayCurrency":"USD"}'], env).displayCurrency,
+      body("hotels search", [...SEARCH, "--body", '{"currency":"USD"}'], env).currency,
       "USD",
     );
   });
 
-  it("a blank FORTRIP_DISPLAY_CURRENCY sets nothing", () => {
-    assert.equal("displayCurrency" in body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: " " }), false);
+  it("--display-currency is gone", () => {
+    assert.throws(() => parse("hotels search", [...SEARCH, "--display-currency", "cny"]), isUsage);
+    assert.throws(() => parse("hotels offers", [...OFFERS, "--display-currency", "cny"]), isUsage);
+  });
+
+  it("a blank FORTRIP_CURRENCY sets nothing", () => {
+    assert.equal("currency" in body("hotels search", SEARCH, { FORTRIP_CURRENCY: " " }), false);
   });
 
   it("an unknown currency is refused, not sent, naming the variable when it came from there", () => {
-    assert.deepEqual(issuesOf(() => body("hotels search", SEARCH, { FORTRIP_DISPLAY_CURRENCY: "EUR" })), [
+    assert.deepEqual(issuesOf(() => body("hotels search", SEARCH, { FORTRIP_CURRENCY: "EUR" })), [
       {
-        pointer: "/displayCurrency",
-        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+        pointer: "/currency",
+        message: "FORTRIP_CURRENCY: currency must be one of: USD, CNY",
       },
     ]);
-    assert.deepEqual(issuesOf(() => body("hotels offers", OFFERS, { FORTRIP_DISPLAY_CURRENCY: "eur" })), [
+    assert.deepEqual(issuesOf(() => body("hotels offers", OFFERS, { FORTRIP_CURRENCY: "eur" })), [
       {
-        pointer: "/displayCurrency",
-        message: "FORTRIP_DISPLAY_CURRENCY: displayCurrency must be one of: USD, CNY",
+        pointer: "/currency",
+        message: "FORTRIP_CURRENCY: currency must be one of: USD, CNY",
       },
     ]);
     // From a flag, it is the flag's own value: the variable isn't named.
-    for (const argv of [["--display-currency", ""], ["--display-currency", "EUR"]]) {
+    for (const argv of [["--currency", ""], ["--currency", "EUR"]]) {
       const issues = issuesOf(() =>
-        body("hotels search", [...SEARCH, ...argv], { FORTRIP_DISPLAY_CURRENCY: "CNY" }),
+        body("hotels search", [...SEARCH, ...argv], { FORTRIP_CURRENCY: "CNY" }),
       );
       assert.deepEqual(issues, [
-        { pointer: "/displayCurrency", message: "displayCurrency must be one of: USD, CNY" },
+        { pointer: "/currency", message: "currency must be one of: USD, CNY" },
       ]);
     }
   });
 
-  it("orders never take one: they are charged in USD", () => {
+  it("orders never take one: they are charged in the currency of their offer", () => {
     const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT], {
-      FORTRIP_DISPLAY_CURRENCY: "CNY",
+      FORTRIP_CURRENCY: "CNY",
     });
-    assert.equal("displayCurrency" in sent, false);
+    assert.equal("currency" in sent, false);
     assert.throws(
-      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--display-currency", "CNY"]),
+      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--currency", "CNY"]),
       isUsage,
     );
   });

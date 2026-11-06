@@ -615,7 +615,7 @@ describe("COMMANDS", () => {
       limit: "limit",
       cursor: "cursor",
       locale: "locale",
-      "display-currency": "displayCurrency",
+      currency: "currency",
     });
     assert.deepEqual(fields("hotels get"), {
       rooms: "include",
@@ -630,7 +630,7 @@ describe("COMMANDS", () => {
       "require-free-cancellation": "filters.requireFreeCancellation",
       "limit-per-hotel": "limitPerHotel",
       locale: "locale",
-      "display-currency": "displayCurrency",
+      currency: "currency",
     });
     assert.deepEqual(fields("hotels book"), {
       offer: "items.offerId",
@@ -863,10 +863,10 @@ describe("COMMANDS", () => {
       "hotels search --amenity",
       "hotels search --sort",
       "hotels search --locale",
-      "hotels search --display-currency",
+      "hotels search --currency",
       "hotels get --locale",
       "hotels offers --locale",
-      "hotels offers --display-currency",
+      "hotels offers --currency",
       "orders get --locale",
       "orders list --locale",
     ]);

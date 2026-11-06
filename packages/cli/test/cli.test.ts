@@ -65,7 +65,7 @@ async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
     ...process.env,
     FORTRIP_API_URL: apiUrl,
     FORTRIP_TOKEN: TOKEN,
-    FORTRIP_DISPLAY_CURRENCY: "",
+    FORTRIP_CURRENCY: "",
     XDG_CONFIG_HOME: await mkdtemp(join(tmpdir(), "fortrip-cli-")),
     ...extraEnv,
   };
@@ -219,9 +219,9 @@ describe("requests", () => {
     });
   });
 
-  it("FORTRIP_DISPLAY_CURRENCY is the default display currency", async () => {
-    await cli(OFFERS, { FORTRIP_DISPLAY_CURRENCY: "cny" });
-    assert.equal((requests[0]?.body as { displayCurrency?: string }).displayCurrency, "CNY");
+  it("FORTRIP_CURRENCY is the default currency", async () => {
+    await cli(OFFERS, { FORTRIP_CURRENCY: "cny" });
+    assert.equal((requests[0]?.body as { currency?: string }).currency, "CNY");
   });
 
   it("FORTRIP_API_URL may carry a path prefix, which every path follows", async () => {
@@ -644,15 +644,15 @@ describe("help", () => {
     assert.equal(code, 2);
   });
 
-  it("--help states the output, the base URL and FORTRIP_DISPLAY_CURRENCY's commands", async () => {
-    const typed = COMMANDS.filter((spec) => spec.flags.some((flag) => flag.field === "displayCurrency")).map(
+  it("--help states the output, the base URL and FORTRIP_CURRENCY's commands", async () => {
+    const typed = COMMANDS.filter((spec) => spec.flags.some((flag) => flag.field === "currency")).map(
       (spec) => commandInvocation(spec).replace(/^fortrip /, ""),
     );
     assert.deepEqual(typed, ["hotels search", "hotels offers"]);
     const { stdout } = await cli(["--help"]);
     assert.match(
       stdout,
-      new RegExp(`^  FORTRIP_DISPLAY_CURRENCY +Default --display-currency for ${typed.join(" and ")}$`, "m"),
+      new RegExp(`^  FORTRIP_CURRENCY +Default --currency for ${typed.join(" and ")}$`, "m"),
     );
     assert.match(stdout, /^  FORTRIP_API_URL +API base URL \(default https:\/\/api\.fortrip\.ai\)$/m);
     assert.match(

@@ -118,8 +118,7 @@
           "fromPerRoomStay": {
             "amount": "82.00",
             "currency": "USD"
-          },
-          "approx": null
+          }
         },
         "photo": null
       },
@@ -162,8 +161,7 @@
           "fromPerRoomStay": {
             "amount": "192.20",
             "currency": "USD"
-          },
-          "approx": null
+          }
         },
         "photo": null
       }

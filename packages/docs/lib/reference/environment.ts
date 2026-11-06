@@ -9,8 +9,8 @@ type PublicName = Extract<EnvVar, { internal: false }>["name"];
 const MEANINGS: Record<PublicName, string> = {
   FORTRIP_TOKEN:
     "Use this access token instead of the saved sign-in. An access token is short-lived, so it suits a remote agent environment or a CI run; for longer, sign in.",
-  FORTRIP_DISPLAY_CURRENCY:
-    "Default `--display-currency` for `hotels search` and `hotels offers`. It never changes what is charged.",
+  FORTRIP_CURRENCY:
+    "Default `--currency` for `hotels search` and `hotels offers`: prices and the order are in this currency.",
 };
 
 /** One row per variable a reader sets, in the CLI's order. */

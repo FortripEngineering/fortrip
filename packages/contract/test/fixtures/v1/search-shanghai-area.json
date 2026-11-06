@@ -226,17 +226,6 @@
           "fromPerRoomStay": {
             "amount": "365.00",
             "currency": "USD"
-          },
-          "approx": {
-            "fromPerRoomNight": {
-              "amount": "1301.23",
-              "currency": "CNY"
-            },
-            "fromPerRoomStay": {
-              "amount": "2602.45",
-              "currency": "CNY"
-            },
-            "rateDate": "2026-11-01"
           }
         },
         "photo": null
@@ -280,17 +269,6 @@
           "fromPerRoomStay": {
             "amount": "192.20",
             "currency": "USD"
-          },
-          "approx": {
-            "fromPerRoomNight": {
-              "amount": "685.19",
-              "currency": "CNY"
-            },
-            "fromPerRoomStay": {
-              "amount": "1370.39",
-              "currency": "CNY"
-            },
-            "rateDate": "2026-11-01"
           }
         },
         "photo": null
@@ -360,17 +338,6 @@
           "fromPerRoomStay": {
             "amount": "82.00",
             "currency": "USD"
-          },
-          "approx": {
-            "fromPerRoomNight": {
-              "amount": "292.33",
-              "currency": "CNY"
-            },
-            "fromPerRoomStay": {
-              "amount": "584.66",
-              "currency": "CNY"
-            },
-            "rateDate": "2026-11-01"
           }
         },
         "photo": null

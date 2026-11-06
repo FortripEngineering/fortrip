@@ -1769,63 +1769,6 @@
                             "additionalProperties": {},
                             "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
                           },
-                          "approx": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "total": {
-                                    "type": "object",
-                                    "properties": {
-                                      "amount": {
-                                        "type": "string",
-                                        "pattern": "^\\d+(\\.\\d+)?$"
-                                      },
-                                      "currency": {
-                                        "type": "string",
-                                        "pattern": "^[A-Z]{3}$"
-                                      }
-                                    },
-                                    "required": [
-                                      "amount",
-                                      "currency"
-                                    ],
-                                    "additionalProperties": {}
-                                  },
-                                  "perNightAllRooms": {
-                                    "type": "object",
-                                    "properties": {
-                                      "amount": {
-                                        "type": "string",
-                                        "pattern": "^\\d+(\\.\\d+)?$"
-                                      },
-                                      "currency": {
-                                        "type": "string",
-                                        "pattern": "^[A-Z]{3}$"
-                                      }
-                                    },
-                                    "required": [
-                                      "amount",
-                                      "currency"
-                                    ],
-                                    "additionalProperties": {}
-                                  },
-                                  "rateDate": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "total",
-                                  "perNightAllRooms",
-                                  "rateDate"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
                           "payAtProperty": {
                             "type": "object",
                             "properties": {
@@ -1971,7 +1914,6 @@
                         "required": [
                           "total",
                           "perNightAllRooms",
-                          "approx",
                           "payAtProperty"
                         ],
                         "additionalProperties": {}
@@ -5303,63 +5245,6 @@
                         "additionalProperties": {},
                         "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
                       },
-                      "approx": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "total": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "string",
-                                    "pattern": "^\\d+(\\.\\d+)?$"
-                                  },
-                                  "currency": {
-                                    "type": "string",
-                                    "pattern": "^[A-Z]{3}$"
-                                  }
-                                },
-                                "required": [
-                                  "amount",
-                                  "currency"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              "perNightAllRooms": {
-                                "type": "object",
-                                "properties": {
-                                  "amount": {
-                                    "type": "string",
-                                    "pattern": "^\\d+(\\.\\d+)?$"
-                                  },
-                                  "currency": {
-                                    "type": "string",
-                                    "pattern": "^[A-Z]{3}$"
-                                  }
-                                },
-                                "required": [
-                                  "amount",
-                                  "currency"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              "rateDate": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "total",
-                              "perNightAllRooms",
-                              "rateDate"
-                            ],
-                            "additionalProperties": {}
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
                       "payAtProperty": {
                         "type": "object",
                         "properties": {
@@ -5505,7 +5390,6 @@
                     "required": [
                       "total",
                       "perNightAllRooms",
-                      "approx",
                       "payAtProperty"
                     ],
                     "additionalProperties": {}
@@ -14918,71 +14802,13 @@
                         "currency"
                       ],
                       "additionalProperties": {}
-                    },
-                    "approx": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "fromPerRoomNight": {
-                              "type": "object",
-                              "properties": {
-                                "amount": {
-                                  "type": "string",
-                                  "pattern": "^\\d+(\\.\\d+)?$"
-                                },
-                                "currency": {
-                                  "type": "string",
-                                  "pattern": "^[A-Z]{3}$"
-                                }
-                              },
-                              "required": [
-                                "amount",
-                                "currency"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            "fromPerRoomStay": {
-                              "type": "object",
-                              "properties": {
-                                "amount": {
-                                  "type": "string",
-                                  "pattern": "^\\d+(\\.\\d+)?$"
-                                },
-                                "currency": {
-                                  "type": "string",
-                                  "pattern": "^[A-Z]{3}$"
-                                }
-                              },
-                              "required": [
-                                "amount",
-                                "currency"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            "rateDate": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "fromPerRoomNight",
-                            "fromPerRoomStay",
-                            "rateDate"
-                          ],
-                          "additionalProperties": {}
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
                     }
                   },
                   "required": [
                     "kind",
                     "basis",
                     "fromPerRoomNight",
-                    "fromPerRoomStay",
-                    "approx"
+                    "fromPerRoomStay"
                   ],
                   "additionalProperties": {}
                 },

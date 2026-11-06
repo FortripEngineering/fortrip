@@ -166,6 +166,30 @@ describe("render fixtures", () => {
   });
 });
 
+describe("one currency", () => {
+  /** Money of a fixture, every amount in CNY. */
+  function inCny(value: unknown): void {
+    if (Array.isArray(value)) value.forEach(inCny);
+    else if (value && typeof value === "object") {
+      const money = value as Record<string, unknown>;
+      if (typeof money.amount === "string" && money.currency === "USD") money.currency = "CNY";
+      Object.values(money).forEach(inCny);
+    }
+  }
+
+  it("a CNY search and offers fixture renders CNY amounts and no approximate line", () => {
+    for (const name of ["search-shanghai-area", "offers-two-hotels-one-unavailable"] as const) {
+      const fixture = copy(load(name)) as ToolFixture;
+      inCny(fixture.data);
+      if ("notes" in fixture.data) fixture.data.notes = []; // service prose about the price, not a rendered amount
+      strictOutput(outputOf(fixture.tool)).parse(fixture.data);
+      const text = render(fixture);
+      assert.match(text, /CNY|¥/, name);
+      assert.doesNotMatch(text, /USD|\$|≈|exchange rate|approx/i, name);
+    }
+  });
+});
+
 describe("search results", () => {
   it("writes every note's message", () => {
     for (const name of GOLDENS.filter((n) => n.startsWith("search-"))) {

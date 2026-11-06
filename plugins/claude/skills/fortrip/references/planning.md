@@ -15,7 +15,7 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `{
 - A `fortrip:search_hotels` price is an indicative estimate per room per night, not a quote. Never call a search result available or bookable, and once you have offers, compare offers only. A hotel without a search price can still have offers.
 - Use `fortrip:get_hotel` only when a stated preference needs evidence (a pool, a policy, room size). An amenity or policy it doesn't list is unknown, not absent.
 - A hotel is available only once `fortrip:get_hotel_offers` returned an offer for it.
-- Anything the tools didn't return, such as reviews, style, price trends or exchange rates other than `approx`, is unknown. Say so instead of filling it in.
+- Anything the tools didn't return, such as reviews, style, price trends or exchange rates, is unknown. Say so instead of filling it in.
 
 ## Ranking
 

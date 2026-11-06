@@ -46,7 +46,7 @@
               "description": "Search hotels in a city for given dates",
               "prompt": "Find 5-star hotels in Bangkok for 2 adults, checking in 30 days from today for 2 nights, with prices in USD.",
               "tools_triggered": "search_hotels",
-              "expected_behavior": "Calls search_hotels with a place_name destination for Bangkok in Thailand, the requested dates and party, filters.stars with a minimum of 5 and displayCurrency USD, and lists matching 5-star Bangkok hotels with their indicative price per room per night in USD, saying these are indicative prices and live offers still need to be checked."
+              "expected_behavior": "Calls search_hotels with a place_name destination for Bangkok in Thailand, the requested dates and party, filters.stars with a minimum of 5 and currency USD, and lists matching 5-star Bangkok hotels with their indicative price per room per night in USD, saying these are indicative prices and live offers still need to be checked."
             },
             {
               "description": "Read static hotel details",
@@ -56,9 +56,9 @@
             },
             {
               "description": "Compare live rates and cancellation terms",
-              "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY too.",
+              "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY.",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and displayCurrency CNY, and lists offers with their room, meals, free-cancellation deadline and price.total in USD, with the approximate CNY amount marked as an estimate, not the charge. If the hotel has no free-cancellation offer for those dates, it says so."
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room, meals, free-cancellation deadline and price.total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so."
             },
             {
               "description": "Compare two check-in dates within a budget",

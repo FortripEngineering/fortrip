@@ -77,7 +77,7 @@ test("the flag check accepts a command's own flags and rejects the 2.0 ones", ()
   assert.deepEqual(
     unknownFlags(
       [
-        "npx fortrip hotels search --place-name Kyoto --country JP --check-in 2026-12-01",
+        "npx fortrip hotels search --place-name Kyoto --country JP --check-in 2026-12-01 --currency CNY",
         "fortrip hotels offers --hotel htl_1 --room 2:6,9 --json",
         "fortrip login --no-browser",
         "fortrip orders pay ord_1 --wallet --total 125.00",
@@ -87,8 +87,10 @@ test("the flag check accepts a command's own flags and rejects the 2.0 ones", ()
     [],
   );
   assert.deepEqual(
-    unknownFlags(["fortrip hotels search --query Kyoto --currency CNY", "fortrip hotels offers --adults 2"].join("\n")),
-    ["fortrip hotels search --query", "fortrip hotels search --currency", "fortrip hotels offers --adults"],
+    unknownFlags(
+      ["fortrip hotels search --query Kyoto --display-currency CNY", "fortrip hotels offers --adults 2"].join("\n"),
+    ),
+    ["fortrip hotels search --query", "fortrip hotels search --display-currency", "fortrip hotels offers --adults"],
   );
 });
 
@@ -140,6 +142,7 @@ test("the pages and docs data name only commands and flags the contract has", ()
     );
     assert.ok(files.length > 0, `${root} has no source files to scan`);
     for (const file of files) {
+      if (file.endsWith("changelog.mdx")) continue; // history: it names flags that no longer exist
       const source = readFileSync(join(ROOT, root, file), "utf8");
       found += [...source.matchAll(INVOCATION)].length;
       for (const invocation of [...unknownInvocations(source), ...unknownFlags(source)]) {

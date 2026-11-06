@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 
 import {
   destination,
-  DISPLAY_CURRENCIES,
+  CURRENCIES,
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
@@ -277,11 +277,11 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("/index.md: the ways to pay and the ways to connect; /api.md: the display currencies", () => {
+  it("/index.md: the ways to pay and the ways to connect; /api.md: the currencies", () => {
     const markdown = pageMarkdown("/");
     includesAll(markdown, PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short), "pay ways");
     assert.ok(markdown.includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
-    includesAll(pageMarkdown("/api"), DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
+    includesAll(pageMarkdown("/api"), CURRENCIES.filter((c) => c !== "USD"), "currencies");
   });
 
   it("a tool page has its input fields; a command page its usage", () => {

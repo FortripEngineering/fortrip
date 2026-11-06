@@ -27,10 +27,10 @@ export interface ApiRequest {
 }
 
 /** Fields the API takes in upper case, which a user may type in lower. */
-const UPPER_CASE = new Set(["displayCurrency", "destination.countryCode"]);
+const UPPER_CASE = new Set(["currency", "destination.countryCode"]);
 
 /** Fields an environment variable sets when neither a flag nor `--body` does. */
-const FROM_ENV: Record<string, string> = { displayCurrency: "FORTRIP_DISPLAY_CURRENCY" };
+const FROM_ENV: Record<string, string> = { currency: "FORTRIP_CURRENCY" };
 
 /** Lists a dot steps into the one item of: a v1 order holds one item. */
 const ONE_ITEM_LISTS = new Set(["items"]);

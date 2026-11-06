@@ -39,7 +39,7 @@ test("input rows carry type, required and constraints", () => {
   assert.equal(rows.get("stay.checkIn")?.badge, "required");
   assert.equal(rows.get("text")?.badge, undefined);
   assert.deepEqual(rows.get("limit")?.meta, ["1–50"]);
-  assert.equal(rows.get("displayCurrency")?.type, '"USD" | "CNY"');
+  assert.equal(rows.get("currency")?.type, '"USD" | "CNY"');
   assert.equal(rows.get("stay.rooms[].adults")?.depth, 2);
   assert.deepEqual(rows.get("stay.rooms[].adults")?.meta, ["1–8"]);
 

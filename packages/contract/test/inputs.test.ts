@@ -315,7 +315,7 @@ describe("searchHotelsInput", () => {
       sort: "price_asc",
       limit: 50,
       locale: "zh",
-      displayCurrency: "CNY",
+      currency: "CNY",
     });
   });
 
@@ -552,13 +552,31 @@ describe("getHotelInput", () => {
 describe("hotelOffersInput", () => {
   const base = { hotelIds: [hotel], stay: goodStay };
 
+  it("currency is USD or CNY", () => {
+    assertAccepted(hotelOffersInput, { ...base, currency: "CNY" });
+    assertAccepted(searchHotelsInput, { destination: tokyo, stay: goodStay, currency: "CNY" });
+    for (const [schema, value] of [
+      [hotelOffersInput, base],
+      [searchHotelsInput, { destination: tokyo, stay: goodStay }],
+    ] as const) {
+      const issues = refusalOf(schema, { ...value, currency: "EUR" });
+      const issue = issues.find((candidate) => candidate.path === "currency");
+      assert.match(issue?.message ?? "", /USD/);
+      assert.match(issue?.message ?? "", /CNY/);
+      assert.equal(
+        refusalOf(schema, { ...value, displayCurrency: "CNY" })[0]?.message,
+        "Unknown argument(s): displayCurrency",
+      );
+    }
+  });
+
   it("accepts the full request and defaults limitPerHotel to 10", () => {
     assertAccepted(hotelOffersInput, {
       ...base,
       filters: { requireBreakfast: true, requireFreeCancellation: false },
       limitPerHotel: 20,
       locale: "en",
-      displayCurrency: "USD",
+      currency: "USD",
     });
     assert.equal(hotelOffersInput.parse(base).limitPerHotel, 10);
     assert.equal(LIMITS.offersPerHotelDefault, 10);

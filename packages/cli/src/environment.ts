@@ -1,8 +1,8 @@
 import { COMMANDS, commandInvocation, MCP_SERVER_URL, PUBLIC_ORIGINS } from "@fortrip/agent-contract";
 
-/** The commands that take `--display-currency`: `hotels search and hotels offers`. */
+/** The commands that take `--currency`: `hotels search and hotels offers`. */
 const CURRENCY_COMMANDS = COMMANDS.filter((spec) =>
-  spec.flags.some((flag) => flag.field === "displayCurrency"),
+  spec.flags.some((flag) => flag.field === "currency"),
 )
   .map((spec) => commandInvocation(spec).slice("fortrip ".length))
   .join(" and ");
@@ -25,8 +25,8 @@ export const ENVIRONMENT = [
     internal: true,
   },
   {
-    name: "FORTRIP_DISPLAY_CURRENCY",
-    help: `Default --display-currency for ${CURRENCY_COMMANDS}`,
+    name: "FORTRIP_CURRENCY",
+    help: `Default --currency for ${CURRENCY_COMMANDS}`,
     internal: false,
   },
 ] as const satisfies readonly { name: `FORTRIP_${string}`; help: string; internal: boolean }[];
