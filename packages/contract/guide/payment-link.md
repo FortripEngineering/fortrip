@@ -1,7 +1,7 @@
 {{#if claude-skill cli}}
 ## Before giving the payment link
 
-`{{tool:hotels book}}` answers with an unpaid order: `status` `awaiting_payment`, its `reference` (the support number), `price.total`, the stay and its terms, and `payment.url`, a Fortrip page that recaps the order and continues to payment on Stripe. Nothing is charged until the user pays.
+`{{tool:hotels book}}` answers with an unpaid order: `status` `awaiting_payment`, its `reference` (the support number), `price.total`, the stay and its terms, and `payment.url`, a Fortrip page that recaps the order and continues to the payment provider. Nothing is charged until the user pays.
 
 1. Show the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included.
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
@@ -34,8 +34,8 @@ The charge is in USD: a card in another currency may add a foreign transaction f
 
 An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token: it is for users who have a mainland-China wallet. {{#if claude-skill}}Call{{/if}}{{#if cli}}Run{{/if}} `{{tool:orders pay}}` {{#if claude-skill}}with `method` `stripe_alipay_wechat_pay`{{/if}}{{#if cli}}the way that line shows{{/if}} and the order's `price.total`, only after the user has confirmed.
 
-1. Show the user the order's total in USD, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. Pay one way only: `payment.url` or this.
-2. Then show the `stripe_alipay_wechat_pay` entry of `payment.methods`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in US dollars, and the wallets show it in yuan at their rate.
+1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. Pay one way only: `payment.url` or this.
+2. Then show the `stripe_alipay_wechat_pay` entry of `payment.methods`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in the order's currency, and the wallets show it in yuan at their rate.
 3. Check the order with `{{tool:orders get}}` until it isn't `awaiting_payment`.
 
 A WeChat Pay code expires {{limit:wechatCodeMinutes}} minutes after it is made, and goes dead earlier if the user opens the Alipay link instead. Then that entry's `wechatPay.qrData` is null: tell the user to open the WeChat link again, or {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again for a new code.

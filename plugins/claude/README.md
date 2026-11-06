@@ -43,17 +43,17 @@ token into the chat.
 
 1. Claude searches hotels. Search prices are indicative minimums; live prices
    come from checking offers.
-2. Offers are priced in USD, or in CNY when you ask for it, and that is the
-   currency you're charged.
+2. Offers are priced in the currency you ask for, USD or CNY, and that is
+   the currency you're charged.
 3. When you pick an offer and give the guest names and a contact name, email
    and phone, Claude creates an unpaid order and shows you the stay, the
    amount and currency you'll be charged, the meals, cancellation
    rules, confirmation time and any fees payable at the hotel.
 4. After you confirm, Claude gives you a payment link. It opens a Fortrip page
-   that recaps the order and continues to Stripe Checkout, which may also
-   show the amount in your local currency. Nothing is charged until you pay
-   there. The link is for you only and expires after a few hours; the order
-   shows when.
+   that recaps the order and continues to payment; for a USD order, Stripe
+   Checkout may also show the amount in your local currency. Nothing is
+   charged until you pay there. The link is for you only and expires after a
+   few hours; the order shows when.
 
 Stays are 1 to 15 nights, with 1 to 8 rooms per order and the same number of
 adults and children in each room. After you pay, Claude can check the order's

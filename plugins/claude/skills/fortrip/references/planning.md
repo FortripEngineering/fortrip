@@ -19,7 +19,7 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `{
 
 ## Ranking
 
-1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in USD.
+1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in the offer's currency.
 2. Keep only options with a live offer.
 3. Order by the user's stated main goal. Goals they didn't state don't count.
 4. Use other preferences only to break ties.

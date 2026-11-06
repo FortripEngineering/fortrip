@@ -196,7 +196,7 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again.",
+        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again.",
       ),
     requiresSignIn: z.boolean(),
     expiresAt: instant
@@ -207,16 +207,18 @@ export const order = openObject({
     chargeCurrency: z
       .string()
       .describe(
-        "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another.",
+        "USD or CNY: the currency of the offer the order was made from. An order made on the Fortrip website may be in another currency.",
       ),
     localCurrencyAtCheckout: z
       .boolean()
       .describe(
-        "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay.",
+        "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order.",
       ),
     localCharge: money
       .nullable()
-      .describe("What the card was charged in its own currency, when Stripe converted the total; otherwise null."),
+      .describe(
+        "What the card was charged in its own currency, when Stripe converted the total; otherwise null. Always null on a CNY order.",
+      ),
     methods: z
       .array(paymentMethod)
       .describe(

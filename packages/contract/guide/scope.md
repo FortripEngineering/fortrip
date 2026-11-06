@@ -19,7 +19,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 |---|---|
 | `{{tool:hotels search}}` | Hotels in a place, near a point or matching a name (`{{arg:text}}`), with indicative prices |
 | `{{tool:hotels get}}` | One hotel's address, check-in and check-out times, description, policies, amenities and rooms; no prices |
-| `{{tool:hotels offers}}` | Live offers (room, meals, total in USD, cancellation terms) for up to {{limit:offersHotels}} hotels |
+| `{{tool:hotels offers}}` | Live offers (room, meals, total and currency, cancellation terms) for up to {{limit:offersHotels}} hotels |
 | `{{tool:hotels book}}` | An unpaid order for one offer, with its terms and a payment link |
 | `{{tool:orders get}}` | One order and its status, including whether the hotel confirmed it |
 | `{{tool:orders list}}` | The user's orders, newest first, including those made on the Fortrip website |

@@ -48,7 +48,7 @@ describe("renderGuide", () => {
     );
     assert.match(PRESENTATION_HINT, /estimate per room-night/);
     assert.match(PRESENTATION_HINT, /never invent photos, ratings, reviews, prices, terms or coordinates/);
-    assert.match(PRESENTATION_HINT, /whole stay for all rooms, in USD/);
+    assert.match(PRESENTATION_HINT, /whole stay for all rooms, in its currency/);
   });
 
   for (const { surface, topic, label } of RENDERINGS) {

@@ -67,7 +67,7 @@ Amenity filters take the codes that enough hotels list: <FilterableAmenities />.
 
 ## Indicative prices [#prices]
 
-With a `stay`, each hotel can carry an indicative price per room and night. It is the hotel supplier's lowest nightly reference price for one unit, converted to USD at a market rate. It doesn't depend on the party or on availability, and it can be above or below the cheapest live offer. It can't be booked: only offers can.
+With a `stay`, each hotel can carry an indicative price per room and night. It is the hotel supplier's lowest nightly reference price for one unit, in the search's `currency`. It doesn't depend on the party or on availability, and it can be above or below the cheapest live offer. It can't be booked: only offers can.
 
 Hotels without an indicative price stay listed with `price: null`; price sorts put them last, and a price filter leaves them out and counts them. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
 

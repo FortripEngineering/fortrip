@@ -5,7 +5,7 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 
 ## The flow [#flow]
 
-1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `price.total` in USD for the whole stay, and its terms.
+1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `price.total` for the whole stay, in the request's `currency`, and its terms.
 2. **Order.** <code><Fact path="ROUTES.book_hotel" /></code> orders one offer and answers an order `awaiting_payment`. Nothing is charged.
 3. **Confirm with the user** ([what to show](#confirm)).
 4. **Pay**, one way only: the payment link, or another way the order offers.
@@ -32,7 +32,7 @@ Show each change's `previous` → `current`; `worse: true` marks a change that i
 
 ### The order [#the-order]
 
-The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `price.total` is what is charged, in the order's `payment.chargeCurrency`: USD for every order made through the API. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
+The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `price.total` is what is charged, in the order's `payment.chargeCurrency`: the currency of the offer it was made from. `items[0].hotel` holds the stay as ordered and its terms: `meals`, `cancellation` and `payAtProperty`, the fees paid at the hotel.
 
 ## Data you send [#data]
 
@@ -50,7 +50,7 @@ Before any payment, show the user:
 
 End that message by asking the user to confirm, and wait for a clear yes; urgency is not consent. Only then give them `payment.url`, or pay another way.
 
-<Fact path="GUIDE_SENTENCES.adaptivePricing" /> A Link token (a shared payment token from the user's Stripe Link wallet) or an Alipay or WeChat Pay payment is charged in USD: a card in another currency may add a foreign transaction fee, and Alipay and WeChat Pay show the total in yuan at their own rate.
+<Fact path="GUIDE_SENTENCES.adaptivePricing" /> A Link token (a shared payment token from the user's Stripe Link wallet) pays a USD order only, and a card in another currency may add a foreign transaction fee. Alipay and WeChat Pay show the total in yuan at their own rate.
 
 ## Pay [#pay]
 

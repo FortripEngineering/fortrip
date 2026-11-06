@@ -124,4 +124,56 @@ describe("stale statements stay fixed", () => {
   it("/regions states no share its data can't show", () => {
     assert.doesNotMatch(pageText("/regions"), /\d\s?%/);
   });
+
+  // The facts contract 5 changed, as packages/contract/test/no-stale-copy.test.ts
+  // keeps them out of what agents read. Pages say "in USD" of nothing: only
+  // the token is USD-only, and no page needs the phrase for it.
+  it("no page or fixture states an old fact, or says what is in USD", () => {
+    const docs = new URL("../content/docs/", import.meta.url).pathname;
+    const fixtures = new URL("../lib/reference/fixtures/", import.meta.url).pathname;
+    const pages = readdirSync(docs, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".mdx") && f !== "changelog.mdx")
+      .map((f) => ({ file: f, text: readFileSync(join(docs, f), "utf8") }));
+    const fixtureTexts = readdirSync(fixtures)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => ({ file: f, text: fixtureText(f, readFileSync(join(fixtures, f), "utf8")) }));
+    assert.ok(pages.length > 10 && fixtureTexts.length > 5, `${pages.length} ${fixtureTexts.length}`);
+    const found = [...pages, ...fixtureTexts].flatMap(({ file, text }) =>
+      [...STALE, /\bin USD\b/].filter((pattern) => pattern.test(text)).map((pattern) => `${file}: ${pattern}`),
+    );
+    assert.deepEqual(found, []);
+  });
 });
+
+const STALE: readonly RegExp[] = [
+  /payment is in USD/,
+  /Charged in USD/,
+  /in USD for offers/,
+  /total in USD/,
+  /the USD total/,
+  // A request's money "must be USD or CNY" is the rule, and stays.
+  /must be USD(?! or)/,
+  /displayCurrency/,
+  /display-currency/,
+  /\bapprox\b/,
+  /--wallet/,
+  /payment\.wallets/,
+  /payment\.handlers/,
+  /credentialLimits/,
+  /cancel\.penalty\.amount/,
+  /get_planning_guide/,
+  /fortrip guide/,
+  /US dollars/,
+  /(?<!stripe_)alipay_wechat_pay/,
+];
+
+/** A fixture as text, less the server-sent notice it mirrors, which is the
+ *  server's words for a USD search: exempt by name. */
+function fixtureText(file: string, source: string): string {
+  if (file !== "search-hotels.json") return source;
+  const data = JSON.parse(source);
+  const note = data.notes.find((n: { code: string }) => n.code === "indicative_prices");
+  assert.ok(note, "search-hotels.json: the indicative_prices note");
+  delete note.message;
+  return JSON.stringify(data, null, 2);
+}
