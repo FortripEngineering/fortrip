@@ -41,8 +41,9 @@ export interface FlagSpec {
    * or `value` when it has one. A `string` flag whose field is an object or
    * a list of objects is one value the CLI parses into that shape:
    * `--point` `lat,lng`; `--room` `adults[:age,…]` (`2:6,9` is two adults
-   * and children of 6 and 9); `--price-max-per-room-night` a USD amount;
-   * `--guest` `room:first:last`, into that room's guests.
+   * and children of 6 and 9); `--price-max-per-room-night` an amount in
+   * the request's currency; `--guest` `room:first:last`, into that room's
+   * guests.
    */
   type: "string" | "number" | "boolean";
   /** Given once per item; its field is a list. */
@@ -330,9 +331,9 @@ const searchFlags = flagsOf(searchHotelsInput, [
     flag: "price-max-per-room-night",
     field: "filters.price.maxPerRoomNight",
     type: "string",
-    placeholder: "<USD decimal>",
+    placeholder: "<decimal>",
     description:
-      "Highest indicative price per room per night, in USD, e.g. `150` or `149.50`. Needs a stay.",
+      "Highest indicative price per room per night, in the search's currency (`--currency`, else USD), e.g. `150` or `149.50`. Needs a stay.",
   },
   {
     flag: "sort",
@@ -456,10 +457,10 @@ const payFlags = flagsOf(payOrderInput, [
     flag: "total",
     field: "total",
     type: "string",
-    placeholder: "<USD decimal>",
+    placeholder: "<decimal>",
     required: "always",
     description:
-      "The total the user approved, exactly as `orders get` shows it, in USD, e.g. `125.00`.",
+      "The total the user approved, exactly as `orders get` shows it, in the order's currency, e.g. `125.00`.",
   },
 ]);
 

@@ -50,7 +50,7 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 
 ### Money [#money]
 
-- Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float. Money in a request must be USD.
+- Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float. Money in a request is in USD or CNY: a search's price bound in the search's `currency`, a payment's `total` in the order's.
 - Prices are in the request's `currency` (USD, the default, or <OtherCurrencies />), where available, with no conversion. An order is charged in the currency of its offers.
 - An order is charged in its `payment.chargeCurrency`. Orders made through the API are charged in the currency of their offers; orders made on the Fortrip website, which the order list includes, may be in another currency.
 - The amount to show the user before they pay is the order's `price.total`, in its charge currency. Fees paid at the property, `payAtProperty`, come on top, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />

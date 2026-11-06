@@ -11,7 +11,7 @@ export {
   type PositionalSpec,
 } from "./commands.ts";
 export { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-export { formatMoney, money, usdMoney, type Money } from "./conventions/money.ts";
+export { formatMoney, money, requestMoney, type Money } from "./conventions/money.ts";
 export {
   openEnum,
   openObject,

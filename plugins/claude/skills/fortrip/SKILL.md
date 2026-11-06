@@ -66,7 +66,7 @@ If a tool says the user isn't signed in, ask them to reconnect.
 
 - Stars run from 1 to 5 in half steps (`filters.stars`). "4 stars" as `{ min: 4, max: 4 }` leaves out 4.5: unless the user means exactly 4, use `{ min: 4 }` or ask. Unrated hotels are left out whenever stars are filtered.
 - `filters.amenities` takes only the amenities that can filter (such as pool, parking, wifi); others, such as gym or spa, show in `fortrip:get_hotel` but can't filter. A hotel matches only when it lists the amenity, and about half the hotels list no amenities at all (`coverage.excludedNoFacilityData` counts those left out): "not listed" is not "absent".
-- `filters.price.maxPerRoomNight` bounds the indicative price per room per night, in USD; hotels without one are left out and counted.
+- `filters.price.maxPerRoomNight` bounds the indicative price per room per night, in the search's currency; hotels without one are left out and counted.
 
 ### Results
 

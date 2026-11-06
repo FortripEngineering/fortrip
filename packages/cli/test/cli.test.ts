@@ -28,6 +28,8 @@ const run = promisify(execFile);
 
 /** What the fake API answers next, and every request it has received. */
 let reply: { status: number; body: unknown; headers?: Record<string, string> };
+/** Answers for the next requests, in order; `reply` answers the rest. */
+let replies: (typeof reply)[];
 let requests: { method?: string; url?: string; authorization?: string; body: unknown }[];
 let server: Server;
 let apiUrl: string;
@@ -45,8 +47,9 @@ before(async () => {
         authorization: req.headers.authorization,
         body: raw ? JSON.parse(raw) : undefined,
       });
-      res.writeHead(reply.status, { "content-type": "application/json", ...reply.headers });
-      res.end(JSON.stringify(reply.body));
+      const answer = replies.shift() ?? reply;
+      res.writeHead(answer.status, { "content-type": "application/json", ...answer.headers });
+      res.end(JSON.stringify(answer.body));
     });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -55,6 +58,7 @@ before(async () => {
 after(() => server.close());
 beforeEach(() => {
   requests = [];
+  replies = [];
   reply = { status: 200, body: {} };
 });
 
@@ -115,13 +119,18 @@ describe("requests", () => {
       [["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"], "POST", `/v1/orders/${ORDER}/pay`],
     ] as const) {
       requests = [];
+      // orders pay reads the order for its currency first, then posts.
+      const pays = args[1] === "pay";
+      if (pays) replies = [{ status: 200, body: (await fixture("order-awaiting-payment")).data }, reply];
       const { code, stderr } = await cli([...args]);
       assert.equal(code, 0, `${args.join(" ")}: ${stderr}`);
-      assert.equal(requests.length, 1, args.join(" "));
-      assert.equal(requests[0]?.method, method, args.join(" "));
-      assert.equal(requests[0]?.url, url, args.join(" "));
-      assert.equal(requests[0]?.authorization, `Bearer ${TOKEN}`);
-      assert.equal(requests[0]?.body === undefined, method === "GET", args.join(" "));
+      assert.equal(requests.length, pays ? 2 : 1, args.join(" "));
+      if (pays) assert.equal(requests[0]?.method, "GET", args.join(" "));
+      const sent = requests[pays ? 1 : 0];
+      assert.equal(sent?.method, method, args.join(" "));
+      assert.equal(sent?.url, url, args.join(" "));
+      assert.equal(sent?.authorization, `Bearer ${TOKEN}`);
+      assert.equal(sent?.body === undefined, method === "GET", args.join(" "));
     }
   });
 
@@ -267,6 +276,38 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
+  it("orders pay --total takes the order's currency", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const order = structuredClone(data) as { price: { total: Record<string, unknown> } };
+    order.price.total = { amount: "880.00", currency: "CNY" };
+    replies = [{ status: 200, body: order }, { status: 200, body: {} }];
+    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+    assert.equal(code, 0, stderr);
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0]?.method, "GET");
+    assert.equal(requests[0]?.url, API.order(ORDER));
+    assert.equal(requests[1]?.method, "POST");
+    assert.equal(requests[1]?.url, `/v1/orders/${ORDER}/pay`);
+    assert.deepEqual(requests[1]?.body, {
+      sharedPaymentToken: "spt_abc",
+      total: { amount: "880.00", currency: "CNY" },
+    });
+  });
+
+  it("orders pay with a bad --token exits 2 before reading the order", async () => {
+    const { code } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "tok_1"]);
+    assert.equal(code, 2);
+    assert.equal(requests.length, 0);
+  });
+
+  it("orders pay on an order without a price currency exits 1 and posts nothing", async () => {
+    replies = [{ status: 200, body: { id: ORDER } }, { status: 200, body: {} }];
+    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+    assert.equal(code, 1);
+    assert.match(stderr, /currency/);
+    assert.deepEqual(requests.map((request) => request.method), ["GET"]);
+  });
+
   it("flags that pick different destinations exit 2 and send nothing", async () => {
     const { code, stderr } = await cli([...SEARCH, "--place", "plc_1"]);
     assert.equal(code, 2);
@@ -304,11 +345,11 @@ describe("output", () => {
 
   it("orders pay --wallet prints the links and, on a wide TTY, the code", async () => {
     const { data } = await fixture("order-wallets-open");
-    reply = { status: 200, body: data };
+    replies = [{ status: 200, body: (await fixture("order-awaiting-payment")).data }, { status: 200, body: data }];
     // The spawned CLI has no TTY, so the code stays out and the links stay in.
     const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
     assert.equal(code, 0, stderr);
-    assert.deepEqual(requests[0]?.body, { method: "alipay_wechat_pay", total: { amount: "365.00", currency: "USD" } });
+    assert.deepEqual(requests[1]?.body, { method: "alipay_wechat_pay", total: { amount: "365.00", currency: "USD" } });
     assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
     assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/alipay/);
     assert.ok(!stdout.includes("█"));

@@ -104,7 +104,7 @@ export function parseCommand(
     if (positional.field) input[positional.field] = positionals[index];
   });
 
-  setFlags(spec, values, input);
+  setFlags(spec, values, input, requestCurrency(spec, values, input, env));
 
   /** Fields the environment set, and the variable that did. */
   const fromEnv = new Map<string, string>();
@@ -121,6 +121,21 @@ export function parseCommand(
   if (route.method === "GET") return { method: "GET", path };
   const body = Object.fromEntries(Object.entries(input).filter(([field]) => !route.pathFields.includes(field)));
   return { method: "POST", path, body };
+}
+
+/**
+ * The currency a request's money is in: the command's `--currency`, else
+ * the `--body`'s, else the environment's, else USD. A command without a
+ * currency (`orders pay`: the order's, which the CLI reads next) gets USD
+ * as a placeholder.
+ */
+function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: NodeJS.ProcessEnv): string {
+  const flag = spec.flags.find((candidate) => candidate.field === "currency");
+  if (!flag) return "USD";
+  const given = values[flag.flag];
+  if (typeof given === "string") return given.trim().toUpperCase();
+  if (typeof input.currency === "string") return input.currency;
+  return env[FROM_ENV.currency as string]?.trim().toUpperCase() || "USD";
 }
 
 /**
@@ -148,7 +163,7 @@ export function cancelPreview(
  *  the API's `invalid_request` would list (pointers into the body, or
  *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an
  *  environment variable set (`fromEnv`, by pointer) names the variable. */
-function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
+export function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   const result = schema?.safeParse(input);
   if (!result || result.success) return;
@@ -183,7 +198,7 @@ function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<st
  * different variants of one union can't be given together, and a variant
  * from `--body` other than the one picked is replaced, not merged into.
  */
-function setFlags(spec: CommandSpec, values: Values, input: Body): void {
+function setFlags(spec: CommandSpec, values: Values, input: Body, currency: string): void {
   const given = spec.flags.filter((flag) => values[flag.flag] !== undefined);
   const picked = new Map<string, { value: string; flag: string }>();
   for (const flag of given) {
@@ -211,7 +226,7 @@ function setFlags(spec: CommandSpec, values: Values, input: Body): void {
     if (flag.field === GUEST_FIELD) {
       setField(input, ROOMS_FIELD, withGuests(getField(input, ROOMS_FIELD), parseGuests(raw as string[])));
     } else {
-      setField(input, flag.field, readFlag(flag, raw));
+      setField(input, flag.field, readFlag(flag, raw, currency));
     }
   }
 }
@@ -282,7 +297,7 @@ function setField(body: Body, field: string, value: unknown): void {
 }
 
 /** What a flag's value means for its field. */
-function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>): unknown {
+function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>, currency: string): unknown {
   if (flag.type === "boolean") return flag.value ?? true;
   const given = (Array.isArray(raw) ? raw : [raw]) as string[];
   switch (flag.field) {
@@ -292,7 +307,7 @@ function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>): unknown {
       return given.map(parseRoom);
     case "filters.price.maxPerRoomNight":
     case "total":
-      return { amount: (given[0] as string).trim(), currency: "USD" };
+      return { amount: (given[0] as string).trim(), currency };
   }
   const parsed = given.map((value) => {
     if (flag.type === "number") return num(flag.flag, value);

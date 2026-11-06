@@ -310,7 +310,7 @@ describe("searchHotelsInput", () => {
       filters: {
         stars: { min: 3.5, max: 5 },
         amenities: ["pool", "spa"],
-        price: { maxPerRoomNight: { amount: "200.00", currency: "USD" } },
+        price: { maxPerRoomNight: { amount: "200.00", currency: "CNY" } },
       },
       sort: "price_asc",
       limit: 50,
@@ -421,18 +421,38 @@ describe("searchHotelsInput", () => {
     });
   });
 
-  it("the price filter is USD", () => {
-    assertRefusedAt(
-      searchHotelsInput,
-      {
+  it("the price filter is in the search's currency", () => {
+    const price = (currency: string) => ({
+      maxPerRoomNight: { amount: "200", currency },
+    });
+    for (const input of [
+      { currency: "CNY", filters: { price: price("USD") } },
+      { filters: { price: price("CNY") } },
+    ]) {
+      const result = searchHotelsInput.safeParse({
         destination: tokyo,
         stay: goodStay,
-        filters: {
-          price: { maxPerRoomNight: { amount: "200", currency: "CNY" } },
-        },
-      },
-      "filters.price.maxPerRoomNight.currency",
-    );
+        ...input,
+      });
+      assert.equal(result.success, false);
+      const issue = result.error?.issues.find(
+        (found) => found.path.join(".") === "filters.price.maxPerRoomNight.currency",
+      );
+      assert.ok(issue, JSON.stringify(result.error?.issues));
+      assert.match(issue.message, /CNY/);
+      assert.match(issue.message, /USD/);
+    }
+    for (const input of [
+      { currency: "CNY", filters: { price: price("CNY") } },
+      { currency: "USD", filters: { price: price("USD") } },
+      { filters: { price: price("USD") } },
+    ]) {
+      assertAccepted(searchHotelsInput, {
+        destination: tokyo,
+        stay: goodStay,
+        ...input,
+      });
+    }
   });
 
   it("stars run from 1 to 5 in half steps, min not above max", () => {

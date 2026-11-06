@@ -111,7 +111,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 
 - Stars run from 1 to 5 in half steps. "4 stars" as `--stars-min 4 --stars-max 4` leaves out 4.5: unless the user means exactly 4, use `--stars-min 4` or ask. Unrated hotels are left out whenever stars are filtered.
 - `--amenity` takes only the amenities that can filter (such as pool, parking, wifi); others, such as gym or spa, show in `fortrip hotels get` but can't filter. A hotel matches only when it lists the amenity, and about half the hotels list no amenities at all (`coverage.excludedNoFacilityData` counts those left out): "not listed" is not "absent".
-- `--price-max-per-room-night` bounds the indicative price per room per night, in USD; hotels without one are left out and counted.
+- `--price-max-per-room-night` bounds the indicative price per room per night, in the search's currency; hotels without one are left out and counted.
 
 ### Results
 

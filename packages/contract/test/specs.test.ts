@@ -775,7 +775,7 @@ describe("COMMANDS", () => {
 
   it("types each flag after its field", () => {
     // One flag value the CLI parses into an object: `lat,lng`,
-    // `adults[:age,…]`, a USD amount, `room:first:last`.
+    // `adults[:age,…]`, an amount, `room:first:last`.
     const composite = new Set([
       "hotels search point",
       "hotels search room",
@@ -882,7 +882,7 @@ describe("COMMANDS", () => {
     assert.equal(placeholder("hotels search", "point"), "<lat,lng>");
     assert.equal(placeholder("hotels search", "country-only"), "<CC>");
     assert.equal(placeholder("hotels search", "room"), "<adults[:age,…]>");
-    assert.equal(placeholder("hotels search", "price-max-per-room-night"), "<USD decimal>");
+    assert.equal(placeholder("hotels search", "price-max-per-room-night"), "<decimal>");
     assert.equal(placeholder("hotels search", "check-in"), "YYYY-MM-DD");
     assert.equal(placeholder("hotels offers", "hotel"), "<htl_>");
     assert.equal(placeholder("hotels offers", "room"), "<adults[:age,…]>");

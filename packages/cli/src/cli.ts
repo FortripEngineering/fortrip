@@ -1,10 +1,13 @@
 import {
+  API,
   COMMAND_GROUPS,
   COMMANDS,
   type CommandGroupSpec,
   commandInvocation,
   type CommandSpec,
+  CURRENCIES,
   GLOBAL_FLAGS,
+  HTTP_ROUTES,
   order as orderSchema,
   type RenderedTool,
   renderToolResult,
@@ -12,7 +15,7 @@ import {
 
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
-import { cancelPreview, parseCommand, parseOptions } from "./commands.ts";
+import { cancelPreview, check, parseCommand, parseOptions } from "./commands.ts";
 import { resolveApiUrl, resolveMcpUrl } from "./credentials.ts";
 import {
   CliError,
@@ -145,8 +148,30 @@ async function run(argv: string[]): Promise<Answer> {
     throw usageError(notCancelled(spec, preview.flag, preview.orderId, order));
   }
   const { method, path, body } = parseCommand(spec, rest, process.env);
+  if (spec.tool === "pay_order" && body) await inOrderCurrency(apiUrl, spec, rest, body);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
   return { data, text: renderToolResult(spec.tool as RenderedTool, data, "cli") };
+}
+
+/** `orders pay`'s total is in the order's currency: read the order for it,
+ *  set it on the total, and check the request again before it is sent. */
+async function inOrderCurrency(
+  apiUrl: string,
+  spec: CommandSpec,
+  rest: string[],
+  body: Record<string, unknown>,
+): Promise<void> {
+  const [orderId] = parseOptions(spec, rest).positionals as [string];
+  const order = unwrap(await authorizedRequest(apiUrl, API.order(orderId), { method: "GET" }));
+  const currency = (order as { price?: { total?: { currency?: unknown } } } | null)?.price?.total?.currency;
+  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
+    throw new CliError(
+      `Not sent: the order ${orderId} has no price.total.currency in USD or CNY to pay in.`,
+      EXIT.error,
+    );
+  }
+  body.total = { ...(body.total as Record<string, unknown>), currency };
+  check(spec, { ...body, orderId }, HTTP_ROUTES.pay_order, new Map());
 }
 
 /** What `orders cancel` without its penalty flag says instead of

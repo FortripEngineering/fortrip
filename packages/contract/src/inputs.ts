@@ -3,7 +3,7 @@ import { z } from "zod";
 import { CARD_NUMBER_MESSAGE, containsCardNumber } from "./card-number.ts";
 import { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
 import { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-import { usdMoney } from "./conventions/money.ts";
+import { requestMoney } from "./conventions/money.ts";
 import { localDate } from "./conventions/time.ts";
 import {
   flag,
@@ -232,8 +232,8 @@ const searchFilters = strictInput({
       "Amenities every hotel must list. Only some codes can filter; asking for one that cannot is answered with the list that can.",
     ),
   price: strictInput({
-    maxPerRoomNight: usdMoney.describe(
-      "Highest price per room per night, in USD.",
+    maxPerRoomNight: requestMoney("filters.price.maxPerRoomNight").describe(
+      "Highest price per room per night, in the search's currency.",
     ),
   })
     .optional()
@@ -333,6 +333,15 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
           `filters.price needs indicative pricing, but ${reason}`,
         );
       }
+    }
+
+    const bound = input.filters?.price?.maxPerRoomNight;
+    const searchCurrency = input.currency ?? "USD";
+    if (bound !== undefined && bound.currency !== searchCurrency) {
+      issue(
+        ["filters", "price", "maxPerRoomNight", "currency"],
+        `filters.price.maxPerRoomNight.currency is ${bound.currency}, but the search is in ${searchCurrency}${input.currency === undefined ? " (the default)" : ""}: send the price in ${searchCurrency}`,
+      );
     }
 
     const checkIn = input.stay?.checkIn;
@@ -758,8 +767,8 @@ export const payOrderInput = strictInput({
     .describe(
       "Pay with Alipay or WeChat Pay instead of a token: opens the payment and returns payment.wallets. Exactly one of sharedPaymentToken, payment and method.",
     ),
-  total: usdMoney.describe(
-    "The total the user approved: the order's price.total, exactly as returned.",
+  total: requestMoney("total").describe(
+    "The total the user approved: the order's price.total, in its currency, exactly as returned.",
   ),
 }).superRefine((input, ctx) => {
   // Of the three ways to pay, in order: the last one given is the extra.

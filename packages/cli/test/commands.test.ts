@@ -120,7 +120,7 @@ const CASES: {
       filters: {
         stars: { min: 4, max: 5 },
         amenities: ["pool", "wifi"],
-        price: { maxPerRoomNight: { amount: "149.50", currency: "USD" } },
+        price: { maxPerRoomNight: { amount: "149.50", currency: "CNY" } },
       },
       sort: "price_asc",
       limit: 10,
@@ -673,6 +673,20 @@ describe("currency", () => {
       body("hotels search", [...SEARCH, "--body", '{"currency":"USD"}'], env).currency,
       "USD",
     );
+  });
+
+  it("the price bound is in the request's currency: --currency, --body, the environment, else USD", () => {
+    const price = (argv: string[], env: NodeJS.ProcessEnv = {}) =>
+      (
+        body("hotels search", [...argv, ...STAY, "--room", "2", "--price-max-per-room-night", "600"], env)
+          .filters as { price: { maxPerRoomNight: unknown } }
+      ).price.maxPerRoomNight;
+    const at = (currency: string) => ({ amount: "600", currency });
+    assert.deepEqual(price([...SEARCH, "--currency", "CNY"]), at("CNY"));
+    assert.deepEqual(price([...SEARCH, "--currency", "cny"], { FORTRIP_CURRENCY: "USD" }), at("CNY"));
+    assert.deepEqual(price([...SEARCH, "--body", '{"currency":"CNY"}'], { FORTRIP_CURRENCY: "USD" }), at("CNY"));
+    assert.deepEqual(price(SEARCH, { FORTRIP_CURRENCY: " cny " }), at("CNY"));
+    assert.deepEqual(price(SEARCH), at("USD"));
   });
 
   it("--display-currency is gone", () => {
