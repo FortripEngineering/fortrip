@@ -1,5 +1,5 @@
 // Pay an order with Alipay or WeChat Pay: opens the payment.
-// Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
+// Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 import process from "node:process";
 
 const token = process.env.FORTRIP_TOKEN;
@@ -20,7 +20,7 @@ const response = await fetch("https://api.fortrip.ai/v1/orders/ord_Wr4tY7uI0oPa3
     "Content-Type": "application/json",
   },
   body: JSON.stringify(body),
-  signal: AbortSignal.timeout(60_000),
+  signal: AbortSignal.timeout(180_000),
 });
 if (!response.ok) {
   console.error(response.status, await response.text());

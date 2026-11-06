@@ -4,6 +4,7 @@ import { Heading } from "fumadocs-ui/components/heading";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { MODEL_READS } from "@/lib/markdown/pages.ts";
 import { fieldRows } from "@/lib/markdown/widgets.ts";
 import { contentSentence } from "@/lib/prose/mcp-content.ts";
 import { CLI_COMMANDS } from "@/lib/reference/cli-commands.ts";
@@ -33,19 +34,31 @@ function Table({ head, children }: { head?: string[]; children: ReactNode }) {
   );
 }
 
+/** A tool's description, verbatim, under its label (`modelReads` is its Markdown). */
+export function ModelReads({ description }: { description: string }) {
+  return (
+    <>
+      <p>
+        <strong>{MODEL_READS}</strong>
+      </p>
+      <blockquote>
+        <p>{inline(description)}</p>
+      </blockquote>
+    </>
+  );
+}
 
-/** A tool's page body: its contract description less what the page's
- *  description says, input fields and output. */
+/** A tool's page body, under its description (what it does for a person):
+ *  the tool, its access and command, its description as the model reads it,
+ *  input fields and output. */
 export function ToolPage({ name }: { name: ToolName }) {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
   const input = tool.name === "get_planning_guide" ? null : TOOL_INPUTS[tool.name];
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
   const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
-  const { rest } = tool;
   return (
     <>
-      {rest && <p>{inline(rest)}</p>}
       <p className="text-sm text-fd-muted-foreground">
         <code>{tool.name}</code> · {tool.access}
         {cli && (
@@ -58,6 +71,7 @@ export function ToolPage({ name }: { name: ToolName }) {
           </>
         )}
       </p>
+      <ModelReads description={tool.summary} />
       <Heading as="h2" id="input">
         Input
       </Heading>
@@ -77,7 +91,7 @@ export function ToolPage({ name }: { name: ToolName }) {
               It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
             </>
           )}{" "}
-          Errors are described in the <Link href="/mcp#results">overview</Link>.
+          Errors are described in the <Link href="/mcp#errors">overview</Link>.
         </p>
       )}
     </>

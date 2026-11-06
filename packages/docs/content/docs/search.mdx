@@ -7,7 +7,7 @@ description: Search never guesses. A name resolves by a published rule, an ambig
 
 A search takes a `destination`, `text`, or both. The destination is one of these:
 
-<DestinationFields />
+<DestinationKinds />
 
 Pass a `placeId` from an earlier answer back as `{ kind: "place", placeId }`, never its name. Place ids stay valid: a place a later release drops still resolves.
 
@@ -27,18 +27,24 @@ A place covers either its whole **area** or a **radius** around it. The answer's
 - `radiusMeters` is optional, from 1 to <Fact path="LIMITS.radiusMetersMax" />. On an area it narrows the area to a circle around its center.
 - A radius around a named place stays inside the place's country; a radius around a point does not.
 - The search never widens a radius by itself. When more hotels lie just outside, the answer says so in its counts and notes.
-- A hotel belongs to an area by where it is, worked out once per catalogue update, not by the catalogue's own city or region labels.
 
 ## How a name resolves [#names]
 
 A `place_name` destination always carries its `countryCode`. The name is matched exactly against the names and alternate names of places in that country, after Unicode normalization, folding typographic apostrophes, lowercasing and collapsing spaces. Accents, hyphens, apostrophes and periods count: "Köln" and "Cologne" match, "Koln" does not; "St. Moritz" matches, "St Moritz" does not; "Xi'an" and "Xi’an" are the same name.
 
 1. **No match** answers `destination_not_found`.
-2. **An area absorbs same-name places inside it**: the region "Okinawa" absorbs the island, and "Shanghai" means the whole municipality, starting from the city center (the note `area_absorbed` says so). An area that isn't city-like doesn't absorb a same-name city of <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people or more: both stay candidates, as with New York State and New York City.
-3. **Near-duplicates count as one**: same-name towns, neighbourhoods and small islands within <Fact path="SEARCH_RULES.nearDuplicateMeters" /> m of each other.
-4. **One place left** is used.
-5. **Several left**: the most populous is used when it has at least <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people and <Fact path="SEARCH_RULES.dominanceRatio" /> times the next (the note `place_resolved_dominant` says so, and `otherMatches` counts the rest).
-6. **Otherwise** the answer is `destination_ambiguous`, with up to <Fact path="LIMITS.candidatesShown" /> candidates, each with its `placeId` and how many hotels it covers. Ask the user, then search the chosen one as `{ kind: "place", placeId }`.
+2. **One place** is used when the rules below leave one, or when one is far more populous than the rest. The notes `area_absorbed` and `place_resolved_dominant` say when a rule picked it.
+3. **Otherwise** the answer is `destination_ambiguous`, with up to <Fact path="LIMITS.candidatesShown" /> candidates, each with its `placeId` and how many hotels it covers. Ask the user, then search the chosen one as `{ kind: "place", placeId }`.
+
+<details>
+<summary>Exact resolution rules</summary>
+
+1. **An area absorbs same-name places inside it**: the region "Okinawa" absorbs the island, and "Shanghai" means the whole municipality, starting from the city center (the note `area_absorbed` says so). An area that isn't city-like doesn't absorb a same-name city of <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people or more: both stay candidates, as with New York State and New York City.
+2. **Near-duplicates count as one**: same-name towns, neighbourhoods and small islands within <Fact path="SEARCH_RULES.nearDuplicateMeters" /> m of each other.
+3. **One place left** is used.
+4. **Several left**: the most populous is used when it has at least <Fact path="SEARCH_RULES.largeSettlementPopulation" /> people and <Fact path="SEARCH_RULES.dominanceRatio" /> times the next (the note `place_resolved_dominant` says so, and `otherMatches` counts the rest).
+
+</details>
 
 A region that isn't enabled isn't matched by its name, so the name can still match a town or island of that name.
 

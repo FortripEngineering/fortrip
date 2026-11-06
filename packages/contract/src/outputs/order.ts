@@ -4,6 +4,7 @@ import { hotelId, orderId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject, openUnion, protocolObject } from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
+import { LIMITS } from "../limits.ts";
 import { localizedText, names, stayEcho } from "./common.ts";
 import { cancellation, confirmation, meals, payAtProperty } from "./offer.ts";
 
@@ -107,7 +108,9 @@ const hotelItem = openObject({
       beds: localizedText.nullable(),
     }),
     meals,
-    cancellation,
+    cancellation: cancellation.describe(
+      "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now.",
+    ),
     payAtProperty,
     confirmationNumber: z.string().nullable(),
   }),
@@ -116,11 +119,17 @@ const hotelItem = openObject({
 export const order = openObject({
   orderId,
   reference: orderReference,
-  status: openEnum(ORDER_STATUSES),
+  status: openEnum(ORDER_STATUSES).describe(
+    "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it.",
+  ),
   createdAt: instant,
   updatedAt: instant,
   items: z.array(openUnion("type", [hotelItem])).min(1),
-  price: openObject({ total: money }),
+  price: openObject({
+    total: money.describe(
+      "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it.",
+    ),
+  }),
   payment: openObject({
     status: openEnum(PAYMENT_STATUSES),
     url: z
@@ -130,23 +139,29 @@ export const order = openObject({
         "The payment page, on fortrip.ai. With requiresSignIn false it continues to Stripe Checkout, and anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null when the order isn't awaiting payment, or, while it is, when the link couldn't be read this time: read the order again.",
       ),
     requiresSignIn: z.boolean(),
-    expiresAt: instant.nullable(),
-    chargeCurrency: z.string(),
-    localCurrencyAtCheckout: z.boolean(),
-    localCharge: money.nullable(),
-    /** The ways to pay other than `url`, while the order can be paid that
-     *  way: a `com.stripe.payments` handler takes a shared payment token
-     *  through `pay_order`. Empty when there is none. */
+    expiresAt: instant
+      .nullable()
+      .describe(
+        "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment.",
+      ),
+    chargeCurrency: z
+      .string()
+      .describe(
+        "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another.",
+      ),
+    localCurrencyAtCheckout: z
+      .boolean()
+      .describe(
+        "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay.",
+      ),
+    localCharge: money
+      .nullable()
+      .describe("What the card was charged in its own currency, when Stripe converted the total; otherwise null."),
     handlers: z
       .array(paymentHandler)
       .describe(
-        "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order.",
+        `The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, an order started on the Fortrip website, a negotiated price, under ${LIMITS.payMinMinutesLeft} minutes left, ${LIMITS.tokensPerOrder} tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order.`,
       ),
-    /** What a payment credential for `pay_order` must allow, with
-     *  `handlers`: at least `maxAmount`, in minor units (cents) of
-     *  `currency`, lowercase as Stripe takes it, and valid until at least
-     *  `expiresAt`, past which the order can't be paid. `null` when
-     *  `handlers` is empty. */
     credentialLimits: openObject({
       maxAmount: z
         .number()
@@ -161,13 +176,11 @@ export const order = openObject({
       .describe(
         "What the shared payment token for pay_order must allow. null exactly when handlers is [].",
       ),
-    /** Paying with Alipay or WeChat Pay through `pay_order`'s `method`.
-     *  `null` when it is neither offered for the order nor open on it. */
     wallets: openObject({
-      open: z.boolean().describe("Whether pay_order has opened a wallet payment on this order."),
+      open: z.boolean().describe("Whether pay_order has opened an Alipay or WeChat Pay payment on this order."),
       current: openEnum(["wechat_pay", "alipay"])
         .nullable()
-        .describe("The wallet the payment is on now; null until it is open."),
+        .describe("Which of the two the payment is on now; null until it is open."),
       wechatPay: openObject({
         qrData: z
           .string()
@@ -195,9 +208,6 @@ export const order = openObject({
         "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open.",
       ),
   }),
-  /** Whether the user can cancel the order now and, when they can, its
-   *  penalty under the accepted terms (read a minute ahead) and the refund,
-   *  what was paid less the penalty, both in the charge currency. */
   cancel: openObject({
     available: z.boolean().describe("Whether the user can cancel the order now."),
     reason: openEnum(CANCEL_REASONS).describe(

@@ -1,33 +1,55 @@
 ---
 title: Quickstart
-description: From install to a paid order in a few minutes. You need Node.js and a Fortrip account.
+description: Use Fortrip from your AI app. Chat apps connect with no install; coding agents add a skill. Then ask for a stay and pay when you're ready.
 ---
 
-You need Node.js <Fact path="CLI_NODE_MAJOR" /> or newer and a Fortrip account.
+No Fortrip account? Create one at [fortrip.ai](https://fortrip.ai).
 
-## 1. Install the skill [#install]
+## Chat apps: no install [#chat-apps]
 
-Run this once. It adds Fortrip to the agents on your machine that use skills.
+For claude.ai, ChatGPT and Claude Desktop. Add Fortrip as a connector, sign in to Fortrip when your app asks, and ask for a stay. Steps: [claude.ai](/install#claude-ai) · [Claude Desktop](/install#claude-desktop) · [ChatGPT](/install#chatgpt).
+
+## Coding agents [#coding-agents]
+
+For Claude Code, Codex and other agents that run shell commands. You need Node.js <Fact path="CLI_NODE_MAJOR" /> or newer.
+
+### 1. Install the skill [#install]
+
+Run this once in your project. It asks which of your agents to add the skill to; [Installation](/install#skill) says where it goes.
 
 <pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
 
-Using a client without skills, such as Cursor, Claude Desktop, claude.ai or ChatGPT? [Set it up over MCP](/install#clients) instead.
+Prefer the Claude Code plugin or MCP, or use Cursor? [Set up your client](/install#clients) instead of the skill. Use one setup per agent, not several.
 
-## 2. Sign in [#sign-in]
+### 2. Sign in [#sign-in]
 
 ```sh
 npx fortrip login
 ```
 
-The command prints a link and a code and opens your browser. Sign in to Fortrip, check that the code matches the one in your terminal, and approve. You stay signed in until you run `npx fortrip logout`. You can skip this step: the first time your agent needs access, it gives you a sign-in link instead.
+The command prints a link and a code and opens your browser. Sign in to Fortrip, check that the code matches the one in your terminal, and approve. You stay signed in until you run `npx fortrip logout`. You can skip this step: the first time your agent needs access, it gives you a sign-in link.
 
-## 3. Ask your agent [#ask]
+## Ask your agent [#ask]
 
 ```text
 Find a quiet hotel in Kyoto for two adults, two nights next month, with free cancellation.
 ```
 
-The agent searches, compares live offers and creates an order. Before it asks you to pay, it shows the total and currency, the room and dates, the meals, the cancellation terms and any fees paid at the hotel, and asks you to confirm. Then you pay one of the [ways the order offers](/api#orders).
+## What to expect [#what-to-expect]
+
+- **What you can ask.** Find and compare hotels, check live prices and terms, book a stay, look up your bookings and cancel one under its terms. Flights, activities and changes to a booking aren't supported.
+- **What the agent asks you.** For each room, at least one guest's name as it is on their passport. A contact's name, email and phone. The hotel gets these to make the booking, and the confirmation goes to the contact's email.
+- **What you see before paying.** The total and its currency, the hotel, room and dates, the meals, the cancellation terms and any fees you pay at the hotel. The agent asks you to confirm and waits for your yes.
+
+## Paying, and what's protected [#paying]
+
+- Nothing is charged until you pay.
+- You pay on a Stripe, Alipay or WeChat Pay page. The agent never sees your card.
+- A card is held until the hotel confirms, then charged. If the hotel can't confirm, the hold is released, or a payment already taken is refunded in full.
+- The payment link is for you alone: anyone who has it can pay, so don't share it.
+- Prices are in US dollars. The payment page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
+
+Questions about a booking, or a payment that didn't go through? See [Help and support](/faq#support).
 
 ## Try it by hand [#by-hand]
 
@@ -40,10 +62,14 @@ npx fortrip hotels book --offer off_… --guest 1:First:Last --first-name First 
 npx fortrip orders get ord_…
 ```
 
-`hotels book` answers an unpaid order with its `payment.url`; nothing is charged until you pay. Open the link to pay there or, when the order's `payment.wallets` isn't `null`, pay with Alipay or WeChat Pay:
+`--room 2` is one room for two adults; `--guest 1:First:Last` is a guest in room 1, named as on the passport.
+
+`hotels book` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
+
+If the order offers Alipay or WeChat Pay (its `payment.wallets` isn't `null`), you can pay that way instead. Use the total exactly as `orders get` shows it:
 
 ```sh
 npx fortrip orders pay ord_… --wallet --total <total>
 ```
 
-It prints a WeChat Pay code and a link for each wallet; pay once, by one of them. Use the total exactly as `orders get` shows it. Each command's usage and options are in the [CLI reference](/cli).
+It prints a WeChat Pay code, an Alipay link and a WeChat Pay link; pay once, by one of them. Each command's usage and options are in the [CLI reference](/cli).

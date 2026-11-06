@@ -3,7 +3,8 @@
 // tests hold them to the contract so they can't drift from it.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
@@ -20,6 +21,9 @@ import {
   type HttpToolName,
 } from "@fortrip/agent-contract";
 
+import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
+import { BLOCKS, END_TO_END_IDS } from "../lib/markdown/components.ts";
+import { EXAMPLE_IDS, RESPONSES } from "../lib/reference/responses.ts";
 import { pageText } from "./built-page.ts";
 
 const root = new URL("../examples/", import.meta.url).pathname;
@@ -52,6 +56,9 @@ const EXAMPLES: Example[] = [
   { name: "list-orders", route: HTTP_ROUTES.list_orders, tool: "list_orders", fromUrl: { limit: 10 } },
   { name: "cancel", route: HTTP_ROUTES.cancel_order, tool: "cancel_order", fromUrl: { orderId: ORDER }, body: true },
 ];
+
+/** The examples that order or pay, which can take a couple of minutes. */
+const SLOW = new Set(["order", "pay-token", "pay-wallet"]);
 
 const LANGS = [
   { dir: "curl", ext: "sh" },
@@ -116,6 +123,18 @@ describe("examples", () => {
     }
   });
 
+  it("the API reference sends the same requests", () => {
+    for (const example of EXAMPLES) {
+      const sent = Object.values(EXAMPLE_REQUESTS)
+        .flat()
+        .find((request) => request.name === example.name);
+      assert.ok(sent, example.name);
+      assert.deepEqual(sent.params ?? {}, example.fromUrl ?? {}, example.name);
+      assert.deepEqual(sent.body, example.body ? bodyOf(example.name) : undefined, example.name);
+    }
+    assert.deepEqual(Object.values(EXAMPLE_IDS).sort(), [HOTEL, OFFER, ORDER].sort());
+  });
+
   it("the requests without a body are valid input too", () => {
     for (const example of EXAMPLES.filter((e) => !e.body && e.tool)) {
       const schema = TOOLS.find((tool) => tool.name === example.tool)?.input;
@@ -175,9 +194,17 @@ describe("examples", () => {
             );
           }
           // A slow answer is waited for, and an HTTP error is not mistaken for success.
+          // Ordering and paying can take a couple of minutes, so they wait three.
+          const seconds = SLOW.has(example.name) ? 180 : 60;
           assert.match(
             text,
-            lang.dir === "curl" ? /--max-time 60/ : lang.dir === "ts" ? /AbortSignal\.timeout\(60_000\)/ : /timeout=60/,
+            new RegExp(
+              lang.dir === "curl"
+                ? `--max-time ${seconds}\\b`
+                : lang.dir === "ts"
+                  ? `AbortSignal\\.timeout\\(${seconds}_000\\)`
+                  : `timeout=${seconds}\\b`,
+            ),
           );
           assert.match(
             text,
@@ -207,6 +234,8 @@ describe("examples", () => {
       assert.ok(text.includes("urn:ietf:params:oauth:grant-type:device_code"));
       assert.ok(text.includes("device_code"));
       assert.ok(text.includes("authorization_pending"));
+      // It prints the refresh token too, to get a new access token with.
+      assert.match(text, /refresh_token/);
       assert.ok(text.includes("slow_down"));
       assert.match(text, /expires_in/);
       // The interval grows on slow_down (RFC 8628: by 5 seconds).
@@ -241,8 +270,8 @@ describe("examples", () => {
   });
 });
 
-describe("the examples page", () => {
-  const mdx = readFileSync(new URL("../content/docs/examples.mdx", import.meta.url), "utf8");
+describe("the API quickstart", () => {
+  const mdx = readFileSync(new URL("../content/docs/api-quickstart.mdx", import.meta.url), "utf8");
 
   it("shows every example once, by name", () => {
     for (const example of EXAMPLES) {
@@ -252,11 +281,51 @@ describe("the examples page", () => {
   });
 
   it("renders each example's curl and links to /payments", () => {
-    const text = pageText("/examples");
+    const text = pageText("/api-quickstart");
     for (const example of EXAMPLES) {
       const url = `${PUBLIC_ORIGINS.api}${routePath(example.route, example.fromUrl ?? {})}`;
       assert.ok(text.includes(url), `${example.name}: ${url}`);
     }
-    assert.match(readFileSync(new URL("../.next/server/app/examples.html", import.meta.url), "utf8"), /href="\/payments/);
+    assert.match(readFileSync(new URL("../.next/server/app/api-quickstart.html", import.meta.url), "utf8"), /href="\/payments/);
+  });
+
+  it("runs end to end in curl: each call parses, sends its example body, and takes the next id where the answer has it", (t) => {
+    const block = BLOCKS.EndToEnd?.({}) ?? [];
+    const scripts = block.flatMap((node) => (node.type === "code" && node.lang === "sh" ? [node.value] : []));
+    assert.equal(scripts.length, 5);
+    for (const [name, script] of [["search", scripts[1]], ["offers", scripts[2]], ["order", scripts[3]]] as const) {
+      const body = /<<JSON\n([\s\S]*?)\nJSON/.exec(script ?? "")?.[1] ?? "";
+      const sent = JSON.parse(body.replace(/"\$\{hotel:\?[^}]*\}"/g, `"${HOTEL}"`).replace(/"\$\{offer:\?[^}]*\}"/g, `"${OFFER}"`));
+      assert.deepEqual(sent, bodyOf(name), name);
+      assert.ok(script?.includes(`--max-time ${SLOW.has(name) ? 180 : 60} `), name);
+    }
+    // The first step saves the curl sign-in script as it is.
+    assert.ok(scripts[0]?.includes(readFileSync(join(root, "curl", "device-login.sh"), "utf8").replace(/^#!.*\n/, "").trimEnd()));
+    const probe = spawnSync("bash", ["--version"]);
+    if (probe.error) return t.skip("bash is not installed");
+    for (const script of scripts) {
+      const run = spawnSync("bash", ["-n"], { input: script });
+      assert.equal(run.status, 0, `${script}: ${run.stderr}`);
+    }
+    // The files holding tokens and the order are created readable by their owner only.
+    assert.match(scripts[0] ?? "", /^umask 077\b/);
+    assert.match(BLOCKS.RefreshTokenExample?.({})?.flatMap((node) => (node.type === "code" ? [node.value] : []))[0] ?? "", /^umask 077\b/);
+    // A call whose id an earlier step didn't find sends nothing.
+    const cwd = mkdtempSync(join(tmpdir(), "end-to-end-"));
+    try {
+      for (const script of [scripts[2], scripts[3]]) {
+        const run = spawnSync("bash", ["-c", `curl() { echo sent; }\nunset hotel offer\n${script}`], { cwd, encoding: "utf8" });
+        assert.notEqual(run.status, 0, script);
+        assert.doesNotMatch(run.stdout, /sent/, script);
+      }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+    // jq's filters read the ids the next calls send, and fail on an answer with none.
+    if (spawnSync("jq", ["--version"]).error) return t.skip("jq is not installed");
+    const jq = (filter: string, value: unknown) => spawnSync("jq", ["-re", filter], { input: JSON.stringify(value), encoding: "utf8" });
+    assert.equal(jq(END_TO_END_IDS.hotel.path, RESPONSES.search_hotels).stdout.trim(), HOTEL);
+    assert.equal(jq(END_TO_END_IDS.offer.path, RESPONSES.get_hotel_offers).stdout.trim(), OFFER);
+    assert.notEqual(jq(END_TO_END_IDS.offer.path, { ...RESPONSES.get_hotel_offers, hotels: [] }).status, 0);
   });
 });

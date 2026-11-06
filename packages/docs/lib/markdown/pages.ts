@@ -6,11 +6,13 @@ import type { PhrasingContent } from "mdast";
 
 import { answers, OPERATIONS } from "../openapi/build.ts";
 import { contentSentence } from "../prose/mcp-content.ts";
+import { inputAnchor } from "../reference/api-docs.ts";
 import { CLI_COMMANDS } from "../reference/cli-commands.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
-import { responseDocFor, responseDocForCommand, schemaHref } from "../reference/response-docs.ts";
+import { responseDocFor, responseDocForCommand, schemaHref, schemaTitle } from "../reference/response-docs.ts";
 import {
   type Block,
+  blockquote,
   code,
   codeBlock,
   codeList,
@@ -20,18 +22,26 @@ import {
   link,
   list,
   paragraph,
+  strong,
   table,
   text,
 } from "./mdast.ts";
 import { toMarkdown } from "./stringify.ts";
 import { fields } from "./widgets.ts";
 
+/** The label of the block that quotes a tool's description verbatim. */
+export const MODEL_READS = "What the model reads (tool description)";
+
+/** A tool's description, verbatim, under its label. */
+export function modelReads(description: string): Block[] {
+  return [paragraph([strong(text(MODEL_READS))]), blockquote([paragraph(inline(description))])];
+}
+
 /** A tool page's body, as `ToolPage` lays it out. */
 export function toolMarkdown(name: ToolName): string {
   const tool = MCP_TOOLS.find((t) => t.name === name);
   if (!tool) throw new Error(`${name} has no docs page`);
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
-  const { rest } = tool;
   const output =
     typeof tool.returns === "string"
       ? [text(tool.returns)]
@@ -45,16 +55,16 @@ export function toolMarkdown(name: ToolName): string {
             ? [text(" It also carries "), code("nextStep"), text(", the rule for sharing "), code("payment.url"), text(".")]
             : []),
           text(" Errors are described in the "),
-          link("/mcp#results", text("overview")),
+          link("/mcp#errors", text("overview")),
           text("."),
         ];
   return toMarkdown([
-    ...(rest ? [paragraph(inline(rest))] : []),
     paragraph([
       code(tool.name),
       text(` · ${tool.access}`),
       ...(cli ? [text(" · CLI: "), link(`/cli/${cli.slug}`, code(tool.cli))] : []),
     ]),
+    ...modelReads(tool.summary),
     heading(2, [text("Input")], "input"),
     tool.name === "get_planning_guide" ? paragraph([text("None.")]) : fields(`input:${tool.name}`),
     heading(2, [text("Output")], "output"),
@@ -101,14 +111,9 @@ export function commandMarkdown(slug: string): string {
   ]);
 }
 
-/** The sentence an API reference page opens its body with, around a link to
- *  its MCP tool's page, which carries the contract's full description. */
-export const TOOL_RULES = ["The full rules agents follow for this call are on its MCP tool's page, ", "."] as const;
-
 /** An API reference page's body, as the page shows it: the operation's
- *  route, its tool's page for the rules, input and answers. Its short
- *  summary heads the page; the contract's full description is on the tool's
- *  page and in `/openapi.json`, with the whole schema. */
+ *  tool description, route, input and answers. Its short summary heads the
+ *  page; `/openapi.json` has the whole schema. */
 export function operationMarkdown(id: string): string {
   const op = OPERATIONS.find((o) => o.id === id);
   if (!op) throw new Error(`${id} has no API reference page`);
@@ -128,13 +133,13 @@ export function operationMarkdown(id: string): string {
       : [
           code(status),
           text(": "),
-          response ? link(schemaHref(response), text(response.title)) : text(endpoint.title),
+          response ? link(schemaHref(response), text(schemaTitle(response))) : text(endpoint.title),
           ...(op.id === "book_hotel" && status === String(ORDER_HTTP.replayedStatus)
             ? [text(", with "), code(`${ORDER_HTTP.replayedHeader}: true`)]
             : []),
         ];
   const blocks: Block[] = [
-    ...(tool ? [paragraph([text(TOOL_RULES[0]), link(`/mcp/${tool.slug}`, code(tool.name)), text(TOOL_RULES[1])])] : []),
+    ...(tool ? modelReads(tool.summary) : []),
     paragraph([code(`${route.method} ${route.path}`), text(" on "), code(PUBLIC_ORIGINS.api)]),
     paragraph(
       endpoint.auth
@@ -144,7 +149,7 @@ export function operationMarkdown(id: string): string {
   ];
   if (tool && tool.name !== "get_planning_guide") {
     blocks.push(
-      heading(2, [text("Input")], "input"),
+      heading(2, [text("Input")], inputAnchor(route)),
       paragraph([
         text("The input of the MCP tool "),
         link(`/mcp/${tool.slug}`, code(tool.name)),

@@ -176,7 +176,7 @@ const READ_OWN = { ...READ, openWorldHint: false } as const;
 export const TOOLS: readonly ToolSpec[] = [
   {
     name: "get_planning_guide",
-    title: "Get hotel planning guide",
+    title: "Planning guide",
     description:
       'Returns Fortrip\'s planning guide for a request that is more than one hotel for fixed dates (flexible dates, a budget, split stays, several destinations, "find me the best"): what to ask the user, which results count as evidence, how to rank and how to present options.',
     annotations: READ_OWN,
@@ -194,7 +194,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "get_hotel",
-    title: "Get hotel details",
+    title: "Hotel details",
     description:
       'One hotel\'s catalogue facts: names, address, location, time zone, check-in and check-out times, the full description, every policy and the amenities, and its rooms with include: "rooms". "Not listed" is not "no". No prices or availability: get_hotel_offers has those.',
     annotations: READ,
@@ -203,7 +203,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "get_hotel_offers",
-    title: "Get live hotel offers",
+    title: "Live offers",
     description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room, the meals included, price.total in USD for the whole stay and every room (what is charged), fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for book_hotel that expires at expiresAt. Hotels with nothing to offer are listed under unavailable with the reason. Up to limitPerHotel offers per hotel, default ${LIMITS.offersPerHotelDefault}, chosen for a spread of choices in this order while room remains: the cheapest offer, the cheapest that can be cancelled free, the cheapest with breakfast, the cheapest of each other room, then the rest by price; listed cheapest first.`,
     annotations: READ,
     input: hotelOffersInput,
@@ -211,7 +211,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "book_hotel",
-    title: "Create hotel order and payment link",
+    title: "Create order",
     description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order (or Alipay/WeChat Pay); anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     annotations: {
       readOnlyHint: false,
@@ -255,7 +255,7 @@ export const TOOLS: readonly ToolSpec[] = [
   },
   {
     name: "pay_order",
-    title: "Pay order by token or Alipay/WeChat Pay",
+    title: "Pay order",
     description:
       `Pay an order without its link, by shared payment token or Alipay/WeChat Pay (method alipay_wechat_pay). Token: only if payment.handlers isn't empty and you can request one from the user's Link wallet (US and Canadian accounts); never ask the user for one. First show the user the USD total, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm and wait for a clear yes. Token: request it with config.business_profile and payment.credentialLimits; pass it with price.total. Wallet: pass method, price.total; show payment.wallets (WeChat code as an image if you can, both links); they pay once by either; a code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: payment.url or pay_order. On success payment.url stops working; on failure it stays open. Then poll get_order. payment_total_changed: confirm details.total, retry. payment_credential_invalid: new token. service_unavailable: retry. Else payment.url. A token pays one order only.`,
     annotations: {

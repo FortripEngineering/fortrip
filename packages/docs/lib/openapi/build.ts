@@ -3,6 +3,7 @@ import {
   ACCOUNT_ROUTES,
   authConfig,
   CONTRACT_VERSION,
+  DOCS_ORIGIN,
   errorEnvelope,
   HTTP_ROUTES,
   type HttpRoute,
@@ -15,7 +16,9 @@ import type { OpenAPIV3_1 } from "fumadocs-openapi";
 import { z } from "zod";
 
 import { type Endpoint, ENDPOINTS } from "../reference/api-docs.ts";
+import { EXAMPLE_REQUESTS } from "../reference/examples.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
+import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, RESPONSES } from "../reference/responses.ts";
 import { responseDocFor } from "../reference/response-docs.ts";
 
 /** A JSON Schema 2020-12 object, as `z.toJSONSchema` writes it. */
@@ -25,19 +28,40 @@ interface Schema {
   [keyword: string]: unknown;
 }
 
-/** A contract schema as JSON Schema, without `$schema`. It must stand alone:
- *  inside the document, a `#/$defs/...` reference would resolve against the
- *  document's root. */
+const SAFE = Number.MAX_SAFE_INTEGER;
+
+/** A JSON Schema without what says nothing: the safe-integer bounds zod puts
+ *  on every integer, and `additionalProperties: {}` (allowed either way), which
+ *  the reference would show as made-up fields in its samples. */
+export function tidy<T>(schema: T): T {
+  if (Array.isArray(schema)) return schema.map(tidy) as T;
+  if (typeof schema !== "object" || schema === null) return schema;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === "minimum" && value === -SAFE) continue;
+    if (key === "maximum" && value === SAFE) continue;
+    if (key === "additionalProperties" && typeof value === "object" && value !== null && Object.keys(value).length === 0) continue;
+    out[key] = tidy(value);
+  }
+  return out as T;
+}
+
+/** A contract schema as JSON Schema, without `$schema`, tidied. It must stand
+ *  alone: inside the document, a `#/$defs/...` reference would resolve
+ *  against the document's root. */
 function jsonSchema(schema: z.ZodType, io: "input" | "output"): Schema {
   const { $schema: _, ...rest } = z.toJSONSchema(schema, { io });
   const text = JSON.stringify(rest);
   if (text.includes('"$defs"') || text.includes('"$ref"')) {
     throw new Error(`a contract schema converts with $defs or $ref: ${text.slice(0, 200)}`);
   }
-  return rest as Schema;
+  return tidy(rest) as Schema;
 }
 
-const json = (schema: Schema) => ({ "application/json": { schema } });
+/** Named examples, as a media type object holds them. */
+type Examples = Record<string, { summary: string; value: unknown }>;
+
+const json = (schema: Schema, examples?: Examples) => ({ "application/json": { schema, ...(examples && { examples }) } });
 
 /** An operation of the API, as the endpoint table lists it. */
 interface OperationSpec {
@@ -71,7 +95,7 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
     const output = responseDocFor(endpoint.tool)?.schema;
     if (!tool || !output) throw new Error(`no tool or response for ${endpoint.tool}`);
     const route = HTTP_ROUTES[endpoint.tool];
-    const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.snippet;
+    const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.human;
     if (!summary) throw new Error(`${tool.name} has no MCP tool page`);
     return { id: tool.name, route, endpoint, input: tool.input, output, summary, description: tool.description };
   }
@@ -107,10 +131,19 @@ function operation(op: OperationSpec, answer: (schema: z.ZodType) => Schema) {
   const inputSchema = op.input ? jsonSchema(op.input, "input") : null;
   const properties = inputSchema?.properties ?? {};
   const required = new Set(inputSchema?.required ?? []);
+  const requests = EXAMPLE_REQUESTS[id as OperationId];
   const parameter = (name: string, where: "path" | "query") => {
     const schema = properties[name];
     if (!schema) throw new Error(`${id}: ${name} isn't an input field`);
-    return { name, in: where, required: where === "path" || required.has(name), schema };
+    // The example requests share their path and query values.
+    const example = requests[0]?.params?.[name];
+    return {
+      name,
+      in: where,
+      required: where === "path" || required.has(name),
+      schema,
+      ...(example !== undefined && { example }),
+    };
   };
   const parameters = [
     ...route.pathFields.map((name) => parameter(name, "path")),
@@ -129,14 +162,26 @@ function operation(op: OperationSpec, answer: (schema: z.ZodType) => Schema) {
     const bodyRequired = [...required].filter((name) => !inParameters.has(name));
     if (bodyRequired.length > 0) body.required = bodyRequired;
     else delete body.required;
-    requestBody = { required: true, content: json(body) };
+    const examples = Object.fromEntries(
+      requests.flatMap((request) => (request.body ? [[request.name, { summary: request.title, value: request.body }]] : [])),
+    );
+    requestBody = { required: true, content: json(body, examples) };
   }
 
+  const error = ERRORS[errorExampleFor(id as OperationId)];
+  const examples = (status: string): Examples =>
+    status === "default"
+      ? { [error.envelope.error.code]: { summary: `${error.status} ${error.envelope.error.code}`, value: error.envelope } }
+      : id === "pay_order"
+        ? Object.fromEntries(
+            requests.map((request) => [request.name, { summary: request.title, value: PAY_RESPONSES[request.name as keyof typeof PAY_RESPONSES] }]),
+          )
+        : { [id]: { summary: endpoint.title, value: RESPONSES[id as OperationId] } };
   const responses = Object.fromEntries(
     Object.entries(answers(op)).map(([status, schema]) => {
       const response = {
         description: status === "default" ? "Error" : endpoint.title,
-        content: json(answer(schema)),
+        content: json(answer(schema), examples(status)),
       };
       if (id === "book_hotel" && status === String(ORDER_HTTP.replayedStatus)) {
         const header = { required: true, schema: { type: "boolean", const: true } };
@@ -188,7 +233,7 @@ export function buildOpenApi(): OpenAPIV3_1.Document {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          description: `A Fortrip OAuth access token from the device authorization flow (RFC 8628). \`GET ${ACCOUNT_ROUTES.authConfig.path}\` returns the flow's endpoints.`,
+          description: `A Fortrip OAuth access token of the signed-in user. How to get one: [Authentication](${DOCS_ORIGIN}/api#authentication).`,
         },
       },
     },

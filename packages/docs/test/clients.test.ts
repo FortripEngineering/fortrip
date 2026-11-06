@@ -18,14 +18,18 @@ describe("client setup", () => {
     assert.doesNotMatch(all, /\bsoon\b|\bstore\b|\blisting\b/i);
   });
 
-  it("remote clients use the MCP server URL; Claude Desktop runs the local bridge", () => {
-    for (const id of ["codex", "claude-code", "cursor", "claude-ai", "chatgpt"] as const) {
+  it("every client uses the MCP server URL; Claude Desktop adds it like claude.ai, with the local bridge as the fallback", () => {
+    for (const id of CLIENT_IDS) {
       assert.ok(JSON.stringify(CLIENT_SETUP[id]).includes(MCP_SERVER_URL), id);
     }
-    const desktop = CLIENT_SETUP["claude-desktop"].code?.text ?? "";
-    assert.deepEqual(JSON.parse(desktop), {
-      mcpServers: { fortrip: { command: "npx", args: ["-y", "fortrip", "mcp"] } },
-    });
+    const desktop = CLIENT_SETUP["claude-desktop"];
+    assert.equal(desktop.code?.text, MCP_SERVER_URL);
+    assert.match(desktop.steps[0] ?? "", /^The same as claude\.ai: go to Customize → Connectors/);
+    assert.match(desktop.note ?? "", /\[local bridge\]\(#local-mcp\)/);
+  });
+
+  it("ChatGPT says it asks before an action that changes an order", () => {
+    assert.match(CLIENT_SETUP.chatgpt.note ?? "", /approve each action that creates, pays or cancels an order/);
   });
 
   it("/install shows every client and the MCP Registry entry", () => {

@@ -1,5 +1,6 @@
-// Sign in with the OAuth device flow and print an access token.
-// Prints the access token; export it as FORTRIP_TOKEN.
+// Sign in with the OAuth device flow and print the tokens.
+// Prints access_token and refresh_token as JSON: export the access token as
+// FORTRIP_TOKEN, and keep the refresh token to get a new one.
 import process from "node:process";
 
 const sleep = (seconds: number) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
@@ -40,7 +41,7 @@ while (Date.now() < deadline) {
     client_id: config.clientId,
   });
   if (token && !token.error) {
-    console.log(token.access_token);
+    console.log(JSON.stringify({ access_token: token.access_token, refresh_token: token.refresh_token }));
     process.exit(0);
   }
   if (token?.error === "slow_down") interval += 5;

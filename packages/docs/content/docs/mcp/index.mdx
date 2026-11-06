@@ -13,16 +13,46 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 <ToolList />
 
-## Results and errors [#results]
+## What a tool returns [#results]
 
-- Success: `structuredContent` is the full response object, the same as the [HTTP API](/api)'s, and every tool but `get_planning_guide` declares its `outputSchema`. `content` holds the answer as compact text for the model: one line per hotel, offer or order with its ids, full descriptions and policies, every note, and "not listed" or "unknown" written out. Some tools add blocks before or after it, so find a block by its `type` (`text`, `image`), not by its position. By tool:
+`structuredContent` is the full response object, the same as the [HTTP API](/api)'s; every tool but `get_planning_guide` declares its `outputSchema`. `content` holds the answer as compact text written for the model: one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. The exceptions:
 
-<McpContentTable />
+<McpContentExceptions />
 
-- The hotel tools' presentation hint asks the model to show only what Fortrip returned, as cards where the client can draw them. A WeChat Pay code comes as an image when `pay_order`'s answer holds a live one and the image could be fetched; the code and its link are in `structuredContent` either way.
-- An answer of <NextStepTools /> that holds a `payment.url` also carries `nextStep` in `structuredContent`, and its text states the same rule: show the user the total and terms and wait for a clear yes before giving them the link.
-- Failure: `isError: true` with no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text.
-- Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
-- `_meta["ai.fortrip/requestId"]` carries the request id, and `_meta["ai.fortrip/replayed"]` marks an order answered again for the same details.
+`content[0]` of a `get_hotel_offers` answer:
 
-See [Errors & limits](/errors).
+<ToolResultSample tool="get_hotel_offers" />
+
+An answer of <NextStepTools /> that holds a `payment.url` also carries `nextStep` in `structuredContent`, and its text states the same rule:
+
+> <Fact path="ORDER_NEXT_STEP" />
+
+### Errors [#errors]
+
+A failed call has `isError: true` and no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text, and `_meta["ai.fortrip/error"]` carries it too. Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
+
+`content[0]` of an `offer_changed` error from `book_hotel`:
+
+<ToolErrorSample code="offer_changed" />
+
+On an error, the request id support asks for is the envelope's `requestId`; a successful result carries it in `_meta["ai.fortrip/requestId"]`. See [Errors & limits](/errors).
+
+## Server instructions [#instructions]
+
+On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. The full agent guide is what `fortrip guide` prints. `get_planning_guide` returns a separate guide, for requests that are more than one hotel for fixed dates.
+
+## Timeouts and retries [#retries]
+
+- Creating an order or paying can take a couple of minutes. Give `book_hotel` and `pay_order` a timeout of at least three minutes.
+- After a `book_hotel` timeout, call it again with the same details: it is [safe to send again](/api#retries).
+- After a `pay_order` timeout, <PayAfterTimeout />
+
+<RetryCodes />
+
+What each call answers when sent again is in [Retries and idempotency](/api#retries).
+
+## Connecting your own agent [#own-agent]
+
+- Sign-in follows the MCP authorization spec: OAuth 2.1 with PKCE. The authorization server's metadata is at <Fact path="OAUTH_METADATA_URL" />.
+- Dynamic client registration is supported, so your client can register itself.
+- Each end user signs in once, with their own Fortrip account. Their orders and payment links belong to that account.

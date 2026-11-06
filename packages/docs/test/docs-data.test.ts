@@ -14,7 +14,7 @@ import { OPERATIONS } from "../lib/openapi/build.ts";
 import { API_BASE_URL, ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { CLI_COMMANDS, commandSlug, RAW_BODY_EXAMPLE } from "../lib/reference/cli-commands.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDocFor, schemaTitle } from "../lib/reference/response-docs.ts";
 
 test("every contract tool has a docs page that takes its words from the contract", () => {
   assert.deepEqual(
@@ -30,25 +30,45 @@ test("every contract tool has a docs page that takes its words from the contract
   }
 });
 
-test("a tool page's description is one short sentence: its contract description's first, unless that is too long", () => {
+test("a tool page is described by what the tool does for a person, in one or two short plain sentences", () => {
   for (const tool of MCP_TOOLS) {
-    assert.ok(tool.snippet.length <= 200, `${tool.name}: ${tool.snippet.length}`);
-    assert.match(tool.snippet, /[.!?]$/, tool.name);
-    assert.doesNotMatch(tool.snippet, /[.!?]\s/, tool.name);
-    const first = /^.*?[.!?](?=\s|$)/s.exec(tool.summary)?.[0] ?? tool.summary;
-    if (first.length <= 200) assert.equal(tool.snippet, first, tool.name);
-    // The body shows what the description doesn't: all of the contract's text.
-    assert.equal(`${tool.summary.startsWith(tool.snippet) ? tool.snippet : ""} ${tool.rest}`.trim(), tool.summary, tool.name);
+    // The page description is plain text (meta, header, llms.txt), and the
+    // model's description is shown once, under its label, not repeated here.
+    assert.ok(tool.human.length <= 200, `${tool.name}: ${tool.human.length}`);
+    assert.doesNotMatch(tool.human, /[`[\]*]/, tool.name);
+    assert.ok(!tool.summary.startsWith(tool.human.split(/(?<=[.!?])\s/)[0] ?? ""), tool.name);
+    const sentences = tool.human.split(/(?<=[.!?])\s+/);
+    assert.ok(sentences.length >= 1 && sentences.length <= 2, `${tool.name}: ${sentences.length} sentences`);
+    assert.match(tool.human, /[.!?]$/, tool.name);
+    assert.notEqual(tool.human, tool.summary, tool.name);
+    // No limit typed by hand: the description the model reads states those.
+    assert.doesNotMatch(tool.human, /\d/, tool.name);
   }
 });
 
 test("an API reference page is described like its MCP tool's page; an account route by the docs", () => {
   for (const op of OPERATIONS) {
     const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
-    if (tool) assert.equal(op.summary, tool.snippet, op.id);
+    if (tool) assert.equal(op.summary, tool.human, op.id);
     assert.ok(op.summary.length > 0 && op.summary.length <= 200, `${op.id}: ${op.summary.length}`);
   }
   assert.deepEqual(OPERATIONS.filter((op) => !op.endpoint.tool).map((op) => op.id).sort(), ["auth_config", "me"]);
+});
+
+test("an operation has one title: its tool's, on the API page, in openapi.json and on its CLI command's page", () => {
+  for (const endpoint of ENDPOINTS) {
+    const tool = TOOLS.find((t) => t.name === endpoint.tool);
+    const command = CLI_COMMANDS.find((c) => c.slug === endpoint.cliSlug);
+    const title = tool?.title ?? endpoint.title;
+    assert.equal(endpoint.title, title, endpoint.path);
+    assert.equal(OPERATIONS.find((op) => op.endpoint === endpoint)?.endpoint.title, title, endpoint.path);
+    // `fortrip login` reads the sign-in settings to sign in: another operation.
+    if (endpoint.cliSlug !== "login") assert.equal(command?.title, title, endpoint.cliSlug);
+  }
+  assert.deepEqual(
+    ENDPOINTS.filter((endpoint) => !endpoint.tool).map((endpoint) => endpoint.title),
+    ["Account", "OAuth sign-in settings"],
+  );
 });
 
 test("every contract command has a docs page with a row for each of its flags", () => {
@@ -102,6 +122,8 @@ test("a usage line lists the positionals and the flags of required fields", () =
   );
   assert.equal(usage("hotels-get"), "fortrip hotels get <hotelId> [options]");
   assert.equal(usage("orders-get"), "fortrip orders get <orderId> [options]");
+  // Without --max-penalty the command shows the penalty and cancels nothing.
+  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [--max-penalty <amount>]");
   assert.equal(usage("guide"), "fortrip guide [topic]");
   assert.equal(usage("logout"), "fortrip logout");
 });
@@ -138,7 +160,7 @@ test("a tool or command that answers an object links to its response schema", ()
       assert.equal(typeof tool.returns, "object", tool.name);
       if (typeof tool.returns === "object") {
         assert.ok(anchors.has(tool.returns.href), tool.name);
-        assert.equal(tool.returns.title, doc.title, tool.name);
+        assert.equal(tool.returns.title, schemaTitle(doc), tool.name);
       }
     } else {
       assert.equal(typeof tool.returns, "string", tool.name);
@@ -155,6 +177,12 @@ test("a tool or command that answers an object links to its response schema", ()
     CLI_COMMANDS.find((command) => command.slug === slug)?.schema?.href;
   assert.equal(schema("hotels-search"), "/schemas#search-result");
   assert.equal(schema("orders-list"), "/schemas#order-list");
+  // Cancel and pay answer the order itself, and link to it.
+  assert.equal(schema("orders-cancel"), "/schemas#order");
+  assert.equal(schema("orders-pay"), "/schemas#order");
+  for (const name of ["cancel_order", "pay_order"]) {
+    assert.deepEqual(MCP_TOOLS.find((t) => t.name === name)?.returns, { title: "Order", href: "/schemas#order" }, name);
+  }
   assert.equal(schema("whoami"), "/schemas#account");
   assert.equal(schema("guide"), undefined);
 });

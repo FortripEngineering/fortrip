@@ -13,8 +13,10 @@ import {
   SUPPLIER_OUTCOME_STATUS,
 } from "@fortrip/agent-contract";
 
+import { ENVIRONMENT } from "../../cli/src/environment.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
 import { ADAPTIVE_PRICING } from "../lib/prose/guide-copy.ts";
+import { ENVIRONMENT_ROWS } from "../lib/reference/environment.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
 /*
@@ -131,11 +133,11 @@ test("the API page states the order statuses, the replay header and the /me scop
   assert.ok(text.includes(`the ${ME_SCOPES.email} scope`));
 });
 
-test("the local-currency sentence is the guide's, on both pages that say USD", () => {
+test("the local-currency sentence is the guide's, on both pages that say what is charged", () => {
   assert.ok(renderGuide("mcp", "main").includes(ADAPTIVE_PRICING));
   assert.match(ADAPTIVE_PRICING, /local currency at Stripe's rate\.$/);
   for (const [page, route] of [
-    ["index.mdx", "/"],
+    ["payments.mdx", "/payments"],
     ["api/index.mdx", "/api"],
   ] as const) {
     assert.ok(source(page).includes('<Fact path="GUIDE_SENTENCES.adaptivePricing" />'), page);
@@ -143,33 +145,41 @@ test("the local-currency sentence is the guide's, on both pages that say USD", (
   }
 });
 
-test("the pre-release policy has one source, rendered on the API page and the changelog", () => {
-  const text = PRE_RELEASE_POLICY.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replaceAll("`", "");
-  assert.match(text, /^Fortrip's agent API is pre-release\. Until general availability/);
-  for (const [page, route] of [
-    ["api/index.mdx", "/api"],
-    ["changelog.mdx", "/changelog"],
-  ] as const) {
-    assert.ok(source(page).includes("<PreReleasePolicy />"), page);
-    assert.ok(pageText(route).includes(text), route);
-    assert.match(pageHtml(route), /href="\/changelog">changelog<\/a>/, route);
-  }
+test("the changelog owns the pre-release policy; the API page states it in one line and links there", () => {
+  const plain = (policy: string) => policy.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replaceAll("`", "");
+  assert.match(plain(PRE_RELEASE_POLICY), /^Fortrip's agent API is pre-release\. Until general availability/);
+  assert.ok(source("changelog.mdx").includes("<PreReleasePolicy />"));
+  assert.ok(pageText("/changelog").includes(plain(PRE_RELEASE_POLICY)));
+  // The changelog states it without a link to itself.
+  assert.doesNotMatch(pageHtml("/changelog"), /href="\/changelog"[^>]*>changelog<\/a>/);
+  assert.ok(!source("api/index.mdx").includes("<PreReleasePolicy"));
+  assert.ok(pageText("/api").includes("Pre-release: breaking changes ship as a new major version; see the changelog."));
+  assert.match(pageHtml("/api"), /href="\/changelog">changelog<\/a>/);
   for (const page of [...PAGES, "changelog.mdx"]) {
     assert.doesNotMatch(source(page), /Until general availability/, page);
   }
 });
 
-test("the CLI's FORTRIP_API_URL is a base URL, and FORTRIP_MCP_URL is documented with its pairing rule", () => {
-  const cli = source("cli/index.mdx");
-  assert.match(cli, /\| `FORTRIP_API_URL` \| The API's base URL/);
-  assert.doesNotMatch(cli, /API origin/);
-  assert.match(cli, /http:\/\/localhost:3000\/api\/public/);
-  assert.match(cli, /\| `FORTRIP_MCP_URL` \|/);
-  assert.match(cli, /on the origin of `FORTRIP_API_URL`/);
-  assert.match(cli, /`api\.fortrip\.ai` and `mcp\.fortrip\.ai`/);
-  const install = source("install.mdx");
-  assert.match(install, /FORTRIP_MCP_URL/);
-  assert.match(install, /FORTRIP_API_URL/);
+test("the CLI's environment table lists what a reader sets, and leaves out the variables only Fortrip's development uses", () => {
+  const internal = ENVIRONMENT.filter((variable) => variable.internal).map((variable) => variable.name);
+  assert.deepEqual(internal, ["FORTRIP_API_URL", "FORTRIP_MCP_URL"]);
+  assert.deepEqual(
+    ENVIRONMENT_ROWS.map((row) => row.name),
+    ENVIRONMENT.filter((variable) => !variable.internal).map((variable) => variable.name),
+  );
+  assert.ok(source("cli/index.mdx").includes("<EnvironmentTable />"));
+  const cli = pageText("/cli");
+  for (const row of ENVIRONMENT_ROWS) assert.ok(cli.includes(row.name), row.name);
+  for (const page of ["/cli", "/install"]) {
+    for (const name of internal) assert.ok(!pageText(page).includes(name), `${page}: ${name}`);
+    assert.doesNotMatch(pageText(page), /localhost|credentials\.json/, page);
+  }
+});
+
+test("no page calls a remote agent environment a sandbox", () => {
+  for (const page of PAGES) assert.doesNotMatch(source(page), /\bsandbox/i, page);
+  assert.doesNotMatch(ENVIRONMENT_ROWS.map((row) => row.meaning).join(" "), /\bsandbox/i);
+  assert.match(pageText("/cli"), /a remote agent environment or a CI run/);
 });
 
 test("the errors page: an unknown code exits by HTTP status; a wrong method is 405 with Allow", () => {

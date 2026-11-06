@@ -1,0 +1,34 @@
+---
+title: FAQ
+description: Fees and terms, testing an integration, your account, getting help, and whether an agent can pay without the user.
+---
+
+## Fees and terms [#fees]
+
+- Calling the API, the MCP server and the CLI is free.
+- There is no commission or revenue share for developers.
+- Fortrip charges the guest the price shown.
+- Fortrip's [terms](https://fortrip.ai/terms), [privacy policy](https://fortrip.ai/privacy) and [booking conditions](https://fortrip.ai/booking-conditions) apply.
+
+## Testing your integration [#testing]
+
+- Search, hotel details and live offers are free reads.
+- Creating an order charges nothing. An unpaid order expires at its `payment.expiresAt` and needs no cancelling.
+- There is no test environment. Any payment is real, and so is any cancellation penalty.
+- Repeated test orders of one stay hit `order_exists` while an open order has any of the same guests, and a stay takes at most <Fact path="LIMITS.ordersPerStay" /> orders.
+
+## Your account [#account]
+
+Create one at [fortrip.ai](https://fortrip.ai). Orders belong to the account that signed in when they were made, and so do their payment links and the [rate limits](/errors#rate-limits).
+
+## Help and support [#support]
+
+- **Paid, and still confirming.** The hotel is confirming the booking. Some hotels confirm at once and others take a while (the offer's `confirmation`). Ask your agent to check the order.
+- **Failed.** No stay was booked. A card hold is released, or the payment refunded in full.
+- **Your bookings.** See them on [fortrip.ai](https://fortrip.ai), signed in to the account that made them (an order's `manageUrl` links there).
+- **Anything else.** Email <Fact path="SUPPORT_EMAIL" /> with the booking number, which starts `FT-` (the order's `reference`), or, for an error, its `requestId`.
+- **A security issue.** Email <Fact path="SUPPORT_EMAIL" />.
+
+## Can my agent pay without the user? [#agent-pay]
+
+No. The user confirms the total and the terms first. Then they pay themselves, on the payment link or with Alipay or WeChat Pay. A Link token, a shared payment token from the user's Stripe Link wallet, needs the user's approval in Link, and it pays one order only.

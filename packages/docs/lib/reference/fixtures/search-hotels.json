@@ -1,0 +1,159 @@
+{
+  "destination": {
+    "kind": "place",
+    "place": {
+      "placeId": "plc_1857910",
+      "name": "Kyoto",
+      "names": {
+        "en": "Kyoto",
+        "zh": "京都"
+      },
+      "kind": "settlement",
+      "scope": "radius",
+      "cityLike": true,
+      "population": 1459640,
+      "region": null,
+      "countryCode": "JP",
+      "location": {
+        "lat": 35.02107,
+        "lng": 135.75385
+      }
+    },
+    "resolution": "only_match",
+    "otherMatches": 0,
+    "scope": "radius",
+    "center": {
+      "location": {
+        "lat": 35.02107,
+        "lng": 135.75385
+      },
+      "place": {
+        "placeId": "plc_1857910",
+        "name": "Kyoto",
+        "names": {
+          "en": "Kyoto",
+          "zh": "京都"
+        }
+      },
+      "basis": "seat"
+    },
+    "radiusMeters": 8000,
+    "radiusSource": "default"
+  },
+  "text": null,
+  "stay": {
+    "checkIn": "2027-03-10",
+    "checkOut": "2027-03-12",
+    "rooms": [
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "pricing": {
+    "mode": "indicative",
+    "scope": "pool",
+    "status": "ok"
+  },
+  "sort": "price_asc",
+  "coverage": {
+    "matched": 1412,
+    "priced": 1412,
+    "withPrice": 1268,
+    "poolRadiusMeters": null,
+    "excludedNoPrice": null,
+    "excludedNoFacilityData": 96,
+    "withinMaxRadius": 2351,
+    "textAnywhere": null,
+    "localities": null,
+    "nameAsText": null
+  },
+  "data": [
+    {
+      "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
+      "name": "Kamo Lantern Hotel",
+      "names": {
+        "en": "Kamo Lantern Hotel",
+        "zh": "鸭川灯笼酒店"
+      },
+      "stars": 3,
+      "address": {
+        "line": {
+          "text": "120 Kamikorikicho, Shimogyo Ward",
+          "locale": "en"
+        },
+        "countryCode": "JP",
+        "region": null
+      },
+      "location": {
+        "lat": 34.99862,
+        "lng": 135.76911
+      },
+      "timeZone": "Asia/Tokyo",
+      "distanceMeters": 2770,
+      "price": {
+        "kind": "indicative",
+        "basis": "lowest_unit",
+        "fromPerRoomNight": {
+          "amount": "61.50",
+          "currency": "USD"
+        },
+        "fromPerRoomStay": {
+          "amount": "123.00",
+          "currency": "USD"
+        },
+        "approx": null
+      },
+      "photo": null
+    },
+    {
+      "hotelId": "htl_Lp5dR8wE1kTz6Yb3Mv9C",
+      "name": "Shijo Corner Inn",
+      "names": {
+        "en": "Nishiki Market Inn",
+        "zh": null
+      },
+      "stars": 2,
+      "address": {
+        "line": {
+          "text": "45 Nishikikoji-dori, Nakagyo Ward",
+          "locale": "en"
+        },
+        "countryCode": "JP",
+        "region": null
+      },
+      "location": {
+        "lat": 35.00502,
+        "lng": 135.76478
+      },
+      "timeZone": "Asia/Tokyo",
+      "distanceMeters": 1880,
+      "price": {
+        "kind": "indicative",
+        "basis": "lowest_unit",
+        "fromPerRoomNight": {
+          "amount": "64.80",
+          "currency": "USD"
+        },
+        "fromPerRoomStay": {
+          "amount": "129.60",
+          "currency": "USD"
+        },
+        "approx": null
+      },
+      "photo": null
+    }
+  ],
+  "nextCursor": "c_kXy7Qp2LmN4",
+  "notes": [
+    {
+      "code": "indicative_prices",
+      "message": "Prices are indicative: the supplier's lowest nightly reference price for one unit (a room, or at hostels possibly a bed), in USD. They are estimates and not bookable; offers give what the user pays."
+    },
+    {
+      "code": "amenities_listed_only",
+      "message": "Amenity filters match hotels that list the amenity; not listed is not absent. 96 hotels here list no facilities at all and were left out."
+    }
+  ]
+}

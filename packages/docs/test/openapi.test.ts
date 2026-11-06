@@ -7,6 +7,7 @@ import { openapiV31 } from "@apidevtools/openapi-schemas";
 import {
   ACCOUNT_ROUTES,
   CONTRACT_VERSION,
+  DOCS_ORIGIN,
   errorEnvelope,
   HTTP_ROUTES,
   order,
@@ -18,9 +19,12 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { z } from "zod";
 
-import { buildOpenApi } from "../lib/openapi/build.ts";
+import { buildOpenApi, OPERATIONS, tidy } from "../lib/openapi/build.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
-import { pageHtml } from "./built-page.ts";
+import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
+import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
+import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
+import { pageHtml, pageText } from "./built-page.ts";
 
 const doc = buildOpenApi();
 const METHODS = ["get", "post"] as const;
@@ -145,8 +149,8 @@ describe("OpenAPI document", () => {
 
   it("writes a response schema that answers share once, under components", () => {
     assert.deepEqual(Object.keys(doc.components?.schemas ?? {}).sort(), ["ErrorEnvelope", "Order"]);
-    assert.deepEqual(doc.components?.schemas?.ErrorEnvelope, standalone(errorEnvelope));
-    assert.deepEqual(doc.components?.schemas?.Order, standalone(order));
+    assert.deepEqual(doc.components?.schemas?.ErrorEnvelope, tidy(standalone(errorEnvelope)));
+    assert.deepEqual(doc.components?.schemas?.Order, tidy(standalone(order)));
     const orderAnswers = operations.flatMap(([, , op]) =>
       Object.entries(op.responses ?? {})
         .filter(([status]) => status !== "default")
@@ -187,6 +191,69 @@ describe("OpenAPI document", () => {
       assert.deepEqual(op.security, expected, op.operationId);
     }
     assert.ok(doc.paths?.[ACCOUNT_ROUTES.authConfig.path]?.get);
+  });
+
+  it("says nothing its schemas don't need: no safe-integer bounds, no empty additionalProperties", () => {
+    const text = JSON.stringify(doc);
+    assert.equal(text.includes(String(Number.MAX_SAFE_INTEGER)), false);
+    assert.equal(text.includes('"additionalProperties":{}'), false);
+    // A real bound stays.
+    assert.ok(text.includes('"maximum":50'));
+    assert.deepEqual(tidy({ a: { minimum: -Number.MAX_SAFE_INTEGER, maximum: 3, additionalProperties: {} }, b: [{ additionalProperties: false }] }), {
+      a: { maximum: 3 },
+      b: [{ additionalProperties: false }],
+    });
+  });
+
+  it("links the bearer token to how to get one", () => {
+    const scheme = doc.components?.securitySchemes?.bearerAuth as { description: string };
+    assert.ok(scheme.description.includes(`(${DOCS_ORIGIN}/api#authentication)`), scheme.description);
+  });
+
+  it("gives every operation the example requests and answers, each valid under its schema", () => {
+    const check = ajv();
+    // Each component under its own id, references rewritten to it.
+    const id = (name: string) => `https://openapi.test/components/${name}`;
+    const resolved = (schema: object) =>
+      JSON.parse(JSON.stringify(schema).replace(/"#\/components\/schemas\/(\w+)"/g, (_, n) => `"${id(n)}"`));
+    for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
+      check.addSchema(resolved(schema as object), id(name));
+    }
+    const valid = (schema: object, value: unknown, where: string) => {
+      const validate = check.compile(resolved(schema));
+      assert.ok(validate(value), `${where}: ${JSON.stringify(validate.errors)}`);
+    };
+    for (const [, , op] of operations) {
+      const opId = op.operationId as OperationId;
+      const requests = EXAMPLE_REQUESTS[opId];
+      for (const p of (op.parameters ?? []) as Array<{ name: string; in: string; example?: unknown; schema: object }>) {
+        const sent = requests[0]?.params?.[p.name];
+        assert.equal(p.example, sent, `${opId} ${p.name}`);
+        if (p.in === "path") assert.notEqual(sent, undefined, `${opId} ${p.name}: a path parameter has an example`);
+        if (sent !== undefined) valid(p.schema, sent, `${opId} ${p.name}`);
+      }
+      const body = (op.requestBody as { content: Record<string, { schema: object; examples?: Record<string, { value: unknown }> }> } | undefined)?.content["application/json"];
+      if (body) {
+        assert.deepEqual(
+          Object.fromEntries(Object.entries(body.examples ?? {}).map(([name, e]) => [name, e.value])),
+          Object.fromEntries(requests.map((r) => [r.name, r.body])),
+          opId,
+        );
+        for (const [name, e] of Object.entries(body.examples ?? {})) valid(body.schema, e.value, `${opId} body ${name}`);
+      }
+      for (const [status, response] of Object.entries(op.responses ?? {})) {
+        const media = (response as { content: Record<string, { schema: object; examples?: Record<string, { value: unknown }> }> }).content["application/json"];
+        const values = Object.values(media?.examples ?? {}).map((e) => e.value);
+        const expected =
+          status === "default"
+            ? [ERRORS[errorExampleFor(opId)].envelope]
+            : opId === "pay_order"
+              ? Object.values(PAY_RESPONSES)
+              : [RESPONSES[opId]];
+        assert.deepEqual(values, expected, `${opId} ${status}`);
+        for (const value of values) valid(media!.schema, value, `${opId} ${status}`);
+      }
+    }
   });
 
   it("embeds only valid JSON Schemas, referring only to its own components", () => {
@@ -247,6 +314,39 @@ describe("built OpenAPI", () => {
     const api = pageHtml("/api");
     assert.ok(api.includes('href="/api/reference/'), "/api links the reference");
     assert.ok(api.includes('href="/openapi.json"'), "/api links the document");
+  });
+
+  it("samples each request with curl as the examples send it: the token, the example ids and body", () => {
+    for (const op of OPERATIONS) {
+      const html = pageHtml(`/api/reference/${op.id}`);
+      // The highlighted sample, as the page's text holds it.
+      const text = pageText(`/api/reference/${op.id}`);
+      const auth = 'Authorization: Bearer $FORTRIP_TOKEN"';
+      assert.equal(text.includes(auth), op.endpoint.auth, `${op.id}: the token`);
+      assert.ok(!text.includes(`'Authorization`), `${op.id}: the token in single quotes isn't expanded`);
+      assert.ok(text.includes(`curl -X ${op.route.method}`), op.id);
+      for (const field of op.route.pathFields) {
+        assert.ok(text.includes(String(EXAMPLE_REQUESTS[op.id as OperationId][0]?.params?.[field])), `${op.id}: ${field}`);
+      }
+      assert.doesNotMatch(text, /\/string\b|"string"/, op.id);
+      assert.doesNotMatch(html, /9007199254740991|property1|additionalProp\d/, op.id);
+      // One sample language: curl.
+      assert.doesNotMatch(text, /\bfetch\(|import requests/, op.id);
+    }
+    // The body sent is the example's.
+    assert.ok(pageText("/api/reference/search_hotels").includes('"countryCode": "JP"'));
+    assert.ok(pageText("/api/reference/pay_order").includes("alipay_wechat_pay") || pageHtml("/api/reference/pay_order").includes("Alipay or WeChat Pay"));
+  });
+
+  it("quotes the tool description under its label, and sends no reader to the MCP page for it", () => {
+    for (const op of OPERATIONS) {
+      const text = pageText(`/api/reference/${op.id}`);
+      const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
+      assert.doesNotMatch(text, /full rules agents follow/, op.id);
+      if (!tool) continue;
+      assert.ok(text.includes("What the model reads (tool description)"), op.id);
+      assert.ok(text.includes(tool.summary), op.id);
+    }
   });
 
   it("lists the reference in the endpoint table's order", () => {

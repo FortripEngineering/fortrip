@@ -571,7 +571,8 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                                 },
                                 "allInclusive": {
                                   "anyOf": [
@@ -593,7 +594,8 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                                 },
                                 "label": {
                                   "anyOf": [
@@ -645,7 +647,8 @@
                                 "guestsCoveredPerRoom",
                                 "label"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                             },
                             "current": {
                               "type": "object",
@@ -688,7 +691,8 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                                 },
                                 "allInclusive": {
                                   "anyOf": [
@@ -710,7 +714,8 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                                 },
                                 "label": {
                                   "anyOf": [
@@ -762,7 +767,8 @@
                                 "guestsCoveredPerRoom",
                                 "label"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                             },
                             "worse": {
                               "type": "boolean"
@@ -804,7 +810,8 @@
                                 },
                                 "asOf": {
                                   "type": "string",
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                  "description": "When these terms were read: status and penalties are as of this time."
                                 },
                                 "freeCancellationEndsAt": {
                                   "anyOf": [
@@ -877,7 +884,8 @@
                                 "penalties",
                                 "timeZone"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "The cancellation terms, read at asOf."
                             },
                             "current": {
                               "type": "object",
@@ -900,7 +908,8 @@
                                 },
                                 "asOf": {
                                   "type": "string",
-                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                  "description": "When these terms were read: status and penalties are as of this time."
                                 },
                                 "freeCancellationEndsAt": {
                                   "anyOf": [
@@ -973,7 +982,8 @@
                                 "penalties",
                                 "timeZone"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "The cancellation terms, read at asOf."
                             },
                             "worse": {
                               "type": "boolean"
@@ -1010,7 +1020,8 @@
                                     {
                                       "type": "string"
                                     }
-                                  ]
+                                  ],
+                                  "description": "instant: the hotel confirms the booking as soon as it is made. on_request: the hotel confirms or refuses it later, within withinMinutes when stated. unknown: not stated."
                                 },
                                 "withinMinutes": {
                                   "anyOf": [
@@ -1022,14 +1033,16 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "For on_request, the minutes the hotel takes to confirm; null when instant or not stated."
                                 }
                               },
                               "required": [
                                 "mode",
                                 "withinMinutes"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "How the hotel confirms a booking of this offer."
                             },
                             "current": {
                               "type": "object",
@@ -1047,7 +1060,8 @@
                                     {
                                       "type": "string"
                                     }
-                                  ]
+                                  ],
+                                  "description": "instant: the hotel confirms the booking as soon as it is made. on_request: the hotel confirms or refuses it later, within withinMinutes when stated. unknown: not stated."
                                 },
                                 "withinMinutes": {
                                   "anyOf": [
@@ -1059,14 +1073,16 @@
                                     {
                                       "type": "null"
                                     }
-                                  ]
+                                  ],
+                                  "description": "For on_request, the minutes the hotel takes to confirm; null when instant or not stated."
                                 }
                               },
                               "required": [
                                 "mode",
                                 "withinMinutes"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "How the hotel confirms a booking of this offer."
                             },
                             "worse": {
                               "type": "boolean"
@@ -1225,7 +1241,8 @@
                                 "disclosure",
                                 "items"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                             },
                             "current": {
                               "type": "object",
@@ -1365,7 +1382,8 @@
                                 "disclosure",
                                 "items"
                               ],
-                              "additionalProperties": {}
+                              "additionalProperties": {},
+                              "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                             },
                             "worse": {
                               "type": "boolean"
@@ -1623,7 +1641,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                               },
                               "allInclusive": {
                                 "anyOf": [
@@ -1645,7 +1664,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                               },
                               "label": {
                                 "anyOf": [
@@ -1697,7 +1717,8 @@
                               "guestsCoveredPerRoom",
                               "label"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                           }
                         },
                         "required": [
@@ -1745,7 +1766,8 @@
                               "amount",
                               "currency"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
                           },
                           "approx": {
                             "anyOf": [
@@ -1942,7 +1964,8 @@
                               "disclosure",
                               "items"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                           }
                         },
                         "required": [
@@ -1974,7 +1997,8 @@
                           },
                           "asOf": {
                             "type": "string",
-                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                            "description": "When these terms were read: status and penalties are as of this time."
                           },
                           "freeCancellationEndsAt": {
                             "anyOf": [
@@ -2047,7 +2071,8 @@
                           "penalties",
                           "timeZone"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "The cancellation terms, read at asOf."
                       },
                       "confirmation": {
                         "type": "object",
@@ -2065,7 +2090,8 @@
                               {
                                 "type": "string"
                               }
-                            ]
+                            ],
+                            "description": "instant: the hotel confirms the booking as soon as it is made. on_request: the hotel confirms or refuses it later, within withinMinutes when stated. unknown: not stated."
                           },
                           "withinMinutes": {
                             "anyOf": [
@@ -2077,14 +2103,16 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "For on_request, the minutes the hotel takes to confirm; null when instant or not stated."
                           }
                         },
                         "required": [
                           "mode",
                           "withinMinutes"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "How the hotel confirms a booking of this offer."
                       }
                     },
                     "required": [
@@ -5147,7 +5175,8 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                           },
                           "allInclusive": {
                             "anyOf": [
@@ -5169,7 +5198,8 @@
                               {
                                 "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                           },
                           "label": {
                             "anyOf": [
@@ -5221,7 +5251,8 @@
                           "guestsCoveredPerRoom",
                           "label"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                       }
                     },
                     "required": [
@@ -5269,7 +5300,8 @@
                           "amount",
                           "currency"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
                       },
                       "approx": {
                         "anyOf": [
@@ -5466,7 +5498,8 @@
                           "disclosure",
                           "items"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                       }
                     },
                     "required": [
@@ -5498,7 +5531,8 @@
                       },
                       "asOf": {
                         "type": "string",
-                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                        "description": "When these terms were read: status and penalties are as of this time."
                       },
                       "freeCancellationEndsAt": {
                         "anyOf": [
@@ -5571,7 +5605,8 @@
                       "penalties",
                       "timeZone"
                     ],
-                    "additionalProperties": {}
+                    "additionalProperties": {},
+                    "description": "The cancellation terms, read at asOf."
                   },
                   "confirmation": {
                     "type": "object",
@@ -5589,7 +5624,8 @@
                           {
                             "type": "string"
                           }
-                        ]
+                        ],
+                        "description": "instant: the hotel confirms the booking as soon as it is made. on_request: the hotel confirms or refuses it later, within withinMinutes when stated. unknown: not stated."
                       },
                       "withinMinutes": {
                         "anyOf": [
@@ -5601,14 +5637,16 @@
                           {
                             "type": "null"
                           }
-                        ]
+                        ],
+                        "description": "For on_request, the minutes the hotel takes to confirm; null when instant or not stated."
                       }
                     },
                     "required": [
                       "mode",
                       "withinMinutes"
                     ],
-                    "additionalProperties": {}
+                    "additionalProperties": {},
+                    "description": "How the hotel confirms a booking of this offer."
                   }
                 },
                 "required": [
@@ -5629,27 +5667,32 @@
                 "byNationality": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out because the hotel sells them only to guests of some nationalities; Fortrip can't book them."
                 },
                 "byFilters": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out by filters."
                 },
                 "dominated": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out because another offer of the same room is as good on price and every term, or can't be told apart from one kept."
                 },
                 "unreadable": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out because their details came back incomplete or inconsistent."
                 },
                 "byLimit": {
                   "type": "integer",
                   "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out by limitPerHotel."
                 }
               },
               "required": [
@@ -5659,7 +5702,8 @@
                 "unreadable",
                 "byLimit"
               ],
-              "additionalProperties": {}
+              "additionalProperties": {},
+              "description": "How many offers each selection step left out."
             }
           },
           "required": [
@@ -5696,7 +5740,8 @@
                 {
                   "type": "string"
                 }
-              ]
+              ],
+              "description": "Why the hotel has no offers: sold_out (nothing left for the stay), no_matching_offers (the filters left none), nationality_restricted (the hotel sells this stay only to guests of some nationalities; Fortrip can't book it), offers_unreadable (its offers came back incomplete or inconsistent), not_found (Fortrip has no bookable hotel with this hotelId), supplier_unavailable (offers couldn't be fetched this time; try again), stay_in_past (check-in has passed in the hotel's time zone)."
             },
             "omitted": {
               "anyOf": [
@@ -5706,27 +5751,32 @@
                     "byNationality": {
                       "type": "integer",
                       "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out because the hotel sells them only to guests of some nationalities; Fortrip can't book them."
                     },
                     "byFilters": {
                       "type": "integer",
                       "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out by filters."
                     },
                     "dominated": {
                       "type": "integer",
                       "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out because another offer of the same room is as good on price and every term, or can't be told apart from one kept."
                     },
                     "unreadable": {
                       "type": "integer",
                       "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out because their details came back incomplete or inconsistent."
                     },
                     "byLimit": {
                       "type": "integer",
                       "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out by limitPerHotel."
                     }
                   },
                   "required": [
@@ -5736,7 +5786,8 @@
                     "unreadable",
                     "byLimit"
                   ],
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "description": "How many offers each selection step left out."
                 },
                 {
                   "type": "null"
@@ -5790,7 +5841,8 @@
           {
             "type": "string"
           }
-        ]
+        ],
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -6035,7 +6087,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                         },
                         "allInclusive": {
                           "anyOf": [
@@ -6057,7 +6110,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                         },
                         "label": {
                           "anyOf": [
@@ -6109,7 +6163,8 @@
                         "guestsCoveredPerRoom",
                         "label"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                     },
                     "cancellation": {
                       "type": "object",
@@ -6132,7 +6187,8 @@
                         },
                         "asOf": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "When these terms were read: status and penalties are as of this time."
                         },
                         "freeCancellationEndsAt": {
                           "anyOf": [
@@ -6205,7 +6261,8 @@
                         "penalties",
                         "timeZone"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -6345,7 +6402,8 @@
                         "disclosure",
                         "items"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -6415,7 +6473,8 @@
               "amount",
               "currency"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
           }
         },
         "required": [
@@ -6467,13 +6526,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
           },
           "chargeCurrency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
           },
           "localCurrencyAtCheckout": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
           },
           "localCharge": {
             "anyOf": [
@@ -6498,7 +6560,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
           "handlers": {
             "type": "array",
@@ -6581,7 +6644,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -6624,7 +6687,7 @@
                 "properties": {
                   "open": {
                     "type": "boolean",
-                    "description": "Whether pay_order has opened a wallet payment on this order."
+                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                   },
                   "current": {
                     "anyOf": [
@@ -6646,7 +6709,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The wallet the payment is on now; null until it is open."
+                    "description": "Which of the two the payment is on now; null until it is open."
                   },
                   "wechatPay": {
                     "anyOf": [
@@ -6887,7 +6950,8 @@
           {
             "type": "string"
           }
-        ]
+        ],
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -7132,7 +7196,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                         },
                         "allInclusive": {
                           "anyOf": [
@@ -7154,7 +7219,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                         },
                         "label": {
                           "anyOf": [
@@ -7206,7 +7272,8 @@
                         "guestsCoveredPerRoom",
                         "label"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                     },
                     "cancellation": {
                       "type": "object",
@@ -7229,7 +7296,8 @@
                         },
                         "asOf": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "When these terms were read: status and penalties are as of this time."
                         },
                         "freeCancellationEndsAt": {
                           "anyOf": [
@@ -7302,7 +7370,8 @@
                         "penalties",
                         "timeZone"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -7442,7 +7511,8 @@
                         "disclosure",
                         "items"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -7512,7 +7582,8 @@
               "amount",
               "currency"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
           }
         },
         "required": [
@@ -7564,13 +7635,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
           },
           "chargeCurrency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
           },
           "localCurrencyAtCheckout": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
           },
           "localCharge": {
             "anyOf": [
@@ -7595,7 +7669,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
           "handlers": {
             "type": "array",
@@ -7678,7 +7753,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -7721,7 +7796,7 @@
                 "properties": {
                   "open": {
                     "type": "boolean",
-                    "description": "Whether pay_order has opened a wallet payment on this order."
+                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                   },
                   "current": {
                     "anyOf": [
@@ -7743,7 +7818,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The wallet the payment is on now; null until it is open."
+                    "description": "Which of the two the payment is on now; null until it is open."
                   },
                   "wechatPay": {
                     "anyOf": [
@@ -7980,7 +8055,8 @@
           {
             "type": "string"
           }
-        ]
+        ],
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -8225,7 +8301,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                         },
                         "allInclusive": {
                           "anyOf": [
@@ -8247,7 +8324,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                         },
                         "label": {
                           "anyOf": [
@@ -8299,7 +8377,8 @@
                         "guestsCoveredPerRoom",
                         "label"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                     },
                     "cancellation": {
                       "type": "object",
@@ -8322,7 +8401,8 @@
                         },
                         "asOf": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "When these terms were read: status and penalties are as of this time."
                         },
                         "freeCancellationEndsAt": {
                           "anyOf": [
@@ -8395,7 +8475,8 @@
                         "penalties",
                         "timeZone"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -8535,7 +8616,8 @@
                         "disclosure",
                         "items"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -8605,7 +8687,8 @@
               "amount",
               "currency"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
           }
         },
         "required": [
@@ -8657,13 +8740,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
           },
           "chargeCurrency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
           },
           "localCurrencyAtCheckout": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
           },
           "localCharge": {
             "anyOf": [
@@ -8688,7 +8774,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
           "handlers": {
             "type": "array",
@@ -8771,7 +8858,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -8814,7 +8901,7 @@
                 "properties": {
                   "open": {
                     "type": "boolean",
-                    "description": "Whether pay_order has opened a wallet payment on this order."
+                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                   },
                   "current": {
                     "anyOf": [
@@ -8836,7 +8923,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The wallet the payment is on now; null until it is open."
+                    "description": "Which of the two the payment is on now; null until it is open."
                   },
                   "wechatPay": {
                     "anyOf": [
@@ -9082,7 +9169,8 @@
                 {
                   "type": "string"
                 }
-              ]
+              ],
+              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -9327,7 +9415,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                               },
                               "allInclusive": {
                                 "anyOf": [
@@ -9349,7 +9438,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                               },
                               "label": {
                                 "anyOf": [
@@ -9401,7 +9491,8 @@
                               "guestsCoveredPerRoom",
                               "label"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                           },
                           "cancellation": {
                             "type": "object",
@@ -9424,7 +9515,8 @@
                               },
                               "asOf": {
                                 "type": "string",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                "description": "When these terms were read: status and penalties are as of this time."
                               },
                               "freeCancellationEndsAt": {
                                 "anyOf": [
@@ -9497,7 +9589,8 @@
                               "penalties",
                               "timeZone"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                           },
                           "payAtProperty": {
                             "type": "object",
@@ -9637,7 +9730,8 @@
                               "disclosure",
                               "items"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                           },
                           "confirmationNumber": {
                             "anyOf": [
@@ -9707,7 +9801,8 @@
                     "amount",
                     "currency"
                   ],
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
                 }
               },
               "required": [
@@ -9759,13 +9854,16 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
                 },
                 "chargeCurrency": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
                 },
                 "localCurrencyAtCheckout": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
                 },
                 "localCharge": {
                   "anyOf": [
@@ -9790,7 +9888,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
                 },
                 "handlers": {
                   "type": "array",
@@ -9873,7 +9972,7 @@
                     ],
                     "additionalProperties": {}
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -9916,7 +10015,7 @@
                       "properties": {
                         "open": {
                           "type": "boolean",
-                          "description": "Whether pay_order has opened a wallet payment on this order."
+                          "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                         },
                         "current": {
                           "anyOf": [
@@ -9938,7 +10037,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "The wallet the payment is on now; null until it is open."
+                          "description": "Which of the two the payment is on now; null until it is open."
                         },
                         "wechatPay": {
                           "anyOf": [
@@ -10198,7 +10297,8 @@
           {
             "type": "string"
           }
-        ]
+        ],
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -10443,7 +10543,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                         },
                         "allInclusive": {
                           "anyOf": [
@@ -10465,7 +10566,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                         },
                         "label": {
                           "anyOf": [
@@ -10517,7 +10619,8 @@
                         "guestsCoveredPerRoom",
                         "label"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                     },
                     "cancellation": {
                       "type": "object",
@@ -10540,7 +10643,8 @@
                         },
                         "asOf": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "When these terms were read: status and penalties are as of this time."
                         },
                         "freeCancellationEndsAt": {
                           "anyOf": [
@@ -10613,7 +10717,8 @@
                         "penalties",
                         "timeZone"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -10753,7 +10858,8 @@
                         "disclosure",
                         "items"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -10823,7 +10929,8 @@
               "amount",
               "currency"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
           }
         },
         "required": [
@@ -10875,13 +10982,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
           },
           "chargeCurrency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
           },
           "localCurrencyAtCheckout": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
           },
           "localCharge": {
             "anyOf": [
@@ -10906,7 +11016,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
           "handlers": {
             "type": "array",
@@ -10989,7 +11100,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -11032,7 +11143,7 @@
                 "properties": {
                   "open": {
                     "type": "boolean",
-                    "description": "Whether pay_order has opened a wallet payment on this order."
+                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                   },
                   "current": {
                     "anyOf": [
@@ -11054,7 +11165,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The wallet the payment is on now; null until it is open."
+                    "description": "Which of the two the payment is on now; null until it is open."
                   },
                   "wechatPay": {
                     "anyOf": [
@@ -11326,7 +11437,8 @@
           {
             "type": "string"
           }
-        ]
+        ],
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -11571,7 +11683,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                         },
                         "allInclusive": {
                           "anyOf": [
@@ -11593,7 +11706,8 @@
                             {
                               "type": "null"
                             }
-                          ]
+                          ],
+                          "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                         },
                         "label": {
                           "anyOf": [
@@ -11645,7 +11759,8 @@
                         "guestsCoveredPerRoom",
                         "label"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                     },
                     "cancellation": {
                       "type": "object",
@@ -11668,7 +11783,8 @@
                         },
                         "asOf": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "When these terms were read: status and penalties are as of this time."
                         },
                         "freeCancellationEndsAt": {
                           "anyOf": [
@@ -11741,7 +11857,8 @@
                         "penalties",
                         "timeZone"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -11881,7 +11998,8 @@
                         "disclosure",
                         "items"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -11951,7 +12069,8 @@
               "amount",
               "currency"
             ],
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
           }
         },
         "required": [
@@ -12003,13 +12122,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
           },
           "chargeCurrency": {
-            "type": "string"
+            "type": "string",
+            "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
           },
           "localCurrencyAtCheckout": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
           },
           "localCharge": {
             "anyOf": [
@@ -12034,7 +12156,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
           "handlers": {
             "type": "array",
@@ -12117,7 +12240,7 @@
               ],
               "additionalProperties": {}
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
           },
           "credentialLimits": {
             "anyOf": [
@@ -12160,7 +12283,7 @@
                 "properties": {
                   "open": {
                     "type": "boolean",
-                    "description": "Whether pay_order has opened a wallet payment on this order."
+                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                   },
                   "current": {
                     "anyOf": [
@@ -12182,7 +12305,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The wallet the payment is on now; null until it is open."
+                    "description": "Which of the two the payment is on now; null until it is open."
                   },
                   "wechatPay": {
                     "anyOf": [
@@ -12424,7 +12547,8 @@
                 {
                   "type": "string"
                 }
-              ]
+              ],
+              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -12669,7 +12793,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
                               },
                               "allInclusive": {
                                 "anyOf": [
@@ -12691,7 +12816,8 @@
                                   {
                                     "type": "null"
                                   }
-                                ]
+                                ],
+                                "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
                               },
                               "label": {
                                 "anyOf": [
@@ -12743,7 +12869,8 @@
                               "guestsCoveredPerRoom",
                               "label"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                           },
                           "cancellation": {
                             "type": "object",
@@ -12766,7 +12893,8 @@
                               },
                               "asOf": {
                                 "type": "string",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                "description": "When these terms were read: status and penalties are as of this time."
                               },
                               "freeCancellationEndsAt": {
                                 "anyOf": [
@@ -12839,7 +12967,8 @@
                               "penalties",
                               "timeZone"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
                           },
                           "payAtProperty": {
                             "type": "object",
@@ -12979,7 +13108,8 @@
                               "disclosure",
                               "items"
                             ],
-                            "additionalProperties": {}
+                            "additionalProperties": {},
+                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                           },
                           "confirmationNumber": {
                             "anyOf": [
@@ -13049,7 +13179,8 @@
                     "amount",
                     "currency"
                   ],
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "description": "The whole stay for all rooms, in payment.chargeCurrency: what paying charges, or once paid what was charged. Fees payable at the property are not in it."
                 }
               },
               "required": [
@@ -13101,13 +13232,16 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "When the time to pay ends: an order unpaid by then expires, with nothing charged. null unless status is awaiting_payment."
                 },
                 "chargeCurrency": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The currency the order is charged in: USD for an order made through the API; an order made on the Fortrip website may be in another."
                 },
                 "localCurrencyAtCheckout": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay."
                 },
                 "localCharge": {
                   "anyOf": [
@@ -13132,7 +13266,8 @@
                     {
                       "type": "null"
                     }
-                  ]
+                  ],
+                  "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
                 },
                 "handlers": {
                   "type": "array",
@@ -13215,7 +13350,7 @@
                     ],
                     "additionalProperties": {}
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, or token payment isn't offered for this order."
+                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
                 },
                 "credentialLimits": {
                   "anyOf": [
@@ -13258,7 +13393,7 @@
                       "properties": {
                         "open": {
                           "type": "boolean",
-                          "description": "Whether pay_order has opened a wallet payment on this order."
+                          "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
                         },
                         "current": {
                           "anyOf": [
@@ -13280,7 +13415,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "The wallet the payment is on now; null until it is open."
+                          "description": "Which of the two the payment is on now; null until it is open."
                         },
                         "wechatPay": {
                           "anyOf": [
@@ -14223,7 +14358,8 @@
           "matched": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "Hotels that match the destination, the text and every filter but the price filter."
           },
           "priced": {
             "anyOf": [
@@ -14235,7 +14371,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.scope); null without prices."
           },
           "withPrice": {
             "anyOf": [
@@ -14247,7 +14384,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Of those priced, how many have an indicative price; null when prices weren't asked for or are unavailable."
           },
           "poolRadiusMeters": {
             "anyOf": [
@@ -14257,7 +14395,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When a price sort or price filter priced only the nearest 3,000: how far the farthest of them is from the center, in meters; otherwise null."
           },
           "excludedNoPrice": {
             "anyOf": [
@@ -14269,7 +14408,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "With a price filter: priced hotels left out for having no indicative price; otherwise null."
           },
           "excludedNoFacilityData": {
             "anyOf": [
@@ -14281,7 +14421,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "With an amenity filter: hotels left out for listing no facilities at all, though they may have the amenity; otherwise null."
           },
           "withinMaxRadius": {
             "anyOf": [
@@ -14293,7 +14434,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "For a radius under 80,000 m: how many would match within 80,000 m of the center; otherwise null."
           },
           "textAnywhere": {
             "anyOf": [
@@ -14305,7 +14447,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "With text and a place: the hotels that match the text anywhere in the place's country; otherwise null."
           },
           "localities": {
             "anyOf": [
@@ -14472,7 +14615,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "For an area: its top localities, the towns its matching hotels belong to; otherwise null."
           },
           "nameAsText": {
             "anyOf": [
@@ -14484,7 +14628,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "When a place_name search matched few hotels: how many in its country match the name as text; otherwise null."
           }
         },
         "required": [
@@ -14499,7 +14644,8 @@
           "localities",
           "nameAsText"
         ],
-        "additionalProperties": {}
+        "additionalProperties": {},
+        "description": "What the search covered: counts of hotels, each null when it doesn't apply."
       },
       "data": {
         "type": "array",

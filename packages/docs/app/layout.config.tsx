@@ -11,7 +11,7 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       { text: "Fortrip for agents", url: "https://fortrip.ai/agents", external: true },
-      { type: "button", text: "Get started", url: "/quickstart" },
+      { type: "button", text: "Quickstart", url: "/quickstart" },
     ],
   };
 }

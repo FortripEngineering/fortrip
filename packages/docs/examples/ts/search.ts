@@ -1,5 +1,5 @@
 // Search hotels in a city.
-// Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
+// Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 import process from "node:process";
 
 const token = process.env.FORTRIP_TOKEN;

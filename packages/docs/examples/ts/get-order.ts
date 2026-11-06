@@ -1,5 +1,5 @@
-// Read an order, and print the link to pay it (payment_link) when it awaits payment.
-// Needs FORTRIP_TOKEN, a Fortrip access token (see device-login).
+// Read an order, and print its payment link when it awaits payment.
+// Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
 import process from "node:process";
 
 const token = process.env.FORTRIP_TOKEN;

@@ -32,14 +32,19 @@ const ROUTES = Object.fromEntries(
   Object.entries({ ...HTTP_ROUTES, ...ACCOUNT_ROUTES }).map(([name, route]) => [name, `${route.method} ${route.path}`]),
 ) as Record<keyof typeof HTTP_ROUTES | keyof typeof ACCOUNT_ROUTES, string>;
 
+/** Where the MCP server's OAuth authorization server publishes its
+ *  metadata (RFC 8414): its endpoints, grants and client registration. */
+const OAUTH_METADATA_URL = new URL("/.well-known/oauth-authorization-server", PUBLIC_ORIGINS.mcp).href;
+
 /** The contract values the docs may state, by the name the contract exports;
- *  a few derived from them (`ROUTES`, `API_BASE_URL`, `GUIDE_SENTENCES`, the
- *  contract guide's own words); the CLI's Node.js floor from its published
+ *  a few derived from them (`ROUTES`, `API_BASE_URL`, `OAUTH_METADATA_URL`,
+ *  `GUIDE_SENTENCES`, the contract guide's own words); the CLI's Node.js floor from its published
  *  package metadata; and the CLI's exit codes from its source. */
 const FACTS = {
   CLI_NODE_MAJOR: Number(nodeRange[1]),
   CLI_EXIT,
   API_BASE_URL,
+  OAUTH_METADATA_URL,
   ROUTES,
   GUIDE_SENTENCES: { adaptivePricing: ADAPTIVE_PRICING },
   ORDER_NEXT_STEP,

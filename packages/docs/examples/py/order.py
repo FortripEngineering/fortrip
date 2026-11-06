@@ -1,5 +1,7 @@
 # Create an order from an offer. Nothing is charged until it is paid.
-# Needs FORTRIP_TOKEN, a Fortrip access token (see device-login), and httpx.
+# It can take a couple of minutes. A call that timed out is safe to send again:
+# https://docs.fortrip.ai/api#retries
+# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above), and httpx.
 import json
 import os
 
@@ -41,7 +43,7 @@ response = httpx.post(
     "https://api.fortrip.ai/v1/orders",
     headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     json=body,
-    timeout=60,
+    timeout=180,
 )
 if response.is_error:
     raise SystemExit(f"HTTP {response.status_code}: {response.text}")

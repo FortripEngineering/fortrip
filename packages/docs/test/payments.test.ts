@@ -21,10 +21,20 @@ describe("order and payment guide", () => {
     }
   });
 
-  it("states the WeChat Pay code's lifetime and the token cap from the contract", () => {
+  it("states the WeChat Pay code's lifetime from the contract, and leaves the token's conditions to payment.handlers", () => {
     const text = pageText("/payments");
     assert.ok(text.includes(`${fact("LIMITS.wechatCodeMinutes")} minutes`));
-    assert.ok(text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
+    assert.ok(!text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
+    assert.match(text, /payment\.handlers isn't empty; that field says why it can be empty/);
+  });
+
+  it("shows the offer_changed details and says to order the new offer, and what happens to the data sent", () => {
+    const text = pageText("/payments");
+    assert.match(text, /"worse": (true|false)/);
+    assert.match(text, /order details\.offer\.offerId; there is no need to fetch offers again/);
+    assert.match(text, /go to the hotel to make the booking/);
+    assert.match(text, /emails the booking confirmation to the contact/);
+    assert.match(pageHtml("/payments"), /href="https:\/\/fortrip\.ai\/privacy"/);
   });
 
   it("says to pay one way only, and that WeChat can't scan a code on its own screen", () => {

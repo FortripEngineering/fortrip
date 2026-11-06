@@ -14,19 +14,20 @@ import { pageHtml, pageText } from "./built-page.ts";
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
 describe("stale statements stay fixed", () => {
-  it("/api: three ways to pay, the wallet input, and no additive-only promise", () => {
+  it("/api: the pay inputs, and no additive-only promise; /payments: the Alipay or WeChat Pay input", () => {
     const text = pageText("/api");
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
-    assert.ok(text.includes("method"));
-    assert.ok(text.includes("payment.wallets"));
-    assert.ok(text.includes('"alipay_wechat_pay"'));
     // §8.1 item 2: exactly one of the three inputs.
-    assert.match(text, /exactly one of sharedPaymentToken, payment and method/);
-    // §8.1 item 3, the owner's ruling.
-    assert.match(text, /[Uu]ntil general availability/);
+    assert.match(text, /exactly one of sharedPaymentToken, payment or method, for the way it pays/);
+    // §8.1 item 3, the owner's ruling, which the changelog states in full.
     assert.match(text, /major version/);
     assert.match(text, /changelog/);
+    assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
+    const payments = pageText("/payments");
+    assert.ok(payments.includes("method"));
+    assert.ok(payments.includes("payment.wallets"));
+    assert.ok(payments.includes('"alipay_wechat_pay"'));
   });
 
   it("/mcp: content[0] is not always text", () => {
@@ -108,7 +109,7 @@ describe("stale statements stay fixed", () => {
       assert.ok(!/\bsix characters\b|\b6 characters\b/i.test(source), `${file} states a reference length`);
     }
     assert.match(pageText("/api"), /The access token is short-lived: its lifetime, in seconds, is the token response's expires_in\./);
-    assert.match(pageText("/cli"), /An access token is short-lived, so it suits one sandbox session or one CI run; for longer, sign in\./);
+    assert.match(pageText("/cli"), /An access token is short-lived, so it suits a remote agent environment or a CI run; for longer, sign in\./);
     assert.match(pageText("/payments"), /The order's reference, which starts with FT-, is the number the user quotes to support\./);
   });
 

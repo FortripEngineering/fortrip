@@ -1,0 +1,204 @@
+{
+  "stay": {
+    "checkIn": "2027-03-10",
+    "checkOut": "2027-03-12",
+    "rooms": [
+      {
+        "adults": 2,
+        "childrenAges": []
+      }
+    ]
+  },
+  "hotels": [
+    {
+      "hotel": {
+        "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
+        "name": "Kamo Lantern Hotel",
+        "names": {
+          "en": "Kamo Lantern Hotel",
+          "zh": "鸭川灯笼酒店"
+        }
+      },
+      "offers": [
+        {
+          "offerId": "off_Bz6yN1cD5fGh8JkM2pQs",
+          "type": "hotel",
+          "expiresAt": "2027-02-20T08:30:00Z",
+          "hotel": {
+            "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
+            "room": {
+              "name": {
+                "text": "Standard Double Room",
+                "locale": "en"
+              },
+              "beds": {
+                "text": "1 double bed",
+                "locale": "en"
+              },
+              "areaSqm": {
+                "min": 18,
+                "max": 18
+              },
+              "maxOccupancy": 2,
+              "window": "yes"
+            },
+            "roomCount": 1,
+            "meals": {
+              "known": true,
+              "included": [],
+              "unspecifiedMainMeals": 0,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": null,
+              "label": {
+                "text": "Room only",
+                "locale": "en"
+              }
+            }
+          },
+          "price": {
+            "total": {
+              "amount": "132.40",
+              "currency": "USD"
+            },
+            "perNightAllRooms": {
+              "amount": "66.20",
+              "currency": "USD"
+            },
+            "approx": null,
+            "payAtProperty": {
+              "disclosure": "complete",
+              "items": [
+                {
+                  "label": {
+                    "text": "Accommodation tax",
+                    "locale": "en"
+                  },
+                  "amount": {
+                    "amount": "200",
+                    "currency": "JPY"
+                  },
+                  "mandatory": true,
+                  "basis": "per_person_per_night",
+                  "collectedAt": "property"
+                }
+              ]
+            }
+          },
+          "cancellation": {
+            "status": "free",
+            "asOf": "2027-02-20T08:00:00Z",
+            "freeCancellationEndsAt": "2027-03-08T15:00:00Z",
+            "penalties": [
+              {
+                "startsAt": "2027-03-08T15:00:00Z",
+                "amount": {
+                  "amount": "66.20",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Tokyo"
+          },
+          "confirmation": {
+            "mode": "instant",
+            "withinMinutes": null
+          }
+        },
+        {
+          "offerId": "off_Tg4sJ7hX0nQe9Wc2Ku6A",
+          "type": "hotel",
+          "expiresAt": "2027-02-20T08:30:00Z",
+          "hotel": {
+            "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
+            "room": {
+              "name": {
+                "text": "Standard Double Room",
+                "locale": "en"
+              },
+              "beds": {
+                "text": "1 double bed",
+                "locale": "en"
+              },
+              "areaSqm": {
+                "min": 18,
+                "max": 18
+              },
+              "maxOccupancy": 2,
+              "window": "yes"
+            },
+            "roomCount": 1,
+            "meals": {
+              "known": true,
+              "included": [
+                "breakfast"
+              ],
+              "unspecifiedMainMeals": 0,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": 2,
+              "label": {
+                "text": "Breakfast included",
+                "locale": "en"
+              }
+            }
+          },
+          "price": {
+            "total": {
+              "amount": "149.80",
+              "currency": "USD"
+            },
+            "perNightAllRooms": {
+              "amount": "74.90",
+              "currency": "USD"
+            },
+            "approx": null,
+            "payAtProperty": {
+              "disclosure": "complete",
+              "items": [
+                {
+                  "label": {
+                    "text": "Accommodation tax",
+                    "locale": "en"
+                  },
+                  "amount": {
+                    "amount": "200",
+                    "currency": "JPY"
+                  },
+                  "mandatory": true,
+                  "basis": "per_person_per_night",
+                  "collectedAt": "property"
+                }
+              ]
+            }
+          },
+          "cancellation": {
+            "status": "free",
+            "asOf": "2027-02-20T08:00:00Z",
+            "freeCancellationEndsAt": "2027-03-08T15:00:00Z",
+            "penalties": [
+              {
+                "startsAt": "2027-03-08T15:00:00Z",
+                "amount": {
+                  "amount": "74.90",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Tokyo"
+          },
+          "confirmation": {
+            "mode": "instant",
+            "withinMinutes": null
+          }
+        }
+      ],
+      "omitted": {
+        "byNationality": 0,
+        "byFilters": 3,
+        "dominated": 2,
+        "unreadable": 0,
+        "byLimit": 0
+      }
+    }
+  ],
+  "unavailable": []
+}

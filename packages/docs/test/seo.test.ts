@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import {
+  destination,
   DISPLAY_CURRENCIES,
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
@@ -21,9 +22,10 @@ import { ENABLED_REGIONS } from "@fortrip/agent-contract/regions";
 
 import { fact } from "../components/fact.tsx";
 import { OPERATIONS } from "../lib/openapi/build.ts";
+import { MODEL_READS } from "../lib/markdown/pages.ts";
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
-import { contentSentence } from "../lib/prose/mcp-content.ts";
+import { MCP_CONTENT } from "../lib/prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../lib/prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../lib/prose/pay-ways.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
@@ -32,7 +34,7 @@ import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDoc, responseDocFor } from "../lib/reference/response-docs.ts";
 import { inputRows } from "../lib/reference/schema-rows.ts";
 import { pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
 
@@ -53,9 +55,9 @@ const unescape = (text: string) =>
     .replaceAll("&gt;", ">")
     .replaceAll("&amp;", "&");
 
-/** "`a`, `b` and `c`", as the pages write a list of names. */
-const codeList = (names: string[]) =>
-  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? " and " : ", "}${name}`);
+/** "`a`, `b` and `c`" (or `last`), as the pages write a list of names. */
+const codeList = (names: string[], last = "and") =>
+  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? ` ${last} ` : ", "}${name}`);
 
 /** `assert.ok(text.includes(part))` for each part, naming the misses. */
 function includesAll(text: string, parts: readonly string[], where: string) {
@@ -123,8 +125,29 @@ describe("Markdown pages", () => {
     );
     assert.deepEqual(new Set(listed), new Set(routes));
     assert.equal(listed[0], "/");
-    assert.equal(full, listed.map(pageMarkdown).join("\n\n"));
+    // /regions keeps its prose and links its Markdown for the list.
+    const regionsList = `The list: [Enabled regions](${DOCS_ORIGIN}/regions.md).`;
+    const pages = listed.map((route) => {
+      const markdown = pageMarkdown(route);
+      if (route !== "/regions") return markdown;
+      const start = markdown.indexOf("regions in ");
+      const at = markdown.lastIndexOf("\n\n", start) + 2;
+      return `${markdown.slice(0, at)}${regionsList}\n`;
+    });
+    assert.equal(full, pages.join("\n\n"));
     assert.doesNotMatch(withoutCode(full), /<[A-Z]/);
+  });
+
+  it("leaves the region list out of llms-full.txt, and lists /regions in llms.txt by its URL only", () => {
+    const full = routeBody("/llms-full.txt");
+    const regions = pageMarkdown("/regions");
+    for (const region of ENABLED_REGIONS.slice(0, 20)) {
+      assert.ok(regions.includes(`\`${region.placeId}\``), region.placeId);
+      assert.ok(!full.includes(region.placeId), region.placeId);
+    }
+    assert.ok(full.includes("# Enabled regions"));
+    const line = routeBody("/llms.txt").split("\n").find((l) => l.includes(`(${DOCS_ORIGIN}/regions.md)`));
+    assert.match(line ?? "", /^- \[Enabled regions\]\(https:\/\/[^)]+\/regions\.md\)$/);
   });
 
   it("has no heading anchors and no relative links outside code", () => {
@@ -173,9 +196,10 @@ describe("Markdown pages", () => {
   it("/api.md: every endpoint, the pay inputs and the pre-release policy", () => {
     const markdown = pageMarkdown("/api");
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
-    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS))}, as`), "pay inputs");
+    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS), "or")}, for the way it pays.`), "pay inputs");
     assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
-    assert.ok(markdown.includes(PRE_RELEASE_POLICY.split(". ")[0]!));
+    assert.ok(markdown.includes("Pre-release: breaking changes ship as a new major version"));
+    assert.ok(pageMarkdown("/changelog").includes(PRE_RELEASE_POLICY.split(". ")[0]!));
   });
 
   it("/install.md: every client's setup and the remote server", () => {
@@ -190,7 +214,17 @@ describe("Markdown pages", () => {
   it("/mcp.md, /cli.md: the tool and command lists, content blocks, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
     includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
-    includesAll(mcp, MCP_TOOLS.map((tool) => contentSentence(tool.name)), "content table");
+    // The tools whose content is more than the compact text, by the block they add.
+    for (const [block, phrase] of [
+      ["presentation_hint", "the presentation hint"],
+      ["wechat_code", "WeChat Pay code first"],
+      ["guide", "planning guide as Markdown"],
+    ] as const) {
+      const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
+      assert.ok(tools.length > 0, block);
+      const line = mcp.split("\n").find((l) => l.includes(phrase)) ?? "";
+      includesAll(line, tools.map((tool) => `\`${tool}\``), block);
+    }
     const nextStep = TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep).map((tool) => tool.name);
     assert.ok(nextStep.length > 0);
     assert.ok(mcp.includes(`An answer of ${codeList(nextStep)} that holds`), "nextStep tools");
@@ -207,24 +241,31 @@ describe("Markdown pages", () => {
     includesAll(markdown, limitRows(LIMITS).map(([name]) => name), "limits");
   });
 
-  it("/regions.md, /search.md: regions, destination fields and amenities", () => {
+  it("/regions.md, /search.md: regions, destination kinds and amenities", () => {
     includesAll(pageMarkdown("/regions"), ENABLED_REGIONS.map((r) => `\`${r.placeId}\``), "regions");
     const search = pageMarkdown("/search");
-    const destination = inputRows(TOOL_INPUTS.search_hotels).filter((row) => /^destination\b/.test(row.path));
-    assert.ok(destination.length > 0);
-    includesAll(search, destination.map((row) => `\`${row.path}\``), "destination fields");
+    // Each kind with what it is for; every field is on the reference page.
+    includesAll(search, destination.options.map((o) => `| \`${o.shape.kind.value}\` | ${o.shape.kind.description}`), "destination kinds");
+    assert.ok(search.includes(`(${DOCS_ORIGIN}/api/reference/search_hotels.md#request-body)`), "destination fields");
     includesAll(search, FILTERABLE_AMENITIES.map((code) => `\`${code}\``), "amenities");
   });
 
   it("/schemas.md: every response object and its fields", () => {
     const markdown = pageMarkdown("/schemas");
     for (const doc of RESPONSE_DOCS) {
-      includesAll(markdown, [doc.title, ...doc.rows.map((row) => `\`${row.path}\``)], doc.id);
+      if (doc.sameAs) {
+        // One line pointing at the object it is, not its fields again.
+        includesAll(markdown, [doc.title, `The answer is the [${responseDoc(doc.sameAs).title}](${DOCS_ORIGIN}/schemas.md#${doc.sameAs}).`], doc.id);
+      } else if (doc.listOf) {
+        includesAll(markdown, [doc.title, `\`data\` ([${responseDoc(doc.listOf).title}](${DOCS_ORIGIN}/schemas.md#${doc.listOf})[])`, "`nextCursor`"], doc.id);
+      } else {
+        includesAll(markdown, [doc.title, ...doc.rows.map((row) => `\`${row.path}\``)], doc.id);
+      }
     }
   });
 
-  it("/examples.md: each example in fenced code, in every language", () => {
-    const markdown = pageMarkdown("/examples");
+  it("/api-quickstart.md: each example in fenced code, in every language", () => {
+    const markdown = pageMarkdown("/api-quickstart");
     for (const [dir, ext] of [
       ["curl", "sh"],
       ["ts", "ts"],
@@ -236,11 +277,11 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("/index.md: the ways to pay, the display currencies and the ways to connect", () => {
+  it("/index.md: the ways to pay and the ways to connect; /api.md: the display currencies", () => {
     const markdown = pageMarkdown("/");
-    includesAll(markdown, PAY_WAYS.map((way) => `**${PAY_WAY_DOCS[way].title}**`), "pay ways");
-    includesAll(markdown, DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
+    includesAll(markdown, PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short), "pay ways");
     assert.ok(markdown.includes(`](${DOCS_ORIGIN}/install.md#remote-mcp)`));
+    includesAll(pageMarkdown("/api"), DISPLAY_CURRENCIES.filter((c) => c !== "USD"), "display currencies");
   });
 
   it("a tool page has its input fields; a command page its usage", () => {
@@ -254,18 +295,22 @@ describe("Markdown pages", () => {
     }
   });
 
-  it("an API reference page has its method and path, its short description once, its tool's page for the rules, and says where each field goes", () => {
+  it("an API reference page has its method and path, its short description, the tool description under its label, and says where each field goes", () => {
     for (const op of OPERATIONS) {
       const markdown = pageMarkdown(`/api/reference/${op.id}`);
       assert.ok(markdown.includes(`\`${op.route.method} ${op.route.path}\``), op.id);
       assert.equal(markdown.split("\n")[2], `> ${op.summary}`, op.id);
-      assert.equal(markdown.split(op.summary).length, 2, `${op.id}: description repeated`);
       const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
       if (tool) {
-        assert.ok(markdown.includes(`(${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), `${op.id}: no link to its tool`);
-        // The contract's full description is on the tool's page, not here.
-        assert.ok(!markdown.includes(tool.summary), `${op.id}: full description`);
+        // The description the model reads, verbatim, quoted under its label; it opens with the summary.
+        assert.ok(markdown.includes(`**${MODEL_READS}**`), `${op.id}: no label`);
+        assert.ok(markdown.replace(/^> ?/gm, "").includes(tool.summary), `${op.id}: no full description`);
+        // Outside the quoted description, the summary is in the header only.
+        const unquoted = markdown.split("\n").filter((line, i) => i === 2 || !line.startsWith(">")).join("\n");
+        assert.equal(unquoted.split(op.summary).length, 2, `${op.id}: description repeated`);
       } else {
+        assert.equal(markdown.split(op.summary).length, 2, `${op.id}: description repeated`);
+        assert.ok(!markdown.includes(MODEL_READS), op.id);
         assert.doesNotMatch(markdown, /\/mcp\//, op.id);
       }
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);

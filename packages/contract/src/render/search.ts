@@ -1,3 +1,4 @@
+import { LIMITS } from "../limits.ts";
 import type { HotelSummary, SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
@@ -21,7 +22,7 @@ const CENTER_BASES: Record<string, string> = {
   seat: "the seat",
   capital: "the capital",
   busiest_settlement: "the settlement with the most hotels",
-  hub: "the locality's hub",
+  hub: "the locality",
   point: "its location",
 };
 
@@ -115,7 +116,7 @@ function countsLine(r: SearchResult): string {
   if (c.excludedNoFacilityData !== null) {
     parts.push(`${num(c.excludedNoFacilityData)} left out for listing no facilities`);
   }
-  if (c.withinMaxRadius !== null) parts.push(`${num(c.withinMaxRadius)} within 80 km`);
+  if (c.withinMaxRadius !== null) parts.push(`${num(c.withinMaxRadius)} within ${LIMITS.radiusMetersMax / 1000} km`);
   if (c.textAnywhere !== null) {
     parts.push(`${num(c.textAnywhere)} match the text anywhere in ${country}`);
   }

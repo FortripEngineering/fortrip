@@ -115,6 +115,8 @@ describe("every request field has a description", () => {
     it(name, () => {
       const json = z.toJSONSchema(schema, { io: "input" }) as Json;
       assert.deepEqual(undescribed(json), []);
+      // A locality is a locality: "hub" is only the name of a field.
+      assert.doesNotMatch(JSON.stringify(json), /"description":"[^"]*\bhubs?\b/i);
     });
   }
 
@@ -877,11 +879,11 @@ describe("cancelOrderInput", () => {
     );
   });
 
-  it("describes maximumPenalty as the order's cancel.penalty.amount", () => {
+  it("describes maximumPenalty as a JSON number equal to the order's cancel.penalty.amount", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      'The penalty the user agreed to, in the order\'s currency. Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
+      'The penalty the user agreed to: a JSON number equal to the order\'s cancel.penalty.amount, e.g. 120.5 for "120.50".',
     );
   });
 });

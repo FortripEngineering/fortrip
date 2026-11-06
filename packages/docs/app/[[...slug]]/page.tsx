@@ -2,12 +2,12 @@ import { createRelativeLink } from "fumadocs-ui/mdx";
 import { flattenTree } from "fumadocs-core/page-tree";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
-import { TOOL_RULES } from "@/lib/markdown/pages";
+import { ModelReads } from "@/components/reference";
+import { SiteFooter } from "@/components/site-footer";
 import { OPERATIONS } from "@/lib/openapi/build";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools";
 import { SITE } from "@/lib/site";
@@ -29,23 +29,15 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   if (!page) notFound();
 
   if (page.type === "openapi") {
-    // The short summary heads the page, and the body links the MCP tool's
-    // page for the contract's full description, which openapi.json keeps.
+    // The short summary heads the page, and the body quotes the tool's
+    // description, the endpoint's full description, under its label.
     const tool = MCP_TOOLS.find((t) => t.name === OPERATIONS.find((op) => op.id === page.slugs.at(-1))?.endpoint.tool);
     return (
-      <DocsPage toc={page.data.toc} full footer={{ items: neighbours(page.url) }}>
+      <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
         <DocsBody>
-          {tool && (
-            <p>
-              {TOOL_RULES[0]}
-              <Link href={`/mcp/${tool.slug}`}>
-                <code>{tool.name}</code>
-              </Link>
-              {TOOL_RULES[1]}
-            </p>
-          )}
+          {tool && <ModelReads description={tool.summary} />}
           <OpenAPIPage {...page.data.getOpenAPIPageProps()} showDescription={false} />
         </DocsBody>
       </DocsPage>
@@ -55,7 +47,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   const MDX = page.data.body;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full} footer={{ items: neighbours(page.url) }}>
+    <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>

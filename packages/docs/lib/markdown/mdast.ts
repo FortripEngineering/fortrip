@@ -2,6 +2,7 @@
 // The same tree is the page (MDX renders it), the search records and the
 // Markdown text (`stringify.ts`, `structure.ts`).
 import type {
+  Blockquote,
   Code,
   Heading,
   InlineCode,
@@ -39,6 +40,7 @@ export const link = (url: string, ...children: PhrasingContent[]): Link => ({ ty
 export const lineBreak = (): PhrasingContent => ({ type: "break" });
 export const paragraph = (children: PhrasingContent[]): Paragraph => ({ type: "paragraph", children });
 export const codeBlock = (lang: string | null, value: string): Code => ({ type: "code", lang, value });
+export const blockquote = (children: Paragraph[]): Blockquote => ({ type: "blockquote", children });
 
 /** A heading; with an `id`, it is a link target and in the table of contents. */
 export function heading(depth: Heading["depth"], children: PhrasingContent[], id?: string): Heading {

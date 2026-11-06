@@ -7,11 +7,33 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 4.3.1
+
+Not released yet.
+
+The schemas keep their shape. The changes are to the text that agents and users read.
+
+### Changed
+
+- Response fields that were undescribed now say what they mean, in the MCP tools' output schemas and the OpenAPI document:
+  - offers: `confirmation`, `price.perNightAllRooms`, `cancellation.asOf`, the meals' `unspecifiedMainMeals` and `guestsCoveredPerRoom`, `payAtProperty`, every `omitted` count, and each `unavailable[].reason`;
+  - orders: `status`, `price.total`, the item's `cancellation` and `payAtProperty`, and `payment.expiresAt`, `chargeCurrency`, `localCurrencyAtCheckout` and `localCharge`;
+  - search: every `coverage` count.
+- `payment.handlers` also lists an open Alipay or WeChat Pay payment among the reasons it can be empty.
+- `maximumPenalty` is described as a JSON number equal to the order's `cancel.penalty.amount`, e.g. `120.5` for `"120.50"`.
+- Tool titles are the operation names the docs use: Planning guide, Hotel details, Live offers, Create order and Pay order. The other tools' titles are unchanged.
+- Descriptions and texts call a locality a locality, not a hub. The `hub` field keeps its name.
+- CLI:
+  - `orders cancel` shows `--max-penalty` as optional: without it, the command shows the penalty and refund and cancels nothing.
+  - `orders pay --token` says it is for agents that can request a token from the user's Link wallet, and `orders pay` calls that token a Link token.
+
 ## 4.3.0
 
 Released 2026-11-05.
 
-### New
+No change to the API, the MCP tools or the CLI.
+
+### Package
 
 - The contract exports more of the values these docs state, so a client can read them instead of copying them:
   - `HTTP_ROUTES` and `ACCOUNT_ROUTES`: each endpoint's method and path. `routePath()` builds a request path from an input.
@@ -21,7 +43,6 @@ Released 2026-11-05.
   - `LIMITS` gains `tokenPaymentMaxUsd`, `payMinMinutesLeft` (the time that must be left to pay for a token or wallet payment to be offered), `payCutoffMinutes` (the time left below which `pay_order` refuses), `tokensPerOrder`, `wechatCodeMinutes` and `ordersPerStay` (the orders one stay can have).
   - `SUPPLIER_OUTCOME_STATUS`: the HTTP status of `supplier_unavailable` for each `details.outcome`.
   - `SEARCH_RULES`, `ORDER_HTTP`, `ME_SCOPES`, `MCP_SERVER_URL`, `SKILL_INSTALL_COMMAND`, `REPOSITORY_URL` and `DOCS_ORIGIN`.
-- The API, the MCP tools and the CLI's commands are unchanged.
 
 ## 4.2.0
 
@@ -31,7 +52,7 @@ Released 2026-11-04.
 
 - Pay an order with Alipay or WeChat Pay. `pay_order` (`POST /v1/orders/{orderId}/pay`) takes `method: "alipay_wechat_pay"` with the order's `total`. The answer is the order, with a WeChat Pay code and an Alipay link in `payment.wallets`. The user pays once, by either. Both charge at once.
 - `order.payment.wallets` is always sent: `{ open, current, wechatPay, alipay }`, or `null` when the order can't be paid this way and no wallet payment is open. `wechatPay.qrData` and `wechatPay.qrImageUrl` are `null` when there is no live code. A WeChat Pay code lasts 120 minutes.
-- The text of `book_hotel`, `get_order` and `list_orders` results has a consent paragraph for an order that offers the wallets. The contract exports it as `WALLET_NEXT_STEP` and `walletNextStep`.
+- The text of `book_hotel`, `get_order` and `list_orders` results has a consent paragraph for an order that offers Alipay or WeChat Pay.
 - CLI: `fortrip orders pay <orderId> --wallet --total <total>` prints both links, and draws the WeChat Pay code in a wide enough terminal.
 
 ### Changed
@@ -42,6 +63,10 @@ Released 2026-11-04.
 ### Migration
 
 - Nothing is required. To keep getting 5 offers per hotel, send `limitPerHotel: 5`.
+
+### Package
+
+- The contract exports the Alipay or WeChat Pay consent paragraph as `WALLET_NEXT_STEP` and `walletNextStep`.
 
 ## 4.1.0
 
@@ -60,11 +85,15 @@ The schemas keep their shape. Most changes are to the text that agents and users
   - `checkOut` states the range: 1 to 15 nights, `stay_unsupported` (`max_nights`) beyond 15, `invalid_request` past 30. Validation is the same as in 4.0.0.
 - An order awaiting payment says it doesn't need cancelling: it expires unpaid.
 - API error messages no longer name MCP tools.
-- `renderToolResult` and `renderError` take an optional surface, `"mcp"` by default. With `"cli"`, the text names CLI commands and flags instead of tools. The CLI's output uses it.
+- CLI: the text of results and errors names CLI commands and flags instead of MCP tools.
 
 ### Migration
 
 - Nothing is required. A 4.0 or 4.1 CLI works with either server.
+
+### Package
+
+- `renderToolResult` and `renderError` take an optional surface, `"mcp"` by default. With `"cli"`, the text names CLI commands and flags instead of tools.
 
 ## 4.0.0
 
@@ -78,13 +107,12 @@ A major release. It removes what was kept for older clients, and makes required 
 - `payment.handlers` is always sent: `[]` when a token can't pay the order, with `payment.credentialLimits` `null`.
 - `order.cancel` is always sent.
 - A hotel's `photos` and a search hit's `photo` are always sent, `null` when there are none.
-- Each error code's `details` is required where the code defines it. `search_too_broad`'s `details.center` is required and may be `null`. `strictErrorEnvelope()` is removed.
+- Each error code's `details` is required where the code defines it. `search_too_broad`'s `details.center` is required and may be `null`.
 - No token payment over $500, Link's cap per spend request. Such an order has empty `payment.handlers`, and `pay_order` answers `payment_method_unavailable` before anything is charged. Exactly $500 can still be paid by token.
 - The API takes only an OAuth bearer token as the caller's identity. OAuth authorization-server metadata is served on `mcp.fortrip.ai` only.
 - CLI:
   - With `--json`, a 429 without Fortrip's error envelope is reported as `service_unavailable`, retryable, instead of `rate_limited`. The exit code is still 4.
   - With `--json`, a local `invalid_request` always carries `details.issues`, empty for an error in the command line itself.
-  - The 1.x and 2.x command names get no rename hints.
 
 ### New
 
@@ -94,8 +122,11 @@ A major release. It removes what was kept for older clients, and makes required 
 
 - Request the token with `config.business_profile` in place of `networkId`.
 - Treat an empty `payment.handlers` as "no token payment", instead of checking whether the field is present.
-- Replace `strictErrorEnvelope()` with `strictOutput(errorEnvelope)`.
 - Update the CLI to 4.0.0. A 3.x CLI can't read the orders this server sends.
+
+### Package
+
+- `strictErrorEnvelope()` is removed: use `strictOutput(errorEnvelope)`.
 
 ## 3.5.0
 
@@ -105,14 +136,15 @@ Released 2026-11-04.
 
 - `payment.handlers[]` gains UCP's handler fields, in UCP's snake case: `schema`, `available_instruments` and `config { environment, business_profile }`.
 - `pay_order` also takes the token in UCP's Complete Checkout form, `payment.instruments`. The selected instrument must be a `stripe_payments` card with a `stripe_payment_token` credential. A card number anywhere in the instruments is refused.
-- `sharedPaymentTokenOf(input)` returns the token from either form.
 - Agents are told to request the token with `config.business_profile`.
 
 ### Deprecated
 
 - `networkId`, equal to `config.business_profile`. It is removed in 4.0.0.
 
-The hosted API and MCP server moved from 3.4.0 straight to 4.0.0, so they serve these additions from 4.0.0.
+### Package
+
+- `sharedPaymentTokenOf(input)` returns the token from either form.
 
 ## 3.4.0
 
@@ -125,8 +157,12 @@ Released 2026-11-03.
   - Once `pay_order` succeeds, `payment.url` stops working. A payment that fails leaves the link open.
 - `payment.handlers` and `payment.credentialLimits` (`maxAmount` in cents, `currency`, `expiresAt`) appear on an order a token can pay: awaiting payment by link, in USD, with at least 15 minutes left to pay. A handler is `{ id, type, version, spec, networkId }`, and agents request the token with the handler's `networkId`.
 - New error codes: `payment_total_changed`, `order_not_payable`, `payment_in_progress`, `payment_credential_invalid`, `payment_declined`, `payment_action_required` and `payment_method_unavailable`. New rate-limit scope: `orders_pay`.
-- `PAY_NEXT_STEP`, the rule for paying by token. It is in `pay_order`'s description, and in the text of results that hold an order a token can pay. It never goes in `nextStep`.
+- The rule for paying by token is in `pay_order`'s description, and in the text of results that hold an order a token can pay. It never goes in `nextStep`.
 - CLI: `fortrip orders pay <orderId> --token <token> --total <total>`.
+
+### Package
+
+- `PAY_NEXT_STEP` is the rule for paying by token.
 
 ## 3.3.1
 
@@ -150,8 +186,12 @@ Released 2026-10-27.
 - Cancel an order under its terms: `cancel_order`, `POST /v1/orders/{orderId}/cancel`, with `maximumPenalty`. The answer is the order: `cancelling`, then `cancelled`. If the hotel refuses, the order is `confirmed` again with `cancel.reason` `refused`.
 - `order.cancel`: `{ available, reason, penalty, refund }`. `penalty` and `refund` are in the charge currency. `reason` is one of `CANCEL_REASONS`.
 - New error codes: `cancellation_changed`, when the penalty is now above `maximumPenalty`, and `order_not_cancellable`, with `details.reason`. New rate-limit scope: `orders_cancel`.
-- `CANCEL_NEXT_STEP`, the consent rule for cancelling. It is in `cancel_order`'s description, and ends the text of `get_order` and `list_orders` results that hold a cancellable order. It never goes in `nextStep`.
+- The consent rule for cancelling is in `cancel_order`'s description, and ends the text of `get_order` and `list_orders` results that hold a cancellable order. It never goes in `nextStep`.
 - CLI: `fortrip orders cancel <orderId> --max-penalty <amount>`. Without `--max-penalty` it cancels nothing: it prints the order's penalty and exits with code 2.
+
+### Package
+
+- `CANCEL_NEXT_STEP` is the consent rule for cancelling.
 
 ## 3.2.0
 
@@ -170,8 +210,12 @@ Released 2026-10-26.
 ### New
 
 - Hotel photos, on Fortrip's own URLs. A search hit's `photo` is the hotel's cover. A hotel's `photos` lists up to 8, cover first, and is `null` when there are none.
-- The MCP results of `search_hotels`, `get_hotel` and `get_hotel_offers` end with a hint on how to present hotels, exported as `PRESENTATION_HINT`.
+- The MCP results of `search_hotels`, `get_hotel` and `get_hotel_offers` end with a hint on how to present hotels.
 - The text of a search shows each hotel's cover URL, and the text of a hotel its first 4 photo URLs.
+
+### Package
+
+- The presentation hint is exported as `PRESENTATION_HINT`.
 
 ## 3.0.0
 
@@ -182,5 +226,8 @@ The first release of Fortrip API v1. This changelog starts here.
 - The HTTP API on `https://api.fortrip.ai`: search hotels, read a hotel, get live offers, order an offer, and read and list orders.
 - The MCP server on `https://mcp.fortrip.ai`, with the tools `get_planning_guide`, `search_hotels`, `get_hotel`, `get_hotel_offers`, `book_hotel`, `get_order` and `list_orders`.
 - The CLI, `fortrip`: hotel and order commands, sign-in, the guide, and `fortrip mcp`, a local bridge to the MCP server. Text output by default, `--json` for one line of JSON, and exit codes 0 to 4.
-- The contract, `@fortrip/agent-contract`: the input and output schemas, error codes, limits, the tool and command specs, and the text renderers `renderToolResult`, `renderError` and `renderGuide`.
 - Ids are opaque, with the prefixes `htl_`, `off_` and `ord_`.
+
+### Package
+
+- The contract, `@fortrip/agent-contract`: the input and output schemas, error codes, limits, the tool and command specs, and the text renderers `renderToolResult`, `renderError` and `renderGuide`.

@@ -5,10 +5,11 @@ import { z } from "zod";
 
 import { strictOutput } from "../src/conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
+import { LIMITS } from "../src/limits.ts";
 import { authConfig, meResult } from "../src/outputs/account.ts";
 import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs/hotel.ts";
-import { hotelOffersResult, offer } from "../src/outputs/offer.ts";
+import { hotelOffersResult, offer, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
 import { offerChange, order, orderList } from "../src/outputs/order.ts";
 import { place } from "../src/outputs/place.ts";
 import { SEARCH_NOTE_CODES, searchResult } from "../src/outputs/search.ts";
@@ -650,5 +651,122 @@ describe("no supplier fields", () => {
     const used = new Set<string>();
     for (const schema of Object.values(OUTPUT_SCHEMAS)) for (const key of propertyNames(jsonSchemaOf(schema))) used.add(key);
     for (const key of PUBLIC_KEYS) assert.ok(used.has(key), key);
+  });
+});
+
+/** The description at a dotted path of a published output schema: dots step
+ *  into properties, and through the items of a list and the branches of a
+ *  union or a nullable. */
+function descriptionAt(schema: z.ZodType, path: string): string | undefined {
+  const expand = (node: JsonSchema): JsonSchema[] => [
+    node,
+    ...((node.anyOf ?? node.oneOf ?? []) as JsonSchema[]).flatMap(expand),
+    ...(node.items ? expand(node.items as JsonSchema) : []),
+  ];
+  let nodes: JsonSchema[] = [jsonSchemaOf(schema)];
+  for (const part of path.split(".")) {
+    nodes = nodes.flatMap(expand).flatMap((node) => {
+      const child = (node.properties as Record<string, JsonSchema> | undefined)?.[part];
+      return child ? [child] : [];
+    });
+  }
+  return nodes
+    .flatMap(expand)
+    .map((node) => node.description as string | undefined)
+    .find(Boolean);
+}
+
+describe("field descriptions", () => {
+  it("payment.handlers states its limits from LIMITS", () => {
+    const text = descriptionAt(order, "payment.handlers") ?? "";
+    assert.ok(text.includes(`over $${LIMITS.tokenPaymentMaxUsd}`), text);
+    assert.ok(text.includes(`under ${LIMITS.payMinMinutesLeft} minutes left`), text);
+    assert.ok(text.includes(`${LIMITS.tokensPerOrder} tokens tried`), text);
+    assert.match(text, /an Alipay or WeChat Pay payment is open/);
+  });
+
+  // The fields a caller acts on say what they mean, where the docs and an
+  // MCP client read them: in the published JSON Schema.
+  const described: Array<[string, z.ZodType, string[]]> = [
+    [
+      "offers",
+      hotelOffersResult,
+      [
+        "hotels.offers.confirmation",
+        "hotels.offers.confirmation.mode",
+        "hotels.offers.confirmation.withinMinutes",
+        "hotels.offers.price.perNightAllRooms",
+        "hotels.offers.cancellation",
+        "hotels.offers.cancellation.asOf",
+        "hotels.offers.hotel.meals",
+        "hotels.offers.hotel.meals.unspecifiedMainMeals",
+        "hotels.offers.hotel.meals.guestsCoveredPerRoom",
+        "hotels.offers.price.payAtProperty",
+        "hotels.omitted",
+        "hotels.omitted.byNationality",
+        "hotels.omitted.byFilters",
+        "hotels.omitted.dominated",
+        "hotels.omitted.unreadable",
+        "hotels.omitted.byLimit",
+        "unavailable.reason",
+      ],
+    ],
+    [
+      "order",
+      order,
+      [
+        "status",
+        "price.total",
+        "items.hotel.cancellation",
+        "items.hotel.payAtProperty",
+        "payment.expiresAt",
+        "payment.chargeCurrency",
+        "payment.localCurrencyAtCheckout",
+        "payment.localCharge",
+      ],
+    ],
+    [
+      "search",
+      searchResult,
+      [
+        "coverage",
+        "coverage.matched",
+        "coverage.priced",
+        "coverage.withPrice",
+        "coverage.poolRadiusMeters",
+        "coverage.excludedNoPrice",
+        "coverage.excludedNoFacilityData",
+        "coverage.withinMaxRadius",
+        "coverage.textAnywhere",
+        "coverage.localities",
+        "coverage.nameAsText",
+      ],
+    ],
+  ];
+  for (const [name, schema, paths] of described) {
+    it(`${name}: the fields a caller acts on say what they mean`, () => {
+      for (const path of paths) assert.ok(descriptionAt(schema, path)?.trim(), `${name}.${path}`);
+    });
+  }
+
+  it("explains every reason a hotel has no offers, nationality_restricted as a rate Fortrip can't book", () => {
+    const text = descriptionAt(hotelOffersResult, "unavailable.reason") ?? "";
+    for (const reason of UNAVAILABLE_REASONS) assert.ok(text.includes(reason), reason);
+    assert.match(text, /nationality_restricted \([^)]*nationalities[^)]*Fortrip can't book/);
+  });
+
+  it("calls a locality a locality, never a hub", () => {
+    for (const [name, schema] of Object.entries(OUTPUT_SCHEMAS)) {
+      const descriptions: string[] = [];
+      const collect = (node: unknown): void => {
+        if (!node || typeof node !== "object") return;
+        for (const [key, value] of Object.entries(node)) {
+          if (key === "description" && typeof value === "string") descriptions.push(value);
+          else collect(value);
+        }
+      };
+      collect(jsonSchemaOf(schema));
+      for (const text of descriptions) assert.doesNotMatch(text, /\bhubs?\b/i, `${name}: ${text}`);
+    }
   });
 });

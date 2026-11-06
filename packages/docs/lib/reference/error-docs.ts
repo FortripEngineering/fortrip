@@ -1,21 +1,25 @@
 import {
+  center,
   ERROR_CODES,
   ERROR_DETAILS,
   type ErrorCode,
   LIMITS,
+  localities,
+  offer,
   SUPPLIER_OUTCOME_STATUS,
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 import type { z } from "zod";
-import { shapeOf, toJsonSchema } from "./schema-rows.ts";
+import { fieldShape, type JsonSchema, shapeOf, toJsonSchema } from "./schema-rows.ts";
 
 export interface ErrorRow {
   code: ErrorCode;
   /** `409`, or `503 / 504` for a code answered at two statuses. */
   status: string;
   retryable: boolean;
-  /** The shape of `details`, or `null` when the code carries none. */
-  details: string | null;
+  /** The fields of `details`, a Markdown line each (a union's branches,
+   *  one each), or `null` when the code carries none. */
+  details: string[] | null;
   meaning: string;
 }
 
@@ -23,7 +27,7 @@ export interface ErrorRow {
  *  so a code the contract gains fails the typecheck until it is described. */
 const MEANINGS: Record<ErrorCode, string> = {
   invalid_request:
-    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`. Filtering by an amenity that can't filter adds `filterable`, the codes that can, and `share`: for the requested `code`, `listedShare` is the fraction, from 0 to 1, of the hotels that list facilities that list it.",
+    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`. Filtering by an amenity that can't filter adds `filterable`, the codes that can, and `share`: for the requested `code`, `listedShare` is the fraction, from 0 to 1, of hotels with a facility list that include the requested `code`.",
   cursor_invalid:
     "The cursor expired, belongs to another request or user, or was never a cursor. Start again from the first page.",
   unauthenticated:
@@ -62,7 +66,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   destination_ambiguous:
     `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:
-    "`no_match`: no place in the country carries the name. `unknown_id`: the `placeId` isn't known. `not_a_locality`: the place is no locality hub; `hub` is the hub it belongs to, and searching the town itself with `place` gives a radius around it.",
+    "`no_match`: no place in the country carries the name. `unknown_id`: the `placeId` isn't known. `not_a_locality`: the place isn't a locality; `hub` is the locality it belongs to, and searching the town itself with `place` gives a radius around it.",
   search_too_broad:
     'A price sort or price filter over an area or text with more matches than can be priced (`poolLimit`). Search one of the listed `localities` as `{ kind: "locality", placeId }`.',
   stay_unsupported:
@@ -77,13 +81,56 @@ const MEANINGS: Record<ErrorCode, string> = {
     "Ordering is paused for now. Search and offers still work, and an order already made can still be read. Retry after `retryAfterSeconds`.",
   service_unavailable:
     "A service Fortrip depends on is briefly unavailable. Retry after `retryAfterSeconds`.",
-  supplier_unavailable: `The hotel supplier didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call was sent and timed out; for an order, read your orders before ordering again.`,
+  supplier_unavailable: `The hotel supplier didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call reached the supplier and timed out, so it may have taken effect. Either way, sending the same call again is safe ([retries](/api#retries)).`,
   internal: "An unexpected error. The `requestId` helps support find it.",
 };
 
-/** The `details` shape of a code, from its contract schema. */
-export function detailsShape(schema: z.ZodType | null): string | null {
-  return schema ? shapeOf(toJsonSchema(schema, "output")) : null;
+/** Objects the schemas page describes, which a detail links to rather than spells out. */
+const DESCRIBED: Array<[z.ZodType, string]> = [
+  [offer, "[Offer](/schemas#offers)"],
+  [localities, "[`coverage.localities`](/schemas#search-result)"],
+  [center, "[`destination.center`](/schemas#search-result)"],
+];
+
+type Def = { type: string; innerType?: z.ZodType; shape?: Record<string, z.ZodType> };
+const defOf = (schema: z.ZodType) => schema._zod.def as unknown as Def;
+
+/** A field's schema less `.nullable()` and `.optional()`, and whether it can be null. */
+function unwrapped(schema: z.ZodType): { inner: z.ZodType; nullable: boolean } {
+  let inner = schema;
+  let nullable = false;
+  for (let def = defOf(inner); (def.type === "nullable" || def.type === "optional") && def.innerType; def = defOf(inner)) {
+    nullable ||= def.type === "nullable";
+    inner = def.innerType;
+  }
+  return { inner, nullable };
+}
+
+/** The fields of a code's `details`, a Markdown line each: `name`, then its
+ *  shape, or a link to the object the schemas page describes. A union of
+ *  objects is a line per branch. */
+export function detailFields(schema: z.ZodType | null): string[] | null {
+  if (!schema) return null;
+  const json = toJsonSchema(schema, "output");
+  const shape = defOf(schema).shape;
+  if (!shape) {
+    // A union: each known branch whole (one with a constant discriminator),
+    // not the fallback that keeps a branch to come.
+    return (json.anyOf ?? json.oneOf ?? [json])
+      .filter((branch) => Object.values(branch.properties ?? {}).some((p) => p.const !== undefined))
+      .map((branch) => `\`${shapeOf(branch)}\``);
+  }
+  return Object.entries(json.properties ?? {}).map(([name, prop]) => {
+    const optional = json.required?.includes(name) ? "" : " (optional)";
+    const field = shape[name];
+    const { inner, nullable } = field ? unwrapped(field) : { inner: null, nullable: false };
+    const described = DESCRIBED.find(([known]) => known === inner)?.[1];
+    if (described) return `\`${name}\`${optional}: ${described}${nullable ? " or `null`" : ""}`;
+    const items = prop.type === "array" && prop.items ? prop.items : null;
+    return items
+      ? `\`${name}[]\`${optional}: \`${fieldShape(items as JsonSchema)}\``
+      : `\`${name}\`${optional}: \`${fieldShape(prop)}\``;
+  });
 }
 
 /** One row per contract error code, in the contract's order. */
@@ -93,6 +140,6 @@ export const ERROR_ROWS: ErrorRow[] = (
   code,
   status: ERROR_CODES[code].status.join(" / "),
   retryable: ERROR_CODES[code].retryable,
-  details: detailsShape(ERROR_DETAILS[code] as z.ZodType | null),
+  details: detailFields(ERROR_DETAILS[code] as z.ZodType | null),
   meaning: MEANINGS[code],
 }));

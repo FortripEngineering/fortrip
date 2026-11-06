@@ -20,7 +20,7 @@ export interface Endpoint {
   cliSlug: string;
   /** Where the input is read. */
   input: "body" | "query" | "none";
-  /** Sign-in needed: every endpoint but the CLI's sign-in settings. */
+  /** Sign-in needed: every endpoint but the OAuth sign-in settings. */
   auth: boolean;
 }
 
@@ -40,8 +40,8 @@ const TOOL_ENDPOINTS: Record<HttpToolName, Docs> = {
 };
 
 const ACCOUNT_ENDPOINTS: Record<keyof typeof ACCOUNT_ROUTES, Docs> = {
-  me: { title: "Signed-in account", cliSlug: "whoami", input: "none", auth: true },
-  authConfig: { title: "CLI sign-in settings", cliSlug: "login", input: "none", auth: false },
+  me: { title: "Account", cliSlug: "whoami", input: "none", auth: true },
+  authConfig: { title: "OAuth sign-in settings", cliSlug: "login", input: "none", auth: false },
 };
 
 /** The v1 endpoints (spec §6), in docs order. */
@@ -59,3 +59,13 @@ export const ENDPOINTS: Endpoint[] = [
     ...ACCOUNT_ENDPOINTS[name],
   })),
 ];
+
+/** The API reference page of an endpoint with a tool: `/api/reference/<tool>`. */
+export const referenceHref = (tool: HttpToolName) => `/api/reference/${tool}`;
+
+/** Where the reference page's input starts, as Fumadocs OpenAPI names its
+ *  sections: the JSON body of a POST, else the path or query parameters. */
+export function inputAnchor(route: HttpRoute): string {
+  if (route.method === "POST") return "request-body";
+  return route.pathFields.length > 0 ? "parameters-path" : "parameters-query";
+}

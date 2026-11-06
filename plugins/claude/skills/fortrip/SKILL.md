@@ -49,7 +49,7 @@ If a tool says the user isn't signed in, ask them to reconnect.
 - **Near a point:** `{ kind: "point", location: { lat, lng } }`, for "near X" when you know where X is.
 - **A whole country:** `{ kind: "country", countryCode }`, as for the Maldives.
 - Countries, regions (states, provinces), prefecture-level cities in China and main islands cover their whole area. Towns, neighbourhoods, districts, small islands and points cover a circle of 8000 meters; `destination.radiusMeters` sets another, up to 80000 meters, and narrows an area to a circle around its center.
-- **Localities:** an area search lists its `localities`, the towns its hotels belong to, each with a `placeId`, its hotel `count` and the places it `includes` (Patong is part of Phuket). To search one, pass it as `{ kind: "locality", placeId }`. A town that isn't a locality answers `destination_not_found` with `not_a_locality` and the `hub` it belongs to: search the hub, or the town itself with `kind: "place"` for a circle around it.
+- **Localities:** an area search lists its `localities`, the towns its hotels belong to, each with a `placeId`, its hotel `count` and the places it `includes` (Patong is part of Phuket). To search one, pass it as `{ kind: "locality", placeId }`. A town that isn't a locality answers `destination_not_found` with `not_a_locality` and, in `hub`, the locality it belongs to: search that locality, or the town itself with `kind: "place"` for a circle around it.
 - A price sort or price filter over more than 3000 hotels (in an area, or for text alone) answers `search_too_broad` with `matched` and the top `localities`: show them and ask the user which they prefer, unless the request already names one of them; search that one by its `placeId` as a locality, never by its name.
 
 ### Text
@@ -176,7 +176,7 @@ A tool error carries `code`, `message` and `retryable`, and `retryAfterSeconds` 
 | `order_removed` (410) | The order was never completed and no payment is held: get offers again and order the new offer (the order keeps its `orderId`) |
 | `stay_unsupported` (422) | `mixed_occupancy`: order once per party; `max_nights`: at most `max` nights per order |
 | `stay_in_past` (422) | Check-in has passed in the hotel's time zone: ask for new dates |
-| `ordering_paused` (503) | Ordering is paused on Fortrip's side: tell the user, and try again only after `retryAfterSeconds` (10 minutes or more) |
+| `ordering_paused` (503) | Ordering is paused on Fortrip's side: tell the user, and try again only after `retryAfterSeconds` |
 
 Any code:
 

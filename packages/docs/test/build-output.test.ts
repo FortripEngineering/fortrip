@@ -8,6 +8,7 @@ import { TOOLS } from "@fortrip/agent-contract";
 
 import { fact } from "../components/fact.tsx";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
+import { FOOTER_LINKS } from "../lib/site.ts";
 import { pageHtml, pageRoutes, pageText } from "./built-page.ts";
 
 const server = new URL("../.next/server/", import.meta.url).pathname;
@@ -18,7 +19,20 @@ describe("built site", () => {
     const html = readFileSync(join(server, "app/index.html"), "utf8").replaceAll("<!-- -->", "");
     assert.ok(html.includes(`any MCP client with OAuth at ${fact("MCP_SERVER_URL")}.`));
     assert.ok(html.includes(`live offers for up to ${fact("LIMITS.offersHotels")} hotels`));
-    assert.ok(html.includes(`up to ${fact("LIMITS.rooms")} rooms`));
+  });
+
+  it("ends every page with the footer links", () => {
+    const routes = pageRoutes();
+    assert.ok(routes.length > 20);
+    const missing: string[] = [];
+    for (const route of routes) {
+      const html = pageHtml(route);
+      const footer = /<footer\b[^>]*>([\s\S]*?)<\/footer>/.exec(html.slice(html.indexOf('<article id="nd-page"')))?.[1] ?? "";
+      for (const link of FOOTER_LINKS) {
+        if (!footer.includes(`href="${link.url}"`) || !footer.includes(`>${link.text}</a>`)) missing.push(`${route}: ${link.text}`);
+      }
+    }
+    assert.deepEqual(missing, []);
   });
 
   it("leaves no <Fact> tag in any output, search data included", () => {
@@ -75,28 +89,27 @@ describe("built site", () => {
       }
     }
     assert.deepEqual(cards, []);
-    // On /quickstart, the next card is Installation's: its title, not its description.
+    // On /quickstart, the next card is the API quickstart's: its title, not its description.
     const quickstart = pageHtml("/quickstart");
-    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/install">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
-    const install = readFileSync(join(server, "app/install.html"), "utf8");
-    const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(install)?.[1] ?? "";
-    const description = /<meta name="description" content="([^"]+)"/.exec(install)?.[1] ?? "";
+    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/api-quickstart">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
+    const target = readFileSync(join(server, "app/api-quickstart.html"), "utf8");
+    const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(target)?.[1] ?? "";
+    const description = /<meta name="description" content="([^"]+)"/.exec(target)?.[1] ?? "";
     assert.ok(title && description);
     assert.ok(next.includes(`<p>${title}</p>`), next);
     assert.ok(next.includes("Next Page"));
     assert.ok(!next.includes(description));
   });
 
-  it("an API reference page shows the short summary and links its MCP tool's page, not the contract's full text", () => {
+  it("an API reference page shows what the tool does for a person, then the tool description the model reads under its label", () => {
     const tool = MCP_TOOLS.find((t) => t.name === "book_hotel");
     const full = TOOLS.find((t) => t.name === "book_hotel")?.description;
-    assert.ok(tool && full && full !== tool.snippet);
+    assert.ok(tool && full);
     const text = pageText("/api/reference/book_hotel");
-    assert.ok(text.includes(tool.snippet));
-    // Past the summary, none of the contract's text is shown.
-    const rest = full.slice(tool.snippet.length).trim();
-    assert.ok(rest.length > 0);
-    assert.ok(!text.includes(rest.slice(0, 60)), "the full description is shown");
-    assert.match(pageHtml("/api/reference/book_hotel"), new RegExp(`<a [^>]*href="/mcp/${tool.slug}"`));
+    assert.ok(text.includes(tool.human));
+    assert.ok(text.includes("What the model reads (tool description)"));
+    // The contract's text is shown too, as the model reads it.
+    assert.ok(text.includes(full.slice(0, 60).replaceAll("`", "")), "the full description is not shown");
+    assert.doesNotMatch(pageHtml("/api/reference/book_hotel"), /full rules agents follow/);
   });
 });

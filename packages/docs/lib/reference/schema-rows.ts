@@ -334,7 +334,7 @@ function shapeOfOne(schema: JsonSchema, depth: number): string {
     return `${bare ? item : `(${item})`}[]`;
   }
   if (schema.type === "object") {
-    if (depth > 0) return flatShape(schema) ?? "object";
+    if (depth > 0) return flatShape(schema) ?? fieldNames(schema);
     const fields = Object.entries(schema.properties ?? {}).map(
       ([name, prop]) =>
         `${name}${schema.required?.includes(name) ? "" : "?"}: ${shapeOf(prop, depth + 1)}`,
@@ -368,4 +368,38 @@ function flatShape(schema: JsonSchema): string | null {
     );
   }
   return fields.length > 0 ? `{ ${fields.join("; ")} }` : null;
+}
+
+/** An object's field names only: `{ placeId; name; names }`. */
+function fieldNames(schema: JsonSchema): string {
+  const names = Object.keys(schema.properties ?? {});
+  return names.length > 0 ? `{ ${names.join("; ")} }` : "object";
+}
+
+/** A nested field's shape on one line: its values or type; an object's
+ *  fields, typed when all are scalars, else named; a union of objects as one
+ *  object, its discriminator's values and the fields of every branch, typed
+ *  when every branch types them alike. */
+export function fieldShape(schema: JsonSchema): string {
+  const { nullable, options } = alternatives(schema);
+  const union = openEnum(options) ? null : discriminated(options);
+  let shape: string;
+  if (union) {
+    const names = [...new Set(union.branches.flatMap((b) => Object.keys(b.schema.properties ?? {})))];
+    shape = `{ ${names
+      .map((name) => {
+        if (name === union.key) return `${name}: ${union.branches.map((b) => JSON.stringify(b.value)).join(" | ")}`;
+        const props = union.branches.map((b) => b.schema.properties?.[name]);
+        const alike = props.every((p) => p && JSON.stringify(p) === JSON.stringify(props[0]));
+        return alike && props[0] ? `${name}: ${shapeOf(props[0], 1)}` : name;
+      })
+      .join("; ")} }`;
+  } else {
+    const [only] = options;
+    shape =
+      options.length === 1 && only?.type === "object"
+        ? (flatShape(only) ?? fieldNames(only))
+        : shapeOf({ anyOf: options }, 1);
+  }
+  return nullable ? `${shape} | null` : shape;
 }

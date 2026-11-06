@@ -37,11 +37,9 @@ test("the errors page renders the table; the pages that name an exit code read i
   assert.ok(errors.includes("<ExitCodes />"));
   assert.doesNotMatch(errors, /\| `\d` \|/);
   assert.ok(page("install.mdx").includes('[code <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes)'));
-  assert.ok(page("cli/index.mdx").includes('`fortrip mcp` exits <Fact path="CLI_EXIT.usage" />'));
   assert.equal(fact("CLI_EXIT.unauthenticated"), String(EXIT.unauthenticated));
   const text = pageText("/errors");
   for (const row of EXIT_ROWS) assert.ok(text.includes(`${row.code} ${row.meaning.split("`")[0]}`), String(row.code));
   assert.ok(text.includes(`${Object.entries(EXIT_BY_STATUS).map(([s, e]) => `${s} → ${e}`).join(", ")}`));
   assert.ok(pageText("/install").includes(`exits with code ${EXIT.unauthenticated}`));
-  assert.ok(pageText("/cli").includes(`fortrip mcp exits ${EXIT.usage}`));
 });

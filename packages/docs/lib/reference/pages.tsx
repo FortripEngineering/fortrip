@@ -55,11 +55,11 @@ const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
     path: `mcp/${tool.slug}.mdx`,
     data: {
       title: tool.title,
-      description: tool.snippet,
+      description: tool.human,
       body: () => <ToolPage name={tool.name} />,
       markdown: () => toolMarkdown(tool.name),
       ...outline(
-        [tool.name, ...(tool.summary.startsWith(tool.snippet) ? [] : [tool.snippet]), tool.summary],
+        [tool.name, tool.human, tool.summary],
         [
           {
             id: "input",
@@ -123,7 +123,7 @@ export const REFERENCE_PAGES: ReferencePage[] = [...toolPages, ...commandPages];
 export const referenceSource: { files: VirtualFile<Config>[] } = {
   files: [
     ...REFERENCE_PAGES,
-    folder("mcp", "MCP", MCP_TOOLS),
+    folder("mcp", "MCP server", MCP_TOOLS),
     folder("cli", "CLI", CLI_COMMANDS),
   ],
 };

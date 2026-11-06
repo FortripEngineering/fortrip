@@ -221,15 +221,15 @@ describe("TOOLS", () => {
     assert.deepEqual(
       Object.fromEntries(TOOLS.map((spec) => [spec.name, spec.title])),
       {
-        get_planning_guide: "Get hotel planning guide",
+        get_planning_guide: "Planning guide",
         search_hotels: "Search hotels",
-        get_hotel: "Get hotel details",
-        get_hotel_offers: "Get live hotel offers",
-        book_hotel: "Create hotel order and payment link",
+        get_hotel: "Hotel details",
+        get_hotel_offers: "Live offers",
+        book_hotel: "Create order",
         get_order: "Get order",
         list_orders: "List orders",
         cancel_order: "Cancel order",
-        pay_order: "Pay order by token or Alipay/WeChat Pay",
+        pay_order: "Pay order",
       },
     );
   });

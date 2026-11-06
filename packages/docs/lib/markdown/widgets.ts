@@ -23,8 +23,7 @@ import {
 
 /**
  * The rows of a field list, by name: `response:<schemas id>` (a response
- * object), `input:<tool>` (a tool's input) or `destination` (a search's
- * destination kinds).
+ * object) or `input:<tool>` (a tool's input).
  */
 export function fieldRows(of: string): FieldRow[] {
   const [kind, name] = of.split(":");
@@ -33,8 +32,6 @@ export function fieldRows(of: string): FieldRow[] {
     if (doc) return doc.rows;
   } else if (kind === "input" && name && name !== "get_planning_guide" && TOOLS.some((t) => t.name === name)) {
     return inputRows(TOOL_INPUTS[name as Exclude<ToolName, "get_planning_guide">]);
-  } else if (of === "destination") {
-    return inputRows(TOOL_INPUTS.search_hotels).filter((row) => /^destination\b/.test(row.path));
   }
   throw new Error(`Unknown field list: ${of}`);
 }
