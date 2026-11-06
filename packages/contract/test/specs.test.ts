@@ -28,6 +28,7 @@ import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
+  CALLS,
   CANCEL_NEXT_STEP,
   MCP_OUTPUT,
   ORDER_NEXT_STEP,
@@ -369,10 +370,21 @@ describe("TOOLS", () => {
   it("cancel_order carries the consent rule, says what it answers and what a refusal leaves", () => {
     const { description } = tool("cancel_order");
     assert.ok(description.includes(CANCEL_NEXT_STEP), description);
-    assert.match(description, /status cancelling, then cancelled/);
-    assert.match(description, /poll get_order/);
-    assert.match(description, /back to confirmed with cancel\.reason refused/);
+    assert.match(description, /Then poll get_order: cancelling, then cancelled\./);
+    assert.match(description, /Hotel refused: confirmed, reason refused\./);
     assert.match(description, /cancellation_changed/);
+  });
+
+  it("cancel_order closes an unpaid order only on the user's word, and never races a payment", () => {
+    const { description, annotations } = tool("cancel_order");
+    assert.match(description, /^Cancel a paid order under its terms, or close an unpaid one\./);
+    assert.match(description, /close it only once the user says they no longer want it, without maximumPenalty; nothing is charged; it becomes expired\./);
+    assert.match(description, /payment_in_progress: read it again shortly\./);
+    assert.ok(description.length <= 1024, String(description.length));
+    assert.equal(annotations.destructiveHint, true);
+    assert.equal(annotations.idempotentHint, true);
+    assert.equal(CALLS.mcp.close, "call cancel_order");
+    assert.equal(CALLS.cli.close, "run `fortrip orders cancel <orderId> --close`");
   });
 
   it("a description names only tools there are", () => {
@@ -436,7 +448,7 @@ describe("CANCEL_NEXT_STEP", () => {
       /^Before you call cancel_order, show the user [^.]*stay[^.]*cancel\.penalty and cancel\.refund \(amount and currency\)/,
     );
     assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
-    assert.ok(CANCEL_NEXT_STEP.includes('Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).'));
+    assert.ok(CANCEL_NEXT_STEP.includes("Pass maximumPenalty as cancel.penalty, exactly as returned."));
     assert.match(CANCEL_NEXT_STEP, /Never state a refund the order did not return\.$/);
   });
 });
@@ -781,6 +793,7 @@ describe("COMMANDS", () => {
       "hotels search room",
       "hotels search price-max-per-room-night",
       "orders pay total",
+      "orders cancel max-penalty",
       "hotels offers room",
       "hotels book guest",
     ]);
@@ -956,8 +969,8 @@ describe("CLI-only options", () => {
   });
 
   // `orders cancel` sends one field, the penalty the user agreed to, and only
-  // from its flag (C7).
-  it("--body is taken by the commands that send a body, but cancel, --no-browser by login", () => {
+  // from its flag (C7); `--close` closes an unpaid order and is never sent.
+  it("--body is taken by the commands that send a body, but cancel, --close by cancel, --no-browser by login", () => {
     const options = Object.fromEntries(
       COMMANDS.map((spec) => [typed(spec), all(spec.options ?? [])]),
     );
@@ -968,7 +981,7 @@ describe("CLI-only options", () => {
       "hotels book": ["body"],
       "orders get": [],
       "orders list": [],
-      "orders cancel": [],
+      "orders cancel": ["close"],
       "orders pay": [],
       login: ["no-browser"],
       logout: [],
@@ -977,6 +990,7 @@ describe("CLI-only options", () => {
       mcp: [],
     });
     assert.equal(command("login").options?.[0]?.type, "boolean");
+    assert.equal(command("orders cancel").options?.[0]?.type, "boolean");
     assert.equal(command("hotels search").options?.[0]?.type, "string");
   });
 

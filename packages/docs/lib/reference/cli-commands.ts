@@ -108,8 +108,8 @@ function positional({ name, optional }: PositionalSpec): string {
 }
 
 /** `fortrip hotels offers --hotel <htl_>... --check-in YYYY-MM-DD ... [options]`: the
- *  positionals and the flags of required fields (in brackets when the command
- *  runs without one), then `[options]` when more can be given. */
+ *  positionals and the flags of required fields, then `[options]` when more
+ *  can be given. */
 function usageOf(spec: CommandSpec): string {
   const tool = TOOLS.find((candidate) => candidate.name === spec.tool);
   const required = new Set(
@@ -121,7 +121,7 @@ function usageOf(spec: CommandSpec): string {
   return [
     commandInvocation(spec),
     ...(spec.positionals ?? []).map(positional),
-    ...mandatory.map((flag) => (flag.optional ? `[${flagSyntax(flag)}]` : flagSyntax(flag))),
+    ...mandatory.map(flagSyntax),
     ...(more ? ["[options]"] : []),
   ].join(" ");
 }

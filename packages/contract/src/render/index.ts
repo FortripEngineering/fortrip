@@ -41,8 +41,10 @@ export type RenderedTool = Exclude<ToolName, "get_planning_guide">;
  * follows that when it holds an order whose `stripe_alipay_wechat_pay` entry
  * is not open;
  * the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order` or
- * `list_orders` result holds an order with `cancel.available`. `surface`
- * names the next calls: tools (`mcp`, the default) or commands (`cli`).
+ * `list_orders` result holds an order with `cancel.available`, other than
+ * an unpaid one (`cancel.reason` `unpaid`), which is closed with no
+ * penalty. `surface` names the next calls: tools (`mcp`, the default) or
+ * commands (`cli`).
  */
 export function renderToolResult(
   tool: RenderedTool,
@@ -135,7 +137,8 @@ function holdsMethod(
   return Object.values(value).some((v) => holdsMethod(v, match, seen));
 }
 
-/** Whether a raw value holds an order whose `cancel.available` is true. */
+/** Whether a raw value holds an order whose `cancel.available` is true,
+ *  other than an unpaid one, which is closed with no penalty. */
 function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
   seen.add(value);
@@ -143,7 +146,8 @@ function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   if (
     typeof cancel === "object" &&
     cancel !== null &&
-    (cancel as { available?: unknown }).available === true
+    (cancel as { available?: unknown }).available === true &&
+    (cancel as { reason?: unknown }).reason !== "unpaid"
   ) {
     return true;
   }
@@ -161,7 +165,7 @@ function withConsent(
     orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
     orders.some((o) => methodOf(o, "stripe_shared_payment_token")) ? payNextStep(surface) : "",
     orders.some((o) => methodOf(o, "stripe_alipay_wechat_pay")?.open === false) ? walletNextStep(surface) : "",
-    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available)
+    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.available && o.cancel.reason !== "unpaid")
       ? cancelNextStep(surface)
       : "",
   ]

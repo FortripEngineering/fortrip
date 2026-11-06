@@ -82,7 +82,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels book` | Order an offer: an unpaid order with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
-| `orders cancel <orderId>` | Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms |
+| `orders cancel <orderId>` | With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows |
 | `orders pay <orderId>` | Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
@@ -115,9 +115,12 @@ are paid in the currency of the offers they come from (`--currency`).
 now and, if so, the penalty under its terms and the refund.
 `orders cancel <orderId> --max-penalty <amount>` cancels it, with the penalty
 the person agreed to exactly as shown; if the penalty has gone up since,
-nothing changes and the command exits 1 with `cancellation_changed`. Without
-`--max-penalty` it cancels nothing: it prints the order's penalty and refund
-and exits 2.
+nothing changes and the command exits 1 with `cancellation_changed`. An
+unpaid order is closed instead, once the person says they no longer want it:
+`orders cancel <orderId> --close` closes it, nothing is charged, and it
+becomes `expired`. Without `--max-penalty` or `--close` it changes nothing:
+it prints the order's penalty and refund, or that it can be closed, and
+exits 2.
 
 ## For AI agents
 

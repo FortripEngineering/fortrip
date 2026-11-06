@@ -8,6 +8,9 @@ curl -sS --fail-with-body --max-time 60 -X POST "https://api.fortrip.ai/v1/order
   -H "Content-Type: application/json" \
   --data @- <<'JSON'
 {
-  "maximumPenalty": 0
+  "maximumPenalty": {
+    "amount": "0.00",
+    "currency": "USD"
+  }
 }
 JSON

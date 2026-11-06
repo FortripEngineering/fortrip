@@ -20,7 +20,7 @@ export function methodOf<I extends PaymentMethodId>(
 
 export const ORDER_STATUS_WORDS: Record<string, string> = {
   awaiting_payment: "awaiting payment",
-  expired: "expired (not paid in time)",
+  expired: "not paid: the time ran out or it was closed",
   confirming: "confirming with the hotel",
   confirmed: "confirmed",
   failed: "failed",
@@ -44,6 +44,7 @@ const SUPPORT = `for help, the user emails ${SUPPORT_EMAIL} with the order's ref
  *  `order_not_cancellable` words its reason the same way. */
 export const CANCEL_REASON_WORDS: Record<string, string> = {
   cancellable: "it can be cancelled",
+  unpaid: "it isn't paid: it can be closed if the user no longer wants it",
   already_cancelled: "it is already cancelled",
   in_progress: "a cancellation is in progress",
   not_confirmed: "only a confirmed order that is paid can be cancelled",
@@ -98,7 +99,7 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
   if (token) lines.push(tokenLine(o, token, surface));
   const wallet = methodOf(o, "stripe_alipay_wechat_pay");
   if (wallet) lines.push(...walletLines(wallet, surface));
-  lines.push(cancelLine(o));
+  lines.push(cancelLine(o, surface));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
@@ -157,11 +158,16 @@ function walletLines(
 }
 
 /** "Cancel: can cancel now: penalty …, refund …", or why not. Figures are
- *  only ever the order's own. An order awaiting payment needs no
- *  cancelling: it expires unpaid. */
-function cancelLine(o: Order): string {
+ *  only ever the order's own. An unpaid order is closed instead, on the
+ *  user's word; one that can't be is a website order, left to expire, or
+ *  one with a payment under way. */
+function cancelLine(o: Order, surface: RenderSurface): string {
   const c = o.cancel;
+  if (c.available && c.reason === "unpaid") {
+    return `Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (${CALLS[surface].close})`;
+  }
   if (o.status === "awaiting_payment" && !c.available && c.reason === "not_confirmed") {
+    if (!o.payment.requiresSignIn) return "Cancel: not now: a payment is under way; read the order again shortly";
     const at = o.payment.expiresAt === null ? "" : ` at ${when(o.payment.expiresAt, null)}`;
     return `Cancel: not needed: an unpaid order expires unpaid${at}`;
   }

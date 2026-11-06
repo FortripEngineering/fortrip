@@ -142,11 +142,8 @@ async function run(argv: string[]): Promise<Answer> {
       }
     }
   }
-  const preview = cancelPreview(spec, rest);
-  if (preview) {
-    const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
-    throw usageError(notCancelled(spec, preview.flag, preview.orderId, order));
-  }
+  const preview = cancelPreview(spec, rest, process.env);
+  if (preview) return cancelOrder(apiUrl, spec, preview);
   const { method, path, body } = parseCommand(spec, rest, process.env);
   if (spec.tool === "pay_order" && body) await inOrderCurrency(apiUrl, spec, rest, body);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
@@ -174,25 +171,92 @@ async function inOrderCurrency(
   check(spec, { ...body, orderId }, HTTP_ROUTES.pay_order, new Map());
 }
 
-/** What `orders cancel` without its penalty flag says instead of
- *  cancelling: the order's hotel and Cancel lines and, when it can be
- *  cancelled now, the consent step and the command with the order's own
- *  penalty. */
-function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
-  const lines = renderToolResult("get_order", order, "cli")
+/** An order as `orders cancel` reads it, field by field: the read may not
+ *  be in the contract's shape. */
+type ReadOrder = {
+  status?: unknown;
+  price?: { total?: { currency?: unknown } };
+  payment?: { status?: unknown };
+  cancel?: { available?: unknown; reason?: unknown; penalty?: { currency?: unknown } | null };
+} | null;
+
+/**
+ * `orders cancel`, after one read of the order: without `--max-penalty` or
+ * `--close`, or with `--max-penalty` on an unpaid order, it says what the
+ * order allows and exits 2. `--close` closes an unpaid order, and answers
+ * an expired one as it is. `--max-penalty` cancels in the currency of the
+ * order's penalty, else of its total.
+ */
+async function cancelOrder(
+  apiUrl: string,
+  spec: CommandSpec,
+  preview: NonNullable<ReturnType<typeof cancelPreview>>,
+): Promise<Answer> {
+  const { flag, orderId, close, request } = preview;
+  const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
+  const read = order as ReadOrder;
+  const closable = read?.cancel?.available === true && read.cancel.reason === "unpaid";
+  if (!request || (!close && closable)) throw usageError(notCancelled(spec, flag, orderId, order));
+  if (close) {
+    if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
+    if (!closable) {
+      const paid = read?.payment?.status === "paid" || read?.payment?.status === "authorized";
+      if (read?.status !== "awaiting_payment" && paid) {
+        throw usageError(
+          `Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`${commandInvocation(spec)} ${orderId} ${flag} <amount>\`.`,
+        );
+      }
+      throw new CliError(["Not closed: nothing was sent.", ...orderLines(order)].join("\n"), EXIT.error);
+    }
+    const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body: request.body }));
+    const text = renderToolResult("cancel_order", data, "cli");
+    if ((data as ReadOrder)?.status !== "expired") {
+      throw new CliError(["Not closed: it was paid meanwhile.", text].join("\n"), EXIT.error);
+    }
+    return { data, text };
+  }
+  const penalty = read?.cancel?.penalty?.currency;
+  const currency = typeof penalty === "string" ? penalty : read?.price?.total?.currency;
+  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
+    throw new CliError(
+      `Not sent: the order ${orderId} has no cancel.penalty or price.total currency in USD or CNY to cancel in.`,
+      EXIT.error,
+    );
+  }
+  const body = request.body as Record<string, unknown>;
+  body.maximumPenalty = { ...(body.maximumPenalty as Record<string, unknown>), currency };
+  check(spec, { ...body, orderId }, HTTP_ROUTES.cancel_order, new Map());
+  const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body }));
+  return { data, text: renderToolResult("cancel_order", data, "cli") };
+}
+
+/** An order's hotel and Cancel lines, as `orders get` prints them. */
+function orderLines(order: unknown): string[] {
+  return renderToolResult("get_order", order, "cli")
     .split("\n")
     .filter((text) => text.startsWith("Hotel: ") || text.startsWith("Cancel: "));
+}
+
+/** What `orders cancel` says instead of cancelling: the order's hotel and
+ *  Cancel lines and, when it can be cancelled now, the consent step and the
+ *  command with the order's own penalty, or, when it can be closed, the
+ *  command that closes it. */
+function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
   const parsed = orderSchema.safeParse(order);
   const cancel = parsed.success ? parsed.data.cancel : undefined;
   const next =
-    cancel?.available && cancel.penalty
+    cancel?.available && cancel.reason === "unpaid"
       ? [
-          `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
+          `Only once the user says they no longer want this order, run \`${commandInvocation(spec)} ${orderId} --close\`.`,
         ]
-      : cancel
-        ? []
-        : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
-  return ["Not cancelled: nothing was sent.", ...lines, ...next].join("\n");
+      : cancel?.available && cancel.penalty
+        ? [
+            `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
+          ]
+        : cancel
+          ? []
+          : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
+  return ["Not cancelled: nothing was sent.", ...orderLines(order), ...next].join("\n");
 }
 
 /** `whoami`, and `login` once signed in: the account,

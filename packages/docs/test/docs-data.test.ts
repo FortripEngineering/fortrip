@@ -122,8 +122,8 @@ test("a usage line lists the positionals and the flags of required fields", () =
   );
   assert.equal(usage("hotels-get"), "fortrip hotels get <hotelId> [options]");
   assert.equal(usage("orders-get"), "fortrip orders get <orderId> [options]");
-  // Without --max-penalty the command shows the penalty and cancels nothing.
-  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [--max-penalty <amount>]");
+  // --max-penalty cancels a paid order, --close closes an unpaid one; without either it changes nothing.
+  assert.equal(usage("orders-cancel"), "fortrip orders cancel <orderId> [options]");
   assert.equal(usage("guide"), "fortrip guide [topic]");
   assert.equal(usage("logout"), "fortrip logout");
 });

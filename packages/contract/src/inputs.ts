@@ -578,19 +578,16 @@ export const listOrdersInput = strictInput({
 
 export type ListOrdersInput = z.input<typeof listOrdersInput>;
 
-const maximumPenaltyError =
-  "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50";
-
 /** `POST /v1/orders/{orderId}/cancel` and the MCP `cancel_order` arguments:
- *  the order, and the penalty the user agreed to as a ceiling. The server
+ *  the order and, to cancel a paid order, the penalty the user agreed to as a
+ *  ceiling; an unpaid order is closed with the order alone. The server
  *  computes the refund; a higher penalty now answers `cancellation_changed`. */
 export const cancelOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to cancel."),
-  maximumPenalty: z
-    .number({ error: maximumPenaltyError })
-    .min(0, { error: maximumPenaltyError })
+  maximumPenalty: requestMoney("maximumPenalty")
+    .optional()
     .describe(
-      "The penalty the user agreed to: a JSON number equal to the order's cancel.penalty.amount, e.g. 120.5 for \"120.50\".",
+      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
     ),
 });
 

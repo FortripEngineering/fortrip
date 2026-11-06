@@ -904,25 +904,35 @@ describe("getOrderInput and listOrdersInput", () => {
 describe("cancelOrderInput", () => {
   const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
 
-  it("takes an order id and the penalty the user agreed to, 0 or more", () => {
-    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 0 });
-    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: 12.5 });
-    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: -1 }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: "12.50" }, "maximumPenalty");
-    assertRefusedAt(cancelOrderInput, { orderId: hotel, maximumPenalty: 0 }, "orderId");
+  it("takes an order id and, to cancel a paid order, the penalty the user agreed to as Money", () => {
+    // Closing an unpaid order sends the order alone.
+    assertAccepted(cancelOrderInput, { orderId });
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "CNY" } });
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "0.00", currency: "USD" } });
+    assert.deepEqual(refusalOf(cancelOrderInput, { orderId, maximumPenalty: 12.5 }), [
+      {
+        path: "maximumPenalty",
+        message: 'maximumPenalty must be Money: { amount: "132.40", currency: "USD" or "CNY" }',
+      },
+    ]);
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "-1", currency: "USD" } }, "maximumPenalty.amount");
+    assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "1.00", currency: "EUR" } }, "maximumPenalty.currency");
+    assertRefusedAt(cancelOrderInput, { orderId: hotel }, "orderId");
     assert.equal(
-      refusalOf(cancelOrderInput, { orderId, maximumPenalty: 0, refund: 1 })[0]?.message,
+      refusalOf(cancelOrderInput, { orderId, refund: 1 })[0]?.message,
       "Unknown argument(s): refund",
     );
+    // Closing is the order alone, never a field.
+    assert.equal(refusalOf(cancelOrderInput, { orderId, close: true })[0]?.message, "Unknown argument(s): close");
   });
 
-  it("describes maximumPenalty as a JSON number equal to the order's cancel.penalty.amount", () => {
+  it("describes maximumPenalty as the order's cancel.penalty, exactly as returned", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      'The penalty the user agreed to: a JSON number equal to the order\'s cancel.penalty.amount, e.g. 120.5 for "120.50".',
+      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
     );
+    assert.deepEqual(json.required, ["orderId"]);
   });
 });
 

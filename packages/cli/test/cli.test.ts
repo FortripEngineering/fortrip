@@ -125,9 +125,10 @@ describe("requests", () => {
       [["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"], "POST", `/v1/orders/${ORDER}/pay`],
     ] as const) {
       requests = [];
-      // orders pay reads the order for its currency first, then posts.
-      const pays = args[1] === "pay";
-      if (pays) replies = [{ status: 200, body: (await fixture("order-awaiting-payment")).data }, reply];
+      // orders pay and orders cancel read the order for its currency first, then post.
+      const pays = args[1] === "pay" || args[1] === "cancel";
+      const read = args[1] === "pay" ? "order-awaiting-payment" : "order-confirmed";
+      if (pays) replies = [{ status: 200, body: (await fixture(read)).data }, reply];
       const { code, stderr } = await cli([...args]);
       assert.equal(code, 0, `${args.join(" ")}: ${stderr}`);
       assert.equal(requests.length, pays ? 2 : 1, args.join(" "));
@@ -140,11 +141,46 @@ describe("requests", () => {
     }
   });
 
-  it("orders cancel posts only the penalty the user agreed to, the order in the path", async () => {
+  it("orders cancel posts only the penalty the user agreed to, in the order's currency, the order in the path", async () => {
+    replies = [{ status: 200, body: (await fixture("order-confirmed")).data }, reply];
     const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.5"]);
     assert.equal(code, 0, stderr);
-    assert.equal(requests[0]?.url, API.orderCancel(ORDER));
-    assert.deepEqual(requests[0]?.body, { maximumPenalty: 12.5 });
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1]?.url, API.orderCancel(ORDER));
+    assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.5", currency: "USD" } });
+  });
+
+  it("orders cancel --max-penalty takes cancel.penalty's currency, else price.total's, else sends nothing", async () => {
+    const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
+    order.cancel.penalty = { amount: "12.50", currency: "CNY" };
+    order.price.total = { amount: "880.00", currency: "CNY" };
+    replies = [{ status: 200, body: order }, reply];
+    const cny = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
+    assert.equal(cny.code, 0, cny.stderr);
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+    assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
+
+    requests = [];
+    order.cancel.penalty = null;
+    replies = [{ status: 200, body: order }, reply];
+    assert.equal((await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"])).code, 0);
+    assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
+
+    requests = [];
+    delete order.price.total.currency;
+    replies = [{ status: 200, body: order }, reply];
+    const none = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
+    assert.equal(none.code, 1);
+    assert.match(none.stderr, /currency/);
+    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  });
+
+  it("orders cancel --close with --max-penalty exits 2 and sends nothing", async () => {
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close", "--max-penalty", "0.00"]);
+    assert.equal(code, 2);
+    assert.match(stderr, /--close/);
+    assert.match(stderr, /--max-penalty/);
+    assert.equal(requests.length, 0);
   });
 
   // C7: never a cancellation without the penalty the user agreed to.
@@ -178,7 +214,7 @@ describe("requests", () => {
     assert.ok(requests.every((r) => r.method === "GET"));
   });
 
-  it("orders cancel without --max-penalty on an order that can't be cancelled says why, and nothing else", async () => {
+  it("orders cancel without --max-penalty on an unpaid order says it can be closed, and the --close command", async () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 200, body: data };
     const { code, stderr } = await cli(["orders", "cancel", ORDER]);
@@ -188,11 +224,110 @@ describe("requests", () => {
       [
         "Error: Not cancelled: nothing was sent.",
         renderToolResult("get_order", data, "cli").split("\n").find((line) => line.startsWith("Hotel: ")),
-        "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC",
+        "Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run `fortrip orders cancel <orderId> --close`)",
+        `Only once the user says they no longer want this order, run \`fortrip orders cancel ${ORDER} --close\`.`,
         "",
       ].join("\n"),
     );
-    assert.ok(requests.every((r) => r.method === "GET"));
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`]);
+  });
+
+  it("orders cancel --max-penalty on an unpaid order exits 2 naming --close, and posts nothing", async () => {
+    reply = { status: 200, body: (await fixture("order-awaiting-payment")).data };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "0.00"]);
+    assert.equal(code, 2);
+    assert.match(stderr, new RegExp(`run \`fortrip orders cancel ${ORDER} --close\``));
+    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  });
+
+  it("orders cancel --close closes an unpaid order: one read, then the close", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const closed = structuredClone(data) as Record<string, any>;
+    closed.status = "expired";
+    closed.payment.url = null;
+    closed.payment.expiresAt = null;
+    closed.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    replies = [{ status: 200, body: data }, { status: 200, body: closed }];
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 0, stderr);
+    assert.equal(stdout, `${renderToolResult("cancel_order", closed, "cli")}\n`);
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+    assert.deepEqual(requests[1]?.body, {});
+  });
+
+  it("orders cancel --close answered with an order that isn't expired: not closed, it was paid meanwhile", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const paid = (await fixture("order-confirmed")).data;
+    replies = [{ status: 200, body: data }, { status: 200, body: paid }];
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.ok(stderr.startsWith("Error: Not closed: it was paid meanwhile.\n"), stderr);
+    assert.ok(stderr.includes(renderToolResult("cancel_order", paid, "cli")), stderr);
+  });
+
+  it("orders cancel --close answered payment_in_progress prints that error and exits 1", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const envelope = {
+      error: {
+        code: "payment_in_progress",
+        message: "A payment of this order is under way.",
+        retryable: true,
+        requestId: "req_1",
+        details: { orderId: ORDER },
+      },
+    };
+    strictOutput(errorEnvelope).parse(envelope);
+    replies = [{ status: 200, body: data }, { status: 409, body: envelope }];
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.ok(stderr.startsWith(renderError(envelope, undefined, "cli")), stderr);
+    assert.doesNotMatch(stderr, /\bclosed\b/i);
+    assert.equal(requests.length, 2);
+  });
+
+  it("orders cancel --close on an expired order prints it and exits 0, closing nothing", async () => {
+    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
+    order.status = "expired";
+    order.payment.url = null;
+    order.payment.expiresAt = null;
+    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    reply = { status: 200, body: order };
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 0, stderr);
+    assert.equal(stdout, `${renderToolResult("cancel_order", order, "cli")}\n`);
+    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  });
+
+  it("orders cancel --close on an unpaid order it can't close prints its Cancel line and exits 1", async () => {
+    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
+    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    for (const [requiresSignIn, line] of [
+      [true, "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC"],
+      [false, "Cancel: not now: a payment is under way; read the order again shortly"],
+    ] as const) {
+      requests = [];
+      order.payment.requiresSignIn = requiresSignIn;
+      reply = { status: 200, body: order };
+      const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+      assert.equal(code, 1, line);
+      assert.equal(stdout, "");
+      assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
+      assert.ok(stderr.includes(`\n${line}\n`), stderr);
+      assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+    }
+  });
+
+  it("orders cancel --close on a paid order exits 2 naming --max-penalty, and posts nothing", async () => {
+    reply = { status: 200, body: (await fixture("order-confirmed")).data };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 2);
+    assert.equal(
+      stderr,
+      `Error: Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`fortrip orders cancel ${ORDER} --max-penalty <amount>\`.\n`,
+    );
+    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });
 
   it("orders cancel without --max-penalty on an order not in the contract's shape still refuses, and offers no flag", async () => {

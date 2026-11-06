@@ -48,9 +48,6 @@ export interface FlagSpec {
   type: "string" | "number" | "boolean";
   /** Given once per item; its field is a list. */
   multiple?: boolean;
-  /** The command runs without it though the tool needs its field:
-   *  `orders cancel` without `--max-penalty` cancels nothing. */
-  optional?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
    *  `--rooms` sends `include: "rooms"`. */
   value?: string;
@@ -429,11 +426,10 @@ const cancelFlags = flagsOf(cancelOrderInput, [
   {
     flag: "max-penalty",
     field: "maximumPenalty",
-    type: "number",
-    optional: true,
+    type: "string",
     placeholder: "<amount>",
     description:
-      "The penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it, the command cancels nothing: it shows the penalty and the refund.",
+      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it or --close, the command changes nothing: it shows the penalty and the refund, or that the order can be closed.",
   },
 ]);
 
@@ -531,10 +527,18 @@ export const COMMANDS: readonly CommandSpec[] = [
     group: "orders",
     name: "cancel",
     summary:
-      "Without --max-penalty it shows the penalty and refund and cancels nothing; with the penalty the user agreed to, it cancels the order under its terms",
+      "With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows",
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],
+    options: [
+      {
+        flag: "close",
+        type: "boolean",
+        description:
+          "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
+      },
+    ],
   },
   {
     group: "orders",

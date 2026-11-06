@@ -141,8 +141,9 @@ ${optionList(GLOBAL_FLAGS)}
 Output is compact text on stdout; --json prints it as one line of JSON.
 Errors go to stderr, as text or, with --json, as JSON.
 Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
-2 invalid arguments, or orders cancel without --max-penalty (nothing is
-cancelled), 3 not signed in or sign-in not accepted, 4 rate limited.
+2 invalid arguments, or orders cancel without --max-penalty or --close
+(nothing is cancelled), 3 not signed in or sign-in not accepted, 4 rate
+limited.
 
 Environment:
 ${ENVIRONMENT_LINES}

@@ -19,7 +19,7 @@ Send the `offerId`, the contact (who the hotel and the confirmation email reach)
 
 - Before it creates the order, Fortrip checks the offer with the hotel. If the price or any term changed, the answer is `409 offer_changed` instead (below). No order is made at a price the user hasn't seen.
 - A call that timed out is [safe to send again](/api#retries) with the same details.
-- Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid.
+- Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid, or can be [closed](#cancel) now once the user says they no longer want it.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
 
 ### When the offer changed [#offer-changed]
@@ -60,7 +60,7 @@ Pay one way only. Every order awaiting payment has a payment link; the other way
 - If the link is paid first, a token hold made meanwhile is released, and an Alipay or WeChat Pay charge is refunded in full.
 - `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, never in a shared channel, document, log or ticket, and give it exactly as returned: don't shorten, rebuild or re-encode it.
 - An order `awaiting_payment` whose `payment.url` is `null` had its link unreadable this time: read the order again.
-- The link closes at `payment.expiresAt`, and the order is then `expired`. To order the stay again, get offers again and confirm the new order with the user.
+- The link closes at `payment.expiresAt`, or when the order is [closed](#cancel), and the order is then `expired`. To order the stay again, get offers again and confirm the new order with the user.
 
 <PayWays variant="full" />
 
@@ -87,6 +87,8 @@ And its `payment.status`, which says where the money is:
 
 ## Cancel and refund [#cancel]
 
-Orders can't be changed through the API. The order's `cancel` says whether it can be cancelled now (`available`, and `reason` when it can't) and, when it can, the `penalty` and the `refund`, what was paid less the penalty, both in the charge currency. Show the user both and wait for a yes, then cancel with [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) or <code><Fact path="ROUTES.cancel_order" /></code>.
+Orders can't be changed through the API. The order's `cancel` says whether it can be cancelled now (`available`, and `reason` when it can't) and, for a paid order that can (`reason` `cancellable`), the `penalty` and the `refund`, what was paid less the penalty, both in the charge currency. Show the user both and wait for a yes, then cancel with [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) or <code><Fact path="ROUTES.cancel_order" /></code>, with `maximumPenalty` the `penalty` exactly as returned.
 
 The order is then `cancelling` while the hotel cancels, and `cancelled` once it has; the refund goes back to the payment the order was paid with. A booking that fails is released or refunded in full without a cancellation. For a change, or a cancellation these can't make, the user emails <Fact path="SUPPORT_EMAIL" /> with the order's `reference`.
+
+An unpaid order made through the API can be closed instead (`reason` `unpaid`, `penalty` and `refund` `null`): close it only once the user says they no longer want it, with the same call and no `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `expired`. While a payment of it is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly. An order made on the Fortrip website isn't closed through the API: it expires at `payment.expiresAt`.

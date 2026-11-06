@@ -34,12 +34,14 @@ export const PAYMENT_STATUSES = [
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Why an order can or can't be cancelled now: `cancellable` when it
- *  can, else the first reason that holds. `non_refundable` is a rate the
- *  hotel takes no cancellation for; `refused`, a cancellation the hotel
- *  refused, the booking standing as it was. */
+/** Why an order can or can't be cancelled now: `cancellable` when a paid
+ *  order can, `unpaid` when an unpaid one can be closed instead, else the
+ *  first reason that holds. `non_refundable` is a rate the hotel takes no
+ *  cancellation for; `refused`, a cancellation the hotel refused, the
+ *  booking standing as it was. */
 export const CANCEL_REASONS = [
   "cancellable",
+  "unpaid",
   "already_cancelled",
   "in_progress",
   "not_confirmed",
@@ -178,7 +180,7 @@ export const order = openObject({
   orderId,
   reference: orderReference,
   status: openEnum(ORDER_STATUSES).describe(
-    "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it.",
+    "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it.",
   ),
   createdAt: instant,
   updatedAt: instant,
@@ -222,9 +224,11 @@ export const order = openObject({
       ),
   }),
   cancel: openObject({
-    available: z.boolean().describe("Whether the user can cancel the order now."),
+    available: z
+      .boolean()
+      .describe("Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."),
     reason: openEnum(CANCEL_REASONS).describe(
-      "cancellable when it can be cancelled now; otherwise why not.",
+      "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not.",
     ),
     penalty: money
       .nullable()

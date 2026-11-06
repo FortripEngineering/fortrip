@@ -126,8 +126,8 @@ export function parseCommand(
 /**
  * The currency a request's money is in: the command's `--currency`, else
  * the `--body`'s, else the environment's, else USD. A command without a
- * currency (`orders pay`: the order's, which the CLI reads next) gets USD
- * as a placeholder.
+ * currency (`orders pay` and `orders cancel`: the order's, which the CLI
+ * reads next) gets USD as a placeholder.
  */
 function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: NodeJS.ProcessEnv): string {
   const flag = spec.flags.find((candidate) => candidate.field === "currency");
@@ -139,24 +139,35 @@ function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: No
 }
 
 /**
- * `orders cancel` without its penalty flag cancels nothing (C7): the read of
- * the order it makes instead, so the penalty and the refund can be shown,
- * and the flag. `null` for any other command, or when the flag is given. A
- * bad order id exits 2 as `orders cancel`'s own, and nothing is sent.
+ * `orders cancel` reads the order first, once (C7): to show it when neither
+ * its penalty flag nor `--close` is given, to close it only while it is
+ * unpaid, and for the penalty's currency. The read, the penalty flag, and
+ * whether `--close` is given; `request` is the cancellation or the close,
+ * a penalty's currency a placeholder until the order is read, or `null`
+ * with neither. `null` for any other command. Bad arguments exit 2 as
+ * `orders cancel`'s own, and nothing is sent.
  */
 export function cancelPreview(
   spec: CommandSpec,
   argv: string[],
-): (ApiRequest & { flag: string; orderId: string }) | null {
+  env: NodeJS.ProcessEnv,
+): (ApiRequest & { flag: string; orderId: string; close: boolean; request: ApiRequest | null }) | null {
   const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
   if (!flag) return null;
   const { values, positionals } = parseOptions(spec, argv);
-  if (values[flag.flag] !== undefined) return null;
+  const close = values.close === true;
+  const penalty = values[flag.flag] !== undefined;
+  if (close && penalty) {
+    throw usageError(
+      `--close and --${flag.flag} can't be given together: --close closes an unpaid order, --${flag.flag} cancels a paid one`,
+    );
+  }
   if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
   const input = { orderId: positionals[0] };
-  check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
+  const request = close || penalty ? parseCommand(spec, argv, env) : null;
+  if (!request) check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
   const orderId = input.orderId as string;
-  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId };
+  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId, close, request };
 }
 
 /** Refuses an input the contract's schema doesn't accept, with the issues
@@ -307,6 +318,7 @@ function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>, currency: st
       return given.map(parseRoom);
     case "filters.price.maxPerRoomNight":
     case "total":
+    case "maximumPenalty":
       return { amount: (given[0] as string).trim(), currency };
   }
   const parsed = given.map((value) => {

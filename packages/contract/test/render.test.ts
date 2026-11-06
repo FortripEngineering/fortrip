@@ -90,6 +90,13 @@ function withWallet(open: boolean): Record<string, any> {
   return data;
 }
 
+/** The order awaiting payment, made through the API, that the user can close. */
+function unpaidOrder(): Record<string, any> {
+  const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
+  data.cancel = { available: true, reason: "unpaid", penalty: null, refund: null };
+  return data;
+}
+
 function render(fixture: Fixture): string {
   return "tool" in fixture
     ? renderToolResult(fixture.tool, fixture.data)
@@ -754,6 +761,61 @@ describe("orders and the consent rule", () => {
     assert.ok(!renderToolResult("cancel_order", data.data).includes(CANCEL_NEXT_STEP));
   });
 
+  it("an unpaid order that can be closed says so, on its word only, and carries no cancel rule", () => {
+    const data = unpaidOrder();
+    strictOutput(outputOf("get_order")).parse(data);
+    for (const surface of ["mcp", "cli"] as const) {
+      const close = surface === "mcp" ? "call cancel_order" : "run `fortrip orders cancel <orderId> --close`";
+      const line = `Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (${close})`;
+      for (const tool of ["get_order", "list_orders"] as const) {
+        const text = renderToolResult(tool, tool === "list_orders" ? { data: [data], nextCursor: null } : data, surface);
+        assert.ok(text.split("\n").includes(line), `${surface} ${tool}`);
+        assert.ok(!text.includes(cancelNextStep(surface)), `${surface} ${tool}`);
+      }
+      // With a confirmed order that can be cancelled: the rule, once.
+      const confirmed = (load("order-confirmed") as ToolFixture).data;
+      const both = renderToolResult("list_orders", { data: [data, confirmed], nextCursor: null }, surface);
+      assert.equal(both.split(cancelNextStep(surface)).length, 2, surface);
+    }
+  });
+
+  it("the raw fallback carries no cancel rule for an unpaid order that can be closed", () => {
+    const cancel = { available: true, reason: "unpaid", penalty: null, refund: null };
+    const text = renderToolResult("get_order", { cancel, junk: 1 });
+    assert.match(text, /^This get_order result is not in the expected shape/);
+    assert.ok(!text.includes(CANCEL_NEXT_STEP));
+    const list = { data: [{ cancel }, { cancel: { ...cancel, reason: "cancellable" } }], junk: 1 };
+    assert.equal(renderToolResult("list_orders", list).split(CANCEL_NEXT_STEP).length, 2);
+  });
+
+  it("an expired order was not paid: the time ran out or it was closed", () => {
+    const data = unpaidOrder();
+    data.status = "expired";
+    data.payment.url = null;
+    data.payment.expiresAt = null;
+    data.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    assert.match(
+      renderToolResult("get_order", data).split("\n")[0]!,
+      / · not paid: the time ran out or it was closed · /,
+    );
+  });
+
+  it("an unpaid order that can't be closed: a website order expires unpaid, else a payment is under way", () => {
+    const data = unpaidOrder();
+    data.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    data.payment.requiresSignIn = true;
+    assert.match(
+      renderToolResult("get_order", data),
+      /^Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC$/m,
+    );
+    data.payment.requiresSignIn = false;
+    for (const surface of ["mcp", "cli"] as const) {
+      const text = renderToolResult("get_order", data, surface);
+      assert.match(text, /^Cancel: not now: a payment is under way; read the order again shortly$/m, surface);
+      assert.doesNotMatch(text, /expires unpaid/, surface);
+    }
+  });
+
   it("words every reason, and shows an unknown one as it came", () => {
     const fixture = copy(load("order-confirmed")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
@@ -1058,7 +1120,7 @@ describe("the CLI surface", () => {
   it("the cancel rule runs fortrip orders cancel with --max-penalty", () => {
     const text = cli(load("order-confirmed"));
     assert.ok(text.endsWith(`\n\n${cancelNextStep("cli")}`));
-    assert.match(cancelNextStep("cli"), /^Before you run `fortrip orders cancel <orderId> --max-penalty <n>`, show the user/);
+    assert.match(cancelNextStep("cli"), /^Before you run `fortrip orders cancel <orderId> --max-penalty <amount>`, show the user/);
     assert.equal(cancelNextStep("mcp"), CANCEL_NEXT_STEP);
   });
 

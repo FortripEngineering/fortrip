@@ -121,7 +121,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
-- Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid.
+- Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` once the user says they no longer want it.
 - An order `awaiting_payment` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip:get_order`.
 - Never ask for, accept or pass on payment card details; payment happens only through Stripe. A card number in a guest name, the contact or the special requests is rejected.
 
@@ -189,13 +189,15 @@ Any code:
 
 ## Cancelling an order
 
-`fortrip:get_order` and `fortrip:list_orders` say of each order whether the user can cancel it now (`cancel.available`), and then the penalty under its terms (`cancel.penalty`) and the refund, what was paid less the penalty (`cancel.refund`), both in the charge currency; otherwise `cancel.reason` says why not.
+`fortrip:get_order` and `fortrip:list_orders` say of each order whether the user can cancel it now (`cancel.available`). A paid order (`cancel.reason` `cancellable`) then has the penalty under its terms (`cancel.penalty`) and the refund, what was paid less the penalty (`cancel.refund`), both in the charge currency; an unpaid one (`unpaid`) can be closed instead. Otherwise `cancel.reason` says why not.
 
 1. Show the user the stay (hotel, dates), `cancel.penalty` and `cancel.refund` (amount and currency). A refund of 0 means nothing is paid back: say so plainly.
 2. End that reply by asking the user to confirm the cancellation, and wait for a clear yes.
-3. Then call `fortrip:cancel_order` with `maximumPenalty` set to `cancel.penalty.amount` as shown. Never state a refund the order didn't return, and never choose or work out an amount yourself.
+3. Then call `fortrip:cancel_order` with `maximumPenalty` set to `cancel.penalty` as shown. Never state a refund the order didn't return, and never choose or work out an amount yourself.
 
 The order is then `cancelling`, and `cancelled` once the hotel has cancelled and the refund is issued: check it with `fortrip:get_order`. If the hotel refuses, the order is `confirmed` again with `cancel.reason` `refused`. `cancellation_changed` (409) means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` (409) says why in `reason`.
+
+Close an unpaid order only once the user says they no longer want it: call `fortrip:cancel_order` without `maximumPenalty`. It becomes `expired`, and nothing is charged. `payment_in_progress` (409) means a payment of it is under way: read it again shortly.
 
 ## Changes and support
 

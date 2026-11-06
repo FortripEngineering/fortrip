@@ -279,19 +279,35 @@ describe("consent before cancelling an order", () => {
       assert.ok(
         text.includes("End that reply by asking the user to confirm the cancellation, and wait for a clear yes"),
       );
-      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty.amount\` as shown`));
+      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty\` as shown`));
       assert.match(text, /Never state a refund the order didn't return, and never choose or work out an amount yourself/);
       assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
     });
   }
 
   // C7: the CLI never cancels without the penalty the user agreed to.
-  it("the CLI guide says orders cancel without --max-penalty cancels nothing", () => {
+  it("the CLI guide says orders cancel without --max-penalty or --close changes nothing", () => {
     assert.match(
       flat(renderGuide("cli", "main")),
-      /Without `--max-penalty`, `fortrip orders cancel` cancels nothing/,
+      /Without `--max-penalty` or `--close`, `fortrip orders cancel` changes nothing/,
     );
   });
+
+  // An unpaid order is closed only on the user's word, and never with a penalty.
+  for (const surface of ["claude-skill", "cli"] as const) {
+    it(`${surface} main: close an unpaid order only once the user says they no longer want it`, () => {
+      const text = flat(renderGuide(surface, "main"));
+      const close = surface === "cli" ? "with `--close`" : "without `maximumPenalty`";
+      assert.ok(
+        text.includes(
+          `Close an unpaid order only once the user says they no longer want it: ${surface === "cli" ? "run" : "call"} \`${renderText("{{tool:orders cancel}}", surface)}\` ${close}.`,
+        ),
+        surface,
+      );
+      assert.match(text, /It becomes `expired`, and nothing is charged\./);
+      assert.match(text, /`payment_in_progress` \(409\) means a payment of it is under way: read it again shortly\./);
+    });
+  }
 });
 
 describe("the MCP instructions", () => {

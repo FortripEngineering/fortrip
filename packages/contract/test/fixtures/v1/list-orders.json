@@ -167,7 +167,7 @@
           }
         },
         "payment": {
-          "status": "unpaid",
+          "status": "authorized",
           "url": null,
           "requiresSignIn": false,
           "expiresAt": null,
@@ -272,8 +272,8 @@
           "methods": []
         },
         "cancel": {
-          "available": false,
-          "reason": "not_confirmed",
+          "available": true,
+          "reason": "unpaid",
           "penalty": null,
           "refund": null
         },

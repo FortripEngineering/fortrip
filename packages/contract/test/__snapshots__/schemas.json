@@ -2360,6 +2360,7 @@
                         "type": "string",
                         "enum": [
                           "cancellable",
+                          "unpaid",
                           "already_cancelled",
                           "in_progress",
                           "not_confirmed",
@@ -5726,7 +5727,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -6718,7 +6719,7 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "description": "Whether the user can cancel the order now."
+            "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
           },
           "reason": {
             "anyOf": [
@@ -6726,6 +6727,7 @@
                 "type": "string",
                 "enum": [
                   "cancellable",
+                  "unpaid",
                   "already_cancelled",
                   "in_progress",
                   "not_confirmed",
@@ -6740,7 +6742,7 @@
                 "type": "string"
               }
             ],
-            "description": "cancellable when it can be cancelled now; otherwise why not."
+            "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -6857,7 +6859,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -7849,7 +7851,7 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "description": "Whether the user can cancel the order now."
+            "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
           },
           "reason": {
             "anyOf": [
@@ -7857,6 +7859,7 @@
                 "type": "string",
                 "enum": [
                   "cancellable",
+                  "unpaid",
                   "already_cancelled",
                   "in_progress",
                   "not_confirmed",
@@ -7871,7 +7874,7 @@
                 "type": "string"
               }
             ],
-            "description": "cancellable when it can be cancelled now; otherwise why not."
+            "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -7984,7 +7987,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -8976,7 +8979,7 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "description": "Whether the user can cancel the order now."
+            "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
           },
           "reason": {
             "anyOf": [
@@ -8984,6 +8987,7 @@
                 "type": "string",
                 "enum": [
                   "cancellable",
+                  "unpaid",
                   "already_cancelled",
                   "in_progress",
                   "not_confirmed",
@@ -8998,7 +9002,7 @@
                 "type": "string"
               }
             ],
-            "description": "cancellable when it can be cancelled now; otherwise why not."
+            "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -9120,7 +9124,7 @@
                   "type": "string"
                 }
               ],
-              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -10112,7 +10116,7 @@
               "properties": {
                 "available": {
                   "type": "boolean",
-                  "description": "Whether the user can cancel the order now."
+                  "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
                 },
                 "reason": {
                   "anyOf": [
@@ -10120,6 +10124,7 @@
                       "type": "string",
                       "enum": [
                         "cancellable",
+                        "unpaid",
                         "already_cancelled",
                         "in_progress",
                         "not_confirmed",
@@ -10134,7 +10139,7 @@
                       "type": "string"
                     }
                   ],
-                  "description": "cancellable when it can be cancelled now; otherwise why not."
+                  "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
                 },
                 "penalty": {
                   "anyOf": [
@@ -10270,7 +10275,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -11262,7 +11267,7 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "description": "Whether the user can cancel the order now."
+            "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
           },
           "reason": {
             "anyOf": [
@@ -11270,6 +11275,7 @@
                 "type": "string",
                 "enum": [
                   "cancellable",
+                  "unpaid",
                   "already_cancelled",
                   "in_progress",
                   "not_confirmed",
@@ -11284,7 +11290,7 @@
                 "type": "string"
               }
             ],
-            "description": "cancellable when it can be cancelled now; otherwise why not."
+            "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -11432,7 +11438,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -12424,7 +12430,7 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "description": "Whether the user can cancel the order now."
+            "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
           },
           "reason": {
             "anyOf": [
@@ -12432,6 +12438,7 @@
                 "type": "string",
                 "enum": [
                   "cancellable",
+                  "unpaid",
                   "already_cancelled",
                   "in_progress",
                   "not_confirmed",
@@ -12446,7 +12453,7 @@
                 "type": "string"
               }
             ],
-            "description": "cancellable when it can be cancelled now; otherwise why not."
+            "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
           },
           "penalty": {
             "anyOf": [
@@ -12564,7 +12571,7 @@
                   "type": "string"
                 }
               ],
-              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid in time, nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -13556,7 +13563,7 @@
               "properties": {
                 "available": {
                   "type": "boolean",
-                  "description": "Whether the user can cancel the order now."
+                  "description": "Whether the user can cancel the order now, or, unpaid (reason unpaid), close it."
                 },
                 "reason": {
                   "anyOf": [
@@ -13564,6 +13571,7 @@
                       "type": "string",
                       "enum": [
                         "cancellable",
+                        "unpaid",
                         "already_cancelled",
                         "in_progress",
                         "not_confirmed",
@@ -13578,7 +13586,7 @@
                       "type": "string"
                     }
                   ],
-                  "description": "cancellable when it can be cancelled now; otherwise why not."
+                  "description": "cancellable: a paid order can be cancelled now; unpaid: an unpaid order can be closed; otherwise why not."
                 },
                 "penalty": {
                   "anyOf": [

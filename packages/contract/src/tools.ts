@@ -66,8 +66,8 @@ export type RenderSurface = "mcp" | "cli";
 export const CALLS = {
   mcp: {
     cancel: "call cancel_order",
-    penalty:
-      'Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
+    penalty: "Pass maximumPenalty as cancel.penalty, exactly as returned.",
+    close: "call cancel_order",
     pay: "call pay_order",
     payWallet: " with method stripe_alipay_wechat_pay",
     get: "call get_order",
@@ -76,7 +76,8 @@ export const CALLS = {
     paid: "pay_order",
   },
   cli: {
-    cancel: "run `fortrip orders cancel <orderId> --max-penalty <n>`",
+    cancel: "run `fortrip orders cancel <orderId> --max-penalty <amount>`",
+    close: "run `fortrip orders cancel <orderId> --close`",
     penalty:
       "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
     pay: "run `fortrip orders pay`",
@@ -92,7 +93,8 @@ export const CALLS = {
 /**
  * The consent rule of a cancellation (spec §5.7, C11), as `surface` names
  * the call. It rides as the last paragraph of the text of every `get_order`
- * and `list_orders` result that holds an order with `cancel.available`,
+ * and `list_orders` result that holds an order with `cancel.available`
+ * (an unpaid one, reason `unpaid`, aside: it is closed with no penalty),
  * after `ORDER_NEXT_STEP` when both apply, and never as `nextStep`, which
  * keeps its payment-only meaning.
  */
@@ -245,7 +247,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "cancel_order",
     title: "Cancel order",
-    description: `Cancel one of the user's orders by orderId under its cancellation terms, when its cancel.available is true: the hotel booking is cancelled and cancel.refund, what was paid less cancel.penalty, is refunded. ${CANCEL_NEXT_STEP} If the penalty is now higher than maximumPenalty, the answer is cancellation_changed and nothing changes: read the order again and ask the user again. Answers the order: status cancelling, then cancelled once the hotel cancels and the refund is issued; poll get_order. If the hotel refuses, the order goes back to confirmed with cancel.reason refused. Calling it again for the same order answers the order as it is.`,
+    description: `Cancel a paid order under its terms, or close an unpaid one. Paid (cancel.reason cancellable): the hotel booking is cancelled and cancel.refund is refunded. ${CANCEL_NEXT_STEP} Penalty now above maximumPenalty: cancellation_changed, nothing changed; ask again. Then poll get_order: cancelling, then cancelled. Hotel refused: confirmed, reason refused. Unpaid (cancel.reason unpaid): close it only once the user says they no longer want it, without maximumPenalty; nothing is charged; it becomes expired. Paid meanwhile: the answer is the paid order or invalid_request; then cancel only under cancel.penalty, with the user's yes. payment_in_progress: read it again shortly. Repeat calls answer the order as it is.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

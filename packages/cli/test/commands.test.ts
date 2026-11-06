@@ -258,12 +258,14 @@ const CASES: {
     method: "GET",
     path: "/v1/orders",
   },
+  // The penalty's currency is the order's, which the CLI reads first: USD
+  // stands in for it here.
   {
     name: "orders cancel",
     argv: [ORDER, "--max-penalty", "12.50"],
     method: "POST",
     path: `/v1/orders/${ORDER}/cancel`,
-    body: { maximumPenalty: 12.5 },
+    body: { maximumPenalty: { amount: "12.50", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
   {
@@ -271,7 +273,16 @@ const CASES: {
     argv: [ORDER, "--max-penalty", "0"],
     method: "POST",
     path: `/v1/orders/${ORDER}/cancel`,
-    body: { maximumPenalty: 0 },
+    body: { maximumPenalty: { amount: "0", currency: "USD" } },
+    inPath: { orderId: ORDER },
+  },
+  // Closing an unpaid order sends the order alone: --close is never sent.
+  {
+    name: "orders cancel",
+    argv: [ORDER, "--close"],
+    method: "POST",
+    path: `/v1/orders/${ORDER}/cancel`,
+    body: {},
     inPath: { orderId: ORDER },
   },
   {
@@ -402,11 +413,7 @@ describe("a request the contract refuses is not sent", () => {
       ["/path/orderId"],
     );
     assert.deepEqual(issuesOf(() => parse("orders cancel", [ORDER, "--max-penalty=-1"])), [
-      {
-        pointer: "/maximumPenalty",
-        message:
-          "maximumPenalty must be a number of 0 or more: the order's cancel.penalty.amount, such as 12.5 for 12.50",
-      },
+      { pointer: "/maximumPenalty/amount", message: "amount must be a decimal string such as 132.40" },
     ]);
   });
 
