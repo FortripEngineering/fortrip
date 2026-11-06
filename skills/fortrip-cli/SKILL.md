@@ -17,7 +17,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip hotels book` | An unpaid order for one offer, with its terms and a payment link |
 | `fortrip orders get` | One order and its status, including whether the hotel confirmed it |
 | `fortrip orders list` | The user's orders, newest first, including those made on the Fortrip website |
-| `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest |
+| `fortrip orders cancel` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `fortrip orders pay` | Pays an order without its link, by a shared payment token from the user's wallet, or with Alipay or WeChat Pay |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", also run `fortrip guide planning` before searching.
@@ -168,7 +168,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip orders cancel` and `--close` once the user says they no longer want it.
-- An order `awaiting_payment` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip orders get`.
+- An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip orders get`.
 - Never ask for, accept or pass on payment card details; payment happens only through Stripe. A card number in a guest name, the contact or the special requests is rejected with exit 2.
 
 ## Paying without the link

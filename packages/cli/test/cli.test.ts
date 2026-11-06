@@ -319,6 +319,40 @@ describe("requests", () => {
     }
   });
 
+  it("orders cancel --close on a paid order that can't be cancelled prints its Cancel line, exits 1, and offers no --max-penalty", async () => {
+    const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
+    order.cancel = { available: false, reason: "non_refundable", penalty: null, refund: null };
+    reply = { status: 200, body: order };
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
+    assert.ok(stderr.includes("\nCancel: not available: this rate can't be cancelled\n"), stderr);
+    assert.doesNotMatch(stderr, /--max-penalty/);
+    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  });
+
+  it("orders cancel --close answered invalid_request (paid meanwhile) exits 2 and never says closed", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const envelope = {
+      error: {
+        code: "invalid_request",
+        message: "This order is paid: cancel it under its terms with maximumPenalty.",
+        retryable: false,
+        requestId: "req_1",
+        details: { issues: [] },
+      },
+    };
+    strictOutput(errorEnvelope).parse(envelope);
+    replies = [{ status: 200, body: data }, { status: 400, body: envelope }];
+    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.ok(stderr.startsWith(renderError(envelope, undefined, "cli")), stderr);
+    assert.doesNotMatch(stderr, /\bclosed\b/i);
+    assert.equal(requests.length, 2);
+  });
+
   it("orders cancel --close on a paid order exits 2 naming --max-penalty, and posts nothing", async () => {
     reply = { status: 200, body: (await fixture("order-confirmed")).data };
     const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);

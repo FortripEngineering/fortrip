@@ -974,6 +974,15 @@ describe("orders and the consent rule", () => {
     assert.ok(!text.includes(ORDER_NEXT_STEP));
   });
 
+  it("an awaiting_payment order with a payment held has no link and says none is unreadable", () => {
+    const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
+    data.payment.url = null;
+    data.payment.status = "authorized";
+    const text = renderToolResult("get_order", data);
+    assert.doesNotMatch(text, /^Payment link/m);
+    assert.doesNotMatch(text, /could not be read/);
+  });
+
   it("renders an unknown status and an unknown item type", () => {
     const fixture = copy(load("order-confirmed")) as ToolFixture;
     const data = fixture.data as Record<string, any>;

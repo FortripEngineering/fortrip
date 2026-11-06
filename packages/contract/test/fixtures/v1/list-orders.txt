@@ -16,7 +16,6 @@ Room: Deluxe King Room · beds: 1 king bed
 Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free cancellation until 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok) · nothing to pay at the property
 Hotel confirmation number: none yet
 Total: USD 1235.50 · payment authorized (held, not yet charged) · charged in USD (the user's card may pay in its local currency at checkout)
-Payment link: could not be read this time; read this order again for it.
 Cancel: not now: a payment is under way; read the order again shortly
 Manage: https://fortrip.ai/orders/ord_KataNoLink0000000000
 

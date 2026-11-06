@@ -200,8 +200,7 @@ async function cancelOrder(
   if (close) {
     if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
     if (!closable) {
-      const paid = read?.payment?.status === "paid" || read?.payment?.status === "authorized";
-      if (read?.status !== "awaiting_payment" && paid) {
+      if (read?.cancel?.available === true && read.cancel.reason === "cancellable") {
         throw usageError(
           `Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`${commandInvocation(spec)} ${orderId} ${flag} <amount>\`.`,
         );

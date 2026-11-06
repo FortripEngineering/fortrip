@@ -92,7 +92,7 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
       p.requiresSignIn ? "the user signs in to Fortrip to pay" : "no sign-in needed",
     ].filter(Boolean);
     lines.push(`Payment link (${about.join("; ")}): ${p.url}`);
-  } else if (o.status === "awaiting_payment") {
+  } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
   const token = methodOf(o, "stripe_shared_payment_token");
