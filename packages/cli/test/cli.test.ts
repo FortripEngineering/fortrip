@@ -374,9 +374,10 @@ describe("output", () => {
   });
 
   it("orders pay --wallet is no flag: it exits 2 and sends nothing", async () => {
-    const { code, stdout } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
+    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
     assert.equal(code, 2);
     assert.equal(stdout, "");
+    assert.match(stderr, /--wallet/);
     assert.equal(requests.length, 0);
   });
 
