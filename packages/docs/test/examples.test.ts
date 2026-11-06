@@ -3,7 +3,8 @@
 // tests hold them to the contract so they can't drift from it.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
@@ -294,7 +295,7 @@ describe("the API quickstart", () => {
     assert.equal(scripts.length, 5);
     for (const [name, script] of [["search", scripts[1]], ["offers", scripts[2]], ["order", scripts[3]]] as const) {
       const body = /<<JSON\n([\s\S]*?)\nJSON/.exec(script ?? "")?.[1] ?? "";
-      const sent = JSON.parse(body.replaceAll('"$hotel"', `"${HOTEL}"`).replaceAll('"$offer"', `"${OFFER}"`));
+      const sent = JSON.parse(body.replace(/"\$\{hotel:\?[^}]*\}"/g, `"${HOTEL}"`).replace(/"\$\{offer:\?[^}]*\}"/g, `"${OFFER}"`));
       assert.deepEqual(sent, bodyOf(name), name);
       assert.ok(script?.includes(`--max-time ${SLOW.has(name) ? 180 : 60} `), name);
     }
@@ -305,6 +306,20 @@ describe("the API quickstart", () => {
     for (const script of scripts) {
       const run = spawnSync("bash", ["-n"], { input: script });
       assert.equal(run.status, 0, `${script}: ${run.stderr}`);
+    }
+    // The files holding tokens and the order are created readable by their owner only.
+    assert.match(scripts[0] ?? "", /^umask 077\b/);
+    assert.match(BLOCKS.RefreshTokenExample?.({})?.flatMap((node) => (node.type === "code" ? [node.value] : []))[0] ?? "", /^umask 077\b/);
+    // A call whose id an earlier step didn't find sends nothing.
+    const cwd = mkdtempSync(join(tmpdir(), "end-to-end-"));
+    try {
+      for (const script of [scripts[2], scripts[3]]) {
+        const run = spawnSync("bash", ["-c", `curl() { echo sent; }\nunset hotel offer\n${script}`], { cwd, encoding: "utf8" });
+        assert.notEqual(run.status, 0, script);
+        assert.doesNotMatch(run.stdout, /sent/, script);
+      }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
     // jq's filters read the ids the next calls send, and fail on an answer with none.
     if (spawnSync("jq", ["--version"]).error) return t.skip("jq is not installed");

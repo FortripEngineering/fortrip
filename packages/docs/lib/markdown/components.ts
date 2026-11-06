@@ -120,10 +120,10 @@ export const END_TO_END_IDS = {
   offer: { file: "offers.json", path: "[.hotels[].offers[]][0].offerId", none: "No offer matches: pick another hotel from step 2." },
 } as const;
 
-/** Reads an id into a shell variable with `jq -e`, which fails on `null`, and
- *  says so when there is none. */
+/** Reads an id into a shell variable with `jq -e`, which fails on `null`;
+ *  when there is none it says so and fails too, without leaving the shell. */
 const readId = (name: string, { file, path, none }: (typeof END_TO_END_IDS)[keyof typeof END_TO_END_IDS]) =>
-  `${name}=$(jq -re '${path}' ${file}) || echo "${none}" >&2`;
+  `${name}=$(jq -re '${path}' ${file}) || { echo "${none}" >&2; false; }`;
 
 /** The curl sign-in script, as the quickstart's first step saves it: the
  *  example file without its `#!` line. */
@@ -143,8 +143,9 @@ function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "book_hotel", f
   const maxTime = curl && example && /--max-time (\d+)/.exec(exampleCode(example.name, curl))?.[1];
   if (!maxTime) throw new Error(`no curl time limit for ${op}`);
   const body = JSON.stringify(example?.body, null, 2)
-    .replaceAll(`"${EXAMPLE_IDS.hotelId}"`, '"$hotel"')
-    .replaceAll(`"${EXAMPLE_IDS.offerId}"`, '"$offer"');
+    // An id an earlier step didn't find stops the call before it is sent.
+    .replaceAll(`"${EXAMPLE_IDS.hotelId}"`, '"${hotel:?no hotelId: run step 2 first}"')
+    .replaceAll(`"${EXAMPLE_IDS.offerId}"`, '"${offer:?no offerId: run step 3 first}"');
   return [
     `curl -sS --fail-with-body --max-time ${maxTime} -X ${route.method} "${PUBLIC_ORIGINS.api}${route.path}" \\`,
     `  -H "Authorization: Bearer $FORTRIP_TOKEN" \\`,
@@ -208,6 +209,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       codeBlock(
         "sh",
         [
+          "umask 077 # token.json and the files after it are readable by you only",
           "cat > device-login.sh <<'SH'",
           signInScript(),
           "SH",
@@ -252,6 +254,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     codeBlock(
       "sh",
       [
+        "umask 077 # the new token.json is readable by you only",
         `config=$(curl -sS --fail-with-body "${PUBLIC_ORIGINS.api}${ACCOUNT_ROUTES.authConfig.path}")`,
         "refresh_token=$(jq -r .refresh_token token.json)",
         'curl -sS --fail-with-body "$(jq -r .tokenEndpoint <<<"$config")" \\',
