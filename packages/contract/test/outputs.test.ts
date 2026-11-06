@@ -10,7 +10,7 @@ import { authConfig, meResult } from "../src/outputs/account.ts";
 import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs/hotel.ts";
 import { hotelOffersResult, offer, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
-import { offerChange, order, orderList } from "../src/outputs/order.ts";
+import { offerChange, order, orderList, PAYMENT_METHOD_IDS } from "../src/outputs/order.ts";
 import { place } from "../src/outputs/place.ts";
 import { SEARCH_NOTE_CODES, searchResult } from "../src/outputs/search.ts";
 import { jsonSchemaOf, OUTPUT_SCHEMAS, type JsonSchema } from "./output-schemas.ts";
@@ -249,9 +249,7 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    handlers: [],
-    credentialLimits: null,
-    wallets: null,
+    methods: [],
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
@@ -364,7 +362,7 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
   });
-  it("an order's payment handler, in UCP's shape", () => {
+  it("an order's token method, its handler in UCP's shape", () => {
     const limits = { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" };
     const handler = {
       id: "stripe_payments",
@@ -378,9 +376,9 @@ describe("v1 response fixtures parse, open and strict", () => {
       ],
       config: { environment: "testmode", business_profile: "profile_test_1" },
     };
-    const withHandler = (h: unknown) => ({
+    const withHandler = (h: unknown, l: unknown = limits) => ({
       ...orderFixture,
-      payment: { ...orderFixture.payment, handlers: [h], credentialLimits: limits },
+      payment: { ...orderFixture.payment, methods: [{ id: "stripe_shared_payment_token", handler: h, limits: l }] },
     });
     parsesBoth(order, withHandler(handler));
     // An instrument's config is UCP's: the strict copy keeps what it doesn't know.
@@ -397,11 +395,6 @@ describe("v1 response fixtures parse, open and strict", () => {
       assert.ok(order.safeParse(withHandler(leaked)).success);
       assert.equal(strictOutput(order).safeParse(withHandler(leaked)).success, false);
     }
-    // An order always says how else it can be paid: no handlers and no limits when it can't.
-    for (const field of ["handlers", "credentialLimits"] as const) {
-      const { [field]: _gone, ...without } = orderFixture.payment;
-      assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false, field);
-    }
     for (const field of ["schema", "available_instruments", "config"] as const) {
       const { [field]: _gone, ...without } = handler;
       assert.equal(order.safeParse(withHandler(without)).success, false, field);
@@ -410,15 +403,23 @@ describe("v1 response fixtures parse, open and strict", () => {
       order.safeParse(withHandler({ ...handler, config: { environment: "testmode" } })).success,
       false,
     );
+    // The token entry always carries its limits.
+    for (const field of ["maxAmount", "currency", "expiresAt"] as const) {
+      const { [field]: _gone, ...without } = limits;
+      assert.equal(order.safeParse(withHandler(handler, without)).success, false, field);
+    }
+    assert.equal(order.safeParse(withHandler(handler, null)).success, false);
   });
 
-  it("an order's wallets, offered and open", () => {
-    const withWallets = (wallets: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, wallets } });
-    parsesBoth(order, withWallets(null));
-    parsesBoth(order, withWallets({ open: false, current: null, wechatPay: null, alipay: null }));
+  it("an order's Alipay or WeChat Pay method, offered and open", () => {
+    const withWallet = (entry: object) => ({
+      ...orderFixture,
+      payment: { ...orderFixture.payment, methods: [{ id: "stripe_alipay_wechat_pay", ...entry }] },
+    });
+    parsesBoth(order, withWallet({ open: false, current: null, wechatPay: null, alipay: null }));
     parsesBoth(
       order,
-      withWallets({
+      withWallet({
         open: true,
         current: "wechat_pay",
         wechatPay: {
@@ -432,17 +433,58 @@ describe("v1 response fixtures parse, open and strict", () => {
     // Not on WeChat Pay now: no live code, and a wallet this contract doesn't know reads.
     parsesBoth(
       order,
-      withWallets({
+      withWallet({
         open: true,
         current: "alipay",
         wechatPay: { qrData: null, qrImageUrl: null, url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/wechat?t=tok" },
         alipay: { url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/alipay?t=tok" },
       }),
     );
-    // An order always says whether wallets are offered or open.
-    const { wallets: _gone, ...without } = orderFixture.payment;
+    // A known id with its fields missing is malformed, not a method this contract doesn't know.
+    assert.equal(order.safeParse(withWallet({})).success, false);
+    assert.equal(order.safeParse(withWallet({ current: null, wechatPay: null, alipay: null })).success, false);
+  });
+
+  it("an order's payment.methods: both entries, none, or one this contract doesn't know", () => {
+    const token = {
+      id: "stripe_shared_payment_token",
+      handler: {
+        id: "stripe_payments",
+        type: "com.stripe.payments",
+        version: "2026-06-25",
+        spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+        schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+        available_instruments: [{ type: "card" }],
+        config: { environment: "testmode", business_profile: "profile_test_1" },
+      },
+      limits: { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" },
+    };
+    const wallet = { id: "stripe_alipay_wechat_pay", open: false, current: null, wechatPay: null, alipay: null };
+    const withMethods = (methods: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, methods } });
+    parsesBoth(order, withMethods([]));
+    parsesBoth(order, withMethods([token, wallet]));
+    // An open union: a method this contract doesn't know reads, and the strict copy refuses it.
+    const other = withMethods([{ id: "other_method" }]);
+    assert.ok(order.safeParse(other).success);
+    assert.equal(strictOutput(order).safeParse(other).success, false);
+    // Every known id is a branch of the union: alone, its id is malformed.
+    for (const id of PAYMENT_METHOD_IDS) {
+      assert.equal(order.safeParse(withMethods([{ id }])).success, false, id);
+    }
+    // An order always lists its methods, the one field for every way to pay but the link.
+    const { methods: _gone, ...without } = orderFixture.payment;
     assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false);
-    assert.equal(strictOutput(order).safeParse({ ...orderFixture, payment: without }).success, false);
+    const payment = (jsonSchemaOf(order).properties as Record<string, JsonSchema>).payment!;
+    assert.deepEqual(Object.keys(payment.properties as Record<string, unknown>), [
+      "status",
+      "url",
+      "requiresSignIn",
+      "expiresAt",
+      "chargeCurrency",
+      "localCurrencyAtCheckout",
+      "localCharge",
+      "methods",
+    ]);
   });
 
   it("an order's cancel quote, cancellable or not", () => {
@@ -612,15 +654,15 @@ const PUBLIC_KEYS = new Set([
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
-  "coverage", "alipay", "createdAt", "credentialLimits", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
+  "coverage", "alipay", "createdAt", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
-  "guestsCoveredPerRoom", "handlers", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
+  "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
   "issuer", "issues", "items", "kind", "known", "label", "lat", "line", "listed", "listedShare",
-  "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
+  "limits", "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
   "manageUrl", "mandatory", "match", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
-  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
+  "message", "methods", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
   "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
   "open", "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
@@ -629,7 +671,7 @@ const PUBLIC_KEYS = new Set([
   "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
   "sort", "spec", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
-  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "wallets", "website", "wechatPay", "window",
+  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "website", "wechatPay", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
 ]);
 
@@ -661,6 +703,12 @@ describe("no supplier fields", () => {
  *  into properties, and through the items of a list and the branches of a
  *  union or a nullable. */
 function descriptionAt(schema: z.ZodType, path: string): string | undefined {
+  return descriptionsAt(schema, path)[0];
+}
+
+/** Every description at a dotted path, as `descriptionAt` steps: the field's
+ *  own first, then those of its items and branches. */
+function descriptionsAt(schema: z.ZodType, path: string): string[] {
   const expand = (node: JsonSchema): JsonSchema[] => [
     node,
     ...((node.anyOf ?? node.oneOf ?? []) as JsonSchema[]).flatMap(expand),
@@ -676,12 +724,12 @@ function descriptionAt(schema: z.ZodType, path: string): string | undefined {
   return nodes
     .flatMap(expand)
     .map((node) => node.description as string | undefined)
-    .find(Boolean);
+    .filter((d): d is string => Boolean(d));
 }
 
 describe("field descriptions", () => {
-  it("payment.handlers states its limits from LIMITS", () => {
-    const text = descriptionAt(order, "payment.handlers") ?? "";
+  it("the token method states its limits from LIMITS", () => {
+    const text = descriptionsAt(order, "payment.methods").find((d) => d.includes("a token can't pay")) ?? "";
     assert.ok(text.includes(`over $${LIMITS.tokenPaymentMaxUsd}`), text);
     assert.ok(text.includes(`under ${LIMITS.payMinMinutesLeft} minutes left`), text);
     assert.ok(text.includes(`${LIMITS.tokensPerOrder} tokens tried`), text);

@@ -1,5 +1,5 @@
 import { LIMITS, SUPPORT_EMAIL } from "../limits.ts";
-import type { Order, OrderList } from "../outputs/order.ts";
+import type { Order, OrderList, PaymentMethod, PaymentMethodId } from "../outputs/order.ts";
 import { CALLS, type RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, feesText, mealsWithLabel } from "./offers.ts";
@@ -8,6 +8,15 @@ import { cancellationText, feesText, mealsWithLabel } from "./offers.ts";
 
 type Item = Order["items"][number];
 type HotelItem = Extract<Item, { type: "hotel" }>;
+
+/** An order's `payment.methods` entry with `id`, if it has one. A known id
+ *  is always its own branch: the open union's fallback refuses it. */
+export function methodOf<I extends PaymentMethodId>(
+  o: Order,
+  id: I,
+): Extract<PaymentMethod, { id: I }> | undefined {
+  return o.payment.methods.find((m) => m.id === id) as Extract<PaymentMethod, { id: I }> | undefined;
+}
 
 export const ORDER_STATUS_WORDS: Record<string, string> = {
   awaiting_payment: "awaiting payment",
@@ -85,30 +94,30 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
   } else if (o.status === "awaiting_payment") {
     lines.push("Payment link: could not be read this time; read this order again for it.");
   }
-  if (p.handlers.length > 0) lines.push(handlersLine(o, surface));
-  if (p.wallets) lines.push(...walletLines(p.wallets, surface));
+  const token = methodOf(o, "stripe_shared_payment_token");
+  if (token) lines.push(tokenLine(o, token, surface));
+  const wallet = methodOf(o, "stripe_alipay_wechat_pay");
+  if (wallet) lines.push(...walletLines(wallet, surface));
   lines.push(cancelLine(o));
   lines.push(`Manage: ${o.manageUrl}`);
   return lines;
 }
 
-/** "Pay without the link: …": each handler by type with the business
- *  profile its token is granted for, the credential's limits, and when to
- *  use it at all. */
-function handlersLine(o: Order, surface: RenderSurface): string {
-  const { handlers, credentialLimits: limits } = o.payment;
+/** "Pay without the link: …": the token entry's handler by type with the
+ *  business profile its token is granted for, the token's limits, and when
+ *  to use it at all. */
+function tokenLine(
+  o: Order,
+  token: Extract<PaymentMethod, { id: "stripe_shared_payment_token" }>,
+  surface: RenderSurface,
+): string {
+  const { handler: h, limits } = token;
   const pay =
     surface === "cli"
       ? `\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.price.total.amount}\``
       : "pay_order";
-  const shown = handlers.map(
-    (h) => `${h.type} (handler ${h.id}, business_profile ${h.config.business_profile})`,
-  );
-  const limit = limits
-    ? `; token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}`
-    : "";
   return [
-    `Pay without the link: ${pay} with a shared payment token via ${shown.join(", ")}${limit}.`,
+    `Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}.`,
     "Only if you have a tool that can request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give the payment link, and never ask the user to create, type or paste a token.",
     `First show the user the total and currency, the stay and every term, and wait for a clear yes. Pay one way only: the link or ${surface === "cli" ? "`fortrip orders pay`" : "pay_order"}.`,
   ].join(" ");
@@ -116,13 +125,16 @@ function handlersLine(o: Order, surface: RenderSurface): string {
 
 /** Paying with Alipay or WeChat Pay: how to open it, or, once open, the
  *  code and both links. */
-function walletLines(w: NonNullable<Order["payment"]["wallets"]>, surface: RenderSurface): string[] {
+function walletLines(
+  w: Extract<PaymentMethod, { id: "stripe_alipay_wechat_pay" }>,
+  surface: RenderSurface,
+): string[] {
   const c = CALLS[surface];
   if (!w.open) {
     const pay =
       surface === "cli"
-        ? "run `fortrip orders pay <orderId> --wallet --total <total>`"
-        : "call pay_order with method alipay_wechat_pay and the order's price.total";
+        ? "run `fortrip orders pay <orderId> --method stripe_alipay_wechat_pay --total <total>`"
+        : "call pay_order with method stripe_alipay_wechat_pay and the order's price.total";
     return [`Pay with Alipay or WeChat Pay: ${pay}.`];
   }
   const lines: string[] = [];

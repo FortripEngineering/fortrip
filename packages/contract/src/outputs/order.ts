@@ -90,6 +90,64 @@ export const paymentHandler = openObject({
 
 export type PaymentHandler = z.infer<typeof paymentHandler>;
 
+/** The ids of `payment.methods`: the ways `pay_order` can pay an order. */
+export const PAYMENT_METHOD_IDS = ["stripe_shared_payment_token", "stripe_alipay_wechat_pay"] as const;
+
+export type PaymentMethodId = (typeof PAYMENT_METHOD_IDS)[number];
+
+/** A way `pay_order` can pay an order other than its link, by `id`: an
+ *  open union, so a later method is an entry with a new id. */
+export const paymentMethod = openUnion("id", [
+  openObject({
+    id: z.literal("stripe_shared_payment_token"),
+    handler: paymentHandler.describe("The com.stripe.payments handler, which takes the token."),
+    limits: openObject({
+      maxAmount: z
+        .number()
+        .int()
+        .describe("Request the token for at least this amount, in cents; a token that allows less can't pay."),
+      currency: z.string().describe("The token's currency, lowercase as Stripe takes it: usd."),
+      expiresAt: instant.describe(
+        "Request the token valid until at least this time; the order can't be paid after it.",
+      ),
+    }).describe("What the shared payment token for pay_order must allow."),
+  }).describe(
+    `A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, an order started on the Fortrip website, a negotiated price, under ${LIMITS.payMinMinutesLeft} minutes left, ${LIMITS.tokensPerOrder} tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order.`,
+  ),
+  openObject({
+    id: z.literal("stripe_alipay_wechat_pay"),
+    open: z.boolean().describe("Whether pay_order has opened an Alipay or WeChat Pay payment on this order."),
+    current: openEnum(["wechat_pay", "alipay"])
+      .nullable()
+      .describe("Which of the two the payment is on now; null until it is open."),
+    wechatPay: openObject({
+      qrData: z
+        .string()
+        .nullable()
+        .describe(
+          "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one).",
+        ),
+      qrImageUrl: z.string().nullable().describe("A 480 px PNG of the same code."),
+      url: z
+        .string()
+        .describe("A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."),
+    })
+      .nullable()
+      .describe("The WeChat Pay code and link; null until the payment is open."),
+    alipay: openObject({
+      url: z
+        .string()
+        .describe("A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."),
+    })
+      .nullable()
+      .describe("The Alipay link; null until the payment is open."),
+  }).describe(
+    "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open.",
+  ),
+]);
+
+export type PaymentMethod = z.infer<typeof paymentMethod>;
+
 /** `FT-` and six characters with no 0, 1, I or O. */
 export const orderReference = z.string().regex(/^FT-[2-9A-HJ-NP-Z]{6}$/);
 
@@ -157,55 +215,10 @@ export const order = openObject({
     localCharge: money
       .nullable()
       .describe("What the card was charged in its own currency, when Stripe converted the total; otherwise null."),
-    handlers: z
-      .array(paymentHandler)
+    methods: z
+      .array(paymentMethod)
       .describe(
-        `The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, an order started on the Fortrip website, a negotiated price, under ${LIMITS.payMinMinutesLeft} minutes left, ${LIMITS.tokensPerOrder} tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order.`,
-      ),
-    credentialLimits: openObject({
-      maxAmount: z
-        .number()
-        .int()
-        .describe("Request the token for at least this amount, in cents; a token that allows less can't pay."),
-      currency: z.string().describe("The token's currency, lowercase as Stripe takes it: usd."),
-      expiresAt: instant.describe(
-        "Request the token valid until at least this time; the order can't be paid after it.",
-      ),
-    })
-      .nullable()
-      .describe(
-        "What the shared payment token for pay_order must allow. null exactly when handlers is [].",
-      ),
-    wallets: openObject({
-      open: z.boolean().describe("Whether pay_order has opened an Alipay or WeChat Pay payment on this order."),
-      current: openEnum(["wechat_pay", "alipay"])
-        .nullable()
-        .describe("Which of the two the payment is on now; null until it is open."),
-      wechatPay: openObject({
-        qrData: z
-          .string()
-          .nullable()
-          .describe(
-            "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one).",
-          ),
-        qrImageUrl: z.string().nullable().describe("A 480 px PNG of the same code."),
-        url: z
-          .string()
-          .describe("A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."),
-      })
-        .nullable()
-        .describe("The WeChat Pay code and link; null until the payment is open."),
-      alipay: openObject({
-        url: z
-          .string()
-          .describe("A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."),
-      })
-        .nullable()
-        .describe("The Alipay link; null until the payment is open."),
-    })
-      .nullable()
-      .describe(
-        "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open.",
+        "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null.",
       ),
   }),
   cancel: openObject({

@@ -21,11 +21,11 @@ describe("order and payment guide", () => {
     }
   });
 
-  it("states the WeChat Pay code's lifetime from the contract, and leaves the token's conditions to payment.handlers", () => {
+  it("states the WeChat Pay code's lifetime from the contract, and leaves the token's conditions to its payment.methods entry", () => {
     const text = pageText("/payments");
     assert.ok(text.includes(`${fact("LIMITS.wechatCodeMinutes")} minutes`));
     assert.ok(!text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
-    assert.match(text, /payment\.handlers isn't empty; that field says why it can be empty/);
+    assert.match(text, /payment\.methods has the stripe_shared_payment_token entry; that entry says why it can be absent/);
   });
 
   it("shows the offer_changed details and says to order the new offer, and what happens to the data sent", () => {

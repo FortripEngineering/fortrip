@@ -7,7 +7,7 @@ The fields come from the zod schemas in the [`@fortrip/agent-contract`](https://
 
 ## Reading the tables [#reading]
 
-- Every field is present unless marked optional; `| null` means the field can be `null`. On catalogue facts `null` means not known, never no. Elsewhere it has its own meaning: `nextCursor` is `null` on the last page, `payment.url` when there is no link to pay now, and `payment.credentialLimits` when a token can't pay the order.
+- Every field is present unless marked optional; `| null` means the field can be `null`. On catalogue facts `null` means not known, never no. Elsewhere it has its own meaning: `nextCursor` is `null` on the last page, and `payment.url` when there is no link to pay now.
 - `[]` marks the items of a list, and "when `kind`" or "when `type`" a branch of a union, with that branch's fields below it.
 - The schemas are open: [read responses tolerantly](/api#conventions).
 - Field rules shared by every response (ids, [money](/api#money), dates, names) are in [Conventions](/api#conventions).

@@ -188,9 +188,7 @@ const orderFixture = {
     chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    handlers: [],
-    credentialLimits: null,
-    wallets: null,
+    methods: [],
   },
   cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
@@ -242,10 +240,12 @@ describe("TOOLS", () => {
     );
   });
 
-  it("pay_order describes both forms: a token and method alipay_wechat_pay", () => {
+  it("pay_order describes both forms: a token and method stripe_alipay_wechat_pay", () => {
     const pay = TOOLS.find((t) => t.name === "pay_order");
-    assert.match(pay?.description ?? "", /method alipay_wechat_pay/);
-    assert.match(pay?.description ?? "", /payment\.wallets/);
+    assert.match(pay?.description ?? "", /by one of its payment\.methods/);
+    assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
+    assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
+    assert.match(pay?.description ?? "", /show the wallet entry/);
     assert.match(pay?.description ?? "", /WeChat code as an image if you can, both links/);
     assert.match(pay?.description ?? "", /ask them to confirm and wait for a clear yes/);
     assert.match(pay?.description ?? "", /a code lasts 120 minutes/);
@@ -648,7 +648,7 @@ describe("COMMANDS", () => {
       locale: "locale",
     });
     assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
-    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", wallet: "method", total: "total" });
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", method: "method", total: "total" });
     for (const name of ["login", "logout", "whoami", "guide", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -810,13 +810,13 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("only --rooms and --wallet send a value instead of true", () => {
+  it("only --rooms sends a value instead of true", () => {
     const valued = COMMANDS.flatMap((spec) =>
       spec.flags
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=rooms", "orders pay --wallet=alipay_wechat_pay"]);
+    assert.deepEqual(valued, ["hotels get --rooms=rooms"]);
   });
 
   it("every flag description is non-empty", () => {
@@ -869,6 +869,7 @@ describe("COMMANDS", () => {
       "hotels offers --currency",
       "orders get --locale",
       "orders list --locale",
+      "orders pay --method",
     ]);
   });
 

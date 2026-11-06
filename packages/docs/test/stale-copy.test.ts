@@ -26,8 +26,8 @@ describe("stale statements stay fixed", () => {
     assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
     const payments = pageText("/payments");
     assert.ok(payments.includes("method"));
-    assert.ok(payments.includes("payment.wallets"));
-    assert.ok(payments.includes('"alipay_wechat_pay"'));
+    assert.ok(payments.includes("payment.methods"));
+    assert.ok(payments.includes('"stripe_alipay_wechat_pay"'));
   });
 
   it("/mcp: content[0] is not always text", () => {
@@ -84,7 +84,7 @@ describe("stale statements stay fixed", () => {
     // refused while a wallet payment is open.
     assert.match(meaning("payment_method_unavailable"), /`method`/);
     assert.match(meaning("payment_method_unavailable"), /Alipay or WeChat Pay/);
-    assert.match(meaning("payment_method_unavailable"), /`payment\.wallets`/);
+    assert.match(meaning("payment_method_unavailable"), /`payment\.methods`/);
   });
 
   it("no page states the access token's lifetime or the order reference's length", () => {

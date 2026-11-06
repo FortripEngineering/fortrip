@@ -93,7 +93,7 @@ describe("OpenAPI document", () => {
     const schema = body.content?.["application/json"]?.schema as {
       properties: Record<string, { enum?: string[] }>;
     };
-    assert.ok(schema.properties.method?.enum?.includes("alipay_wechat_pay"));
+    assert.deepEqual(schema.properties.method?.enum, ["stripe_alipay_wechat_pay"]);
     // The path field is a parameter, not a body field.
     assert.equal("orderId" in schema.properties, false);
   });
@@ -335,7 +335,7 @@ describe("built OpenAPI", () => {
     }
     // The body sent is the example's.
     assert.ok(pageText("/api/reference/search_hotels").includes('"countryCode": "JP"'));
-    assert.ok(pageText("/api/reference/pay_order").includes("alipay_wechat_pay") || pageHtml("/api/reference/pay_order").includes("Alipay or WeChat Pay"));
+    assert.ok(pageText("/api/reference/pay_order").includes("stripe_alipay_wechat_pay") || pageHtml("/api/reference/pay_order").includes("Alipay or WeChat Pay"));
   });
 
   it("quotes the tool description under its label, and sends no reader to the MCP page for it", () => {

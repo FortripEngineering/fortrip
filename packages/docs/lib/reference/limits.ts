@@ -100,12 +100,12 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   tokenPaymentMaxUsd: (l) => [
     "Token payment",
     `up to $${n(l.tokenPaymentMaxUsd)}`,
-    "An order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.handlers` is empty.",
+    "An order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.methods` has no `stripe_shared_payment_token` entry.",
   ],
   payMinMinutesLeft: (l) => [
     "Time left to offer a Link token or Alipay or WeChat Pay",
     `${l.payMinMinutesLeft} minutes`,
-    "Once less is left before the order's `payment.expiresAt`, `payment.handlers` is empty and no Alipay or WeChat Pay payment can be opened.",
+    "Once less is left before the order's `payment.expiresAt`, `payment.methods` offers no token and no Alipay or WeChat Pay payment can be opened.",
   ],
   payCutoffMinutes: (l) => [
     "Time left to pay",
@@ -120,7 +120,7 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   wechatCodeMinutes: (l) => [
     "WeChat Pay code",
     `${l.wechatCodeMinutes} minutes`,
-    "How long a WeChat Pay code in `payment.wallets` lasts after it is made.",
+    "How long a WeChat Pay code in `payment.methods` lasts after it is made.",
   ],
   ordersPerStay: (l) => [
     "Orders per stay",

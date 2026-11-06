@@ -6447,234 +6447,258 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
-          "handlers": {
+          "methods": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "string"
-                },
-                "spec": {
-                  "type": "string"
-                },
-                "schema": {
-                  "type": "string"
-                },
-                "available_instruments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string"
-                      },
-                      "config": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "additionalProperties": {}
-                  }
-                },
-                "config": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "environment": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_shared_payment_token"
+                    },
+                    "handler": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "type": "string"
+                        },
+                        "available_instruments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              },
+                              "config": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "environment": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "livemode",
+                                    "testmode"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "business_profile": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "environment",
+                            "business_profile"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "version",
+                        "spec",
+                        "schema",
+                        "available_instruments",
+                        "config"
+                      ],
+                      "additionalProperties": {},
+                      "description": "The com.stripe.payments handler, which takes the token."
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {},
+                      "description": "What the shared payment token for pay_order must allow."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "handler",
+                    "limits"
+                  ],
+                  "additionalProperties": {},
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_alipay_wechat_pay"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                    },
+                    "current": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "livemode",
-                            "testmode"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "wechat_pay",
+                                "alipay"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
                           ]
                         },
                         {
-                          "type": "string"
+                          "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Which of the two the payment is on now; null until it is open."
                     },
-                    "business_profile": {
+                    "wechatPay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "qrData": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                            },
+                            "qrImageUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A 480 px PNG of the same code."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "qrData",
+                            "qrImageUrl",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The WeChat Pay code and link; null until the payment is open."
+                    },
+                    "alipay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The Alipay link; null until the payment is open."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "open",
+                    "current",
+                    "wechatPay",
+                    "alipay"
+                  ],
+                  "additionalProperties": {},
+                  "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "environment",
-                    "business_profile"
+                    "id"
                   ],
                   "additionalProperties": {}
                 }
-              },
-              "required": [
-                "id",
-                "type",
-                "version",
-                "spec",
-                "schema",
-                "available_instruments",
-                "config"
-              ],
-              "additionalProperties": {}
+              ]
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-          },
-          "credentialLimits": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "maxAmount": {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991,
-                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                  },
-                  "currency": {
-                    "type": "string",
-                    "description": "The token's currency, lowercase as Stripe takes it: usd."
-                  },
-                  "expiresAt": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "Request the token valid until at least this time; the order can't be paid after it."
-                  }
-                },
-                "required": [
-                  "maxAmount",
-                  "currency",
-                  "expiresAt"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-          },
-          "wallets": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean",
-                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                  },
-                  "current": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "wechat_pay",
-                              "alipay"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Which of the two the payment is on now; null until it is open."
-                  },
-                  "wechatPay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "qrData": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                          },
-                          "qrImageUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "A 480 px PNG of the same code."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "qrData",
-                          "qrImageUrl",
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The WeChat Pay code and link; null until the payment is open."
-                  },
-                  "alipay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The Alipay link; null until the payment is open."
-                  }
-                },
-                "required": [
-                  "open",
-                  "current",
-                  "wechatPay",
-                  "alipay"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+            "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
           }
         },
         "required": [
@@ -6685,9 +6709,7 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge",
-          "handlers",
-          "credentialLimits",
-          "wallets"
+          "methods"
         ],
         "additionalProperties": {}
       },
@@ -7556,234 +7578,258 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
-          "handlers": {
+          "methods": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "string"
-                },
-                "spec": {
-                  "type": "string"
-                },
-                "schema": {
-                  "type": "string"
-                },
-                "available_instruments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string"
-                      },
-                      "config": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "additionalProperties": {}
-                  }
-                },
-                "config": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "environment": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_shared_payment_token"
+                    },
+                    "handler": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "type": "string"
+                        },
+                        "available_instruments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              },
+                              "config": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "environment": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "livemode",
+                                    "testmode"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "business_profile": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "environment",
+                            "business_profile"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "version",
+                        "spec",
+                        "schema",
+                        "available_instruments",
+                        "config"
+                      ],
+                      "additionalProperties": {},
+                      "description": "The com.stripe.payments handler, which takes the token."
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {},
+                      "description": "What the shared payment token for pay_order must allow."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "handler",
+                    "limits"
+                  ],
+                  "additionalProperties": {},
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_alipay_wechat_pay"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                    },
+                    "current": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "livemode",
-                            "testmode"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "wechat_pay",
+                                "alipay"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
                           ]
                         },
                         {
-                          "type": "string"
+                          "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Which of the two the payment is on now; null until it is open."
                     },
-                    "business_profile": {
+                    "wechatPay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "qrData": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                            },
+                            "qrImageUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A 480 px PNG of the same code."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "qrData",
+                            "qrImageUrl",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The WeChat Pay code and link; null until the payment is open."
+                    },
+                    "alipay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The Alipay link; null until the payment is open."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "open",
+                    "current",
+                    "wechatPay",
+                    "alipay"
+                  ],
+                  "additionalProperties": {},
+                  "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "environment",
-                    "business_profile"
+                    "id"
                   ],
                   "additionalProperties": {}
                 }
-              },
-              "required": [
-                "id",
-                "type",
-                "version",
-                "spec",
-                "schema",
-                "available_instruments",
-                "config"
-              ],
-              "additionalProperties": {}
+              ]
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-          },
-          "credentialLimits": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "maxAmount": {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991,
-                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                  },
-                  "currency": {
-                    "type": "string",
-                    "description": "The token's currency, lowercase as Stripe takes it: usd."
-                  },
-                  "expiresAt": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "Request the token valid until at least this time; the order can't be paid after it."
-                  }
-                },
-                "required": [
-                  "maxAmount",
-                  "currency",
-                  "expiresAt"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-          },
-          "wallets": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean",
-                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                  },
-                  "current": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "wechat_pay",
-                              "alipay"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Which of the two the payment is on now; null until it is open."
-                  },
-                  "wechatPay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "qrData": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                          },
-                          "qrImageUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "A 480 px PNG of the same code."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "qrData",
-                          "qrImageUrl",
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The WeChat Pay code and link; null until the payment is open."
-                  },
-                  "alipay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The Alipay link; null until the payment is open."
-                  }
-                },
-                "required": [
-                  "open",
-                  "current",
-                  "wechatPay",
-                  "alipay"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+            "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
           }
         },
         "required": [
@@ -7794,9 +7840,7 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge",
-          "handlers",
-          "credentialLimits",
-          "wallets"
+          "methods"
         ],
         "additionalProperties": {}
       },
@@ -8661,234 +8705,258 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
-          "handlers": {
+          "methods": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "string"
-                },
-                "spec": {
-                  "type": "string"
-                },
-                "schema": {
-                  "type": "string"
-                },
-                "available_instruments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string"
-                      },
-                      "config": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "additionalProperties": {}
-                  }
-                },
-                "config": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "environment": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_shared_payment_token"
+                    },
+                    "handler": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "type": "string"
+                        },
+                        "available_instruments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              },
+                              "config": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "environment": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "livemode",
+                                    "testmode"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "business_profile": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "environment",
+                            "business_profile"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "version",
+                        "spec",
+                        "schema",
+                        "available_instruments",
+                        "config"
+                      ],
+                      "additionalProperties": {},
+                      "description": "The com.stripe.payments handler, which takes the token."
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {},
+                      "description": "What the shared payment token for pay_order must allow."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "handler",
+                    "limits"
+                  ],
+                  "additionalProperties": {},
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_alipay_wechat_pay"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                    },
+                    "current": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "livemode",
-                            "testmode"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "wechat_pay",
+                                "alipay"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
                           ]
                         },
                         {
-                          "type": "string"
+                          "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Which of the two the payment is on now; null until it is open."
                     },
-                    "business_profile": {
+                    "wechatPay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "qrData": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                            },
+                            "qrImageUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A 480 px PNG of the same code."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "qrData",
+                            "qrImageUrl",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The WeChat Pay code and link; null until the payment is open."
+                    },
+                    "alipay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The Alipay link; null until the payment is open."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "open",
+                    "current",
+                    "wechatPay",
+                    "alipay"
+                  ],
+                  "additionalProperties": {},
+                  "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "environment",
-                    "business_profile"
+                    "id"
                   ],
                   "additionalProperties": {}
                 }
-              },
-              "required": [
-                "id",
-                "type",
-                "version",
-                "spec",
-                "schema",
-                "available_instruments",
-                "config"
-              ],
-              "additionalProperties": {}
+              ]
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-          },
-          "credentialLimits": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "maxAmount": {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991,
-                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                  },
-                  "currency": {
-                    "type": "string",
-                    "description": "The token's currency, lowercase as Stripe takes it: usd."
-                  },
-                  "expiresAt": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "Request the token valid until at least this time; the order can't be paid after it."
-                  }
-                },
-                "required": [
-                  "maxAmount",
-                  "currency",
-                  "expiresAt"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-          },
-          "wallets": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean",
-                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                  },
-                  "current": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "wechat_pay",
-                              "alipay"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Which of the two the payment is on now; null until it is open."
-                  },
-                  "wechatPay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "qrData": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                          },
-                          "qrImageUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "A 480 px PNG of the same code."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "qrData",
-                          "qrImageUrl",
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The WeChat Pay code and link; null until the payment is open."
-                  },
-                  "alipay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The Alipay link; null until the payment is open."
-                  }
-                },
-                "required": [
-                  "open",
-                  "current",
-                  "wechatPay",
-                  "alipay"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+            "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
           }
         },
         "required": [
@@ -8899,9 +8967,7 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge",
-          "handlers",
-          "credentialLimits",
-          "wallets"
+          "methods"
         ],
         "additionalProperties": {}
       },
@@ -9775,234 +9841,258 @@
                   ],
                   "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
                 },
-                "handlers": {
+                "methods": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "version": {
-                        "type": "string"
-                      },
-                      "spec": {
-                        "type": "string"
-                      },
-                      "schema": {
-                        "type": "string"
-                      },
-                      "available_instruments": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string"
-                            },
-                            "config": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            }
-                          },
-                          "required": [
-                            "type"
-                          ],
-                          "additionalProperties": {}
-                        }
-                      },
-                      "config": {
+                    "anyOf": [
+                      {
                         "type": "object",
                         "properties": {
-                          "environment": {
+                          "id": {
+                            "type": "string",
+                            "const": "stripe_shared_payment_token"
+                          },
+                          "handler": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              },
+                              "version": {
+                                "type": "string"
+                              },
+                              "spec": {
+                                "type": "string"
+                              },
+                              "schema": {
+                                "type": "string"
+                              },
+                              "available_instruments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string"
+                                    },
+                                    "config": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "config": {
+                                "type": "object",
+                                "properties": {
+                                  "environment": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "livemode",
+                                          "testmode"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  "business_profile": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "environment",
+                                  "business_profile"
+                                ],
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "version",
+                              "spec",
+                              "schema",
+                              "available_instruments",
+                              "config"
+                            ],
+                            "additionalProperties": {},
+                            "description": "The com.stripe.payments handler, which takes the token."
+                          },
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "maxAmount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "The token's currency, lowercase as Stripe takes it: usd."
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                "description": "Request the token valid until at least this time; the order can't be paid after it."
+                              }
+                            },
+                            "required": [
+                              "maxAmount",
+                              "currency",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": {},
+                            "description": "What the shared payment token for pay_order must allow."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "handler",
+                          "limits"
+                        ],
+                        "additionalProperties": {},
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "const": "stripe_alipay_wechat_pay"
+                          },
+                          "open": {
+                            "type": "boolean",
+                            "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                          },
+                          "current": {
                             "anyOf": [
                               {
-                                "type": "string",
-                                "enum": [
-                                  "livemode",
-                                  "testmode"
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "wechat_pay",
+                                      "alipay"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
                                 ]
                               },
                               {
-                                "type": "string"
+                                "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Which of the two the payment is on now; null until it is open."
                           },
-                          "business_profile": {
+                          "wechatPay": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "qrData": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                                  },
+                                  "qrImageUrl": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "A 480 px PNG of the same code."
+                                  },
+                                  "url": {
+                                    "type": "string",
+                                    "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                                  }
+                                },
+                                "required": [
+                                  "qrData",
+                                  "qrImageUrl",
+                                  "url"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code and link; null until the payment is open."
+                          },
+                          "alipay": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string",
+                                    "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                                  }
+                                },
+                                "required": [
+                                  "url"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The Alipay link; null until the payment is open."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "open",
+                          "current",
+                          "wechatPay",
+                          "alipay"
+                        ],
+                        "additionalProperties": {},
+                        "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
                             "type": "string"
                           }
                         },
                         "required": [
-                          "environment",
-                          "business_profile"
+                          "id"
                         ],
                         "additionalProperties": {}
                       }
-                    },
-                    "required": [
-                      "id",
-                      "type",
-                      "version",
-                      "spec",
-                      "schema",
-                      "available_instruments",
-                      "config"
-                    ],
-                    "additionalProperties": {}
+                    ]
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-                },
-                "credentialLimits": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "maxAmount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991,
-                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                        },
-                        "currency": {
-                          "type": "string",
-                          "description": "The token's currency, lowercase as Stripe takes it: usd."
-                        },
-                        "expiresAt": {
-                          "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                          "description": "Request the token valid until at least this time; the order can't be paid after it."
-                        }
-                      },
-                      "required": [
-                        "maxAmount",
-                        "currency",
-                        "expiresAt"
-                      ],
-                      "additionalProperties": {}
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-                },
-                "wallets": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "open": {
-                          "type": "boolean",
-                          "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                        },
-                        "current": {
-                          "anyOf": [
-                            {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "enum": [
-                                    "wechat_pay",
-                                    "alipay"
-                                  ]
-                                },
-                                {
-                                  "type": "string"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "Which of the two the payment is on now; null until it is open."
-                        },
-                        "wechatPay": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "qrData": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ],
-                                  "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                                },
-                                "qrImageUrl": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ],
-                                  "description": "A 480 px PNG of the same code."
-                                },
-                                "url": {
-                                  "type": "string",
-                                  "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                                }
-                              },
-                              "required": [
-                                "qrData",
-                                "qrImageUrl",
-                                "url"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "The WeChat Pay code and link; null until the payment is open."
-                        },
-                        "alipay": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "url": {
-                                  "type": "string",
-                                  "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                                }
-                              },
-                              "required": [
-                                "url"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "The Alipay link; null until the payment is open."
-                        }
-                      },
-                      "required": [
-                        "open",
-                        "current",
-                        "wechatPay",
-                        "alipay"
-                      ],
-                      "additionalProperties": {}
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+                  "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
                 }
               },
               "required": [
@@ -10013,9 +10103,7 @@
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
                 "localCharge",
-                "handlers",
-                "credentialLimits",
-                "wallets"
+                "methods"
               ],
               "additionalProperties": {}
             },
@@ -10903,234 +10991,258 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
-          "handlers": {
+          "methods": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "string"
-                },
-                "spec": {
-                  "type": "string"
-                },
-                "schema": {
-                  "type": "string"
-                },
-                "available_instruments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string"
-                      },
-                      "config": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "additionalProperties": {}
-                  }
-                },
-                "config": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "environment": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_shared_payment_token"
+                    },
+                    "handler": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "type": "string"
+                        },
+                        "available_instruments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              },
+                              "config": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "environment": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "livemode",
+                                    "testmode"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "business_profile": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "environment",
+                            "business_profile"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "version",
+                        "spec",
+                        "schema",
+                        "available_instruments",
+                        "config"
+                      ],
+                      "additionalProperties": {},
+                      "description": "The com.stripe.payments handler, which takes the token."
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {},
+                      "description": "What the shared payment token for pay_order must allow."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "handler",
+                    "limits"
+                  ],
+                  "additionalProperties": {},
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_alipay_wechat_pay"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                    },
+                    "current": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "livemode",
-                            "testmode"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "wechat_pay",
+                                "alipay"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
                           ]
                         },
                         {
-                          "type": "string"
+                          "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Which of the two the payment is on now; null until it is open."
                     },
-                    "business_profile": {
+                    "wechatPay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "qrData": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                            },
+                            "qrImageUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A 480 px PNG of the same code."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "qrData",
+                            "qrImageUrl",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The WeChat Pay code and link; null until the payment is open."
+                    },
+                    "alipay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The Alipay link; null until the payment is open."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "open",
+                    "current",
+                    "wechatPay",
+                    "alipay"
+                  ],
+                  "additionalProperties": {},
+                  "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "environment",
-                    "business_profile"
+                    "id"
                   ],
                   "additionalProperties": {}
                 }
-              },
-              "required": [
-                "id",
-                "type",
-                "version",
-                "spec",
-                "schema",
-                "available_instruments",
-                "config"
-              ],
-              "additionalProperties": {}
+              ]
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-          },
-          "credentialLimits": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "maxAmount": {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991,
-                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                  },
-                  "currency": {
-                    "type": "string",
-                    "description": "The token's currency, lowercase as Stripe takes it: usd."
-                  },
-                  "expiresAt": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "Request the token valid until at least this time; the order can't be paid after it."
-                  }
-                },
-                "required": [
-                  "maxAmount",
-                  "currency",
-                  "expiresAt"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-          },
-          "wallets": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean",
-                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                  },
-                  "current": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "wechat_pay",
-                              "alipay"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Which of the two the payment is on now; null until it is open."
-                  },
-                  "wechatPay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "qrData": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                          },
-                          "qrImageUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "A 480 px PNG of the same code."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "qrData",
-                          "qrImageUrl",
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The WeChat Pay code and link; null until the payment is open."
-                  },
-                  "alipay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The Alipay link; null until the payment is open."
-                  }
-                },
-                "required": [
-                  "open",
-                  "current",
-                  "wechatPay",
-                  "alipay"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+            "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
           }
         },
         "required": [
@@ -11141,9 +11253,7 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge",
-          "handlers",
-          "credentialLimits",
-          "wallets"
+          "methods"
         ],
         "additionalProperties": {}
       },
@@ -12043,234 +12153,258 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
           },
-          "handlers": {
+          "methods": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "string"
-                },
-                "spec": {
-                  "type": "string"
-                },
-                "schema": {
-                  "type": "string"
-                },
-                "available_instruments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string"
-                      },
-                      "config": {
-                        "type": "object",
-                        "propertyNames": {
-                          "type": "string"
-                        },
-                        "additionalProperties": {}
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "additionalProperties": {}
-                  }
-                },
-                "config": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "environment": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_shared_payment_token"
+                    },
+                    "handler": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "type": "string"
+                        },
+                        "schema": {
+                          "type": "string"
+                        },
+                        "available_instruments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string"
+                              },
+                              "config": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "environment": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "livemode",
+                                    "testmode"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "business_profile": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "environment",
+                            "business_profile"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "version",
+                        "spec",
+                        "schema",
+                        "available_instruments",
+                        "config"
+                      ],
+                      "additionalProperties": {},
+                      "description": "The com.stripe.payments handler, which takes the token."
+                    },
+                    "limits": {
+                      "type": "object",
+                      "properties": {
+                        "maxAmount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "description": "The token's currency, lowercase as Stripe takes it: usd."
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                          "description": "Request the token valid until at least this time; the order can't be paid after it."
+                        }
+                      },
+                      "required": [
+                        "maxAmount",
+                        "currency",
+                        "expiresAt"
+                      ],
+                      "additionalProperties": {},
+                      "description": "What the shared payment token for pay_order must allow."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "handler",
+                    "limits"
+                  ],
+                  "additionalProperties": {},
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "const": "stripe_alipay_wechat_pay"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                    },
+                    "current": {
                       "anyOf": [
                         {
-                          "type": "string",
-                          "enum": [
-                            "livemode",
-                            "testmode"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "wechat_pay",
+                                "alipay"
+                              ]
+                            },
+                            {
+                              "type": "string"
+                            }
                           ]
                         },
                         {
-                          "type": "string"
+                          "type": "null"
                         }
-                      ]
+                      ],
+                      "description": "Which of the two the payment is on now; null until it is open."
                     },
-                    "business_profile": {
+                    "wechatPay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "qrData": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                            },
+                            "qrImageUrl": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "A 480 px PNG of the same code."
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "qrData",
+                            "qrImageUrl",
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The WeChat Pay code and link; null until the payment is open."
+                    },
+                    "alipay": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "additionalProperties": {}
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The Alipay link; null until the payment is open."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "open",
+                    "current",
+                    "wechatPay",
+                    "alipay"
+                  ],
+                  "additionalProperties": {},
+                  "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "environment",
-                    "business_profile"
+                    "id"
                   ],
                   "additionalProperties": {}
                 }
-              },
-              "required": [
-                "id",
-                "type",
-                "version",
-                "spec",
-                "schema",
-                "available_instruments",
-                "config"
-              ],
-              "additionalProperties": {}
+              ]
             },
-            "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-          },
-          "credentialLimits": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "maxAmount": {
-                    "type": "integer",
-                    "minimum": -9007199254740991,
-                    "maximum": 9007199254740991,
-                    "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                  },
-                  "currency": {
-                    "type": "string",
-                    "description": "The token's currency, lowercase as Stripe takes it: usd."
-                  },
-                  "expiresAt": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                    "description": "Request the token valid until at least this time; the order can't be paid after it."
-                  }
-                },
-                "required": [
-                  "maxAmount",
-                  "currency",
-                  "expiresAt"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-          },
-          "wallets": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "open": {
-                    "type": "boolean",
-                    "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                  },
-                  "current": {
-                    "anyOf": [
-                      {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "wechat_pay",
-                              "alipay"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "Which of the two the payment is on now; null until it is open."
-                  },
-                  "wechatPay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "qrData": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                          },
-                          "qrImageUrl": {
-                            "anyOf": [
-                              {
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "A 480 px PNG of the same code."
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "qrData",
-                          "qrImageUrl",
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The WeChat Pay code and link; null until the payment is open."
-                  },
-                  "alipay": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                          }
-                        },
-                        "required": [
-                          "url"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ],
-                    "description": "The Alipay link; null until the payment is open."
-                  }
-                },
-                "required": [
-                  "open",
-                  "current",
-                  "wechatPay",
-                  "alipay"
-                ],
-                "additionalProperties": {}
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+            "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
           }
         },
         "required": [
@@ -12281,9 +12415,7 @@
           "chargeCurrency",
           "localCurrencyAtCheckout",
           "localCharge",
-          "handlers",
-          "credentialLimits",
-          "wallets"
+          "methods"
         ],
         "additionalProperties": {}
       },
@@ -13153,234 +13285,258 @@
                   ],
                   "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null."
                 },
-                "handlers": {
+                "methods": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      },
-                      "version": {
-                        "type": "string"
-                      },
-                      "spec": {
-                        "type": "string"
-                      },
-                      "schema": {
-                        "type": "string"
-                      },
-                      "available_instruments": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string"
-                            },
-                            "config": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            }
-                          },
-                          "required": [
-                            "type"
-                          ],
-                          "additionalProperties": {}
-                        }
-                      },
-                      "config": {
+                    "anyOf": [
+                      {
                         "type": "object",
                         "properties": {
-                          "environment": {
+                          "id": {
+                            "type": "string",
+                            "const": "stripe_shared_payment_token"
+                          },
+                          "handler": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              },
+                              "version": {
+                                "type": "string"
+                              },
+                              "spec": {
+                                "type": "string"
+                              },
+                              "schema": {
+                                "type": "string"
+                              },
+                              "available_instruments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string"
+                                    },
+                                    "config": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {}
+                                    }
+                                  },
+                                  "required": [
+                                    "type"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              "config": {
+                                "type": "object",
+                                "properties": {
+                                  "environment": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "livemode",
+                                          "testmode"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  "business_profile": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "environment",
+                                  "business_profile"
+                                ],
+                                "additionalProperties": {}
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "version",
+                              "spec",
+                              "schema",
+                              "available_instruments",
+                              "config"
+                            ],
+                            "additionalProperties": {},
+                            "description": "The com.stripe.payments handler, which takes the token."
+                          },
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "maxAmount": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "The token's currency, lowercase as Stripe takes it: usd."
+                              },
+                              "expiresAt": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+                                "description": "Request the token valid until at least this time; the order can't be paid after it."
+                              }
+                            },
+                            "required": [
+                              "maxAmount",
+                              "currency",
+                              "expiresAt"
+                            ],
+                            "additionalProperties": {},
+                            "description": "What the shared payment token for pay_order must allow."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "handler",
+                          "limits"
+                        ],
+                        "additionalProperties": {},
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "const": "stripe_alipay_wechat_pay"
+                          },
+                          "open": {
+                            "type": "boolean",
+                            "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
+                          },
+                          "current": {
                             "anyOf": [
                               {
-                                "type": "string",
-                                "enum": [
-                                  "livemode",
-                                  "testmode"
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "wechat_pay",
+                                      "alipay"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
                                 ]
                               },
                               {
-                                "type": "string"
+                                "type": "null"
                               }
-                            ]
+                            ],
+                            "description": "Which of the two the payment is on now; null until it is open."
                           },
-                          "business_profile": {
+                          "wechatPay": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "qrData": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
+                                  },
+                                  "qrImageUrl": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "A 480 px PNG of the same code."
+                                  },
+                                  "url": {
+                                    "type": "string",
+                                    "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
+                                  }
+                                },
+                                "required": [
+                                  "qrData",
+                                  "qrImageUrl",
+                                  "url"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The WeChat Pay code and link; null until the payment is open."
+                          },
+                          "alipay": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "url": {
+                                    "type": "string",
+                                    "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
+                                  }
+                                },
+                                "required": [
+                                  "url"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The Alipay link; null until the payment is open."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "open",
+                          "current",
+                          "wechatPay",
+                          "alipay"
+                        ],
+                        "additionalProperties": {},
+                        "description": "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open."
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
                             "type": "string"
                           }
                         },
                         "required": [
-                          "environment",
-                          "business_profile"
+                          "id"
                         ],
                         "additionalProperties": {}
                       }
-                    },
-                    "required": [
-                      "id",
-                      "type",
-                      "version",
-                      "spec",
-                      "schema",
-                      "available_instruments",
-                      "config"
-                    ],
-                    "additionalProperties": {}
+                    ]
                   },
-                  "description": "The ways to pay other than url: a com.stripe.payments handler takes a Stripe shared payment token through pay_order. [] when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
-                },
-                "credentialLimits": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "maxAmount": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991,
-                          "description": "Request the token for at least this amount, in cents; a token that allows less can't pay."
-                        },
-                        "currency": {
-                          "type": "string",
-                          "description": "The token's currency, lowercase as Stripe takes it: usd."
-                        },
-                        "expiresAt": {
-                          "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
-                          "description": "Request the token valid until at least this time; the order can't be paid after it."
-                        }
-                      },
-                      "required": [
-                        "maxAmount",
-                        "currency",
-                        "expiresAt"
-                      ],
-                      "additionalProperties": {}
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "What the shared payment token for pay_order must allow. null exactly when handlers is []."
-                },
-                "wallets": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "open": {
-                          "type": "boolean",
-                          "description": "Whether pay_order has opened an Alipay or WeChat Pay payment on this order."
-                        },
-                        "current": {
-                          "anyOf": [
-                            {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "enum": [
-                                    "wechat_pay",
-                                    "alipay"
-                                  ]
-                                },
-                                {
-                                  "type": "string"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "Which of the two the payment is on now; null until it is open."
-                        },
-                        "wechatPay": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "qrData": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ],
-                                  "description": "The WeChat Pay code's content, to draw as a QR code; null when there is no live code (open wechatPay.url for one)."
-                                },
-                                "qrImageUrl": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string"
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ],
-                                  "description": "A 480 px PNG of the same code."
-                                },
-                                "url": {
-                                  "type": "string",
-                                  "description": "A link, on fortrip.ai, for the user to pay with WeChat Pay; anyone holding it can pay."
-                                }
-                              },
-                              "required": [
-                                "qrData",
-                                "qrImageUrl",
-                                "url"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "The WeChat Pay code and link; null until the payment is open."
-                        },
-                        "alipay": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "url": {
-                                  "type": "string",
-                                  "description": "A link, on fortrip.ai, for the user to pay with Alipay; anyone holding it can pay."
-                                }
-                              },
-                              "required": [
-                                "url"
-                              ],
-                              "additionalProperties": {}
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "The Alipay link; null until the payment is open."
-                        }
-                      },
-                      "required": [
-                        "open",
-                        "current",
-                        "wechatPay",
-                        "alipay"
-                      ],
-                      "additionalProperties": {}
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "description": "Paying with Alipay or WeChat Pay: pass method alipay_wechat_pay to pay_order to open it. null when the order can't be paid this way and none is open."
+                  "description": "What pay_order accepts for this order now, by id. [] means: give the user payment.url, when it isn't null."
                 }
               },
               "required": [
@@ -13391,9 +13547,7 @@
                 "chargeCurrency",
                 "localCurrencyAtCheckout",
                 "localCharge",
-                "handlers",
-                "credentialLimits",
-                "wallets"
+                "methods"
               ],
               "additionalProperties": {}
             },

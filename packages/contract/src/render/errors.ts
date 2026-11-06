@@ -199,7 +199,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       ];
     case "payment_credential_invalid":
       return [
-        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the order's payment.credentialLimits. Nothing was charged.`,
+        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the limits of the order's stripe_shared_payment_token method. Nothing was charged.`,
       ];
     case "payment_declined":
       return [

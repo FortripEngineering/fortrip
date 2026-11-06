@@ -71,9 +71,7 @@
           "chargeCurrency": "EUR",
           "localCurrencyAtCheckout": false,
           "localCharge": null,
-          "handlers": [],
-          "credentialLimits": null,
-          "wallets": null
+          "methods": []
         },
         "cancel": {
           "available": false,
@@ -176,9 +174,7 @@
           "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "handlers": [],
-          "credentialLimits": null,
-          "wallets": null
+          "methods": []
         },
         "cancel": {
           "available": false,
@@ -273,9 +269,7 @@
           "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "handlers": [],
-          "credentialLimits": null,
-          "wallets": null
+          "methods": []
         },
         "cancel": {
           "available": false,
@@ -389,9 +383,7 @@
             "amount": "339.80",
             "currency": "EUR"
           },
-          "handlers": [],
-          "credentialLimits": null,
-          "wallets": null
+          "methods": []
         },
         "cancel": {
           "available": true,

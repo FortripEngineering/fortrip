@@ -284,10 +284,10 @@ const CASES: {
   },
   {
     name: "orders pay",
-    argv: [ORDER, "--wallet", "--total", "125.00"],
+    argv: [ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "125.00"],
     method: "POST",
     path: `/v1/orders/${ORDER}/pay`,
-    body: { method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
+    body: { method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
 ];

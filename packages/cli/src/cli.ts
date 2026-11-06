@@ -228,12 +228,16 @@ function takeJson(argv: string[]): { json: boolean; argv: string[] } {
   return { json: kept.length < before.length, argv: [...kept, ...after] };
 }
 
-/** The WeChat Pay code of an `orders pay` answer, drawn for the terminal;
+/** The WeChat Pay code of an `orders pay` answer's Alipay or WeChat Pay
+ *  entry in `payment.methods`, drawn for the terminal;
  *  null when it isn't one, there is no code, or it doesn't fit. */
 function walletCode(argv: string[], data: unknown): string | null {
   if (argv[0] !== "orders" || argv[1] !== "pay" || !process.stdout.isTTY) return null;
-  const wallets = (data as { payment?: { wallets?: { wechatPay?: { qrData?: unknown } } } } | null)?.payment?.wallets;
-  const qrData = wallets?.wechatPay?.qrData;
+  const methods = (data as { payment?: { methods?: unknown } } | null)?.payment?.methods;
+  const wallet = Array.isArray(methods)
+    ? (methods as { id?: unknown; wechatPay?: { qrData?: unknown } }[]).find((m) => m?.id === "stripe_alipay_wechat_pay")
+    : undefined;
+  const qrData = wallet?.wechatPay?.qrData;
   return typeof qrData === "string" ? terminalQr(qrData, process.stdout.columns) : null;
 }
 

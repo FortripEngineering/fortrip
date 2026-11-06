@@ -1055,22 +1055,25 @@ describe("payOrderInput", () => {
     assertAccepted(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...phone }] }, total });
   });
 
-  it("takes method alipay_wechat_pay with the total", () => {
-    assertAccepted(payOrderInput, { orderId, method: "alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
+  it("takes method stripe_alipay_wechat_pay with the total", () => {
+    assertAccepted(payOrderInput, { orderId, method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
   });
 
-  it("refuses an unknown method", () => {
-    const issues = refusalOf(payOrderInput, { orderId, method: "card", total });
-    assert.deepEqual(
-      issues.map((i) => [i.path, i.message]),
-      [["method", "method must be one of: alipay_wechat_pay"]],
-    );
+  it("refuses an unknown method, and the token's id: a token is sent as sharedPaymentToken or payment", () => {
+    for (const method of ["card", "stripe_shared_payment_token"]) {
+      const issues = refusalOf(payOrderInput, { orderId, method, total });
+      assert.deepEqual(
+        issues.map((i) => [i.path, i.message]),
+        [["method", "method must be one of: stripe_alipay_wechat_pay"]],
+        method,
+      );
+    }
   });
 
   it("takes exactly one of the three", () => {
     const both = "Send exactly one of sharedPaymentToken, payment and method";
     const payment = { instruments: [card(true)] };
-    const method = "alipay_wechat_pay";
+    const method = "stripe_alipay_wechat_pay";
     const messageAt = (input: object, at: string) =>
       refusalOf(payOrderInput, { orderId, total, ...input }).find((i) => i.path === at)?.message;
     assert.equal(messageAt({ sharedPaymentToken: token, payment }, "payment"), both);

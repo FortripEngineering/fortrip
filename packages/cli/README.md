@@ -107,8 +107,8 @@ same.
 `hotels book` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens, or
 approves a shared payment token for `orders pay` in their wallet, or
-scans the WeChat Pay code or opens the Alipay link that `orders pay --wallet`
-prints. Orders
+scans the WeChat Pay code or opens the Alipay link that
+`orders pay --method stripe_alipay_wechat_pay` prints. Orders
 are paid in the currency of the offers they come from (`--currency`).
 
 `orders get` and `orders list` say of each order whether it can be cancelled

@@ -69,7 +69,7 @@ export const CALLS = {
     penalty:
       'Pass maximumPenalty as the number in cancel.penalty.amount ("120.00" → 120).',
     pay: "call pay_order",
-    payWallet: " with method alipay_wechat_pay",
+    payWallet: " with method stripe_alipay_wechat_pay",
     get: "call get_order",
     poll: "poll get_order",
     payWith: "call pay_order with it and the order's price.total",
@@ -80,7 +80,7 @@ export const CALLS = {
     penalty:
       "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
     pay: "run `fortrip orders pay`",
-    payWallet: " with --wallet",
+    payWallet: " with --method stripe_alipay_wechat_pay",
     get: "run `fortrip orders get <orderId>`",
     poll: "poll it with `fortrip orders get <orderId>`",
     payWith:
@@ -107,12 +107,13 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
 /**
  * How to pay without the link, as `surface` names the call. It rides as the
  * last paragraph of the text of every `book_hotel`, `get_order` and
- * `list_orders` result that holds an order with non-empty
- * `payment.handlers`, after `ORDER_NEXT_STEP`; never as `nextStep`.
+ * `list_orders` result that holds an order whose `payment.methods` has the
+ * `stripe_shared_payment_token` entry, after `ORDER_NEXT_STEP`; never as
+ * `nextStep`.
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.handlers isn't empty. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with the handler's config.business_profile and payment.credentialLimits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
+  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.methods has the stripe_shared_payment_token entry. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with that entry's handler config.business_profile and its limits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
 }
 
 /** `payNextStep` over MCP. */
@@ -122,11 +123,12 @@ export const PAY_NEXT_STEP = payNextStep("mcp");
  * How to pay with Alipay or WeChat Pay (spec §7), as `surface` names the
  * call. It rides as the last paragraph of the text of every `book_hotel`,
  * `get_order` and `list_orders` result that holds an order whose
- * `payment.wallets` offers it without having opened it; never as `nextStep`.
+ * `payment.methods` has the `stripe_alipay_wechat_pay` entry, not yet open;
+ * never as `nextStep`.
  */
 export function walletNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `Before you ${c.pay}${c.payWallet}, show the user the order's total in USD, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then ask them to confirm, and wait for a clear yes. Then show payment.wallets: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
+  return `Before you ${c.pay}${c.payWallet}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then ask them to confirm, and wait for a clear yes. Then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
 }
 
 /** `walletNextStep` over MCP. */
@@ -257,7 +259,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order",
     description:
-      `Pay an order without its link, by shared payment token or Alipay/WeChat Pay (method alipay_wechat_pay). Token: only if payment.handlers isn't empty and you can request one from the user's Link wallet (US and Canadian accounts); never ask the user for one. First show the user the USD total, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm and wait for a clear yes. Token: request it with config.business_profile and payment.credentialLimits; pass it with price.total. Wallet: pass method, price.total; show payment.wallets (WeChat code as an image if you can, both links); they pay once by either; a code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: payment.url or pay_order. On success payment.url stops working; on failure it stays open. Then poll get_order. payment_total_changed: confirm details.total, retry. payment_credential_invalid: new token. service_unavailable: retry. Else payment.url. A token pays one order only.`,
+      `Pay an order without its link, by one of its payment.methods: a shared payment token, or Alipay/WeChat Pay (method stripe_alipay_wechat_pay). Token: only if you can request one from the user's Link wallet (US and Canadian accounts); never ask the user for one. First show the user the total and currency, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm and wait for a clear yes. Token: request it with the entry's handler config.business_profile and limits; pass it with price.total. Wallet: pass method, price.total; show the wallet entry (WeChat code as an image if you can, both links); they pay once by either; a code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: payment.url or pay_order. Success closes payment.url; failure leaves it open. Then poll get_order. payment_total_changed: confirm details.total, retry. payment_credential_invalid: new token. service_unavailable: retry. Else payment.url. A token pays one order.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

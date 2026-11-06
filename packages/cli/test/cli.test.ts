@@ -24,6 +24,8 @@ import {
   strictOutput,
 } from "@fortrip/agent-contract";
 
+import { terminalQr } from "../src/qr.ts";
+
 const run = promisify(execFile);
 
 /** What the fake API answers next, and every request it has received. */
@@ -64,7 +66,10 @@ beforeEach(() => {
 
 const TOKEN = `fth_${"x".repeat(43)}`;
 
-async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
+/** A preload that makes the spawned CLI's stdout a 200-column TTY. */
+const WIDE_TTY = "data:text/javascript,Object.assign(process.stdout,{isTTY:true,columns:200})";
+
+async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}, preload: string[] = []) {
   const env = {
     ...process.env,
     FORTRIP_API_URL: apiUrl,
@@ -73,7 +78,8 @@ async function cli(args: string[], extraEnv: NodeJS.ProcessEnv = {}) {
     XDG_CONFIG_HOME: await mkdtemp(join(tmpdir(), "fortrip-cli-")),
     ...extraEnv,
   };
-  return run(process.execPath, ["--import", "tsx", "src/cli.ts", ...args], { env }).then(
+  const imports = [...preload, "tsx"].flatMap((module) => ["--import", module]);
+  return run(process.execPath, [...imports, "src/cli.ts", ...args], { env }).then(
     ({ stdout, stderr }) => ({ code: 0, stdout, stderr }),
     (error: { code: number; stdout: string; stderr: string }) => error,
   );
@@ -343,16 +349,35 @@ describe("output", () => {
     assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
   });
 
-  it("orders pay --wallet prints the links and, on a wide TTY, the code", async () => {
+  it("orders pay --method stripe_alipay_wechat_pay prints the links and, on a wide TTY, the entry's code", async () => {
     const { data } = await fixture("order-wallets-open");
-    replies = [{ status: 200, body: (await fixture("order-awaiting-payment")).data }, { status: 200, body: data }];
+    const read = { status: 200, body: (await fixture("order-awaiting-payment")).data };
+    const args = ["orders", "pay", ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "365.00"];
+    replies = [read, { status: 200, body: data }];
     // The spawned CLI has no TTY, so the code stays out and the links stay in.
-    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
+    const { code, stdout, stderr } = await cli(args);
     assert.equal(code, 0, stderr);
-    assert.deepEqual(requests[1]?.body, { method: "alipay_wechat_pay", total: { amount: "365.00", currency: "USD" } });
+    assert.deepEqual(requests[1]?.body, {
+      method: "stripe_alipay_wechat_pay",
+      total: { amount: "365.00", currency: "USD" },
+    });
     assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
     assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/alipay/);
     assert.ok(!stdout.includes("█"));
+    // On a wide TTY, the code drawn is the wallet entry's wechatPay.qrData.
+    const { qrData } = (data as { payment: { methods: { wechatPay: { qrData: string } }[] } }).payment.methods[0]!
+      .wechatPay;
+    replies = [read, { status: 200, body: data }];
+    const tty = await cli(args, {}, [WIDE_TTY]);
+    assert.equal(tty.code, 0, tty.stderr);
+    assert.ok(tty.stdout.endsWith(`\nOr scan this WeChat Pay code:\n${terminalQr(qrData, 200)}\n`), tty.stdout);
+  });
+
+  it("orders pay --wallet is no flag: it exits 2 and sends nothing", async () => {
+    const { code, stdout } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
+    assert.equal(code, 2);
+    assert.equal(stdout, "");
+    assert.equal(requests.length, 0);
   });
 
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {

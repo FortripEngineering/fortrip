@@ -66,10 +66,10 @@ npx fortrip orders get ord_…
 
 `hotels book` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
 
-If the order offers Alipay or WeChat Pay (its `payment.wallets` isn't `null`), you can pay that way instead. Use the total exactly as `orders get` shows it:
+If the order offers Alipay or WeChat Pay (its `payment.methods` has the `stripe_alipay_wechat_pay` entry), you can pay that way instead. Use the total exactly as `orders get` shows it:
 
 ```sh
-npx fortrip orders pay ord_… --wallet --total <total>
+npx fortrip orders pay ord_… --method stripe_alipay_wechat_pay --total <total>
 ```
 
 It prints a WeChat Pay code, an Alipay link and a WeChat Pay link; pay once, by one of them. Each command's usage and options are in the [CLI reference](/cli).

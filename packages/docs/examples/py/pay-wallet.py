@@ -8,7 +8,7 @@ import httpx
 token = os.environ["FORTRIP_TOKEN"]
 
 body = {
-  "method": "alipay_wechat_pay",
+  "method": "stripe_alipay_wechat_pay",
   "total": {
     "amount": "132.40",
     "currency": "USD"

@@ -116,8 +116,10 @@ export {
   orderList,
   orderReference,
   ORDER_STATUSES,
+  PAYMENT_METHOD_IDS,
   PAYMENT_STATUSES,
   paymentHandler,
+  paymentMethod,
   type CancelReason,
   type CredentialInvalidReason,
   type OfferChange,
@@ -125,6 +127,8 @@ export {
   type OrderList,
   type OrderStatus,
   type PaymentHandler,
+  type PaymentMethod,
+  type PaymentMethodId,
   type PaymentStatus,
 } from "./outputs/order.ts";
 export {

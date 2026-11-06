@@ -444,14 +444,15 @@ const payFlags = flagsOf(payOrderInput, [
     type: "string",
     placeholder: "<spt_…>",
     description:
-      "Required unless --wallet. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --wallet.",
+      "Required unless --method. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --method.",
   },
   {
-    flag: "wallet",
+    flag: "method",
     field: "method",
-    type: "boolean",
-    value: "alipay_wechat_pay",
-    description: "Pay with Alipay or WeChat Pay instead of a token: prints the WeChat Pay code and both links.",
+    type: "string",
+    placeholder: "stripe_alipay_wechat_pay",
+    description:
+      "Pay by a method in the order's payment.methods instead of a token: stripe_alipay_wechat_pay is Alipay or WeChat Pay, and prints the WeChat Pay code and both links.",
   },
   {
     flag: "total",

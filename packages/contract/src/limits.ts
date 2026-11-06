@@ -28,7 +28,7 @@ export const LIMITS = {
   tokenPaymentMaxUsd: 500,
   /** Minutes that must be left before the order's payment window closes
    *  (`payment.expiresAt`) for the order to offer a token or wallet payment
-   *  (`payment.handlers`, `payment.wallets`). */
+   *  (an entry of `payment.methods`). */
   payMinMinutesLeft: 15,
   /** `pay_order` refuses (`order_not_payable`), by token or wallet, when the
    *  order's payment window (`payment.expiresAt`) closes within this many
