@@ -5,13 +5,10 @@ export type ErrorCode =
   | "unauthenticated"
   | "forbidden"
   | "not_found"
-  | "order_removed"
   | "offer_expired"
   | "offer_changed"
   | "offer_already_ordered"
-  | "order_exists"
   | "order_in_progress"
-  | "order_attempts_exhausted"
   | "cancellation_changed"
   | "order_not_cancellable"
   | "order_not_payable"
@@ -47,13 +44,10 @@ export const ERROR_CODES: Readonly<
   unauthenticated: { status: [401], retryable: false },
   forbidden: { status: [403], retryable: false },
   not_found: { status: [404], retryable: false },
-  order_removed: { status: [410], retryable: false },
   offer_expired: { status: [409], retryable: false },
   offer_changed: { status: [409], retryable: false },
   offer_already_ordered: { status: [409], retryable: false },
-  order_exists: { status: [409], retryable: false },
   order_in_progress: { status: [409], retryable: true },
-  order_attempts_exhausted: { status: [409], retryable: false },
   cancellation_changed: { status: [409], retryable: false },
   order_not_cancellable: { status: [409], retryable: false },
   order_not_payable: { status: [409], retryable: false },

@@ -17,7 +17,6 @@ import {
   CREDENTIAL_INVALID_REASONS,
   ORDER_STATUSES,
   offerChange,
-  orderReference,
 } from "./order.ts";
 import { center, place, placeRef } from "./place.ts";
 import { localities } from "./search.ts";
@@ -54,13 +53,10 @@ export const ERROR_DETAILS = {
   unauthenticated: null,
   forbidden: null,
   not_found: null,
-  order_removed: openObject({ orderId, reference: orderReference }),
   offer_expired: openObject({ offerId, expiredAt: instant }),
   offer_changed: openObject({ changes: z.array(offerChange).min(1), offer }),
   offer_already_ordered: openObject({ orderId }),
-  order_exists: openObject({ orderId, status: openEnum(ORDER_STATUSES) }),
   order_in_progress: openObject({ orderId }),
-  order_attempts_exhausted: openObject({ orderId }),
   cancellation_changed: null,
   order_not_cancellable: openObject({ reason: openEnum(CANCEL_REASONS) }),
   order_not_payable: openObject({ orderId, status: openEnum(ORDER_STATUSES) }),

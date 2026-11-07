@@ -20,13 +20,10 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   unauthenticated: [[401], false],
   forbidden: [[403], false],
   not_found: [[404], false],
-  order_removed: [[410], false],
   offer_expired: [[409], false],
   offer_changed: [[409], false],
   offer_already_ordered: [[409], false],
-  order_exists: [[409], false],
   order_in_progress: [[409], true],
-  order_attempts_exhausted: [[409], false],
   cancellation_changed: [[409], false],
   order_not_cancellable: [[409], false],
   order_not_payable: [[409], false],
@@ -122,7 +119,6 @@ describe("LIMITS and friends", () => {
       payCutoffMinutes: 2,
       tokensPerOrder: 5,
       wechatCodeMinutes: 120,
-      ordersPerStay: 20,
     });
     assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");

@@ -31,15 +31,15 @@ export const RETRY_WAYS = {
  * Checked against the server's behaviour: an order's request is matched by
  * its offer and the canonical contact, guests per room and special requests
  * (names with spacing and apostrophes normalized, the email lowercased, the
- * phone as its digits and a leading `+`); an offer's claim is released only
- * when its order failed or expired; a token pays once and its replay answers
+ * phone as its digits and a leading `+`); an offer is ordered once, and its
+ * order answers it whatever its status; a token pays once and its replay answers
  * the first call's outcome; an open Alipay or WeChat Pay payment is resumed;
  * a cancellation under way or done is answered as the order reads.
  */
 export const RETRY_DOCS: readonly RetryDoc[] = [
   {
     tools: ["book_hotel"],
-    again: `Safe. The same details answer the same order: HTTP ${ORDER_HTTP.replayedStatus} with \`${ORDER_HTTP.replayedHeader}: true\`, or \`_meta["ai.fortrip/replayed"]\` over MCP. The same details are the same \`offerId\`, contact, guests in each room and special requests; spacing in a name, the email's letter case, and spaces and punctuation in the phone don't count (a leading \`+\` does). Other details answer \`offer_already_ordered\`, unless the offer's order failed or expired. While the first call is still running, the answer is \`order_in_progress\`: send it again after \`retryAfterSeconds\`.`,
+    again: `Safe. The same details answer the same order: HTTP ${ORDER_HTTP.replayedStatus} with \`${ORDER_HTTP.replayedHeader}: true\`, or \`_meta["ai.fortrip/replayed"]\` over MCP. The same details are the same \`offerId\`, contact, guests in each room and special requests; spacing in a name, the email's letter case, and spaces and punctuation in the phone don't count (a leading \`+\` does). Other details answer \`offer_already_ordered\`, even when the offer's order failed or expired. While the first call is still running, the answer is \`order_in_progress\`: send it again after \`retryAfterSeconds\`.`,
   },
   {
     tools: ["pay_order"],

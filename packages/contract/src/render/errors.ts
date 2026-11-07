@@ -163,8 +163,6 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
     }
     case "cursor_invalid":
       return [`The cursor is ${e.details.reason}: search again without a cursor.`];
-    case "order_removed":
-      return [`Order ${e.details.orderId}, reference ${e.details.reference}.`];
     case "offer_expired":
       return [`Offer ${e.details.offerId} expired at ${when(e.details.expiredAt, null)}: get fresh offers.`];
     case "offer_changed":
@@ -177,10 +175,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       ];
     case "offer_already_ordered":
     case "order_in_progress":
-    case "order_attempts_exhausted":
       return [`Order ${e.details.orderId}.`];
-    case "order_exists":
-      return [`Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}.`];
     case "order_not_cancellable":
       return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
     case "order_not_payable":

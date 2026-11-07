@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -487,10 +486,8 @@ describe("the full guides", () => {
         // After payment (§4).
         new RegExp(`check the order with \`${order}\``),
         // Purchases the protocol blocks (§10.1).
-        /`order_exists`.{0,300}?open order for one of these guests.{0,300}?none of its guests.{0,300}?cancelled.{0,300}?failed/,
         /[Aa]nother order of the stay.{0,200}?get offers again.{0,200}?pay only the new link/,
-        /`offer_already_ordered`/,
-        /`order_removed`.{0,120}?get offers again and order the new offer/,
+        /`offer_already_ordered`.{0,200}?ordered once, even when its order failed or expired.{0,120}?get offers again/,
         /`order_in_progress`/,
         /`offer_expired`/,
         /`ordering_paused`/,
@@ -531,17 +528,6 @@ describe("renderText", () => {
     assert.equal(renderText("{{arg:stay.rooms}}", "cli"), "--room");
     assert.equal(renderText("{{arg:items.offerId}}", "cli"), "--offer");
     assert.equal(renderText("{{arg:stay.checkIn}}", "cli"), "--check-in");
-  });
-
-  it("states the stay order cap from LIMITS", () => {
-    const fragment = readFileSync(new URL("../guide/errors.md", import.meta.url), "utf8");
-    assert.ok(fragment.includes("the stay has had {{limit:ordersPerStay}} orders"));
-    for (const surface of ["cli", "claude-skill"] as const) {
-      assert.ok(
-        flat(renderGuide(surface, "main")).includes(`the stay has had ${LIMITS.ordersPerStay} orders`),
-        surface,
-      );
-    }
   });
 
   it("renders limits and the support address", () => {
