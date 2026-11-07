@@ -6,7 +6,8 @@ import { CURRENCIES } from "../limits.ts";
  * Money is `{ amount: "132.40", currency: "USD" }`: a decimal string (never a
  * number) and an uppercase ISO 4217 code. A response Money is open (extra
  * fields pass); a request Money is strict and in USD or CNY, except one that
- * echoes a returned Money, which is checked as a response Money.
+ * echoes a returned Money, which is checked as a response Money. A request
+ * Money's input type is `Money` too, so a caller's `z.input` is typed.
  */
 
 export type Money = { amount: string; currency: string };
@@ -27,7 +28,7 @@ export const money: z.ZodType<Money> = z.looseObject({
  * A Money a caller sends: USD or CNY, no unknown fields. `name` is the field
  * it is the value of, which the refusal names.
  */
-export function requestMoney(name: string): z.ZodType<Money> {
+export function requestMoney(name: string): z.ZodType<Money, Money> {
   return z.strictObject(
     {
       amount: z
@@ -52,7 +53,7 @@ export function requestMoney(name: string): z.ZodType<Money> {
  * response Money, so in any currency. `name` is the field it is the value
  * of, which the refusal names.
  */
-export function echoedMoney(name: string): z.ZodType<Money> {
+export function echoedMoney(name: string): z.ZodType<Money, Money> {
   return z.looseObject(
     {
       amount: z
