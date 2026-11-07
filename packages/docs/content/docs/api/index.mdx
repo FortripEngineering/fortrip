@@ -85,7 +85,7 @@ There are no webhooks. After you give the user the payment link, read the order 
 ## Orders [#orders]
 
 - <code><Fact path="ROUTES.book_hotel" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
-- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; `409 offer_already_ordered` when the offer was ordered with other details and that order hasn't failed or expired; and `409 order_exists` when the stay already has an open order for one of these guests.
+- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; and `409 offer_already_ordered` when the offer was ordered with other details. An offer is ordered once, even when its order failed or expired: another order of the stay takes a new offer.
 - <code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, for the way it pays.
 - Orders can't be changed through the API.
 

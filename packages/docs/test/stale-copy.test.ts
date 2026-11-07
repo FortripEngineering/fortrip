@@ -177,6 +177,14 @@ const STALE: readonly RegExp[] = [
   /fortrip guide/,
   /US dollars/,
   /(?<!stripe_)alipay_wechat_pay/,
+  // One offer is one order: no per-stay check, cap or removed order.
+  /order_exists/,
+  /order_removed/,
+  /order_attempts_exhausted/,
+  /ordersPerStay/,
+  /[Oo]rders per stay/,
+  /hasn't failed or expired/,
+  /unless the offer's order failed/,
 ];
 
 /** A fixture as text, less the server-sent notice it mirrors, which is the

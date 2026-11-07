@@ -27,6 +27,7 @@ A major release. A request is priced and charged in one currency, USD or CNY, an
 - `pay_order`'s `method: "alipay_wechat_pay"` is now `method: "stripe_alipay_wechat_pay"`. A token is sent as before.
 - `maximumPenalty` on `cancel_order` is Money, the order's `cancel.penalty` exactly as returned, in whatever currency it is, instead of a JSON number. It is optional: an unpaid order is closed without it.
 - `get_planning_guide` is removed, and so is `fortrip guide`. The planning guide is a file in the Claude plugin and the CLI skill, `references/planning.md`.
+- One offer is one order. Ordering the same offer again answers its order: the same details replay it, and other details answer `offer_already_ordered`, even when that order failed or expired. Another order of the stay, for another party or after an order failed or expired, takes a new offer and gets its own `orderId`. Nothing refuses a second open order of the same stay any more: when a new order replaces an unpaid one, have the user pay only the new link, or close the old order with `cancel_order`. The errors `order_exists`, `order_removed` and `order_attempts_exhausted` are removed: the server no longer answers them.
 - CLI:
   - `--display-currency` is now `--currency`, and `FORTRIP_DISPLAY_CURRENCY` is now `FORTRIP_CURRENCY`.
   - `orders pay --wallet` is now `--method stripe_alipay_wechat_pay`.
@@ -57,6 +58,7 @@ A major release. A request is priced and charged in one currency, USD or CNY, an
 - `cancel.available` is also true for an unpaid order (`reason` `unpaid`, `penalty` null): check `reason`.
 - Close an unpaid order with `cancel_order` when the user no longer wants it.
 - Stop calling `get_planning_guide` and `fortrip guide`.
+- Drop any handling of `order_exists`, `order_removed` and `order_attempts_exhausted`. To order a stay again, get offers again and order the new offer; when it replaces an unpaid order, close that one or tell the user to pay only the new link.
 - Update the CLI to 5.0.0, and use `--currency`, `FORTRIP_CURRENCY` and `--method`. A 4.x CLI shows this server's searches, offers and orders only as raw JSON, and its cancel, Alipay or WeChat Pay and `--display-currency` requests are refused, as is its token payment of a CNY order.
 
 ### Package
@@ -67,6 +69,8 @@ A major release. A request is priced and charged in one currency, USD or CNY, an
 - The `PAY_WAYS` values are `payment_link`, `stripe_shared_payment_token` and `stripe_alipay_wechat_pay`.
 - `RenderedTool` and `HttpToolName` are every tool name, `get_planning_guide` being removed.
 - `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `payment.handlers` and `payment.wallets.open` are now `payment.methods` and `payment.methods.open`.
+- `LIMITS.ordersPerStay` is removed, and so are the three error codes, from `ErrorCode`, `ERROR_CODES` and `ERROR_DETAILS`.
+- A Money a request sends (`requestMoney`, and `cancel_order`'s `maximumPenalty`) is typed as `Money` on input too: `CancelOrderInput`, `PayOrderInput` and `SearchHotelsInput` no longer have `unknown` for it.
 - `ToolSpec.input` and `ToolSpec.output` are required, not `null`. `PositionalSpec.field` is a `string`, and `PositionalSpec.optional` and `FlagSpec.optional` are removed. The `guide` command is removed from `COMMANDS`.
 
 ## 4.3.1

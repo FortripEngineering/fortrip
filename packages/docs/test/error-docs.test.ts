@@ -28,7 +28,7 @@ test("details are listed field by field, as the contract's shapes", () => {
   const details = (code: keyof typeof ERROR_CODES) =>
     ERROR_ROWS.find((row) => row.code === code)?.details;
   assert.deepEqual(details("cursor_invalid"), ['`reason`: `"expired" | "mismatch" | "malformed"`']);
-  assert.deepEqual(details("order_removed"), ["`orderId`: `string`", "`reference`: `string`"]);
+  assert.deepEqual(details("payment_in_progress"), ["`orderId`: `string`"]);
   assert.deepEqual(details("supplier_unavailable"), ['`outcome`: `"not_started" | "unknown"`']);
   assert.deepEqual(details("stay_in_past"), ["`checkIn`: `string`", "`timeZone`: `string | null`"]);
   assert.deepEqual(details("payment_total_changed"), ["`orderId`: `string`", "`total`: `{ amount: string; currency: string }`"]);
@@ -65,22 +65,13 @@ test("the meanings say what the contract and its guide say", () => {
     meaning("destination_ambiguous"),
     new RegExp(`lists up to ${LIMITS.candidatesShown} with`),
   );
-  // The guide's order_exists cases (renderGuide "cli" main).
-  for (const blocked of [
-    /open order for one of these guests/,
-    /A party with none of its guests can order the stay/,
-    /once the stay's order is confirmed, cancelled or refused by the hotel/,
-    /earlier order failed at the hotel with its outcome unknown/,
-    new RegExp(`the stay has had ${LIMITS.ordersPerStay} orders`),
-  ]) {
-    assert.match(meaning("order_exists"), blocked);
-  }
+  // One offer, one order (the guide's offer_already_ordered row).
+  assert.match(meaning("offer_already_ordered"), /An offer is ordered once, even when its order failed or expired/);
 });
 
-test("the stay order cap, the pay cutoff and supplier_unavailable's statuses come from the contract", () => {
+test("the pay cutoff and supplier_unavailable's statuses come from the contract", () => {
   const meaning = (code: keyof typeof ERROR_CODES) =>
     ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
-  assert.ok(meaning("order_exists").includes(`the stay has had ${LIMITS.ordersPerStay} orders`));
   assert.ok(
     meaning("order_not_payable").includes(`whose payment window closes within ${LIMITS.payCutoffMinutes} minutes`),
     meaning("order_not_payable"),

@@ -122,11 +122,6 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     `${l.wechatCodeMinutes} minutes`,
     "How long a WeChat Pay code in `payment.methods` lasts after it is made.",
   ],
-  ordersPerStay: (l) => [
-    "Orders per stay",
-    String(l.ordersPerStay),
-    "Orders one account can make for one stay (the same room, rate, dates and party); past it, `order_exists`.",
-  ],
 };
 
 /** The rows of the limits table. Takes the limits as an argument so a test

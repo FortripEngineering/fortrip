@@ -16,12 +16,6 @@ describe("CONTRACT_VERSION", () => {
   });
 });
 
-describe("order limits", () => {
-  it("caps the orders one stay can have", () => {
-    assert.equal(LIMITS.ordersPerStay, 20);
-  });
-});
-
 describe("pay-eligibility limits", () => {
   it("states the token and wallet numbers", () => {
     assert.equal(LIMITS.tokenPaymentMaxUsd, 500);

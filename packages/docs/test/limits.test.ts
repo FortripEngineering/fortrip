@@ -33,7 +33,6 @@ test("each limit row says what it limits and shows its value", () => {
   assert.equal(row("Token payment")?.[1], "up to $500");
   assert.equal(row("WeChat Pay code")?.[1], "120 minutes");
   assert.equal(row("Time left to pay")?.[1], `${LIMITS.payCutoffMinutes} minutes`);
-  assert.equal(row("Orders per stay")?.[1], String(LIMITS.ordersPerStay));
 });
 
 test("the rate limits are the contract's, one row per scope, per minute", () => {

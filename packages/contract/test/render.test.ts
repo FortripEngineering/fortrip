@@ -552,19 +552,6 @@ describe("other errors", () => {
     assertClean(text);
   });
 
-  it("order_exists renders its order and status only", () => {
-    const text = renderError(
-      envelope({
-        code: "order_exists",
-        retryable: false,
-        details: { orderId: "ord_0123456789abcdefABCD", status: "confirmed" },
-      }),
-      409,
-    );
-    assert.match(text, /^Order ord_0123456789abcdefABCD, confirmed\.$/m);
-    assert.ok(!/close it/i.test(text));
-  });
-
   it("order_not_cancellable words its reason as the order's Cancel line does", () => {
     const envelope = {
       error: {

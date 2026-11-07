@@ -7,7 +7,6 @@ import {
   localities,
   offer,
   SUPPLIER_OUTCOME_STATUS,
-  SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 import type { z } from "zod";
 import { fieldShape, type JsonSchema, shapeOf, toJsonSchema } from "./schema-rows.ts";
@@ -34,22 +33,18 @@ const MEANINGS: Record<ErrorCode, string> = {
     "No access token, or one Fortrip doesn't accept. Sign in again.",
   forbidden: "The token is valid but doesn't allow this call.",
   not_found: "No such hotel or order, or the order belongs to another account.",
-  order_removed:
-    "The order was never completed and has been removed; no payment is recorded as held. Ordering the same stay again brings back the same `orderId`.",
   offer_expired:
     "The offer's `expiresAt` has passed. Get offers again and order a new one.",
   offer_changed:
     "The hotel supplier's price or terms changed since the offer. `changes` lists every change, and `offer` is a new offer with the new terms. Show the changes, ask the user again, then order the new offer.",
   offer_already_ordered:
-    "The offer was ordered with different details. Read the order in `orderId`, or get a new offer.",
-  order_exists: `This stay already has an open order for one of these guests (\`orderId\`, \`status\`): show it instead of ordering again; its payment link stays valid. A party with none of its guests can order the stay from a new offer (get offers again), and so can the user once the stay's order is confirmed, cancelled or refused by the hotel. It also answers when the stay's earlier order failed at the hotel with its outcome unknown, or the stay has had ${LIMITS.ordersPerStay} orders; for those, the user emails ${SUPPORT_EMAIL}.`,
+    "The offer was ordered with different details. An offer is ordered once, even when its order failed or expired: read the order in `orderId`, or get a new offer.",
   order_in_progress:
     "The same offer is being ordered by another request right now, or (for `cancel_order`) the order is still being confirmed. Retry after `retryAfterSeconds` to get its answer.",
   cancellation_changed:
     "The order's cancellation penalty is now higher than the `maximumPenalty` sent, usually because a penalty step has passed. Read the order again, show the user its `cancel.penalty` and `cancel.refund`, and ask again before cancelling.",
   order_not_cancellable:
     "The order can't be cancelled now; `reason` says why, as `order.cancel.reason` does. `stay_started`, `non_refundable` and `refused` won't change: the user emails support. `in_progress` and `not_confirmed` mean the order isn't confirmed yet.",
-  order_attempts_exhausted: `This order has reached its limit of attempts and can't be submitted again. The user can email ${SUPPORT_EMAIL} with its reference.`,
   order_not_payable: `\`pay_order\` on an order that isn't awaiting payment, or whose payment window closes within ${LIMITS.payCutoffMinutes} minutes. \`status\` is the order's. This call charged nothing.`,
   payment_in_progress:
     "Another payment of the order is under way. Read the order after `retryAfterSeconds`.",

@@ -15,7 +15,7 @@ description: Fees and terms, testing an integration, your account, getting help,
 - Search, hotel details and live offers are free reads.
 - Creating an order charges nothing. An unpaid order expires at its `payment.expiresAt` and needs no cancelling.
 - There is no test environment. Any payment is real, and so is any cancellation penalty.
-- Repeated test orders of one stay hit `order_exists` while an open order has any of the same guests, and a stay takes at most <Fact path="LIMITS.ordersPerStay" /> orders.
+- Each test order needs its own offer: an offer is ordered once.
 
 ## Your account [#account]
 

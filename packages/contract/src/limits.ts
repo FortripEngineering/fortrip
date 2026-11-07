@@ -36,9 +36,6 @@ export const LIMITS = {
   payCutoffMinutes: 2,
   tokensPerOrder: 5,
   wechatCodeMinutes: 120,
-  /** Orders one account can make for one stay (the same room, rate, dates
-   *  and party); past it, ordering the stay answers `order_exists`. */
-  ordersPerStay: 20,
 } as const;
 
 /** Currencies a v1 request can price and charge in (USD is the default). */

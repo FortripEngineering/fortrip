@@ -25,10 +25,10 @@ import {
 /*
  * Statements that stopped being true in contract 5 (one currency per search
  * and order, payment.methods, cancel_order's Money, the planning guide's
- * removal) stay out of every text an agent reads: the tool descriptions and
- * schemas, the next steps, the guide, the error renderings, the generated
- * skills and the plugins. The docs pages have the same list
- * (packages/docs/test/stale-copy.test.ts).
+ * removal, one order per offer) stay out of every text an agent reads: the
+ * tool descriptions and schemas, the next steps, the guide, the error
+ * renderings, the generated skills and the plugins. The docs pages have the
+ * same list (packages/docs/test/stale-copy.test.ts).
  */
 
 const STALE: readonly RegExp[] = [
@@ -51,6 +51,12 @@ const STALE: readonly RegExp[] = [
   /fortrip guide/,
   /US dollars/,
   /(?<!stripe_)alipay_wechat_pay/,
+  // One offer is one order: no per-stay check, cap or removed order.
+  /order_exists/,
+  /order_removed/,
+  /order_attempts_exhausted/,
+  /ordersPerStay/,
+  /[Oo]rders per stay/,
 ];
 
 /** Only the token is USD-only: "in USD" is said of it alone. */
@@ -110,7 +116,6 @@ const OFFER = fixture("offers-two-hotels-one-unavailable").data.hotels[0].offers
 const DETAILS: Partial<Record<ErrorCode, unknown>> = {
   invalid_request: { issues: [{ pointer: "/stay", message: "m" }] },
   cursor_invalid: { reason: "expired" },
-  order_removed: { orderId: ORDER, reference: "FT-ABCDEF" },
   offer_expired: { offerId: OFFER.offerId, expiredAt: "2026-11-01T00:00:00Z" },
   offer_changed: {
     changes: [
@@ -124,9 +129,7 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
     offer: OFFER,
   },
   offer_already_ordered: { orderId: ORDER },
-  order_exists: { orderId: ORDER, status: "awaiting_payment" },
   order_in_progress: { orderId: ORDER },
-  order_attempts_exhausted: { orderId: ORDER },
   order_not_cancellable: { reason: "not_confirmed" },
   order_not_payable: { orderId: ORDER, status: "confirmed" },
   payment_in_progress: { orderId: ORDER },
