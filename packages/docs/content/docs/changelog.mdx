@@ -9,7 +9,7 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 ## 5.0.0
 
-Not released yet.
+Released 2026-11-09.
 
 A major release. A request is priced and charged in one currency, USD or CNY, and `payment.methods` replaces the three payment fields.
 
@@ -45,7 +45,8 @@ A major release. A request is priced and charged in one currency, USD or CNY, an
 - `expired` also means an order that was closed.
 - The error `currency_unavailable` (422), with `details { currency }`: prices in that currency aren't available. Offer the user USD.
 - `payment.url` is `null` for an order awaiting payment only while its payment is `unpaid` and the link couldn't be read this time; read the order again. A held payment (`payment.status` `authorized`) has no link: the link stops working once a payment succeeds.
-- A CNY order is charged in CNY: `payment.localCurrencyAtCheckout` is `false`, `payment.localCharge` is `null`, and `payment.methods` has no `stripe_shared_payment_token` entry, because a token is charged in USD.
+- The user pays on `payment.url`, a Fortrip page that continues to the payment provider: Stripe for a USD order, a cashier in China (Alipay or WeChat Pay) for a CNY order. Or they pay by a way listed in `payment.methods`.
+- A CNY order is charged in CNY: `payment.localCurrencyAtCheckout` is `false`, `payment.localCharge` is `null`, and `payment.methods` is empty, so it is paid only through `payment.url`. A token is charged in USD, and the cashier takes Alipay and WeChat Pay itself.
 - With `fortrip guide` gone, nothing pins the CLI version any more: the CLI skill runs `npx -y fortrip@latest`, as before.
 
 ### Migration

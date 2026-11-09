@@ -144,7 +144,7 @@ export const paymentMethod = openUnion("id", [
       .nullable()
       .describe("The Alipay link; null until the payment is open."),
   }).describe(
-    "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open.",
+    "Paying with Alipay or WeChat Pay: pass method stripe_alipay_wechat_pay to pay_order to open it. The entry is absent when the order can't be paid this way and none is open, as on a CNY order.",
   ),
 ]);
 

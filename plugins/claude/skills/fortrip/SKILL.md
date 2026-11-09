@@ -123,7 +123,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` once the user says they no longer want it.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip:get_order`.
-- Never ask for, accept or pass on payment card details; payment happens only through Stripe. A card number in a guest name, the contact or the special requests is rejected.
+- Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`. A card number in a guest name, the contact or the special requests is rejected.
 
 ## Paying without the link
 
