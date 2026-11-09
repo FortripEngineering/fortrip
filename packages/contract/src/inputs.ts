@@ -35,7 +35,7 @@ const locale = oneOf("locale", ["en", "zh"] as const).describe(
 );
 
 const currencyDescription =
-  "The currency to price and charge in: USD (default) or CNY, where available (otherwise the answer is currency_unavailable).";
+  "The currency to price and charge in: USD (default) or CNY, where available (otherwise the answer is currency_unavailable). Use CNY only for a user who pays with Alipay, WeChat Pay or a bank card from mainland China, the only ways a CNY order can be paid: when they ask for CNY or say they pay that way. Ask only when the conversation suggests it; otherwise keep USD.";
 
 /** An opaque cursor from a previous response. */
 const cursor = nonEmpty("cursor");
