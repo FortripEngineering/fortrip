@@ -17,7 +17,7 @@
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `{{tool:orders cancel}}`{{#if cli}} and `--close`{{/if}} once the user says they no longer want it.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null had its link unreadable this time: read it again with `{{tool:orders get}}`.
 {{/if}}
-- Never ask for, accept or pass on payment card details; payment happens only through Stripe.{{#if claude-skill cli}} A card number in a guest name, the contact or the special requests is rejected{{#if cli}} with exit 2{{/if}}.{{/if}}
+- Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`.{{#if claude-skill cli}} A card number in a guest name, the contact or the special requests is rejected{{#if cli}} with exit 2{{/if}}.{{/if}}
 {{#if claude-skill cli}}
 
 ## Paying without the link

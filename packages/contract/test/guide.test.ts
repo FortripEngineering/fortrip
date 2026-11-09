@@ -327,7 +327,7 @@ describe("the MCP instructions", () => {
     for (const phrase of [
       "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_offers` → `book_hotel`; after the user pays, `get_order`",
       "anyone holding it can pay",
-      "Never ask for, accept or pass on payment card details; payment happens only through Stripe.",
+      "Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`.",
       "Never ask the user to paste a token",
       `emails ${SUPPORT_EMAIL}`,
     ]) {
