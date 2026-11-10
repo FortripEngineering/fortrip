@@ -11,4 +11,4 @@ Show the user the WeChat Pay code as an image if you can, and both links. They p
 Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order)
 Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
 
-Before you give the user an order's payment.url or pay it another way, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then pay one way only: give payment.url exactly as returned, or use one of the order's payment.methods.
+Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.

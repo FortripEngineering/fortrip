@@ -248,7 +248,7 @@ describe("TOOLS", () => {
     assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay and every term with a clear yes/);
     assert.match(pay?.description ?? "", /A code lasts 120 minutes/);
     assert.match(pay?.description ?? "", /^Pay a USD order without its link/);
-    assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /pay_order \(a shared payment token, or Alipay\/WeChat Pay\)/);
+    assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
   });
 
   it("gives every tool a title and a description of at most 1,024 characters", () => {
@@ -354,6 +354,10 @@ describe("TOOLS", () => {
   // C2: the result is an unpaid order with a payment link.
   it("book_hotel says it answers an unpaid order with a payment link, and where changes go", () => {
     const { description } = tool("book_hotel");
+    // A paired eval (Haiku, S6) lost bookings when these two were cut:
+    // one guest per room is enough, and offer_changed needs the user again.
+    assert.ok(description.includes("Send the contact and, for each room of the offer, at least one guest."));
+    assert.ok(description.includes("the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it."));
     assert.match(description, /unpaid order/);
     assert.match(description, /payment link/);
     assert.ok(description.includes(SUPPORT_EMAIL), description);
@@ -423,7 +427,7 @@ describe("ORDER_NEXT_STEP", () => {
     assert.match(ORDER_NEXT_STEP, /end your reply by asking them to confirm, and wait for a clear yes/);
     assert.match(
       ORDER_NEXT_STEP,
-      /wait for a clear yes\. Then pay one way only: give payment\.url exactly as returned, or use one of the order's payment\.methods\.$/,
+      /Only after they say yes, give them payment\.url exactly as returned\.$/,
     );
   });
 

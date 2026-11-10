@@ -883,11 +883,13 @@ describe("orders and the consent rule", () => {
       plain.payment.methods = methods;
       assert.ok(!renderToolResult("get_order", plain).includes(WALLET_NEXT_STEP));
     }
+    // The consent rule is repeated here on purpose: as the result's last
+    // paragraph it keeps the model from giving the link early (paired eval, S6).
     assert.match(
       WALLET_NEXT_STEP,
-      /^To pay with Alipay or WeChat Pay: once the user has confirmed the order with a clear yes, call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, /,
+      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, [^.]*then ask them to confirm, and wait for a clear yes\. /,
     );
-    assert.match(WALLET_NEXT_STEP, /then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
+    assert.match(WALLET_NEXT_STEP, /Then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
     assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
   });
 
@@ -956,10 +958,11 @@ describe("orders and the consent rule", () => {
       assertClean(text);
     }
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
-    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Once the user has confirmed the order with a clear yes, /);
+    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, [^.]*end your reply by asking them to confirm, and wait for a clear yes\./);
+    assert.match(PAY_NEXT_STEP, /Pay one way only: either give payment\.url or call pay_order\./);
     assert.match(
       PAY_NEXT_STEP,
-      /with the stripe_shared_payment_token entry's handler config\.business_profile and its limits \(maxAmount in cents, currency, expiresAt\)/,
+      /with that entry's handler config\.business_profile and its limits \(maxAmount in cents, currency, expiresAt\)/,
     );
     // An order with no methods: the link alone, and only its rule.
     const unpayable = load("order-awaiting-payment") as ToolFixture;
@@ -1133,7 +1136,7 @@ describe("the CLI surface", () => {
     assert.ok(offer.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${walletNextStep("cli")}`));
     assert.match(
       walletNextStep("cli"),
-      /once the user has confirmed the order with a clear yes, run `fortrip orders pay` with --method stripe_alipay_wechat_pay --total <total>, /,
+      /^Before you run `fortrip orders pay` with --method stripe_alipay_wechat_pay --total <total>, show the user/,
     );
     assert.match(walletNextStep("cli"), /Then poll it with `fortrip orders get <orderId>`\.$/);
     assert.notEqual(walletNextStep("cli"), WALLET_NEXT_STEP);

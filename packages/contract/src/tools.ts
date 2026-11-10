@@ -57,7 +57,7 @@ export interface ToolSpec {
  * confirmation in a clause of their own.
  */
 export const ORDER_NEXT_STEP =
-  "Before you give the user an order's payment.url or pay it another way, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then pay one way only: give payment.url exactly as returned, or use one of the order's payment.methods.";
+  "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
 
 /** Where a rendered result is read: an MCP client, which calls tools with
  *  JSON arguments, or the CLI, which runs commands with flags. */
@@ -116,7 +116,7 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts); otherwise give payment.url, and never ask the user to create, type or paste a token. Once the user has confirmed the order with a clear yes, request the token for this order with the stripe_shared_payment_token entry's handler config.business_profile and its limits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
+  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.methods has the stripe_shared_payment_token entry. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with that entry's handler config.business_profile and its limits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
 }
 
 /** `payNextStep` over MCP. */
@@ -131,7 +131,7 @@ export const PAY_NEXT_STEP = payNextStep("mcp");
  */
 export function walletNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `To pay with Alipay or WeChat Pay: once the user has confirmed the order with a clear yes, ${c.pay}${c.payWallet}, then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
+  return `Before you ${c.pay}${c.payWallet}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then ask them to confirm, and wait for a clear yes. Then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
 }
 
 /** `walletNextStep` over MCP. */
@@ -208,7 +208,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "book_hotel",
     title: "Create order",
-    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order (a shared payment token, or Alipay/WeChat Pay); anyone holding the link can pay. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: false,
