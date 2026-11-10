@@ -7,6 +7,28 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 5.2.0
+
+Released 2026-11-10.
+
+A search can suggest CNY, and the text that agents read is corrected and shorter.
+
+### Added
+
+- `currencyHint` on `search_hotels` (`POST /v1/hotels/search`): present only when the search isn't in CNY and the request comes from mainland China (`reason: "request_location"`) or the user's latest sign-in to Fortrip was there (`"sign_in_location"`). It says CNY prices are available too; the agent decides whether to offer them. The result text ends with the same suggestion.
+
+### Changed
+
+- `currency` on `search_hotels` and `get_hotel_offers` no longer lists payment methods, which can change: each currency is paid through its own channel, the order's payment page shows the methods, and CNY, paid through channels in mainland China, suits a user who pays that way. The Claude plugin's skill and the CLI skill say the same.
+- `pay_order` says it pays USD orders, and that a shared payment token is only for an agent that can request one from the user's Link wallet.
+- The Alipay and WeChat Pay step of an order says to send the order's total with the method (`--total` in the CLI).
+- `cancel_order` states its own confirmation rule. `payment_total_changed` tells the CLI to rerun the same command with the order's total, for a token or a wallet payment.
+- The MCP server instructions are shorter. Rules about a tool's data (guest names, what `price.total` covers, `offer_changed`, one party per call) are stated in that tool's description and inputs instead.
+
+### Migration
+
+- Nothing is required: `currencyHint` is optional, and a client that doesn't know it ignores it.
+
 ## 5.1.0
 
 Released 2026-11-10.

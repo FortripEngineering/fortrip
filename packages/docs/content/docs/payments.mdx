@@ -59,7 +59,7 @@ Pay one way only. Every order awaiting payment has a payment link; the other way
 - Once a Link token or an Alipay or WeChat Pay payment succeeds, `payment.url` stops working. One that fails leaves the link open and the order `awaiting_payment`.
 - If the link is paid first, a token hold made meanwhile is released, and an Alipay or WeChat Pay charge is refunded in full.
 - `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, never in a shared channel, document, log or ticket, and give it exactly as returned: don't shorten, rebuild or re-encode it.
-- An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is `null` had its link unreadable this time: read the order again.
+- An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is `null` has a payment being processed: read the order again shortly, and don't give an earlier link.
 - The link closes at `payment.expiresAt`, or when the order is [closed](#cancel), and the order is then `expired`. To order the stay again, get offers again and confirm the new order with the user.
 
 <PayWays variant="full" />

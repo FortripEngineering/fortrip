@@ -27,7 +27,7 @@ export const PAY_WAY_DOCS: Record<PayWay, PayWayDoc> = {
     short: "payment link",
     when: "Every order awaiting payment has one: `payment.url`.",
     charge:
-      "The user pays through a Fortrip page. On a USD order, Alipay and WeChat Pay are charged at once and refunded in full if the hotel can't confirm; a card, Link or Amazon Pay, on Stripe Checkout, is held until the hotel confirms, then charged. A CNY order continues to a cashier in China (Alipay, WeChat Pay or a Chinese bank card), charged at once and refunded in full if the hotel can't confirm.",
+      "The user pays through a Fortrip page. The page shows the ways to pay for the order's currency. On a USD order, a wallet such as Alipay or WeChat Pay is charged at once and refunded in full if the hotel can't confirm; a card on Stripe Checkout is held until the hotel confirms, then charged. A CNY order continues to a cashier in mainland China, charged at once and refunded in full if the hotel can't confirm.",
     body: "Give the user `payment.url` once they have confirmed. Only the signed-in owner can pay it when `requiresSignIn` is `true` (an order started on the Fortrip website).",
   },
   stripe_shared_payment_token: {

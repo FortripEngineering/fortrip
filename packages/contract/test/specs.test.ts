@@ -207,6 +207,18 @@ const TOOL_NAMES = [
 ] as const;
 
 describe("TOOLS", () => {
+  // Payment methods change; the currency text names the channel, not a list.
+  it("currency says each currency has its own channel, and lists no payment methods", () => {
+    for (const name of ["search_hotels", "get_hotel_offers"]) {
+      const spec = TOOLS.find((t) => t.name === name)!;
+      const json = z.toJSONSchema(spec.input, { io: "input" }) as unknown as { properties: { currency: { description: string } } };
+      const text = json.properties.currency.description;
+      assert.match(text, /Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them\./, name);
+      assert.match(text, /CNY is paid through payment channels in mainland China and suits a user who pays that way\./, name);
+      assert.doesNotMatch(text, /Alipay|WeChat|bank card|currency_unavailable|where available/, name);
+    }
+  });
+
   it("lists the eight tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
@@ -244,11 +256,11 @@ describe("TOOLS", () => {
     assert.match(pay?.description ?? "", /by one of its payment\.methods/);
     assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
     assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
-    assert.match(pay?.description ?? "", /show the wallet entry/);
-    assert.match(pay?.description ?? "", /WeChat code as an image if you can, both links/);
-    assert.match(pay?.description ?? "", /ask them to confirm and wait for a clear yes/);
-    assert.match(pay?.description ?? "", /a code lasts 120 minutes/);
-    assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /pay_order \(or Alipay\/WeChat Pay\)/);
+    assert.match(pay?.description ?? "", /then show the entry it returns: the WeChat code as an image if you can, and both links/);
+    assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay and every term with a clear yes/);
+    assert.match(pay?.description ?? "", /A code lasts 120 minutes/);
+    assert.match(pay?.description ?? "", /^Pay a USD order without its link/);
+    assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
   });
 
   it("gives every tool a title and a description of at most 1,024 characters", () => {
@@ -354,6 +366,10 @@ describe("TOOLS", () => {
   // C2: the result is an unpaid order with a payment link.
   it("book_hotel says it answers an unpaid order with a payment link, and where changes go", () => {
     const { description } = tool("book_hotel");
+    // A paired eval (Haiku, S6) lost bookings when these two were cut:
+    // one guest per room is enough, and offer_changed needs the user again.
+    assert.ok(description.includes("Send the contact and, for each room of the offer, at least one guest."));
+    assert.ok(description.includes("the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it."));
     assert.match(description, /unpaid order/);
     assert.match(description, /payment link/);
     assert.ok(description.includes(SUPPORT_EMAIL), description);
@@ -364,16 +380,16 @@ describe("TOOLS", () => {
 
   it("cancel_order carries the consent rule, says what it answers and what a refusal leaves", () => {
     const { description } = tool("cancel_order");
-    assert.ok(description.includes(CANCEL_NEXT_STEP), description);
-    assert.match(description, /Then poll get_order: cancelling, then cancelled\./);
-    assert.match(description, /Hotel refused: confirmed, reason refused\./);
+    assert.match(description, /only after the user confirmed the order's cancel\.penalty and cancel\.refund with a clear yes, pass maximumPenalty, that cancel\.penalty exactly as returned\./);
+    assert.match(description, /The order becomes cancelling, then cancelled with cancel\.refund refunded, or confirmed with reason refused if the hotel refuses: poll get_order\./);
     assert.match(description, /cancellation_changed/);
+    assert.match(description, /Never state a refund the order did not return\./);
   });
 
   it("cancel_order closes an unpaid order only on the user's word, and never races a payment", () => {
     const { description, annotations } = tool("cancel_order");
     assert.match(description, /^Cancel a paid order under its terms, or close an unpaid one\./);
-    assert.match(description, /close it only once the user says they no longer want it, without maximumPenalty; nothing is charged; it becomes expired\./);
+    assert.match(description, /close it, without maximumPenalty, only once the user says they no longer want it; nothing is charged and it becomes expired\./);
     assert.match(description, /payment_in_progress: read it again shortly\./);
     assert.ok(description.length <= 1024, String(description.length));
     assert.equal(annotations.destructiveHint, true);

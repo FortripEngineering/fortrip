@@ -114,7 +114,7 @@ export const paymentMethod = openUnion("id", [
       ),
     }).describe("What the shared payment token for pay_order must allow."),
   }).describe(
-    `A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, an order started on the Fortrip website, a negotiated price, under ${LIMITS.payMinMinutesLeft} minutes left, ${LIMITS.tokensPerOrder} tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order.`,
+    `A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry.`,
   ),
   openObject({
     id: z.literal("stripe_alipay_wechat_pay"),
@@ -180,7 +180,7 @@ export const order = openObject({
   orderId,
   reference: orderReference,
   status: openEnum(ORDER_STATUSES).describe(
-    "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it.",
+    "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it.",
   ),
   createdAt: instant,
   updatedAt: instant,
@@ -196,7 +196,7 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again.",
+        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link.",
       ),
     requiresSignIn: z.boolean(),
     expiresAt: instant
@@ -212,7 +212,7 @@ export const order = openObject({
     localCurrencyAtCheckout: z
       .boolean()
       .describe(
-        "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order.",
+        "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order.",
       ),
     localCharge: money
       .nullable()

@@ -343,6 +343,14 @@ describe("v1 response fixtures parse, open and strict", () => {
     const { photo: _photo, ...noPhoto } = summary!;
     assert.equal(searchResult.safeParse({ ...searchFixture, data: [noPhoto] }).success, false);
   });
+
+  it("search, with and without a currency hint", () => {
+    // Absent unless the server sees a sign; when present, one currency and its reason.
+    parsesBoth(searchResult, { ...searchFixture, currencyHint: { currency: "CNY", reason: "request_location" } });
+    parsesBoth(searchResult, { ...searchFixture, currencyHint: { currency: "CNY", reason: "sign_in_location" } });
+    assert.equal(strictOutput(searchResult).safeParse({ ...searchFixture, currencyHint: null }).success, false);
+    assert.equal(strictOutput(searchResult).safeParse({ ...searchFixture, currencyHint: { currency: "CNY" } }).success, false);
+  });
   it("hotel, with and without rooms", () => {
     parsesBoth(hotel, hotelFixture);
     const { rooms: _rooms, ...noRooms } = hotelFixture;
@@ -652,7 +660,7 @@ const PUBLIC_KEYS = new Set([
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
-  "coverage", "alipay", "createdAt", "currency", "current", "data", "declineCode", "deposit", "description", "destination",
+  "coverage", "alipay", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
@@ -729,9 +737,8 @@ describe("field descriptions", () => {
   it("the token method states its limits from LIMITS", () => {
     const text = descriptionsAt(order, "payment.methods").find((d) => d.includes("a token can't pay")) ?? "";
     assert.ok(text.includes(`over $${LIMITS.tokenPaymentMaxUsd}`), text);
-    assert.ok(text.includes(`under ${LIMITS.payMinMinutesLeft} minutes left`), text);
-    assert.ok(text.includes(`${LIMITS.tokensPerOrder} tokens tried`), text);
-    assert.match(text, /an Alipay or WeChat Pay payment is open/);
+    assert.match(text, /not charged in USD/);
+    assert.match(text, /then give payment\.url or use another entry\.$/);
   });
 
   // The fields a caller acts on say what they mean, where the docs and an

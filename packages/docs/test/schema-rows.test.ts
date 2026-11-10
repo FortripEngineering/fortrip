@@ -115,10 +115,10 @@ test("a union branch without a described discriminator shows its own description
     ['id: "stripe_shared_payment_token"', 'id: "stripe_alipay_wechat_pay"'],
   );
   const [token, wallet] = methods.map((row) => row.description);
-  assert.match(token ?? "", /The entry is absent when a token can't pay the order/);
+  assert.match(token ?? "", /The entry is absent when a token can't pay this order/);
   assert.match(wallet ?? "", /The entry is absent when the order can't be paid this way and none is open, as on a CNY order\./);
   // The /schemas page shows both, as the pay ways' docs say it does.
   const text = pageText("/schemas");
-  assert.ok(text.includes("The entry is absent when a token can't pay the order"));
+  assert.ok(text.includes("The entry is absent when a token can't pay this order"));
   assert.ok(text.includes("The entry is absent when the order can't be paid this way and none is open, as on a CNY order."));
 });

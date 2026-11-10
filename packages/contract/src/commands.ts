@@ -524,7 +524,7 @@ export const COMMANDS: readonly CommandSpec[] = [
     group: "orders",
     name: "cancel",
     summary:
-      "With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows",
+      "Cancel a paid order under its terms (--max-penalty), or close an unpaid one (--close)",
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],

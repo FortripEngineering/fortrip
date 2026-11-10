@@ -82,7 +82,7 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels book` | Order an offer: an unpaid order with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
-| `orders cancel <orderId>` | With the penalty the user agreed to (--max-penalty) it cancels a paid order under its terms, and --close closes an unpaid one; with neither it changes nothing and shows what the order allows |
+| `orders cancel <orderId>` | Cancel a paid order under its terms (--max-penalty), or close an unpaid one (--close) |
 | `orders pay <orderId>` | Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
@@ -193,7 +193,7 @@ args = ["-y", "fortrip", "mcp"]
 | `FORTRIP_TOKEN` | An access token, used instead of the saved sign-in. It is short-lived, so it suits a remote agent environment or a CI run; for longer, sign in. It isn't tied to a server: it is sent to whatever `FORTRIP_API_URL` points at. If Fortrip doesn't accept it, or it contains a line break or another character that can't be sent in a header, commands exit 3 with `tokenSource: "FORTRIP_TOKEN"` and no `loginUrl`; the error never repeats the token. |
 | `FORTRIP_API_URL` | The API's base URL (default `https://api.fortrip.ai`). It must be `https`, except for `localhost`, `127.0.0.1` and `[::1]`, which may use plain `http`. It may end in a path prefix (`http://localhost:3000/api/public`), which every request path follows; a query or fragment is dropped. |
 | `FORTRIP_MCP_URL` | The MCP server `fortrip mcp` bridges to (default `https://mcp.fortrip.ai/`), under the same URL rule. Your sign-in is sent to it, so it must be the MCP server of the API you use: on the origin of `FORTRIP_API_URL`, except that the default API goes with the default MCP server, `api.fortrip.ai` and `mcp.fortrip.ai`. When you set `FORTRIP_API_URL` to a local or preview API, set `FORTRIP_MCP_URL` too; `fortrip mcp` exits 2 and says so when you don't. |
-| `FORTRIP_CURRENCY` | The default `--currency` for `hotels search` and `hotels offers` (`USD` or `CNY`, where available). Prices are in this currency, and an order made from the offers is paid in it. |
+| `FORTRIP_CURRENCY` | The default `--currency` for `hotels search` and `hotels offers` (`USD` or `CNY`). Prices are in this currency, and an order made from the offers is paid in it. |
 
 ## Output and exit codes
 

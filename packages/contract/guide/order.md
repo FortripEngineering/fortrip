@@ -58,10 +58,9 @@
 
 `{{arg:text}}` matches exact words in hotel names and addresses, in Chinese or English:
 
-- Every word must match as written: plurals, accents, spacing and abbreviations count ("hostel" and "hostels", "St Regis" and "Saint Regis" find different hotels). Hyphens and apostrophes don't (Ritz-Carlton finds Ritz Carlton).
+- Every word must match as written (a typo such as "Shangahi" finds nothing): plurals, accents, spacing and abbreviations count ("hostel" and "hostels", "St Regis" and "Saint Regis" find different hotels). Hyphens and apostrophes don't (Ritz-Carlton finds Ritz Carlton).
 - In Chinese, matching follows word segmentation, so part of a name can match unrelated hotels (希尔 is not 希尔顿).
 - Use only distinctive words: a hotel or brand name, a district or a landmark. Not "hotel", "near", "cheap" or "best".
-- Typos return nothing: "Shangahi" finds no hotel.
 - Place names belong in the destination: "Maldives" as text finds a hotel named Maldives in China.
 
 ### Filters

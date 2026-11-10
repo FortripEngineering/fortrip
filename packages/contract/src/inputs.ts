@@ -35,7 +35,7 @@ const locale = oneOf("locale", ["en", "zh"] as const).describe(
 );
 
 const currencyDescription =
-  "The currency to price and charge in: USD (default) or CNY, where available (otherwise the answer is currency_unavailable). Use CNY only for a user who pays with Alipay, WeChat Pay or a bank card from mainland China, the only ways a CNY order can be paid: when they ask for CNY or say they pay that way. Ask only when the conversation suggests it; otherwise keep USD.";
+  "The currency of every price: USD (default) or CNY. Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them. CNY is paid through payment channels in mainland China and suits a user who pays that way.";
 
 /** An opaque cursor from a previous response. */
 const cursor = nonEmpty("cursor");
@@ -267,7 +267,7 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
     pricing: oneOf("pricing", ["indicative", "none"] as const)
       .optional()
       .describe(
-        "`indicative` adds an approximate price per hotel and needs a stay; `none` skips prices. Default: indicative with a stay, otherwise none.",
+        "`indicative` adds an indicative price per hotel and needs a stay; `none` skips prices. Default: indicative with a stay, otherwise none.",
       ),
     filters: searchFilters,
     sort: oneOf("sort", SEARCH_SORTS)

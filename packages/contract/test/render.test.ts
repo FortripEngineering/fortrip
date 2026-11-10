@@ -204,6 +204,28 @@ describe("one currency", () => {
 });
 
 describe("search results", () => {
+  it("ends with the currency hint only when the search carries one", () => {
+    const fixture = copy(load("search-locality-phuket")) as ToolFixture;
+    assert.doesNotMatch(render(fixture), /^Currency:/m);
+    const data = fixture.data as Record<string, unknown>;
+    data.currencyHint = { currency: "CNY", reason: "request_location" };
+    const mcp = renderToolResult("search_hotels", data);
+    assert.ok(
+      mcp.endsWith(
+        "\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers with currency CNY.",
+      ),
+      mcp,
+    );
+    data.currencyHint = { currency: "CNY", reason: "sign_in_location" };
+    const cli = renderToolResult("search_hotels", data, "cli");
+    assert.match(cli, /\n\nCurrency: the user's latest sign-in to Fortrip was from mainland China\. [^\n]*: search and get offers with --currency CNY\.$/);
+    // An unknown reason still offers CNY, without a reason; another currency, nothing.
+    data.currencyHint = { currency: "CNY", reason: "something_new" };
+    assert.match(renderToolResult("search_hotels", data), /\n\nCurrency: Prices are also available in CNY/);
+    data.currencyHint = { currency: "EUR", reason: "request_location" };
+    assert.doesNotMatch(renderToolResult("search_hotels", data), /^Currency:/m);
+  });
+
   it("writes every note's message", () => {
     for (const name of GOLDENS.filter((n) => n.startsWith("search-"))) {
       const fixture = load(name) as ToolFixture;
@@ -592,6 +614,7 @@ describe("other errors", () => {
     assert.match(text, /meals: breakfast for 2 guests per room → room only \(worse\)/);
     assert.match(text, /parking/);
     assert.ok(text.includes(offer.offerId as string));
+    assert.ok(text.includes("Show the user these changes and ask again before ordering the new offer."));
     assertClean(text);
   });
 });
@@ -763,7 +786,7 @@ describe("orders and the consent rule", () => {
     const fixture = load("cancel-order") as ToolFixture;
     const text = render(fixture);
     assert.match(text.split("\n")[0]!, / · cancelling · /);
-    assert.match(text, /^Cancel: not available: a cancellation is in progress/m);
+    assert.match(text, /^Cancel: not available: the booking is still being confirmed, or a cancellation is under way; read the order again later$/m);
     assert.ok(!text.includes(CANCEL_NEXT_STEP));
     assert.ok(!text.includes(ORDER_NEXT_STEP));
     // Even an answer that could still be cancelled carries no rule: it is
@@ -882,7 +905,12 @@ describe("orders and the consent rule", () => {
       plain.payment.methods = methods;
       assert.ok(!renderToolResult("get_order", plain).includes(WALLET_NEXT_STEP));
     }
-    assert.match(WALLET_NEXT_STEP, /^Before you call pay_order with method stripe_alipay_wechat_pay, show the user the order's total and currency, /);
+    // The consent rule is repeated here on purpose: as the result's last
+    // paragraph it keeps the model from giving the link early (paired eval, S6).
+    assert.match(
+      WALLET_NEXT_STEP,
+      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then ask them to confirm, and wait for a clear yes\. /,
+    );
     assert.match(WALLET_NEXT_STEP, /Then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
     assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
   });
@@ -951,7 +979,9 @@ describe("orders and the consent rule", () => {
       assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
       assertClean(text);
     }
-    assert.match(PAY_NEXT_STEP, /the order's payment\.methods has the stripe_shared_payment_token entry\./);
+    assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
+    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
+    assert.match(PAY_NEXT_STEP, /Pay one way only: either give payment\.url or call pay_order\./);
     assert.match(
       PAY_NEXT_STEP,
       /with that entry's handler config\.business_profile and its limits \(maxAmount in cents, currency, expiresAt\)/,
@@ -991,7 +1021,9 @@ describe("orders and the consent rule", () => {
     data.payment.status = "authorized";
     const text = renderToolResult("get_order", data);
     assert.doesNotMatch(text, /^Payment link/m);
-    assert.doesNotMatch(text, /could not be read/);
+    // Held is not "being processed": the line for an unpaid order with no link stays out.
+    assert.doesNotMatch(text, /being processed/);
+    assert.match(text, /payment authorized \(held, not yet charged\)/);
   });
 
   it("renders an unknown status and an unknown item type", () => {
@@ -1124,7 +1156,10 @@ describe("the CLI surface", () => {
       /^Pay with Alipay or WeChat Pay: run `fortrip orders pay <orderId> --method stripe_alipay_wechat_pay --total <total>`\.$/m,
     );
     assert.ok(offer.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${walletNextStep("cli")}`));
-    assert.match(walletNextStep("cli"), /^Before you run `fortrip orders pay` with --method stripe_alipay_wechat_pay, show the user/);
+    assert.match(
+      walletNextStep("cli"),
+      /^Before you run `fortrip orders pay` with --method stripe_alipay_wechat_pay --total <total>, show the user/,
+    );
     assert.match(walletNextStep("cli"), /Then poll it with `fortrip orders get <orderId>`\.$/);
     assert.notEqual(walletNextStep("cli"), WALLET_NEXT_STEP);
     assert.equal(walletNextStep("mcp"), WALLET_NEXT_STEP);
@@ -1174,7 +1209,7 @@ describe("the CLI surface", () => {
     assert.match(error("payment_declined", { declineCode: null }), /read the order with `fortrip orders get <orderId>` and give its payment\.url/);
     assert.match(
       error("payment_total_changed", { orderId: order, total: { amount: "365.00", currency: "USD" } }),
-      new RegExp(`then run \`fortrip orders pay ${order} --token <spt_…> --total 365\\.00\` again with the same token\\. Nothing was charged\\.`),
+      new RegExp(`confirm this total with the user, then run the same \`fortrip orders pay ${order}\` command again with \`--total 365\\.00\`\\. Nothing was charged\\.`),
     );
   });
 
