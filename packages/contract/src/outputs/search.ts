@@ -164,7 +164,7 @@ export const searchResult = openObject({
   })
     .optional()
     .describe(
-      "Present only when the search didn't set currency and the user may pay through another currency's channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
+      "Present only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
     ),
   data: z.array(hotelSummary),
   nextCursor: z

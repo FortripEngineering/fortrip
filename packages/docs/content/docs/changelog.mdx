@@ -15,7 +15,7 @@ A search can suggest CNY, and the text that agents read is corrected and shorter
 
 ### Added
 
-- `currencyHint` on `search_hotels` (`POST /v1/hotels/search`): present only when the search didn't set `currency` and the request comes from mainland China (`reason: "request_location"`) or the user's latest sign-in to Fortrip was there (`"sign_in_location"`). It says CNY prices are available too; the agent decides whether to offer them. The result text ends with the same suggestion.
+- `currencyHint` on `search_hotels` (`POST /v1/hotels/search`): present only when the search isn't in CNY and the request comes from mainland China (`reason: "request_location"`) or the user's latest sign-in to Fortrip was there (`"sign_in_location"`). It says CNY prices are available too; the agent decides whether to offer them. The result text ends with the same suggestion.
 
 ### Changed
 
