@@ -212,13 +212,13 @@ describe("search results", () => {
     const mcp = renderToolResult("search_hotels", data);
     assert.ok(
       mcp.endsWith(
-        "\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search again with currency CNY.",
+        "\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers again with currency CNY.",
       ),
       mcp,
     );
     data.currencyHint = { currency: "CNY", reason: "sign_in_location" };
     const cli = renderToolResult("search_hotels", data, "cli");
-    assert.match(cli, /\n\nCurrency: the user's latest sign-in to Fortrip was from mainland China\. [^\n]*: run the search again with --currency CNY\.$/);
+    assert.match(cli, /\n\nCurrency: the user's latest sign-in to Fortrip was from mainland China\. [^\n]*: search and get offers again with --currency CNY\.$/);
     // An unknown reason still offers CNY, without a reason; another currency, nothing.
     data.currencyHint = { currency: "CNY", reason: "something_new" };
     assert.match(renderToolResult("search_hotels", data), /\n\nCurrency: Prices are also available in CNY/);

@@ -207,7 +207,10 @@ const HINT_REASONS = {
  *  agent's to weigh. */
 function currencyHintLine(hint: NonNullable<SearchResult["currencyHint"]>, surface: RenderSurface): string {
   const reason = HINT_REASONS[hint.reason as keyof typeof HINT_REASONS];
-  const again = surface === "cli" ? "run the search again with --currency CNY" : "search again with currency CNY";
+  const again =
+    surface === "cli"
+      ? "search and get offers again with --currency CNY"
+      : "search and get offers again with currency CNY";
   return `Currency: ${reason ? `${reason}. ` : ""}Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: ${again}.`;
 }
 
