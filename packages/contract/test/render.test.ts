@@ -887,7 +887,7 @@ describe("orders and the consent rule", () => {
     // paragraph it keeps the model from giving the link early (paired eval, S6).
     assert.match(
       WALLET_NEXT_STEP,
-      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, [^.]*then ask them to confirm, and wait for a clear yes\. /,
+      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then ask them to confirm, and wait for a clear yes\. /,
     );
     assert.match(WALLET_NEXT_STEP, /Then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
     assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
@@ -958,7 +958,7 @@ describe("orders and the consent rule", () => {
       assertClean(text);
     }
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
-    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, [^.]*end your reply by asking them to confirm, and wait for a clear yes\./);
+    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
     assert.match(PAY_NEXT_STEP, /Pay one way only: either give payment\.url or call pay_order\./);
     assert.match(
       PAY_NEXT_STEP,

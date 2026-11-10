@@ -50,11 +50,12 @@ export interface ToolSpec {
 }
 
 /**
- * The consent rule (spec §6), for every way to pay. It rides on every MCP
- * result that holds a non-null `payment.url`, as `nextStep` and as the first
- * next-step paragraph of the text: some clients never show the model the
- * server instructions. The pay and wallet paragraphs after it refer to the
- * confirmation in a clause of their own.
+ * The consent rule (spec §6). It rides on every MCP result that holds a
+ * non-null `payment.url`, as `nextStep` and as the first next-step paragraph
+ * of the text: some clients never show the model the server instructions.
+ * The pay and wallet paragraphs after it repeat the rule on purpose: as the
+ * result's last paragraph it keeps the model from giving the link before a
+ * yes (paired eval, S6).
  */
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
@@ -150,7 +151,7 @@ const nextStep = z
   .string()
   .optional()
   .describe(
-    "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
+    "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
   );
 
 /** The answers over MCP that are orders. Those that can hold a

@@ -6689,7 +6689,7 @@
         "type": "string"
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
@@ -8949,7 +8949,7 @@
         "type": "string"
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
@@ -10113,7 +10113,7 @@
         "description": "Pass it back as cursor for the next page; null on the last page."
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
