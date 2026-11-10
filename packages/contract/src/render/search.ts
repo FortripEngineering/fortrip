@@ -209,8 +209,8 @@ function currencyHintLine(hint: NonNullable<SearchResult["currencyHint"]>, surfa
   const reason = HINT_REASONS[hint.reason as keyof typeof HINT_REASONS];
   const again =
     surface === "cli"
-      ? "search and get offers again with --currency CNY"
-      : "search and get offers again with currency CNY";
+      ? "search and get offers with --currency CNY"
+      : "search and get offers with currency CNY";
   return `Currency: ${reason ? `${reason}. ` : ""}Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: ${again}.`;
 }
 
