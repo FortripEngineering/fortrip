@@ -592,6 +592,7 @@ describe("other errors", () => {
     assert.match(text, /meals: breakfast for 2 guests per room → room only \(worse\)/);
     assert.match(text, /parking/);
     assert.ok(text.includes(offer.offerId as string));
+    assert.ok(text.includes("Show the user these changes and ask again before ordering the new offer."));
     assertClean(text);
   });
 });
@@ -995,7 +996,9 @@ describe("orders and the consent rule", () => {
     data.payment.status = "authorized";
     const text = renderToolResult("get_order", data);
     assert.doesNotMatch(text, /^Payment link/m);
-    assert.doesNotMatch(text, /could not be read/);
+    // Held is not "being processed": the line for an unpaid order with no link stays out.
+    assert.doesNotMatch(text, /being processed/);
+    assert.match(text, /payment authorized \(held, not yet charged\)/);
   });
 
   it("renders an unknown status and an unknown item type", () => {

@@ -6,7 +6,7 @@ Read this when the request is more than one hotel for fixed dates: flexible date
 
 Keep track of: dates (or the flexible window), nights, destination(s) with their country, rooms and the guests in each room, room constraints (beds, connecting rooms, accessibility), budget, and what the user said matters most (cheapest, most flexible, closest to X).
 
-Ask only for what changes which hotels qualify or how they rank. "4 stars" as `--stars-min 4 --stars-max 4` leaves out 4.5: unless the user means exactly 4, use `--stars-min 4` or ask.
+Ask only for what changes which hotels qualify or how they rank. "4 stars" as `--stars-min 4 --stars-max 4` leaves out 4.5: unless the user means exactly 4, use `--stars-min 4` or ask. Don't ask for trip type or style: infer it from the conversation or leave it general.
 
 ## Evidence
 
@@ -18,7 +18,7 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `-
 
 1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in the offer's currency.
 2. Keep only options with a live offer.
-3. Order by what the user said matters most.
+3. Order by the user's stated main goal. Goals they didn't state don't count.
 4. Use other preferences only to break ties.
 
 Use the cheapest comparable offer as the baseline unless the user fixed the room type. Two or three plans usually suffice, each with its price difference from the baseline and what it trades off (meals, cancellation, location, confirmation). Keep hotel names as returned and dates in the user's notation.

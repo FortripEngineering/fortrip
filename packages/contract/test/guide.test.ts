@@ -139,6 +139,7 @@ describe("the settled rules (design §3.4)", () => {
     assert.match(tools, /for different parties, call once per party/);
     assert.match(tools, /offer_changed with every change and a new offer/);
     assert.match(tools, /in Latin letters as on the passport/);
+    assert.match(tools, /indicative per-room-night price/);
   });
 
   it("price units: price.total is the whole stay for all rooms, charged in the request's currency", () => {
@@ -359,9 +360,12 @@ describe("the MCP instructions", () => {
     assert.doesNotMatch(text, /fortrip:|fortrip hotels|fortrip orders|--room/);
   });
 
-  it("state each of these at most once", () => {
-    for (const pattern of [/`offer_changed`/, /\bindicative\b/i, /\bget_order\b/, /`countryCode`/]) {
-      assert.ok(count(text, pattern) <= 1, String(pattern));
+  it("state each of these once, and leave to the tools what they carry", () => {
+    for (const pattern of [/\bget_order\b/, /`countryCode`/]) {
+      assert.equal(count(text, pattern), 1, String(pattern));
+    }
+    for (const pattern of [/`offer_changed`/, /\bindicative\b/i]) {
+      assert.equal(count(text, pattern), 0, String(pattern));
     }
   });
 });

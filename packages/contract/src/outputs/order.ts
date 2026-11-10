@@ -114,7 +114,7 @@ export const paymentMethod = openUnion("id", [
       ),
     }).describe("What the shared payment token for pay_order must allow."),
   }).describe(
-    `A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, or started on the Fortrip website); then give payment.url.`,
+    `A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $${LIMITS.tokenPaymentMaxUsd}, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry.`,
   ),
   openObject({
     id: z.literal("stripe_alipay_wechat_pay"),

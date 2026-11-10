@@ -6452,7 +6452,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                 },
                 {
                   "type": "object",
@@ -7584,7 +7584,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                 },
                 {
                   "type": "object",
@@ -8712,7 +8712,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                 },
                 {
                   "type": "object",
@@ -9849,7 +9849,7 @@
                           "limits"
                         ],
                         "additionalProperties": {},
-                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                       },
                       {
                         "type": "object",
@@ -11000,7 +11000,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                 },
                 {
                   "type": "object",
@@ -12163,7 +12163,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                 },
                 {
                   "type": "object",
@@ -13296,7 +13296,7 @@
                           "limits"
                         ],
                         "additionalProperties": {},
-                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url or use another entry."
                       },
                       {
                         "type": "object",
