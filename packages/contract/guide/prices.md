@@ -9,7 +9,7 @@
 - {{#if claude-skill cli}}In an offer or order, {{/if}}`price.total` is the whole stay for all rooms and is what is charged, in the request's `{{arg:currency}}` (`USD` by default); an order is in the currency of the offer it was made from.{{#if claude-skill cli}} `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms.{{/if}} On a USD order, Stripe's page may let the user pay in their card's local currency at Stripe's rate{{#if claude-skill cli}} (Adaptive Pricing): say so plainly, and that the total in that currency is the price{{/if}}.
 {{#if claude-skill cli}}
 - Every price of a response is in that one currency; don't convert it. `{{arg:currency}}`{{#if cli}} (or `FORTRIP_CURRENCY`){{/if}} is `USD` (the default) or `CNY`, where available; otherwise the answer is `currency_unavailable`.
-- A CNY order can be paid only with Alipay, WeChat Pay or a bank card from mainland China, through its `payment.url`. Use `{{arg:currency}}` `CNY` when where you run or the conversation shows the user can pay that way, and tell them this limit. Chinese text alone is no reason, nor is Alipay or WeChat Pay: USD orders take them too. Otherwise keep `USD`.
+- A CNY order can be paid only with Alipay, WeChat Pay or a bank card from mainland China, through its `payment.url`; a USD order takes cards, Alipay and WeChat Pay. CNY suits a user who can pay one of those mainland ways.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.
 - After payment, `payment.localCharge` is what the card paid in its own currency. Orders made on the Fortrip website can be charged in another currency: `payment.chargeCurrency` says which.
 {{/if}}

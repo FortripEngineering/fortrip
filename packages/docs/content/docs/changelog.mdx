@@ -15,7 +15,7 @@ The schemas keep their shape. The change is to the text that agents read.
 
 ### Changed
 
-- `currency` on `search_hotels` and `get_hotel_offers` says when to use `CNY`: when where the agent runs or the conversation shows the user can pay with Alipay, WeChat Pay or a bank card from mainland China, the only ways a CNY order can be paid. The agent tells the user that limit. Chinese text alone is no reason, nor is paying with Alipay or WeChat Pay, which USD orders take too. The Claude plugin's skill and the CLI skill say the same.
+- `currency` on `search_hotels` and `get_hotel_offers` no longer names paying with Alipay or WeChat Pay as a reason for `CNY`: USD orders take both too. It states how each currency can be paid and suggests CNY for a user who can pay with Alipay, WeChat Pay or a bank card from mainland China. The Claude plugin's skill and the CLI skill say the same.
 
 ## 5.1.0
 
