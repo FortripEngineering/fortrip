@@ -7,6 +7,16 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 5.1.1
+
+Released 2026-11-10.
+
+The schemas keep their shape. The change is to the text that agents read.
+
+### Changed
+
+- `currency` on `search_hotels` and `get_hotel_offers` says when to use `CNY`: when where the agent runs or the conversation shows the user can pay with Alipay, WeChat Pay or a bank card from mainland China, the only ways a CNY order can be paid. The agent tells the user that limit. Chinese text alone is no reason, nor is paying with Alipay or WeChat Pay, which USD orders take too. The Claude plugin's skill and the CLI skill say the same.
+
 ## 5.1.0
 
 Released 2026-11-10.
