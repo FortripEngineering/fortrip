@@ -7,6 +7,18 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 5.1.0
+
+Released 2026-11-10.
+
+### Changed
+
+- `limitPerHotel` on `get_hotel_offers` (`POST /v1/hotels/offers`) defaults to 15 offers per hotel, up from 10. The maximum is 30, up from 20.
+
+### Migration
+
+- Nothing is required. To keep getting 10 offers per hotel, send `limitPerHotel: 10`.
+
 ## 5.0.1
 
 Released 2026-11-09.
