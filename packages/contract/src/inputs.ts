@@ -35,7 +35,7 @@ const locale = oneOf("locale", ["en", "zh"] as const).describe(
 );
 
 const currencyDescription =
-  "The currency of every price: USD (default) or CNY, where available (otherwise the answer is currency_unavailable). A CNY order can be paid only with Alipay, WeChat Pay or a bank card from mainland China; a USD order takes cards, Alipay and WeChat Pay. CNY suits a user who can pay one of those mainland ways.";
+  "The currency of every price: USD (default) or CNY. Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them. CNY is paid through payment channels in mainland China and suits a user who pays that way.";
 
 /** An opaque cursor from a previous response. */
 const cursor = nonEmpty("cursor");

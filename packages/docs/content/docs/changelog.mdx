@@ -15,7 +15,7 @@ The schemas keep their shape. The change is to the text that agents read.
 
 ### Changed
 
-- `currency` on `search_hotels` and `get_hotel_offers` no longer names paying with Alipay or WeChat Pay as a reason for `CNY`: USD orders take both too. It states how each currency can be paid and suggests CNY for a user who can pay with Alipay, WeChat Pay or a bank card from mainland China. The Claude plugin's skill and the CLI skill say the same.
+- `currency` on `search_hotels` and `get_hotel_offers` no longer lists payment methods, which can change: each currency is paid through its own channel, the order's payment page shows the methods, and CNY, paid through channels in mainland China, suits a user who pays that way. The Claude plugin's skill and the CLI skill say the same.
 - `pay_order` says it pays USD orders, and that a shared payment token is only for an agent that can request one from the user's Link wallet.
 - The Alipay and WeChat Pay step of an order says to send the order's total with the method (`--total` in the CLI).
 - `cancel_order` states its own confirmation rule. `payment_total_changed` tells the CLI to rerun the same command with the order's total, for a token or a wallet payment.

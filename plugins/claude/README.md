@@ -95,10 +95,9 @@ Flights, activities and changes to existing orders aren't supported.
   hotel to make the reservation: the stay you chose, guest names, the contact
   name, phone and email, and any special requests.
 - **Payment** goes to a payment provider: Stripe for a USD price, a provider
-  in China for a CNY price, where you pay with Alipay, WeChat Pay or a bank
-  card from mainland China. In Claude you'll usually pay by link, or pay a USD
-  order with Alipay or WeChat Pay right in the chat. Paying by card without
-  the link needs a one-time token you approve in your Link wallet, which only
+  in mainland China for a CNY price; the payment page shows the ways to pay.
+  In Claude you'll usually pay by link, or pay a USD order with Alipay or
+  WeChat Pay right in the chat. Paying by card without the link needs a one-time token you approve in your Link wallet, which only
   works for US and Canadian Link accounts and a USD order of up to $500, and
   only where Claude has a tool that can request one.
   Claude never sees your card details; don't paste them into the chat.

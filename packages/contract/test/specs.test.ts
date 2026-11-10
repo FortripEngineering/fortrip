@@ -207,6 +207,18 @@ const TOOL_NAMES = [
 ] as const;
 
 describe("TOOLS", () => {
+  // Payment methods change; the currency text names the channel, not a list.
+  it("currency says each currency has its own channel, and lists no payment methods", () => {
+    for (const name of ["search_hotels", "get_hotel_offers"]) {
+      const spec = TOOLS.find((t) => t.name === name)!;
+      const json = z.toJSONSchema(spec.input, { io: "input" }) as unknown as { properties: { currency: { description: string } } };
+      const text = json.properties.currency.description;
+      assert.match(text, /Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them\./, name);
+      assert.match(text, /CNY is paid through payment channels in mainland China and suits a user who pays that way\./, name);
+      assert.doesNotMatch(text, /Alipay|WeChat|bank card|currency_unavailable|where available/, name);
+    }
+  });
+
   it("lists the eight tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
