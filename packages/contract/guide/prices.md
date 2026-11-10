@@ -7,6 +7,7 @@
 {{#if claude-skill cli}}
 - Every price of a response is in that one currency; don't convert it. `{{arg:currency}}`{{#if cli}} (or `FORTRIP_CURRENCY`){{/if}} is `USD` (the default) or `CNY`.
 - Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them. CNY is paid through payment channels in mainland China and suits a user who pays that way.
+- A search that didn't set the currency may carry `currencyHint` (CNY) when the request or the user's latest sign-in comes from mainland China: offer CNY prices if the user may pay that way.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.
 - After payment, `payment.localCharge` is what the card paid in its own currency. Orders made on the Fortrip website can be charged in another currency: `payment.chargeCurrency` says which.
 {{/if}}

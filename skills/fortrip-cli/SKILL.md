@@ -132,6 +132,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 - In an offer or order, `price.total` is the whole stay for all rooms and is what is charged, in the request's `--currency` (`USD` by default); an order is in the currency of the offer it was made from. `perNightAllRooms` is the total per night; to compare with a per-room budget, also divide by the rooms. On a USD order, Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the total in that currency is the price.
 - Every price of a response is in that one currency; don't convert it. `--currency` (or `FORTRIP_CURRENCY`) is `USD` (the default) or `CNY`.
 - Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them. CNY is paid through payment channels in mainland China and suits a user who pays that way.
+- A search that didn't set the currency may carry `currencyHint` (CNY) when the request or the user's latest sign-in comes from mainland China: offer CNY prices if the user may pay that way.
 - Fees payable at the property (`payAtProperty`) are separate, in the property's own currency, not converted.
 - After payment, `payment.localCharge` is what the card paid in its own currency. Orders made on the Fortrip website can be charged in another currency: `payment.chargeCurrency` says which.
 

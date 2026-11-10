@@ -71,6 +71,8 @@ With a `stay`, each hotel can carry an indicative price per room and night. It i
 
 Hotels without an indicative price stay listed with `price: null`; price sorts put them last, and a price filter leaves them out and counts them. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
 
+A search that doesn't set `currency` can carry `currencyHint`: `{ currency: "CNY", reason }` when the request comes from mainland China (`request_location`) or the user's latest sign-in to Fortrip was there (`sign_in_location`). CNY prices are available too, paid through payment channels in mainland China. It is a suggestion: the agent decides whether to offer them.
+
 ## Counts and notes [#coverage]
 
 Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Field by field, see the [search result](/schemas#search-result).

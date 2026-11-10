@@ -158,6 +158,14 @@ export const searchResult = openObject({
       "When a place_name search matched few hotels: how many in its country match the name as text; otherwise null.",
     ),
   }).describe("What the search covered: counts of hotels, each null when it doesn't apply."),
+  currencyHint: openObject({
+    currency: openEnum(["CNY"]),
+    reason: openEnum(["request_location", "sign_in_location"]),
+  })
+    .optional()
+    .describe(
+      "Present only when the search didn't set currency and the user may pay through another currency's channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
+    ),
   data: z.array(hotelSummary),
   nextCursor: z
     .string()

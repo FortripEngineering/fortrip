@@ -14572,6 +14572,44 @@
         "additionalProperties": {},
         "description": "What the search covered: counts of hotels, each null when it doesn't apply."
       },
+      "currencyHint": {
+        "description": "Present only when the search didn't set currency and the user may pay through another currency's channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
+        "type": "object",
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CNY"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "request_location",
+                  "sign_in_location"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "currency",
+          "reason"
+        ],
+        "additionalProperties": {}
+      },
       "data": {
         "type": "array",
         "items": {

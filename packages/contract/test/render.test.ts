@@ -204,6 +204,28 @@ describe("one currency", () => {
 });
 
 describe("search results", () => {
+  it("ends with the currency hint only when the search carries one", () => {
+    const fixture = copy(load("search-locality-phuket")) as ToolFixture;
+    assert.doesNotMatch(render(fixture), /^Currency:/m);
+    const data = fixture.data as Record<string, unknown>;
+    data.currencyHint = { currency: "CNY", reason: "request_location" };
+    const mcp = renderToolResult("search_hotels", data);
+    assert.ok(
+      mcp.endsWith(
+        "\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search again with currency CNY.",
+      ),
+      mcp,
+    );
+    data.currencyHint = { currency: "CNY", reason: "sign_in_location" };
+    const cli = renderToolResult("search_hotels", data, "cli");
+    assert.match(cli, /\n\nCurrency: the user's latest sign-in to Fortrip was from mainland China\. [^\n]*: run the search again with --currency CNY\.$/);
+    // An unknown reason still offers CNY, without a reason; another currency, nothing.
+    data.currencyHint = { currency: "CNY", reason: "something_new" };
+    assert.match(renderToolResult("search_hotels", data), /\n\nCurrency: Prices are also available in CNY/);
+    data.currencyHint = { currency: "EUR", reason: "request_location" };
+    assert.doesNotMatch(renderToolResult("search_hotels", data), /^Currency:/m);
+  });
+
   it("writes every note's message", () => {
     for (const name of GOLDENS.filter((n) => n.startsWith("search-"))) {
       const fixture = load(name) as ToolFixture;

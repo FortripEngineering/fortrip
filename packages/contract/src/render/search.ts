@@ -198,6 +198,19 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
     .join(" · ");
 }
 
+const HINT_REASONS = {
+  request_location: "this request comes from mainland China",
+  sign_in_location: "the user's latest sign-in to Fortrip was from mainland China",
+} as const;
+
+/** The currency hint (`currencyHint`): a fact and a suggestion, the
+ *  agent's to weigh. */
+function currencyHintLine(hint: NonNullable<SearchResult["currencyHint"]>, surface: RenderSurface): string {
+  const reason = HINT_REASONS[hint.reason as keyof typeof HINT_REASONS];
+  const again = surface === "cli" ? "run the search again with --currency CNY" : "search again with currency CNY";
+  return `Currency: ${reason ? `${reason}. ` : ""}Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: ${again}.`;
+}
+
 export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): string {
   const lines = [header(r)];
   lines.push(
@@ -248,5 +261,6 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
         ? `Next page: run again with only --cursor ${r.nextCursor} and, optionally, --limit.`
         : `Next page: call again with only the cursor and, optionally, limit: { cursor: "${r.nextCursor}" }.`,
   );
+  if (r.currencyHint?.currency === "CNY") lines.push("", currencyHintLine(r.currencyHint, surface));
   return lines.join("\n");
 }
