@@ -590,16 +590,16 @@ describe("hotelOffersInput", () => {
     }
   });
 
-  it("accepts the full request and defaults limitPerHotel to 10", () => {
+  it("accepts the full request and defaults limitPerHotel to 15", () => {
     assertAccepted(hotelOffersInput, {
       ...base,
       filters: { requireBreakfast: true, requireFreeCancellation: false },
-      limitPerHotel: 20,
+      limitPerHotel: 30,
       locale: "en",
       currency: "USD",
     });
-    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 10);
-    assert.equal(LIMITS.offersPerHotelDefault, 10);
+    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 15);
+    assert.equal(LIMITS.offersPerHotelDefault, 15);
   });
 
   it("holds hotelIds to 1 to 15, distinct", () => {
@@ -633,7 +633,7 @@ describe("hotelOffersInput", () => {
     );
     assertRefusedAt(
       hotelOffersInput,
-      { ...base, limitPerHotel: 21 },
+      { ...base, limitPerHotel: 31 },
       "limitPerHotel",
     );
     assertRefusedAt(
