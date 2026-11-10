@@ -1,7 +1,7 @@
 /*
  * Inlines the guide's Markdown fragments (`guide/*.md`) into
  * `src/guide-data.generated.ts`, so `renderGuide` never reads a file: not in
- * the tests, the CLI bundle or fortrip-ai. `build` and `test` run it first;
+ * the tests, the CLI bundle or the server. `build` and `test` run it first;
  * the generated file is committed, and the repository's `pnpm generate
  * --check` compares it with `embeddedGuide()`.
  */

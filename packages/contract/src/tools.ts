@@ -50,12 +50,14 @@ export interface ToolSpec {
 }
 
 /**
- * The consent rule (spec §6). It rides on every MCP result that holds a
- * non-null `payment.url`, as `nextStep` and as the last paragraph of the
- * text: some clients never show the model the server instructions.
+ * The consent rule (spec §6), for every way to pay. It rides on every MCP
+ * result that holds a non-null `payment.url`, as `nextStep` and as the first
+ * next-step paragraph of the text: some clients never show the model the
+ * server instructions. The pay and wallet paragraphs after it refer to the
+ * confirmation in a clause of their own.
  */
 export const ORDER_NEXT_STEP =
-  "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
+  "Before you give the user an order's payment.url or pay it another way, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then pay one way only: give payment.url exactly as returned, or use one of the order's payment.methods.";
 
 /** Where a rendered result is read: an MCP client, which calls tools with
  *  JSON arguments, or the CLI, which runs commands with flags. */
@@ -68,7 +70,7 @@ export const CALLS = {
     penalty: "Pass maximumPenalty as cancel.penalty, exactly as returned.",
     close: "call cancel_order",
     pay: "call pay_order",
-    payWallet: " with method stripe_alipay_wechat_pay",
+    payWallet: " with method stripe_alipay_wechat_pay and the order's price.total",
     get: "call get_order",
     poll: "poll get_order",
     payWith: "call pay_order with it and the order's price.total",
@@ -80,7 +82,7 @@ export const CALLS = {
     penalty:
       "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
     pay: "run `fortrip orders pay`",
-    payWallet: " with --method stripe_alipay_wechat_pay",
+    payWallet: " with --method stripe_alipay_wechat_pay --total <total>",
     get: "run `fortrip orders get <orderId>`",
     poll: "poll it with `fortrip orders get <orderId>`",
     payWith:
@@ -102,7 +104,7 @@ export function cancelNextStep(surface: RenderSurface): string {
   return `Before you ${c.cancel}, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. ${c.penalty} Never state a refund the order did not return.`;
 }
 
-/** `cancelNextStep` over MCP, also in the `cancel_order` description. */
+/** `cancelNextStep` over MCP. */
 export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
 
 /**
@@ -114,7 +116,7 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts), and the order's payment.methods has the stripe_shared_payment_token entry. Otherwise give payment.url, and never ask the user to create, type or paste a token. Before you ${c.pay}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Then request the token for this order from the user's Link wallet with that entry's handler config.business_profile and its limits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give payment.url or ${c.pay}. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
+  return `To pay without the link: only if you have a tool that can request a Stripe shared payment token from the user's Link wallet (US and Canadian Link accounts); otherwise give payment.url, and never ask the user to create, type or paste a token. Once the user has confirmed the order with a clear yes, request the token for this order with the stripe_shared_payment_token entry's handler config.business_profile and its limits (maxAmount in cents, currency, expiresAt), and ${c.payWith}. The charge is in USD: a card in another currency may add a foreign transaction fee. Once ${c.paid} succeeds, payment.url stops working; a failed payment leaves it open.`;
 }
 
 /** `payNextStep` over MCP. */
@@ -129,7 +131,7 @@ export const PAY_NEXT_STEP = payNextStep("mcp");
  */
 export function walletNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `Before you ${c.pay}${c.payWallet}, show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then ask them to confirm, and wait for a clear yes. Then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
+  return `To pay with Alipay or WeChat Pay: once the user has confirmed the order with a clear yes, ${c.pay}${c.payWallet}, then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
 }
 
 /** `walletNextStep` over MCP. */
@@ -148,7 +150,7 @@ const nextStep = z
   .string()
   .optional()
   .describe(
-    "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
+    "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
   );
 
 /** The answers over MCP that are orders. Those that can hold a
@@ -181,7 +183,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "search_hotels",
     title: "Search hotels",
     description:
-      "Find hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point, or a country. A name several places bear answers destination_ambiguous with candidates: ask the user, then search the chosen placeId. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A search too broad to answer is refused with search_too_broad and its localities: pass one back as { kind: \"locality\", placeId }, never by name. The answer states the scope, the counts and notes; a next page is the cursor and, optionally, limit.",
+      "Find hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point, or a country. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A name several places bear answers destination_ambiguous, and a search too broad to answer search_too_broad with its localities; each error says what to do next. The answer states the scope, the counts and notes; a next page is the cursor and, optionally, limit.",
     annotations: READ,
     input: searchHotelsInput,
     output: searchResult,
@@ -198,7 +200,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "get_hotel_offers",
     title: "Live offers",
-    description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room, the meals included, price.total, in the request's currency, for the whole stay and every room (what is charged), fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for book_hotel that expires at expiresAt. Hotels with nothing to offer are listed under unavailable with the reason. Up to limitPerHotel offers per hotel, default ${LIMITS.offersPerHotelDefault}, chosen for a spread of choices in this order while room remains: the cheapest offer, the cheapest that can be cancelled free, the cheapest with breakfast, the cheapest of each other room, then the rest by price; listed cheapest first.`,
+    description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room, the meals included, price.total, in the request's currency, for the whole stay and every room (what is charged), fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for book_hotel that expires at expiresAt. Hotels with nothing to offer are listed under unavailable with the reason. Up to limitPerHotel offers per hotel (default ${LIMITS.offersPerHotelDefault}), picked to span price, free cancellation, breakfast and rooms, listed cheapest first; the answer counts those not shown.`,
     annotations: READ,
     input: hotelOffersInput,
     output: hotelOffersResult,
@@ -206,7 +208,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "book_hotel",
     title: "Create order",
-    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order (or Alipay/WeChat Pay); anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Order one offer from get_hotel_offers. The answer is an unpaid order with a payment link: status awaiting_payment, the total, the stay and its terms, and payment.url, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order (a shared payment token, or Alipay/WeChat Pay); anyone holding the link can pay. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer. Sending the same details again returns the same order. An offer is ordered once: for another order of the stay (another party, or a corrected guest name), get offers again and order the new offer; when it replaces an unpaid order, tell the user to pay only the new link, as the earlier one expires unpaid. To cancel an order, use cancel_order; for changes, or a cancellation cancel_order can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: false,
@@ -220,7 +222,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "get_order",
     title: "Get order",
     description:
-      "One of the user's orders by orderId: its status, the payment status and, while it awaits payment, payment.url; the stay and its terms; and the hotel's confirmation number once there is one. Check it after the user pays. An order awaiting payment whose payment.url is null had its link unreadable this time: read it again.",
+      "One of the user's orders by orderId: its status, the payment status and, while it awaits payment, payment.url; the stay and its terms; and the hotel's confirmation number once there is one. Check it after the user pays.",
     annotations: READ_OWN,
     input: getOrderInput,
     output: MCP_OUTPUT.get_order,
@@ -237,7 +239,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "cancel_order",
     title: "Cancel order",
-    description: `Cancel a paid order under its terms, or close an unpaid one. Paid (cancel.reason cancellable): the hotel booking is cancelled and cancel.refund is refunded. ${CANCEL_NEXT_STEP} Penalty now above maximumPenalty: cancellation_changed, nothing changed; ask again. Then poll get_order: cancelling, then cancelled. Hotel refused: confirmed, reason refused. Unpaid (cancel.reason unpaid): close it only once the user says they no longer want it, without maximumPenalty; nothing is charged; it becomes expired. Paid meanwhile: the answer is the paid order or invalid_request; then cancel only under cancel.penalty, with the user's yes. payment_in_progress: read it again shortly. Repeat calls answer the order as it is.`,
+    description: `Cancel a paid order under its terms, or close an unpaid one. Paid (cancel.reason cancellable): only after the user confirmed the order's cancel.penalty and cancel.refund with a clear yes, pass maximumPenalty, that cancel.penalty exactly as returned. The order becomes cancelling, then cancelled with cancel.refund refunded, or confirmed with reason refused if the hotel refuses: poll get_order. cancellation_changed: the penalty rose above maximumPenalty and nothing changed; ask the user again. Never state a refund the order did not return. Unpaid (cancel.reason unpaid): close it, without maximumPenalty, only once the user says they no longer want it; nothing is charged and it becomes expired. If it was paid meanwhile, the answer is the paid order, invalid_request, order_not_cancellable or order_in_progress: cancel it only under its cancel.penalty, with the user's yes. payment_in_progress: read it again shortly. Repeat calls answer the order as it is.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,
@@ -251,7 +253,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order",
     description:
-      `Pay an order without its link, by one of its payment.methods: a shared payment token, or Alipay/WeChat Pay (method stripe_alipay_wechat_pay). Token: only if you can request one from the user's Link wallet (US and Canadian accounts); never ask the user for one. First show the user the total and currency, the stay and every term (meals, cancellation, fees payable at the property), ask them to confirm and wait for a clear yes. Token: request it with the entry's handler config.business_profile and limits; pass it with price.total. Wallet: pass method, price.total; show the wallet entry (WeChat code as an image if you can, both links); they pay once by either; a code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: payment.url or pay_order. Success closes payment.url; failure leaves it open. Then poll get_order. payment_total_changed: confirm details.total, retry. payment_credential_invalid: new token. service_unavailable: retry. Else payment.url. A token pays one order.`,
+      `Pay a USD order without its link, by one of its payment.methods: a Stripe shared payment token, only if you can request one from the user's Link wallet (US and Canadian accounts; never ask the user for one), or Alipay/WeChat Pay (method stripe_alipay_wechat_pay). Call it only after the user confirmed the order's total and currency, the stay and every term with a clear yes. Token: request it with the entry's handler config.business_profile and limits, and pass it with price.total; a token pays one order. Wallet: pass method and price.total, then show the entry it returns: the WeChat code as an image if you can, and both links; the user pays once, by either. A code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: success closes payment.url, a failure leaves it open, and each error says how to recover. Then poll get_order.`,
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

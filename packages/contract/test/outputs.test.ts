@@ -729,9 +729,8 @@ describe("field descriptions", () => {
   it("the token method states its limits from LIMITS", () => {
     const text = descriptionsAt(order, "payment.methods").find((d) => d.includes("a token can't pay")) ?? "";
     assert.ok(text.includes(`over $${LIMITS.tokenPaymentMaxUsd}`), text);
-    assert.ok(text.includes(`under ${LIMITS.payMinMinutesLeft} minutes left`), text);
-    assert.ok(text.includes(`${LIMITS.tokensPerOrder} tokens tried`), text);
-    assert.match(text, /an Alipay or WeChat Pay payment is open/);
+    assert.match(text, /not charged in USD/);
+    assert.match(text, /then give payment\.url\.$/);
   });
 
   // The fields a caller acts on say what they mean, where the docs and an

@@ -526,7 +526,7 @@ describe("output", () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 201, body: data };
     const { stdout } = await cli(BOOK);
-    assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
+    assert.match(stdout, /wait for a clear yes\. Then pay one way only: give payment\.url exactly as returned, or use one of the order's payment\.methods\.\n$/);
   });
 
   it("orders pay --method stripe_alipay_wechat_pay prints the links and, on a wide TTY, the entry's code", async () => {

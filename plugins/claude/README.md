@@ -9,8 +9,8 @@ from a conversation with Claude.
 - **The Fortrip connector**, Fortrip's hosted MCP server at
   `https://mcp.fortrip.ai/`. Its tools search hotels, read a hotel's
   details, get live offers for up to 15 hotels at a time, create an order
-  with a payment link, check an order's status or list your orders, and
-  cancel an order under its cancellation terms.
+  with a payment link, pay an order, check an order's status or list your
+  orders, and cancel an order under its cancellation terms.
 - **The `fortrip` skill**, which tells Claude the order to use the tools in,
   how to read prices, meal plans and cancellation terms, how to plan trips
   with flexible dates, budgets or several stops, and to show you the price
@@ -41,7 +41,7 @@ token into the chat.
 
 ## How booking works
 
-1. Claude searches hotels. Search prices are indicative minimums; live prices
+1. Claude searches hotels. Search prices are indicative estimates; live prices
    come from checking offers.
 2. Offers are priced in the currency you ask for, USD or CNY where
    available, and that is the currency you're charged.
@@ -95,11 +95,12 @@ Flights, activities and changes to existing orders aren't supported.
   hotel to make the reservation: the stay you chose, guest names, the contact
   name, phone and email, and any special requests.
 - **Payment** goes to a payment provider: Stripe for a USD price, a provider
-  in China for a CNY price, where you pay with Alipay, WeChat Pay or a Chinese
-  bank card. In Claude you'll usually pay by link. Paying without the link
-  needs a one-time token you approve in your Link wallet, which only works for
-  US and Canadian Link accounts and a USD order of up to $500, and only where
-  Claude has a tool that can request one.
+  in China for a CNY price, where you pay with Alipay, WeChat Pay or a bank
+  card from mainland China. In Claude you'll usually pay by link, or pay a USD
+  order with Alipay or WeChat Pay right in the chat. Paying by card without
+  the link needs a one-time token you approve in your Link wallet, which only
+  works for US and Canadian Link accounts and a USD order of up to $500, and
+  only where Claude has a tool that can request one.
   Claude never sees your card details; don't paste them into the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip

@@ -1,6 +1,6 @@
 ---
 name: fortrip
-description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
+description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, book_hotel, get_order, list_orders, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
 ---
 
 # Fortrip hotel stays
@@ -56,10 +56,9 @@ If a tool says the user isn't signed in, ask them to reconnect.
 
 `text` matches exact words in hotel names and addresses, in Chinese or English:
 
-- Every word must match as written: plurals, accents, spacing and abbreviations count ("hostel" and "hostels", "St Regis" and "Saint Regis" find different hotels). Hyphens and apostrophes don't (Ritz-Carlton finds Ritz Carlton).
+- Every word must match as written (a typo such as "Shangahi" finds nothing): plurals, accents, spacing and abbreviations count ("hostel" and "hostels", "St Regis" and "Saint Regis" find different hotels). Hyphens and apostrophes don't (Ritz-Carlton finds Ritz Carlton).
 - In Chinese, matching follows word segmentation, so part of a name can match unrelated hotels (希尔 is not 希尔顿).
 - Use only distinctive words: a hotel or brand name, a district or a landmark. Not "hotel", "near", "cheap" or "best".
-- Typos return nothing: "Shangahi" finds no hotel.
 - Place names belong in the destination: "Maldives" as text finds a hotel named Maldives in China.
 
 ### Filters
@@ -118,29 +117,29 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 1. Show the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included.
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
-3. Then give `payment.url` exactly as returned: don't shorten, rebuild or re-encode it.
+3. Then pay one way only: give `payment.url` exactly as returned (don't shorten, rebuild or re-encode it), or use one of the ways below.
 
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` once the user says they no longer want it.
-- An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null had its link unreadable this time: read it again with `fortrip:get_order`.
+- An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null has a payment being processed: read it again shortly with `fortrip:get_order`, and don't give an earlier link.
 - Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`. A card number in a guest name, the contact or the special requests is rejected.
 
 ## Paying without the link
 
 An order whose `payment.methods` has the `stripe_shared_payment_token` entry (in a result's text, the line "Pay without the link") can also be paid through `fortrip:pay_order` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so only a USD order up to that has such an entry. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
 
-1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. The token comes from the user's wallet, never from card details.
+1. Confirm the order with the user as before giving the payment link: its total and currency, the stay and every term, and a clear yes. The token comes from the user's wallet, never from card details.
 2. Request the token from the user's Link wallet with that entry's `handler.config.business_profile` and its `limits`: `maxAmount` (in cents), `currency` and `expiresAt`.
 3. Call `fortrip:pay_order` with the token and the order's `price.total`, the token as `sharedPaymentToken` or in UCP's `payment.instruments`. The order is then `confirming`, its payment `authorized`: check it as after payment.
 
-The charge is in USD: a card in another currency may add a foreign transaction fee. Pay one way only: either give `payment.url` or call `fortrip:pay_order`. Once `fortrip:pay_order` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then call `fortrip:pay_order` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with that entry's `limits`. `service_unavailable`: call `fortrip:pay_order` again with the same token, never a new one. A token pays one order only.
+The charge is in USD: a card in another currency may add a foreign transaction fee. Once `fortrip:pay_order` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then call `fortrip:pay_order` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with that entry's `limits`. `service_unavailable`: call `fortrip:pay_order` again with the same token, never a new one. A token pays one order only.
 
 ## Paying with Alipay or WeChat Pay
 
-An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token: it is for users who have a mainland-China wallet. Call `fortrip:pay_order` with `method` `stripe_alipay_wechat_pay` and the order's `price.total`, only after the user has confirmed.
+An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token. Call `fortrip:pay_order` with `method` `stripe_alipay_wechat_pay` and the order's `price.total`, only after the user has confirmed.
 
-1. Show the user the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation and fees payable at the property. End that reply by asking the user to confirm, and wait for a clear yes. Pay one way only: `payment.url` or this.
+1. Confirm the order with the user as before giving the payment link: its total and currency, the stay and every term, and a clear yes.
 2. Then show the `stripe_alipay_wechat_pay` entry of `payment.methods`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in the order's currency, and the wallets show it in yuan at their rate.
 3. Check the order with `fortrip:get_order` until it isn't `awaiting_payment`.
 
@@ -167,10 +166,10 @@ A tool error carries `code`, `message` and `retryable`, and `retryAfterSeconds` 
 
 | `code` | Do this |
 |---|---|
-| `offer_changed` (409) | The price or terms changed since the offer: `changes` lists every change (`worse` says which are worse for the user) and `offer` is the new offer. Show the user every change and ask again; if they still want it, order the new offer, and confirm the new order before giving its link |
+| `offer_changed` (409) | The price or terms changed since the offer: `changes` lists every change (`worse` says which are worse for the user) and `offer` is the new offer. Show the user every change and ask again; if they still want it, order the new offer |
 | `offer_expired` (409) | Get offers again and let the user choose again |
 | `offer_unavailable` (422) | The offer is sold out or was refused: get offers again and let the user choose again |
-| `order_in_progress` (409) | The same order is still being created: wait `retryAfterSeconds`, then call again with the same details |
+| `order_in_progress` (409) | The order is still being created, or still being confirmed when cancelling it: wait `retryAfterSeconds`, then call again with the same details |
 | `offer_already_ordered` (409) | This offer was already ordered with other details: show that order (`orderId`) instead. An offer is ordered once, even when its order failed or expired: to order with other details, get offers again |
 | `stay_unsupported` (422) | `mixed_occupancy`: order once per party; `max_nights`: at most `max` nights per order |
 | `currency_unavailable` (422) | Prices in `details.currency` aren't available yet: tell the user, and ask whether to see USD prices |

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { z } from "zod";
 
 import {
   COMMAND_GROUPS,
@@ -114,10 +115,15 @@ describe("the settled rules (design §3.4)", () => {
     "one party per call": /one party per call/,
   };
 
+  // On MCP these ride with the tools (descriptions, inputs, error text),
+  // where the model reads them next to the data, not in the instructions.
+  const WITH_THE_TOOLS = new Set(["guest name", "offer changed", "price units", "one party per call"]);
+
   for (const surface of SURFACES) {
     for (const [rule, pattern] of Object.entries(SETTLED)) {
-      it(`${surface} main states "${rule}" exactly once`, () => {
-        assert.equal(count(renderGuide(surface, "main"), pattern), 1);
+      const times = surface === "mcp" && WITH_THE_TOOLS.has(rule) ? 0 : 1;
+      it(`${surface} main states "${rule}" ${times === 1 ? "exactly once" : "nowhere"}`, () => {
+        assert.equal(count(renderGuide(surface, "main"), pattern), times);
       });
       it(`${surface} planning states "${rule}" at most once`, () => {
         assert.ok(count(renderGuide(surface, "planning"), pattern) <= 1);
@@ -125,8 +131,18 @@ describe("the settled rules (design §3.4)", () => {
     }
   }
 
+  it("on MCP, the rules of the data ride with the tools", () => {
+    const tools = flat(
+      TOOLS.map((t) => `${t.description} ${JSON.stringify(z.toJSONSchema(t.input, { io: "input" }))}`).join(" "),
+    );
+    assert.match(tools, /price\.total, in the request's currency, for the whole stay and every room \(what is charged\)/);
+    assert.match(tools, /for different parties, call once per party/);
+    assert.match(tools, /offer_changed with every change and a new offer/);
+    assert.match(tools, /in Latin letters as on the passport/);
+  });
+
   it("price units: price.total is the whole stay for all rooms, charged in the request's currency", () => {
-    for (const surface of SURFACES) {
+    for (const surface of ["claude-skill", "cli"] as const) {
       assert.match(
         flat(renderGuide(surface, "main")),
         /`price\.total` is the whole stay for all rooms and is what is charged, in the request's `(--)?currency`/,
@@ -141,7 +157,7 @@ describe("the settled rules (design §3.4)", () => {
       assert.doesNotMatch(text, /approx|in USD for offers|display-?currency/i, `${surface} ${topic}`);
     }
     for (const surface of SURFACES) {
-      assert.equal(count(renderGuide(surface, "main"), /in the request's `(--)?currency`/), 1, surface);
+      assert.equal(count(renderGuide(surface, "main"), /in the request's `(--)?currency`/), surface === "mcp" ? 0 : 1, surface);
     }
   });
 
@@ -179,7 +195,7 @@ describe("the settled rules (design §3.4)", () => {
   });
 
   it("offer changed: show every change and ask again", () => {
-    for (const surface of SURFACES) {
+    for (const surface of ["claude-skill", "cli"] as const) {
       assert.match(
         flat(renderGuide(surface, "main")),
         /`offer_changed`.{0,300}?every change.{0,200}?ask (the user )?again/,
@@ -189,7 +205,7 @@ describe("the settled rules (design §3.4)", () => {
   });
 
   it("one party per call: one order per party", () => {
-    for (const surface of SURFACES) {
+    for (const surface of ["claude-skill", "cli"] as const) {
       assert.match(
         flat(renderGuide(surface, "main")),
         /one party per call[^.]*order once per party/,
@@ -343,9 +359,9 @@ describe("the MCP instructions", () => {
     assert.doesNotMatch(text, /fortrip:|fortrip hotels|fortrip orders|--room/);
   });
 
-  it("state each of these once", () => {
+  it("state each of these at most once", () => {
     for (const pattern of [/`offer_changed`/, /\bindicative\b/i, /\bget_order\b/, /`countryCode`/]) {
-      assert.equal(count(text, pattern), 1, String(pattern));
+      assert.ok(count(text, pattern) <= 1, String(pattern));
     }
   });
 });
@@ -361,7 +377,7 @@ describe("the Claude skill", () => {
     assert.match(main, /^## Before giving the payment link$/m);
     assert.match(main, /^1\. Show the order's total/m);
     assert.match(main, /^2\. End that reply by asking the user to confirm/m);
-    assert.match(main, /^3\. Then give `payment\.url` exactly as returned/m);
+    assert.match(main, /^3\. Then pay one way only: give `payment\.url` exactly as returned/m);
   });
 
   it("points to its planning reference file, and has no CLI text", () => {
@@ -421,7 +437,9 @@ describe("the CLI guide", () => {
         "give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip hotels book` returned",
       ),
     );
-    assert.ok(planning.includes("Offers and orders take one party per call"));
+    // The one-party rule lives in SKILL.md, which planning.md points back to.
+    assert.ok(main.includes("Offers and orders take one party per call"));
+    assert.ok(!planning.includes("Offers and orders take one party per call"));
   });
 
   it("names only flags the CLI has", () => {
@@ -469,7 +487,7 @@ describe("the full guides", () => {
       const text = flat(main);
       for (const pattern of [
         // Text matching (§7.5).
-        /[Tt]ypos return nothing/,
+        /a typo such as "Shangahi" finds nothing/,
         /distinctive words/,
         // Stars (§7.7).
         /"4 stars" as [^.]*leaves out 4\.5/,

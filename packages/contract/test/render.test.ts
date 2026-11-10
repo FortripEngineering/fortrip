@@ -763,7 +763,7 @@ describe("orders and the consent rule", () => {
     const fixture = load("cancel-order") as ToolFixture;
     const text = render(fixture);
     assert.match(text.split("\n")[0]!, / · cancelling · /);
-    assert.match(text, /^Cancel: not available: a cancellation is in progress/m);
+    assert.match(text, /^Cancel: not available: the booking is still being confirmed, or a cancellation is under way; read the order again later$/m);
     assert.ok(!text.includes(CANCEL_NEXT_STEP));
     assert.ok(!text.includes(ORDER_NEXT_STEP));
     // Even an answer that could still be cancelled carries no rule: it is
@@ -882,8 +882,11 @@ describe("orders and the consent rule", () => {
       plain.payment.methods = methods;
       assert.ok(!renderToolResult("get_order", plain).includes(WALLET_NEXT_STEP));
     }
-    assert.match(WALLET_NEXT_STEP, /^Before you call pay_order with method stripe_alipay_wechat_pay, show the user the order's total and currency, /);
-    assert.match(WALLET_NEXT_STEP, /Then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
+    assert.match(
+      WALLET_NEXT_STEP,
+      /^To pay with Alipay or WeChat Pay: once the user has confirmed the order with a clear yes, call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, /,
+    );
+    assert.match(WALLET_NEXT_STEP, /then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
     assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
   });
 
@@ -951,10 +954,11 @@ describe("orders and the consent rule", () => {
       assert.equal(text.split(PAY_NEXT_STEP).length, tool === "pay_order" ? 1 : 2, tool);
       assertClean(text);
     }
-    assert.match(PAY_NEXT_STEP, /the order's payment\.methods has the stripe_shared_payment_token entry\./);
+    assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
+    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Once the user has confirmed the order with a clear yes, /);
     assert.match(
       PAY_NEXT_STEP,
-      /with that entry's handler config\.business_profile and its limits \(maxAmount in cents, currency, expiresAt\)/,
+      /with the stripe_shared_payment_token entry's handler config\.business_profile and its limits \(maxAmount in cents, currency, expiresAt\)/,
     );
     // An order with no methods: the link alone, and only its rule.
     const unpayable = load("order-awaiting-payment") as ToolFixture;
@@ -1124,7 +1128,10 @@ describe("the CLI surface", () => {
       /^Pay with Alipay or WeChat Pay: run `fortrip orders pay <orderId> --method stripe_alipay_wechat_pay --total <total>`\.$/m,
     );
     assert.ok(offer.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${walletNextStep("cli")}`));
-    assert.match(walletNextStep("cli"), /^Before you run `fortrip orders pay` with --method stripe_alipay_wechat_pay, show the user/);
+    assert.match(
+      walletNextStep("cli"),
+      /once the user has confirmed the order with a clear yes, run `fortrip orders pay` with --method stripe_alipay_wechat_pay --total <total>, /,
+    );
     assert.match(walletNextStep("cli"), /Then poll it with `fortrip orders get <orderId>`\.$/);
     assert.notEqual(walletNextStep("cli"), WALLET_NEXT_STEP);
     assert.equal(walletNextStep("mcp"), WALLET_NEXT_STEP);
@@ -1174,7 +1181,7 @@ describe("the CLI surface", () => {
     assert.match(error("payment_declined", { declineCode: null }), /read the order with `fortrip orders get <orderId>` and give its payment\.url/);
     assert.match(
       error("payment_total_changed", { orderId: order, total: { amount: "365.00", currency: "USD" } }),
-      new RegExp(`then run \`fortrip orders pay ${order} --token <spt_…> --total 365\\.00\` again with the same token\\. Nothing was charged\\.`),
+      new RegExp(`confirm this total with the user, then run the same \`fortrip orders pay ${order}\` command again with \`--total 365\\.00\`\\. Nothing was charged\\.`),
     );
   });
 

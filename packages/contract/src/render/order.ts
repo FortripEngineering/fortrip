@@ -46,7 +46,7 @@ export const CANCEL_REASON_WORDS: Record<string, string> = {
   cancellable: "it can be cancelled",
   unpaid: "it isn't paid: it can be closed if the user no longer wants it",
   already_cancelled: "it is already cancelled",
-  in_progress: "a cancellation is in progress",
+  in_progress: "the booking is still being confirmed, or a cancellation is under way; read the order again later",
   not_confirmed: "only a confirmed order that is paid can be cancelled",
   stay_started: `the stay has started; ${SUPPORT}`,
   non_refundable: "this rate can't be cancelled",
@@ -93,7 +93,7 @@ function paymentLines(o: Order, surface: RenderSurface): string[] {
     ].filter(Boolean);
     lines.push(`Payment link (${about.join("; ")}): ${p.url}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
-    lines.push("Payment link: could not be read this time; read this order again for it.");
+    lines.push("Payment link: none while a payment is being processed; read this order again shortly.");
   }
   const token = methodOf(o, "stripe_shared_payment_token");
   if (token) lines.push(tokenLine(o, token, surface));
@@ -117,11 +117,7 @@ function tokenLine(
     surface === "cli"
       ? `\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.price.total.amount}\``
       : "pay_order";
-  return [
-    `Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}.`,
-    "Only if you have a tool that can request the token from the user's Link wallet (US and Canadian Link accounts); otherwise give the payment link, and never ask the user to create, type or paste a token.",
-    `First show the user the total and currency, the stay and every term, and wait for a clear yes. Pay one way only: the link or ${surface === "cli" ? "`fortrip orders pay`" : "pay_order"}.`,
-  ].join(" ");
+  return `Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); token limits: maxAmount ${limits.maxAmount} (cents), currency ${limits.currency}, expiresAt ${limits.expiresAt}.`;
 }
 
 /** Paying with Alipay or WeChat Pay: how to open it, or, once open, the

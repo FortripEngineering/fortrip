@@ -5606,7 +5606,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -6276,7 +6276,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -6299,7 +6299,7 @@
           },
           "localCurrencyAtCheckout": {
             "type": "boolean",
-            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
           },
           "localCharge": {
             "anyOf": [
@@ -6452,7 +6452,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                 },
                 {
                   "type": "object",
@@ -6689,7 +6689,7 @@
         "type": "string"
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
@@ -6738,7 +6738,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -7408,7 +7408,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -7431,7 +7431,7 @@
           },
           "localCurrencyAtCheckout": {
             "type": "boolean",
-            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
           },
           "localCharge": {
             "anyOf": [
@@ -7584,7 +7584,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                 },
                 {
                   "type": "object",
@@ -7866,7 +7866,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -8536,7 +8536,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -8559,7 +8559,7 @@
           },
           "localCurrencyAtCheckout": {
             "type": "boolean",
-            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
           },
           "localCharge": {
             "anyOf": [
@@ -8712,7 +8712,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                 },
                 {
                   "type": "object",
@@ -8949,7 +8949,7 @@
         "type": "string"
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
@@ -9003,7 +9003,7 @@
                   "type": "string"
                 }
               ],
-              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+              "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -9673,7 +9673,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -9696,7 +9696,7 @@
                 },
                 "localCurrencyAtCheckout": {
                   "type": "boolean",
-                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
                 },
                 "localCharge": {
                   "anyOf": [
@@ -9849,7 +9849,7 @@
                           "limits"
                         ],
                         "additionalProperties": {},
-                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                       },
                       {
                         "type": "object",
@@ -10113,7 +10113,7 @@
         "description": "Pass it back as cursor for the next page; null on the last page."
       },
       "nextStep": {
-        "description": "What to show and ask before giving a payment.url. Present when the answer holds a non-null payment.url, and only then.",
+        "description": "What to show and ask before giving a payment.url or paying another way. Present when the answer holds a non-null payment.url, and only then.",
         "type": "string"
       }
     },
@@ -10154,7 +10154,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -10824,7 +10824,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -10847,7 +10847,7 @@
           },
           "localCurrencyAtCheckout": {
             "type": "boolean",
-            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
           },
           "localCharge": {
             "anyOf": [
@@ -11000,7 +11000,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                 },
                 {
                   "type": "object",
@@ -11317,7 +11317,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -11987,7 +11987,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -12010,7 +12010,7 @@
           },
           "localCurrencyAtCheckout": {
             "type": "boolean",
-            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+            "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
           },
           "localCharge": {
             "anyOf": [
@@ -12163,7 +12163,7 @@
                     "limits"
                   ],
                   "additionalProperties": {},
-                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                  "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                 },
                 {
                   "type": "object",
@@ -12450,7 +12450,7 @@
                   "type": "string"
                 }
               ],
-              "description": "awaiting_payment: unpaid, nothing charged; payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
+              "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; payment.status says what became of the money. cancelling, then cancelled: a cancellation under the terms. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -13120,7 +13120,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, when the link couldn't be read this time: read the order again."
+                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
                 },
                 "requiresSignIn": {
                   "type": "boolean"
@@ -13143,7 +13143,7 @@
                 },
                 "localCurrencyAtCheckout": {
                   "type": "boolean",
-                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, Alipay or WeChat Pay; always false on a CNY order."
+                  "description": "Whether paying by url may charge the card in its own currency, converted by Stripe; false once paid by token, or by Alipay or WeChat Pay through pay_order or the Fortrip page; always false on a CNY order."
                 },
                 "localCharge": {
                   "anyOf": [
@@ -13296,7 +13296,7 @@
                           "limits"
                         ],
                         "additionalProperties": {},
-                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay the order: over $500, not charged in USD, an order started on the Fortrip website, a negotiated price, under 15 minutes left, 5 tokens tried, a token payment is under way, an Alipay or WeChat Pay payment is open, or token payment isn't offered for this order."
+                        "description": "A Stripe shared payment token, through pay_order's sharedPaymentToken or payment. The entry is absent when a token can't pay this order (for example over $500, not charged in USD, or started on the Fortrip website); then give payment.url."
                       },
                       {
                         "type": "object",
