@@ -101,12 +101,12 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   tokenPaymentMaxUsd: (l) => [
     "Token payment",
     `up to $${n(l.tokenPaymentMaxUsd)}`,
-    "A USD order's total payable with a shared payment token (Link's cap on a spend request); on a larger order, or a CNY order, `payment.token` is `null`.",
+    "A USD order's total payable with a shared payment token (Link's cap on a spend request); on a larger order, or a CNY order, `payment.tokenRequest` is `null`.",
   ],
   payMinMinutesLeft: (l) => [
     "Time left to offer a Link token",
     `${l.payMinMinutesLeft} minutes`,
-    "Once less is left before the order's `payment.expiresAt`, `payment.token` is `null`: the user pays by the link.",
+    "Once less is left before the order's `payment.expiresAt`, `payment.tokenRequest` is `null`: the user pays by the link.",
   ],
   payCutoffMinutes: (l) => [
     "Time left to pay",

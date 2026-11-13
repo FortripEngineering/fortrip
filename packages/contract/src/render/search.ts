@@ -143,7 +143,7 @@ export function localitiesLines(
   ];
   for (const item of loc.items) {
     let line = ours`- Locality: ${theirs(item.place.name)} ${token("id", item.place.placeId)} ${num(item.count)}`;
-    if (item.total !== item.count) line = ours`${line} here, ${num(item.total)} as a locality`;
+    if (item.localityTotal !== item.count) line = ours`${line} here, ${num(item.localityTotal)} as a locality`;
     const sameName =
       areaName !== null &&
       [item.place.name, item.place.names.en, item.place.names.zh].some(

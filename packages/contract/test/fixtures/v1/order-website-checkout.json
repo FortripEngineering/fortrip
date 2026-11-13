@@ -73,7 +73,7 @@
       "expiresAt": "2026-11-02T10:30:00Z",
       "localCurrencyAtCheckout": false,
       "localCharge": null,
-      "token": null
+      "tokenRequest": null
     },
     "cancel": {
       "action": null,

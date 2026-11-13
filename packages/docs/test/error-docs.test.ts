@@ -69,7 +69,7 @@ test("the meanings say what the contract and its guide say", () => {
     new RegExp(`lists up to ${LIMITS.candidatesShown} with`),
   );
   // One offer, one order (the guide's offer_already_ordered row).
-  assert.match(meaning("offer_already_ordered"), /An offer is ordered once, even when its order failed or expired/);
+  assert.match(meaning("offer_already_ordered"), /An offer is ordered once, even when its order failed, expired or was closed/);
 });
 
 test("the pay cutoff and supplier_unavailable's statuses come from the contract", () => {

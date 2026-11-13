@@ -72,11 +72,11 @@ End that message by asking the user to confirm, and wait for a clear yes; urgenc
 
 ## Pay [#pay]
 
-Pay one way only. Every order awaiting payment has a payment link, `payment.url`. While the order's `payment.token` is set, an agent that can request a Link token can pay with one instead.
+Pay one way only. Every order awaiting payment has a payment link, `payment.url`. While the order's `payment.tokenRequest` is set, an agent that can request a Link token can pay with one instead.
 
 - `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, never in a shared channel, document, log or ticket, and give it exactly as returned: don't shorten, rebuild or re-encode it.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is `null` has a payment being processed: read the order again shortly, and don't give an earlier link.
-- The link closes at `payment.expiresAt`, or when the order is [closed](#close), and the order is then `expired`. To order the stay again, get offers again and confirm the new order with the user.
+- The link closes at `payment.expiresAt`, and the order is then `expired`, or when the order is [closed](#close), and it is then `closed`. To order the stay again, get offers again and confirm the new order with the user.
 - Once a token payment succeeds, `payment.url` stops working. One that fails leaves the link open and the order `awaiting_payment`.
 - If the user pays on the link first, a token hold made meanwhile is released.
 
@@ -91,7 +91,7 @@ The link opens a Fortrip page that recaps the order and shows the ways to pay fo
 - **A USD order:** a card, through Stripe Checkout, or Alipay or WeChat Pay.
 - **A CNY order:** a cashier in mainland China.
 
-An agent doesn't open or choose any of these: it gives the link, and the user pays. While the user has an Alipay or WeChat Pay payment open on the page, the order's `payment.token` is `null`, and `pay_order` answers [`payment_method_unavailable`](/errors#code-payment_method_unavailable) with `reason` `payment_open_on_page`: the user finishes paying on the page.
+An agent doesn't open or choose any of these: it gives the link, and the user pays. While the user has an Alipay or WeChat Pay payment open on the page, the order's `payment.tokenRequest` is `null`, and `pay_order` answers [`payment_method_unavailable`](/errors#code-payment_method_unavailable) with `reason` `payment_open_on_page`: the user finishes paying on the page.
 
 ## After payment [#after-payment]
 
@@ -123,7 +123,7 @@ Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`
 | For | A paid order, under its cancellation terms. | An unpaid order made through the API. |
 | Send | `maximumPenalty` | `close: true` |
 | CLI | `--max-penalty <amount>` | `--close` |
-| Effect | The hotel booking is cancelled. The penalty is kept and the rest refunded. | Nothing is charged. The order is `expired` and can no longer be paid. |
+| Effect | The hotel booking is cancelled. The penalty is kept and the rest refunded. | Nothing is charged. The order is `closed` and can no longer be paid. |
 | Ask the user | Show the penalty and the refund, and wait for a clear yes. | Close it only once the user says they no longer want it. |
 
 Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now. The same mode sent again answers the order it already cancelled or closed.
@@ -142,11 +142,11 @@ Every order says what can be done to it now, in `cancel`: `{ action, blockedBy, 
 
 Show the user the order's `cancel.penalty` and `cancel.refund`, and wait for a yes. Then cancel with `maximumPenalty` set to that `penalty`, exactly as returned. It is a ceiling: if the penalty has risen above it, the answer is [`cancellation_changed`](/errors#code-cancellation_changed) and nothing is cancelled. Read the order and ask the user again.
 
-The order is then `cancelling` while the hotel cancels, and `cancelled` once it has. A cancelled order's `cancelled` holds what the cancellation kept and returned: `{ at, penalty, refund }`. The refund goes back to the payment the order was paid with, and `payment.status` says whether it has arrived. If the hotel refuses the cancellation, the order is `confirmed` again, with `cancel.blockedBy` `refused`.
+The order is then `cancelling` while the hotel cancels, and `cancelled` once it has. A cancelled order's `cancelled` holds what the cancellation kept and returned: `{ at, penalty, refund }`. The refund goes back to the payment the order was paid with, and `payment.status` says whether it has arrived. If the hotel refuses the cancellation, the order is `confirmed` again, with `cancel.blockedBy` `cancellation_refused`.
 
 ### Close an unpaid order [#close]
 
-Close an order only once the user says they no longer want it: the same call with `close: true` in place of `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `expired`.
+Close an order only once the user says they no longer want it: the same call with `close: true` in place of `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `closed`.
 
 - While a payment of the order is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly.
 - An order made on the Fortrip website isn't closed through the API: it expires at `payment.expiresAt`.

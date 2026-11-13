@@ -5,7 +5,6 @@ import {
   type CommandGroupSpec,
   commandInvocation,
   type CommandSpec,
-  CURRENCIES,
   GLOBAL_FLAGS,
   HTTP_ROUTES,
   order as orderSchema,
@@ -134,30 +133,28 @@ async function run(argv: string[]): Promise<Answer> {
   const preview = cancelPreview(spec, rest, process.env);
   if (preview) return cancelOrder(apiUrl, spec, preview);
   const { method, path, body } = parseCommand(spec, rest, process.env);
-  if (spec.tool === "pay_order" && body) await inOrderCurrency(apiUrl, spec, rest, body);
+  if (spec.tool === "pay_order") await payableInUsd(apiUrl, spec, rest);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
   return { data, text: renderToolResult(spec.tool as RenderedTool, data, "cli") };
 }
 
-/** `orders pay`'s total is in the order's currency: read the order for it,
- *  set it on the total, and check the request again before it is sent. */
-async function inOrderCurrency(
-  apiUrl: string,
-  spec: CommandSpec,
-  rest: string[],
-  body: Record<string, unknown>,
-): Promise<void> {
+/** `orders pay` sends its total in USD, the one currency a token pays in.
+ *  The order is read first, so that one in another currency is not sent,
+ *  and the person is told how it is paid instead. */
+async function payableInUsd(apiUrl: string, spec: CommandSpec, rest: string[]): Promise<void> {
   const [orderId] = parseOptions(spec, rest).positionals as [string];
   const order = unwrap(await authorizedRequest(apiUrl, API.order(orderId), { method: "GET" }));
   const currency = (order as { total?: { currency?: unknown } } | null)?.total?.currency;
-  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
+  const read = `\`${commandInvocation({ group: "orders", name: "get" })} ${orderId}\``;
+  if (typeof currency !== "string") {
+    throw new CliError(`Not sent: order ${orderId} shows no total to pay. Read it with ${read}.`, EXIT.error);
+  }
+  if (currency !== "USD") {
     throw new CliError(
-      `Not sent: the order ${orderId} has no total.currency in USD or CNY to pay in.`,
+      `Not sent: order ${orderId} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: ${read} shows it.`,
       EXIT.error,
     );
   }
-  body.total = { ...(body.total as Record<string, unknown>), currency };
-  check(spec, { ...body, orderId }, HTTP_ROUTES.pay_order, new Map());
 }
 
 /** An order as `orders cancel` reads it, field by field: the read may not
@@ -173,7 +170,7 @@ type ReadOrder = {
  * `orders cancel`, after one read of the order: without `--max-penalty` or
  * `--close`, or with `--max-penalty` on an unpaid order, it says what the
  * order allows and exits 2. `--close` closes an unpaid order, and answers
- * an expired one as it is. `--max-penalty` cancels in the currency of the
+ * one already closed, or expired, as it is. `--max-penalty` cancels in the currency of the
  * order's penalty, else of its total.
  */
 async function cancelOrder(
@@ -187,7 +184,9 @@ async function cancelOrder(
   const closable = read?.cancel?.action === "close";
   if (!request || (!close && closable)) throw usageError(notCancelled(spec, flag, orderId, order));
   if (close) {
-    if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
+    if (read?.status === "closed" || read?.status === "expired") {
+      return { data: order, text: renderToolResult("cancel_order", order, "cli") };
+    }
     if (!closable) {
       if (read?.cancel?.action === "cancel") {
         throw usageError(

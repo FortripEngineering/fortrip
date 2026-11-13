@@ -131,8 +131,8 @@ test("a union branch without a described discriminator shows its own description
 });
 
 test("an order's payment token says when it is null, on the /schemas page too", () => {
-  const token = outputRows(order).find((row) => row.path === "payment.token");
+  const token = outputRows(order).find((row) => row.path === "payment.tokenRequest");
   assert.match(token?.description ?? "", /null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout/);
   assert.ok(pageText("/schemas").includes("null when no token can pay this order: a CNY order"));
-  assert.ok(outputRows(order).some((row) => row.path === "payment.token.usageLimits.max_amount"));
+  assert.ok(outputRows(order).some((row) => row.path === "payment.tokenRequest.usageLimits.max_amount"));
 });

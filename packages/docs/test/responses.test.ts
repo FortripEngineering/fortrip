@@ -76,7 +76,7 @@ describe("example responses", () => {
     const destination = RESPONSES.search_hotels.destination;
     assert.equal(destination.radiusSource, "default");
     assert.equal(destination.radiusMeters, LIMITS.radiusMetersDefault);
-    const { usageLimits } = RESPONSES.create_order.payment.token;
+    const { usageLimits } = RESPONSES.create_order.payment.tokenRequest;
     // A token is offered: the total is under the token cap, in cents, until the time to pay ends.
     assert.ok(Number(RESPONSES.create_order.total.amount) <= LIMITS.tokenPaymentMaxUsd);
     assert.equal(usageLimits.max_amount, Math.round(Number(RESPONSES.create_order.total.amount) * 100));

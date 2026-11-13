@@ -113,7 +113,7 @@
         "amount": "339.80",
         "currency": "EUR"
       },
-      "token": null
+      "tokenRequest": null
     },
     "cancel": {
       "action": null,

@@ -32,9 +32,9 @@ export const PAY_WAY_DOCS: Record<PayWay, PayWayDoc> = {
   stripe_shared_payment_token: {
     title: "Link token",
     short: "Link token",
-    when: "Only for agents that can request a shared payment token from the user's Stripe Link wallet (US and Canadian Link accounts). Otherwise use the payment link. A token can pay only while the order's `payment.token` is set; that field says when it is `null`. Never ask the user to type or paste a token.",
+    when: "Only for agents that can request a shared payment token from the user's Stripe Link wallet (US and Canadian Link accounts). Otherwise use the payment link. A token can pay only while the order's `payment.tokenRequest` is set; that field says when it is `null`. Never ask the user to type or paste a token.",
     charge:
       "The amount is held until the hotel confirms, then charged; if the hotel can't confirm, the hold is released.",
-    body: `Request the token from the user's Link wallet with \`payment.token.handler.config.business_profile\` and \`payment.token.usageLimits\`, copied as they are. Then call ${PAY} (MCP \`pay_order\`, CLI \`fortrip orders pay --token\`) with \`sharedPaymentToken\` and \`total\`, the order's \`total\`. A token pays one order only.`,
+    body: `Request the token from the user's Link wallet with \`payment.tokenRequest.handler.config.business_profile\` and \`payment.tokenRequest.usageLimits\`, copied as they are. Then call ${PAY} (MCP \`pay_order\`, CLI \`fortrip orders pay --token\`) with \`sharedPaymentToken\` and \`total\`, the order's \`total\`. A token pays one order only.`,
   },
 };

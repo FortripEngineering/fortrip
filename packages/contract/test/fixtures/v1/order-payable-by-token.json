@@ -108,7 +108,7 @@
       "expiresAt": "2026-11-01T12:50:00Z",
       "localCurrencyAtCheckout": true,
       "localCharge": null,
-      "token": {
+      "tokenRequest": {
         "handler": {
           "id": "stripe_payments",
           "type": "com.stripe.payments",

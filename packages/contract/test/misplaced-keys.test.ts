@@ -317,7 +317,7 @@ describe("misplacedKeys: offers and search", () => {
   it("says nothing for a key that another variant has at the same place", () => {
     const destination = { kind: "country", countryCode: "JP", radiusMeters: 500 };
     const result = searchHotelsInput.safeParse({ destination });
-    assert.equal(result.error?.issues[0]?.message, "Unknown argument(s): radiusMeters");
+    assert.equal(result.error?.issues[0]?.message, "Unknown field: radiusMeters");
     assert.deepEqual(hints(searchHotelsInput, { destination }), {});
   });
 

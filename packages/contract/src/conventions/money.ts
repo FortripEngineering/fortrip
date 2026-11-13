@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { unknownFieldsMessage } from "../fields.ts";
 import { CURRENCIES } from "../limits.ts";
 
 /*
@@ -25,10 +26,15 @@ export const money: z.ZodType<Money> = z.looseObject({
 });
 
 /**
- * A Money a caller sends: USD or CNY, no unknown fields. `name` is the field
- * it is the value of, which the refusal names.
+ * A Money a caller sends: in one of `currencies` (USD or CNY unless the
+ * field takes fewer), no unknown fields. `name` is the field it is the value
+ * of, which the refusal names.
  */
-export function requestMoney(name: string): z.ZodType<Money, Money> {
+export function requestMoney(
+  name: string,
+  currencies: readonly [string, ...string[]] = CURRENCIES,
+): z.ZodType<Money, Money> {
+  const allowed = currencies.join(" or ");
   return z.strictObject(
     {
       amount: z
@@ -36,14 +42,14 @@ export function requestMoney(name: string): z.ZodType<Money, Money> {
         .regex(/^\d+(\.\d+)?$/, { error: amountError })
         .describe("Decimal string such as 132.40, never a number."),
       currency: z
-        .enum(CURRENCIES, { error: "currency must be USD or CNY" })
-        .describe("USD or CNY."),
+        .enum(currencies, { error: `currency must be ${allowed}` })
+        .describe(`${allowed}.`),
     },
     {
       error: (issue) =>
         issue.code === "unrecognized_keys"
-          ? `Unknown field(s): ${issue.keys.join(", ")}`
-          : `${name} must be Money: { amount: "132.40", currency: "USD" or "CNY" }`,
+          ? unknownFieldsMessage(issue.keys)
+          : `${name} must be Money: { amount: "132.40", currency: ${currencies.map((c) => `"${c}"`).join(" or ")} }`,
     },
   );
 }

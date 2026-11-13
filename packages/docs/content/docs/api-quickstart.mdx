@@ -65,7 +65,7 @@ The answer, abridged:
 
 ### Link token [#pay-token]
 
-Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet, and only while the order's `payment.token` is set. Request the token with that field's `handler` and `usageLimits`, then send it with the order's `total`.
+Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet, and only while the order's `payment.tokenRequest` is set. Request the token with that field's `handler` and `usageLimits`, then send it with the order's `total`.
 
 <Example name="pay-token" />
 

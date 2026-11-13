@@ -75,7 +75,7 @@
           "expiresAt": "2026-11-02T10:30:00Z",
           "localCurrencyAtCheckout": false,
           "localCharge": null,
-          "token": null
+          "tokenRequest": null
         },
         "cancel": {
           "action": null,
@@ -238,7 +238,7 @@
           "expiresAt": null,
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "token": null
+          "tokenRequest": null
         },
         "cancel": {
           "action": null,
@@ -358,7 +358,7 @@
           "expiresAt": "2026-11-01T12:50:00Z",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "token": null
+          "tokenRequest": null
         },
         "cancel": {
           "action": "close",
@@ -490,7 +490,7 @@
             "amount": "339.80",
             "currency": "EUR"
           },
-          "token": null
+          "tokenRequest": null
         },
         "cancel": {
           "action": "cancel",

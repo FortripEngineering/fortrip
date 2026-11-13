@@ -75,7 +75,7 @@ const searchFixture = {
         {
           place: { placeId: "plc_1", name: "Pudong", names: { en: "Pudong", zh: null } },
           count: 812,
-          total: 812,
+          localityTotal: 812,
           includes: [
             { place: { placeId: "plc_2", name: "Lujiazui", names: { en: "Lujiazui", zh: "陆家嘴" } }, members: 90 },
           ],
@@ -262,7 +262,7 @@ const orderFixture = {
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    token: null,
+    tokenRequest: null,
   },
   cancel: { action: "close", blockedBy: null, penalty: null, refund: null },
   cancelled: null,
@@ -450,7 +450,7 @@ describe("v1 response fixtures parse, open and strict", () => {
       ],
       config: { environment: "testmode", business_profile: "profile_test_1" },
     };
-    const withToken = (token: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, token } });
+    const withToken = (tokenRequest: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, tokenRequest } });
     const withHandler = (h: unknown, l: unknown = usageLimits) => withToken({ handler: h, usageLimits: l });
     parsesBoth(order, withHandler(handler));
     // An instrument's config is UCP's: the strict copy keeps what it doesn't know.
@@ -498,7 +498,7 @@ describe("v1 response fixtures parse, open and strict", () => {
 
   it("an order's payment: a token or null, always said, and nothing of a method list or a charge currency", () => {
     parsesBoth(order, orderFixture);
-    const { token: _gone, ...without } = orderFixture.payment;
+    const { tokenRequest: _gone, ...without } = orderFixture.payment;
     assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false);
     for (const gone of [{ methods: [] }, { chargeCurrency: "USD" }]) {
       assert.equal(strictOutput(order).safeParse({ ...orderFixture, payment: { ...orderFixture.payment, ...gone } }).success, false);
@@ -511,7 +511,7 @@ describe("v1 response fixtures parse, open and strict", () => {
       "expiresAt",
       "localCurrencyAtCheckout",
       "localCharge",
-      "token",
+      "tokenRequest",
     ]);
   });
 
@@ -588,8 +588,8 @@ describe("v1 response fixtures parse, open and strict", () => {
       "cancelling",
       "already_cancelled",
       "stay_started",
-      "non_refundable",
-      "refused",
+      "cancellation_not_allowed",
+      "cancellation_refused",
       "terms_unknown",
       "support_only",
       "needs_attention",
@@ -616,7 +616,7 @@ describe("v1 response fixtures parse, open and strict", () => {
       { action: "close", blockedBy: "payment_in_progress", penalty: null, refund: null },
       // A penalty and a refund come with cancel, both, and only then.
       { action: "close", blockedBy: null, penalty: usd("0.00"), refund: null },
-      { ...blockedBy("non_refundable"), penalty: usd("132.40"), refund: usd("0.00") },
+      { ...blockedBy("cancellation_not_allowed"), penalty: usd("132.40"), refund: usd("0.00") },
       { ...cancelNow, penalty: null },
       { ...cancelNow, refund: null },
       { ...cancelNow, penalty: null, refund: null },
@@ -883,7 +883,7 @@ const PUBLIC_KEYS = new Set([
   "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "version", "website", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
   // Orders and errors in 6.0.
-  "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "max_amount", "token", "usageLimits",
+  "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "max_amount", "tokenRequest", "usageLimits",
   // A search note's details.
   "places",
 ]);
@@ -942,7 +942,7 @@ function descriptionsAt(schema: z.ZodType, path: string): string[] {
 
 describe("field descriptions", () => {
   it("the payment token says when it is null, its cap from LIMITS", () => {
-    const text = descriptionAt(order, "payment.token") ?? "";
+    const text = descriptionAt(order, "payment.tokenRequest") ?? "";
     assert.match(text, /^What to request a Stripe shared payment token with, for pay_order\. null when no token can pay this order: /);
     assert.match(text, /a CNY order, an order from the Fortrip website's own checkout, /);
     assert.ok(text.includes(`a total over $${LIMITS.tokenPaymentMaxUsd}`), text);
@@ -951,12 +951,12 @@ describe("field descriptions", () => {
 
   it("the usage limits say they go into the token request as they are, each in Stripe's unit", () => {
     assert.match(
-      descriptionAt(order, "payment.token.usageLimits") ?? "",
+      descriptionAt(order, "payment.tokenRequest.usageLimits") ?? "",
       /^Stripe's usage limits for the token: copy these values as they are into the token request\.$/,
     );
-    assert.match(descriptionAt(order, "payment.token.usageLimits.max_amount") ?? "", /minor unit \(cents for usd\)/);
-    assert.match(descriptionAt(order, "payment.token.usageLimits.currency") ?? "", /lowercase/);
-    assert.match(descriptionAt(order, "payment.token.usageLimits.expires_at") ?? "", /Unix seconds/);
+    assert.match(descriptionAt(order, "payment.tokenRequest.usageLimits.max_amount") ?? "", /minor unit \(cents for usd\)/);
+    assert.match(descriptionAt(order, "payment.tokenRequest.usageLimits.currency") ?? "", /lowercase/);
+    assert.match(descriptionAt(order, "payment.tokenRequest.usageLimits.expires_at") ?? "", /Unix seconds/);
   });
 
   it("cancel explains each action and everything that blocks both; failure, every reason", () => {
@@ -1012,7 +1012,7 @@ describe("field descriptions", () => {
         "payment.expiresAt",
         "payment.localCurrencyAtCheckout",
         "payment.localCharge",
-        "payment.token",
+        "payment.tokenRequest",
         "cancel",
         "cancel.penalty",
         "cancel.refund",

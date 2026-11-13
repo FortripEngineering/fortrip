@@ -3,7 +3,7 @@
   "data": {
     "orderId": "ord_BundClosed0000000000",
     "reference": "FT-L2C9HV",
-    "status": "expired",
+    "status": "closed",
     "createdAt": "2026-11-01T09:05:00Z",
     "updatedAt": "2026-11-01T09:40:00Z",
     "contact": {
@@ -108,7 +108,7 @@
       "expiresAt": null,
       "localCurrencyAtCheckout": true,
       "localCharge": null,
-      "token": null
+      "tokenRequest": null
     },
     "cancel": {
       "action": null,

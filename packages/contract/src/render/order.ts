@@ -4,7 +4,7 @@ import {
   type OrderCancel,
   orderCancelled,
   orderFailure,
-  paymentToken,
+  paymentTokenRequest,
   tokenUsageLimits,
 } from "../outputs/order.ts";
 import type { RenderSurface } from "../tools.ts";
@@ -29,7 +29,8 @@ type Room = HotelItem["hotel"]["rooms"][number];
 
 export const ORDER_STATUS_WORDS: Record<string, string> = {
   awaiting_payment: "awaiting payment",
-  expired: "not paid: the time ran out or it was closed",
+  expired: "not paid: the time to pay ran out",
+  closed: "closed unpaid, as asked",
   confirming: "confirming with the hotel",
   confirmed: "confirmed",
   failed: "failed",
@@ -62,9 +63,9 @@ const CANCEL_BLOCKER_WORDS: Record<string, string> = {
   cancelling: "a cancellation is already under way; read the order again later",
   already_cancelled: "it is already cancelled",
   stay_started: `the stay has started; ${SUPPORT}`,
-  non_refundable:
+  cancellation_not_allowed:
     "the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands",
-  refused: "the hotel refused the cancellation; the booking stands",
+  cancellation_refused: "the hotel refused the cancellation; the booking stands",
   terms_unknown: `its cancellation terms are not on record; ${SUPPORT}`,
   support_only: `the booking stands, and it can't be cancelled here; to cancel it, the user emails ${SUPPORT_EMAIL} with the order's reference`,
   needs_attention: `Fortrip is looking into this order; ${SUPPORT}`,
@@ -184,7 +185,7 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
     lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
-  if (p.token) lines.push(tokenLine(o, p.token, surface));
+  if (p.tokenRequest) lines.push(tokenLine(o, p.tokenRequest, surface));
   lines.push(cancelLine(o.cancel, o.orderId, surface));
   lines.push(ours`Manage: ${token("url", o.manageUrl)}`);
   return lines;
@@ -198,7 +199,7 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
  *  number is shown alone. */
 function tokenLine(
   o: Order,
-  request: NonNullable<Order["payment"]["token"]>,
+  request: NonNullable<Order["payment"]["tokenRequest"]>,
   surface: RenderSurface,
 ): Ours {
   const { handler: h, usageLimits: u } = request;
@@ -277,8 +278,8 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
  * An order as it came, each optional part of it that does not parse read as
  * not there, so that one such part does not cost the order its text: what a
  * cancellation kept is then not on record, why the order failed is unknown
- * (a failed order always says), and no token is requested, which leaves the
- * payment link. Each is what the text says of the part when it is absent,
+ * (a failed order always says), and the order takes no token, which leaves
+ * the payment link. Each is what the text says of the part when it is absent,
  * and none is a fact about the stay, the money or what can be done now:
  * an order that does not parse there is still shown as JSON.
  */
@@ -289,8 +290,8 @@ export function readableOrder(value: unknown): unknown {
   if (!orderFailure.nullable().safeParse(order.failure).success) {
     order.failure = order.status === "failed" ? { reason: "unknown" } : null;
   }
-  if (isObject(order.payment) && !paymentToken.nullable().safeParse(order.payment.token).success) {
-    order.payment = { ...order.payment, token: null };
+  if (isObject(order.payment) && !paymentTokenRequest.nullable().safeParse(order.payment.tokenRequest).success) {
+    order.payment = { ...order.payment, tokenRequest: null };
   }
   return order;
 }

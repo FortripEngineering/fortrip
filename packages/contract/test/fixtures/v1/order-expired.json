@@ -104,7 +104,7 @@
       "expiresAt": null,
       "localCurrencyAtCheckout": true,
       "localCharge": null,
-      "token": null
+      "tokenRequest": null
     },
     "cancel": {
       "action": null,

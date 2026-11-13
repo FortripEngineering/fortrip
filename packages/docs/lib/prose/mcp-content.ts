@@ -1,4 +1,18 @@
-import type { ToolName } from "@fortrip/agent-contract";
+import type { META_KEYS, ToolName } from "@fortrip/agent-contract";
+
+/**
+ * Which results carry each `_meta` key and what it holds, keyed by the
+ * contract's `META_KEYS`, so a key the contract gains fails the typecheck
+ * until it is described.
+ */
+export const META_KEY_DOCS: Record<keyof typeof META_KEYS, { on: string; value: string }> = {
+  requestId: { on: "Every successful result", value: "The request id to quote to support." },
+  replayed: {
+    on: "`create_order`",
+    value: "`true` when the answer is an order the same details already created.",
+  },
+  error: { on: "Every error", value: "The [error envelope](/errors#format), as the HTTP API answers it." },
+};
 
 /** A paragraph of rules that ends a tool's result text, after the data it
  *  governs (the contract's `renderToolResult` adds each). */

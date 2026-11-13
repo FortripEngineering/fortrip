@@ -11,9 +11,12 @@ import { cancellation, confirmation, meals, payAtProperty } from "./offer.ts";
 
 /* Orders (spec §10.2, §10.3). */
 
+/** `expired`: unpaid, the time to pay ran out. `closed`: unpaid, closed at
+ *  the caller's request. Neither was charged, and neither can be paid. */
 export const ORDER_STATUSES = [
   "awaiting_payment",
   "expired",
+  "closed",
   "confirming",
   "confirmed",
   "failed",
@@ -48,11 +51,11 @@ export type CancelAction = (typeof CANCEL_ACTIONS)[number];
  *  `expired`: unpaid, its time to pay ran out. `closed`: unpaid, closed at
  *  the caller's request. `failed`: no stay was booked. `confirming`: paid or
  *  held, the booking still with the hotel. `cancelling`: a cancellation is
- *  under way. `non_refundable`: the hotel takes no cancellation for the
- *  order at all, even one that keeps the whole total (a rate that only
- *  keeps the whole total can still be cancelled: action `cancel`).
- *  `refused`: the hotel refused a cancellation, the booking standing as it
- *  was. `support_only`: a sound booking that `cancel_order` can't cancel;
+ *  under way. `cancellation_not_allowed`: the hotel takes no cancellation
+ *  for the order at all, even one that keeps the whole total (a
+ *  non-refundable rate, which only keeps the whole total, can still be
+ *  cancelled: action `cancel`). `cancellation_refused`: the hotel refused a
+ *  cancellation, the booking standing as it was. `support_only`: a sound booking that `cancel_order` can't cancel;
  *  Fortrip's support can. `needs_attention`: the order's status is
  *  `needs_attention`. */
 export const CANCEL_BLOCKERS = [
@@ -65,8 +68,8 @@ export const CANCEL_BLOCKERS = [
   "cancelling",
   "already_cancelled",
   "stay_started",
-  "non_refundable",
-  "refused",
+  "cancellation_not_allowed",
+  "cancellation_refused",
   "terms_unknown",
   "support_only",
   "needs_attention",
@@ -96,7 +99,7 @@ export type CredentialInvalidReason = (typeof CREDENTIAL_INVALID_REASONS)[number
 
 /** Why `pay_order` takes no token for an order, whatever the token.
  *  `payment_open_on_page`: the user has a payment open on the order's
- *  payment page. `token_not_offered`: the order's `payment.token` is null.
+ *  payment page. `token_not_offered`: the order's `payment.tokenRequest` is null.
  *  `charge_refused`: the charge was refused for a reason a new token
  *  wouldn't fix. */
 export const PAYMENT_METHOD_UNAVAILABLE_REASONS = [
@@ -171,7 +174,7 @@ export const orderCancel = openObject({
   blockedBy: openEnum(CANCEL_BLOCKERS)
     .nullable()
     .describe(
-      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a rate that only keeps the whole total has action cancel instead. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it.",
+      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it.",
     ),
   penalty: money
     .nullable()
@@ -244,8 +247,9 @@ const hotelItem = openObject({
   }),
 });
 
-/** What to request a shared payment token with, for `pay_order`. */
-export const paymentToken = openObject({
+/** What a shared payment token is requested with, for `pay_order`: not a
+ *  token itself. */
+export const paymentTokenRequest = openObject({
   handler: paymentHandler.describe("The com.stripe.payments handler, which takes the token."),
   usageLimits: tokenUsageLimits.describe(
     "Stripe's usage limits for the token: copy these values as they are into the token request.",
@@ -270,7 +274,7 @@ export const order = openObject({
   orderId,
   reference: orderReference,
   status: openEnum(ORDER_STATUSES).describe(
-    "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out or the order was closed, and cancel.blockedBy says which. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it.",
+    "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out. closed: not paid, and nothing charged; closed at the caller's request. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it.",
   ),
   createdAt: instant,
   updatedAt: instant,
@@ -314,7 +318,7 @@ export const order = openObject({
       .describe(
         "What the card was charged in its own currency, when Stripe converted the total; otherwise null. Always null on a CNY order.",
       ),
-    token: paymentToken
+    tokenRequest: paymentTokenRequest
       .nullable()
       .describe(
         `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,

@@ -526,7 +526,7 @@ describe("the full guides", () => {
         new RegExp(`check the order with \`${order}\``),
         // Purchases the protocol blocks (§10.1).
         /[Aa]nother order of the stay.{0,200}?get offers again.{0,200}?pay only the new link/,
-        /`offer_already_ordered`.{0,200}?ordered once, even when its order failed or expired.{0,120}?get offers again/,
+        /`offer_already_ordered`.{0,200}?ordered once, even when its order failed, expired or was closed.{0,120}?get offers again/,
         /`order_in_progress`/,
         /`offer_expired`/,
         /`ordering_paused`/,

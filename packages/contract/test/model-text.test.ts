@@ -93,7 +93,7 @@ const PLAIN_ENGLISH = new Set([
   "matched", "meals", "members", "message", "mode", "more", "names", "notes", "offer", "offers", "omitted",
   "outcome", "payment", "penalties", "penalty", "photo", "photos", "places", "pointer", "policies", "population", "previous",
   "priced", "reason", "reference", "refund", "region", "required", "resolution", "retryable", "schema", "scope",
-  "spec", "status", "token", "topic", "type", "unassigned", "unavailable", "unreadable", "until", "url", "version",
+  "spec", "status", "topic", "type", "unassigned", "unavailable", "unreadable", "until", "url", "version",
   "website", "window", "worse",
 ]);
 
@@ -158,7 +158,7 @@ function pathsNamed(text: string): string[] {
 
 describe("the list of output JSON paths", () => {
   it("is built from the output schemas, and holds the paths a rule used to name", () => {
-    for (const chain of ["payment.url", "cancel.penalty", "cancel.refund", "payment.token", "payment.status", "indicativePrice.fromPerRoomNight", "handler.config.business_profile", "error.details", "details.issues"]) {
+    for (const chain of ["payment.url", "cancel.penalty", "cancel.refund", "payment.tokenRequest", "payment.status", "indicativePrice.fromPerRoomNight", "handler.config.business_profile", "error.details", "details.issues"]) {
       assert.ok(REFUSED_CHAINS.has(chain), chain);
     }
     for (const key of ["fromPerRoomNight", "usageLimits", "nextCursor", "payAtProperty", "expiresAt", "requiresSignIn", "manageUrl", "blockedBy", "retryAfterSeconds", "roomType", "perRoomNight", "currencyHint", "localCharge"]) {
@@ -217,7 +217,7 @@ describe("the list of output JSON paths", () => {
 
   it("finds a path however it is written", () => {
     assert.deepEqual(pathsNamed("give them payment.url exactly as returned"), ["payment.url"]);
-    assert.deepEqual(pathsNamed("the order's `payment.token` is not null").sort(), ["payment.token"]);
+    assert.deepEqual(pathsNamed("the order's `payment.tokenRequest` is not null").sort(), ["payment.tokenRequest", "tokenRequest"]);
     assert.deepEqual(pathsNamed("its usageLimits (max_amount in cents)"), ["usageLimits"]);
     assert.deepEqual(pathsNamed("the order's `reference`, its status and its total"), ["`reference`"]);
     assert.deepEqual(pathsNamed("Pass maximumPenalty as that penalty; `total` is the order's total."), []);
@@ -263,7 +263,7 @@ describe("no model-facing text names a JSON path of an answer", () => {
 
   it("inputs: the paths given are the ones a model needs the concept for", () => {
     const given = (sources.inputs as Text[]).flatMap(({ text }) => pathsNamed(text));
-    assert.deepEqual([...new Set(given)].sort(), ["cancel.penalty", "nextCursor", "payment.token", "payment.token.usageLimits", "token.usageLimits", "usageLimits"]);
+    assert.deepEqual([...new Set(given)].sort(), ["cancel.penalty", "nextCursor", "payment.tokenRequest", "payment.tokenRequest.usageLimits", "tokenRequest", "tokenRequest.usageLimits", "usageLimits"]);
   });
 });
 

@@ -156,9 +156,9 @@ function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): Ours[
   // A locality over the pool is priced from its nearest hotels only; when it
   // is the area's center, a radius around the center prices nearly the same.
   const top = d.localities.items[0];
-  if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
+  if (top && top.localityTotal > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      ours`Or: ${topName}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${topName}).`,
+      ours`Or: ${topName}, the area's center, alone has ${num(top.localityTotal)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${topName}).`,
     );
   }
   return lines;
@@ -297,7 +297,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       ];
     case "offer_already_ordered":
       return [
-        ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))}. An offer is ordered once, even when its order failed or expired: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
+        ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))}. An offer is ordered once, even when its order failed, expired or was closed: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
       ];
     case "order_in_progress":
       return [ours`Order ${token("id", e.details.orderId)}: wait, then send the same call again with the same details.`];

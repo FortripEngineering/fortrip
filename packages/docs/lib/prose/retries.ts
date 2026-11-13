@@ -39,7 +39,7 @@ export const RETRY_WAYS = {
 export const RETRY_DOCS: readonly RetryDoc[] = [
   {
     tools: ["create_order"],
-    again: `Safe. The same details answer the same order: HTTP ${ORDER_HTTP.replayedStatus} with \`${ORDER_HTTP.replayedHeader}: true\`, or \`_meta["ai.fortrip/replayed"]\` over MCP. The same details are the same \`offerId\`, contact, guests in each room and special requests; spacing in a name, the email's letter case, and spaces and punctuation in the phone don't count (a leading \`+\` does). Other details answer \`offer_already_ordered\`, even when the offer's order failed or expired. While the first call is still running, the answer is \`order_in_progress\`: send it again after \`retryAfterSeconds\`.`,
+    again: `Safe. The same details answer the same order: HTTP ${ORDER_HTTP.replayedStatus} with \`${ORDER_HTTP.replayedHeader}: true\`, or \`_meta["ai.fortrip/replayed"]\` over MCP. The same details are the same \`offerId\`, contact, guests in each room and special requests; spacing in a name, the email's letter case, and spaces and punctuation in the phone don't count (a leading \`+\` does). Other details answer \`offer_already_ordered\`, even when the offer's order failed, expired or was closed. While the first call is still running, the answer is \`order_in_progress\`: send it again after \`retryAfterSeconds\`.`,
   },
   {
     tools: ["pay_order"],
@@ -47,7 +47,7 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
   },
   {
     tools: ["cancel_order"],
-    again: "Safe with the same mode. A repeated cancellation answers the order as it is now: `cancelling`, then `cancelled`. A repeated close answers the order, `expired`. The other mode is never applied: `close` on an order paid meanwhile answers `order_not_cancellable`.",
+    again: "Safe with the same mode. A repeated cancellation answers the order as it is now: `cancelling`, then `cancelled`. A repeated close answers the order, `closed`. The other mode is never applied: `close` on an order paid meanwhile answers `order_not_cancellable`.",
   },
   {
     tools: ["search_hotels", "get_hotel", "get_hotel_offers", "get_order", "list_orders"],

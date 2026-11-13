@@ -115,8 +115,14 @@ export const localities = openObject({
   items: z.array(
     openObject({
       place: placeRef,
-      count: z.number().int(),
-      total: z.number().int(),
+      count: z
+        .number()
+        .int()
+        .describe("How many of the search's matching hotels belong to the locality."),
+      localityTotal: z
+        .number()
+        .int()
+        .describe("How many matching hotels the locality has as a locality, beyond this search's scope too."),
       includes: z.array(
         openObject({ place: placeRef, members: z.number().int() }),
       ),

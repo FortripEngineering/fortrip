@@ -22,6 +22,7 @@ import {
   payOrderInput,
   searchHotelsInput,
 } from "../src/inputs.ts";
+import * as index from "../src/index.ts";
 import { LIMITS, SUPPORT_EMAIL } from "../src/limits.ts";
 import { readFileSync } from "node:fs";
 
@@ -33,6 +34,7 @@ import {
   CANCEL_NEXT_STEP,
   cancelNextStep,
   ORDER_NEXT_STEP,
+  META_KEYS,
   SERVER_INFO,
   TOOLS,
   type ToolName,
@@ -207,7 +209,7 @@ const orderFixture = {
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    token: null,
+    tokenRequest: null,
   },
   cancel: { action: "close", blockedBy: null, penalty: null, refund: null },
   cancelled: null,
@@ -545,6 +547,18 @@ describe("SERVER_INFO", () => {
       icons: entry.icons,
     });
     assert.ok(SERVER_INFO.title && SERVER_INFO.description && SERVER_INFO.icons.length > 0);
+  });
+});
+
+describe("META_KEYS", () => {
+  // The hosted server and the CLI's bridge write the same keys, so both take them from here.
+  it("names the three _meta keys of a result, under Fortrip's prefix", () => {
+    assert.deepEqual(META_KEYS, {
+      requestId: "ai.fortrip/requestId",
+      replayed: "ai.fortrip/replayed",
+      error: "ai.fortrip/error",
+    });
+    assert.equal(index.META_KEYS, META_KEYS);
   });
 });
 

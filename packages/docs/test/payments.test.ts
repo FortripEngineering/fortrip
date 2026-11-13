@@ -32,11 +32,11 @@ describe("order and payment guide", () => {
     }
   });
 
-  it("has no WeChat Pay code section, and leaves the token's conditions to payment.token", () => {
+  it("has no WeChat Pay code section, and leaves the token's conditions to payment.tokenRequest", () => {
     const text = pageText("/payments");
     assert.doesNotMatch(text, /The WeChat Pay code|qrData/);
     assert.ok(!text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
-    assert.match(text, /A token can pay only while the order's payment\.token is set; that field says when it is null/);
+    assert.match(text, /A token can pay only while the order's payment\.tokenRequest is set; that field says when it is null/);
   });
 
   it("says the payment page, not the agent, offers Alipay and WeChat Pay", () => {
@@ -61,7 +61,7 @@ describe("order and payment guide", () => {
     // A failed order never reads failure: null (the contract refuses it).
     assert.match(text, /Every failed order has failure: a reason that isn't on record is unknown\. On any other order failure is null\./);
     // The blockers that changed meaning say their one situation.
-    assert.match(CANCEL_BLOCKER_DOCS.non_refundable, /takes no cancellation for this order at all, even one that keeps the whole total/);
+    assert.match(CANCEL_BLOCKER_DOCS.cancellation_not_allowed, /takes no cancellation for this order at all, even one that keeps the whole total/);
     assert.match(CANCEL_BLOCKER_DOCS.expired, /its time to pay ran out/);
     assert.match(CANCEL_BLOCKER_DOCS.closed, /closed at the caller's request/);
   });

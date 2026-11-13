@@ -48,7 +48,7 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  * of orders degrades per order: one that does not parse is JSON on its one
  * line, and the others are shown in full. An optional part that does not
  * parse costs neither: a note's details, and what an order says of a
- * cancellation, a failure or a token, are then read as not there
+ * cancellation, a failure or a token request, are then read as not there
  * (`readableSearch`, `readableOrder`).
  *
  * After the data come the rules it governs, each a paragraph, last:
@@ -90,7 +90,7 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
     return withRules(text, surface, {
       cancel: CANCEL_TOOLS.has(tool) && holdsCancellable(data),
       consent: ORDER_TOOLS.has(tool) && holdsPaymentUrl(data),
-      pay: ORDER_TOOLS.has(tool) && holdsToken(data),
+      pay: ORDER_TOOLS.has(tool) && holdsTokenRequest(data),
     });
   }
   switch (tool) {
@@ -150,15 +150,17 @@ function holdsPaymentUrl(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsPaymentUrl(v, seen));
 }
 
-/** Whether a raw value holds a `payment.token` object anywhere inside it. */
-function holdsToken(value: unknown, seen = new Set<unknown>()): boolean {
+/** Whether a raw value holds a `payment.tokenRequest` object anywhere inside it. */
+function holdsTokenRequest(value: unknown, seen = new Set<unknown>()): boolean {
   if (typeof value !== "object" || value === null || seen.has(value)) return false;
   seen.add(value);
   const payment = (value as { payment?: unknown }).payment;
-  const token =
-    typeof payment === "object" && payment !== null ? (payment as { token?: unknown }).token : undefined;
-  if (typeof token === "object" && token !== null) return true;
-  return Object.values(value).some((v) => holdsToken(v, seen));
+  const request =
+    typeof payment === "object" && payment !== null
+      ? (payment as { tokenRequest?: unknown }).tokenRequest
+      : undefined;
+  if (typeof request === "object" && request !== null) return true;
+  return Object.values(value).some((v) => holdsTokenRequest(v, seen));
 }
 
 /** Whether a raw value holds an order whose `cancel.action` is `cancel`:
@@ -186,7 +188,7 @@ function withConsent(
   return withRules(text, surface, {
     cancel: CANCEL_TOOLS.has(tool) && some((o) => o.cancel.action === "cancel", holdsCancellable),
     consent: some((o) => o.payment.url !== null, holdsPaymentUrl),
-    pay: some((o) => o.payment.token !== null, holdsToken),
+    pay: some((o) => o.payment.tokenRequest !== null, holdsTokenRequest),
   });
 }
 

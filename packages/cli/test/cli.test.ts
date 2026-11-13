@@ -18,6 +18,7 @@ import {
   ERROR_CODES,
   errorEnvelope,
   GLOBAL_FLAGS,
+  order as orderSchema,
   type RenderedTool,
   renderError,
   renderToolResult,
@@ -257,10 +258,10 @@ describe("requests", () => {
   it("orders cancel --close closes an unpaid order: one read, then the close", async () => {
     const { data } = await fixture("order-awaiting-payment");
     const closed = structuredClone(data) as Record<string, any>;
-    closed.status = "expired";
+    closed.status = "closed";
     closed.payment.url = null;
     closed.payment.expiresAt = null;
-    closed.cancel = { action: null, blockedBy: "expired", penalty: null, refund: null };
+    closed.cancel = { action: null, blockedBy: "closed", penalty: null, refund: null };
     replies = [{ status: 200, body: data }, { status: 200, body: closed }];
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 0, stderr);
@@ -290,17 +291,21 @@ describe("requests", () => {
     assert.equal(requests.length, 2);
   });
 
-  it("orders cancel --close on an expired order prints it and exits 0, closing nothing", async () => {
-    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    order.status = "expired";
-    order.payment.url = null;
-    order.payment.expiresAt = null;
-    order.cancel = { action: null, blockedBy: "expired", penalty: null, refund: null };
-    reply = { status: 200, body: order };
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 0, stderr);
-    assert.equal(stdout, `${renderToolResult("cancel_order", order, "cli")}\n`);
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  it("orders cancel --close on an order already closed, or expired, prints it and exits 0, closing nothing", async () => {
+    for (const ended of ["closed", "expired"] as const) {
+      requests = [];
+      const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
+      order.status = ended;
+      order.payment.url = null;
+      order.payment.expiresAt = null;
+      order.cancel = { action: null, blockedBy: ended, penalty: null, refund: null };
+      strictOutput(orderSchema).parse(order);
+      reply = { status: 200, body: order };
+      const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+      assert.equal(code, 0, stderr);
+      assert.equal(stdout, `${renderToolResult("cancel_order", order, "cli")}\n`);
+      assert.deepEqual(requests.map((r) => r.method), ["GET"], ended);
+    }
   });
 
   it("orders cancel --close on an unpaid order it can't close prints its Cancel line and exits 1", async () => {
@@ -327,7 +332,7 @@ describe("requests", () => {
 
   it("orders cancel --close on a paid order that can't be cancelled prints its Cancel line, exits 1, and offers no --max-penalty", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
-    order.cancel = { action: null, blockedBy: "non_refundable", penalty: null, refund: null };
+    order.cancel = { action: null, blockedBy: "cancellation_not_allowed", penalty: null, refund: null };
     reply = { status: 200, body: order };
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 1);
@@ -470,12 +475,10 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("orders pay --total takes the order's currency", async () => {
+  it("orders pay reads the order, then pays its total in USD", async () => {
     const { data } = await fixture("order-awaiting-payment");
-    const order = structuredClone(data) as { total: Record<string, unknown> };
-    order.total = { amount: "880.00", currency: "CNY" };
-    replies = [{ status: 200, body: order }, { status: 200, body: {} }];
-    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+    replies = [{ status: 200, body: data }, { status: 200, body: {} }];
+    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "365.00", "--token", "spt_abc"]);
     assert.equal(code, 0, stderr);
     assert.equal(requests.length, 2);
     assert.equal(requests[0]?.method, "GET");
@@ -484,8 +487,25 @@ describe("requests", () => {
     assert.equal(requests[1]?.url, `/v1/orders/${ORDER}/pay`);
     assert.deepEqual(requests[1]?.body, {
       sharedPaymentToken: "spt_abc",
-      total: { amount: "880.00", currency: "CNY" },
+      total: { amount: "365.00", currency: "USD" },
     });
+  });
+
+  // A token pays a USD order only: an order in another currency is not sent, and the message
+  // names what the order's text shows (its Total, its payment link), never a JSON path.
+  it("orders pay on an order that is not in USD exits 1, posts nothing, and points at the payment link", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    const order = structuredClone(data) as { total: Record<string, unknown> };
+    order.total = { amount: "880.00", currency: "CNY" };
+    replies = [{ status: 200, body: order }, { status: 200, body: {} }];
+    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+    assert.equal(code, 1);
+    assert.equal(stdout, "");
+    assert.equal(
+      stderr,
+      `Error: Not sent: order ${ORDER} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: \`fortrip orders get ${ORDER}\` shows it.\n`,
+    );
+    assert.deepEqual(requests.map((request) => request.method), ["GET"]);
   });
 
   it("orders pay with a bad --token exits 2 before reading the order", async () => {
@@ -494,11 +514,12 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("orders pay on an order without a total currency exits 1 and posts nothing", async () => {
+  it("orders pay on an order that shows no total exits 1 and posts nothing", async () => {
     replies = [{ status: 200, body: { id: ORDER } }, { status: 200, body: {} }];
     const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
     assert.equal(code, 1);
-    assert.match(stderr, /currency/);
+    assert.equal(stderr, `Error: Not sent: order ${ORDER} shows no total to pay. Read it with \`fortrip orders get ${ORDER}\`.\n`);
+    assert.doesNotMatch(stderr, /total\.currency/);
     assert.deepEqual(requests.map((request) => request.method), ["GET"]);
   });
 

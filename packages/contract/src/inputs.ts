@@ -647,7 +647,7 @@ const sharedPaymentTokenError =
   "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
 
 /** The ways an order is paid: the order's own link, or through `pay_order`
- *  a shared payment token, which the order offers as `payment.token`. */
+ *  a shared payment token, which the order offers as `payment.tokenRequest`. */
 export const PAY_WAYS = ["payment_link", "stripe_shared_payment_token"] as const;
 export type PayWay = (typeof PAY_WAYS)[number];
 
@@ -661,10 +661,11 @@ export const payOrderInput = strictInput({
     .string({ error: sharedPaymentTokenError })
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.token.usageLimits).",
+      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.tokenRequest.usageLimits).",
     ),
-  total: requestMoney("total").describe(
-    "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total).",
+  // USD alone: an order offers a token request only when it is in USD.
+  total: requestMoney("total", ["USD"]).describe(
+    "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total). In USD: a token pays a USD order only, and any other order is paid by its payment link.",
   ),
 });
 

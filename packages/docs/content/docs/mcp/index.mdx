@@ -53,11 +53,7 @@ The text is for the model. When your code needs the object, read it over the [HT
 
 `_meta` is for your code. Most clients don't show it to the model.
 
-| Key | On | Value |
-| --- | --- | --- |
-| `ai.fortrip/requestId` | Every successful result | The request id to quote to support. |
-| `ai.fortrip/replayed` | `create_order` | `true` when the answer is an order the same details already created. |
-| `ai.fortrip/error` | Every error | The [error envelope](/errors#format), as the HTTP API answers it. |
+<MetaKeys />
 
 ### Errors [#errors]
 

@@ -2014,8 +2014,8 @@
                                   "cancelling",
                                   "already_cancelled",
                                   "stay_started",
-                                  "non_refundable",
-                                  "refused",
+                                  "cancellation_not_allowed",
+                                  "cancellation_refused",
                                   "terms_unknown",
                                   "support_only",
                                   "needs_attention"
@@ -2030,7 +2030,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a rate that only keeps the whole total has action cancel instead. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+                        "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
                       },
                       "penalty": {
                         "anyOf": [
@@ -2149,6 +2149,7 @@
                         "enum": [
                           "awaiting_payment",
                           "expired",
+                          "closed",
                           "confirming",
                           "confirmed",
                           "failed",
@@ -3061,12 +3062,14 @@
                             "count": {
                               "type": "integer",
                               "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "maximum": 9007199254740991,
+                              "description": "How many of the search's matching hotels belong to the locality."
                             },
-                            "total": {
+                            "localityTotal": {
                               "type": "integer",
                               "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "maximum": 9007199254740991,
+                              "description": "How many matching hotels the locality has as a locality, beyond this search's scope too."
                             },
                             "includes": {
                               "type": "array",
@@ -3138,7 +3141,7 @@
                           "required": [
                             "place",
                             "count",
-                            "total",
+                            "localityTotal",
                             "includes"
                           ],
                           "additionalProperties": {}
@@ -5504,6 +5507,7 @@
             "enum": [
               "awaiting_payment",
               "expired",
+              "closed",
               "confirming",
               "confirmed",
               "failed",
@@ -5516,7 +5520,7 @@
             "type": "string"
           }
         ],
-        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out or the order was closed, and cancel.blockedBy says which. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it."
+        "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out. closed: not paid, and nothing charged; closed at the caller's request. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it."
       },
       "createdAt": {
         "type": "string",
@@ -6380,7 +6384,7 @@
             ],
             "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null. Always null on a CNY order."
           },
-          "token": {
+          "tokenRequest": {
             "anyOf": [
               {
                 "type": "object",
@@ -6514,7 +6518,7 @@
           "expiresAt",
           "localCurrencyAtCheckout",
           "localCharge",
-          "token"
+          "tokenRequest"
         ],
         "additionalProperties": {}
       },
@@ -6559,8 +6563,8 @@
                       "cancelling",
                       "already_cancelled",
                       "stay_started",
-                      "non_refundable",
-                      "refused",
+                      "cancellation_not_allowed",
+                      "cancellation_refused",
                       "terms_unknown",
                       "support_only",
                       "needs_attention"
@@ -6575,7 +6579,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a rate that only keeps the whole total has action cancel instead. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+            "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
           },
           "penalty": {
             "anyOf": [
@@ -6779,6 +6783,7 @@
                   "enum": [
                     "awaiting_payment",
                     "expired",
+                    "closed",
                     "confirming",
                     "confirmed",
                     "failed",
@@ -6791,7 +6796,7 @@
                   "type": "string"
                 }
               ],
-              "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out or the order was closed, and cancel.blockedBy says which. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it."
+              "description": "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out. closed: not paid, and nothing charged; closed at the caller's request. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it."
             },
             "createdAt": {
               "type": "string",
@@ -7655,7 +7660,7 @@
                   ],
                   "description": "What the card was charged in its own currency, when Stripe converted the total; otherwise null. Always null on a CNY order."
                 },
-                "token": {
+                "tokenRequest": {
                   "anyOf": [
                     {
                       "type": "object",
@@ -7789,7 +7794,7 @@
                 "expiresAt",
                 "localCurrencyAtCheckout",
                 "localCharge",
-                "token"
+                "tokenRequest"
               ],
               "additionalProperties": {}
             },
@@ -7834,8 +7839,8 @@
                             "cancelling",
                             "already_cancelled",
                             "stay_started",
-                            "non_refundable",
-                            "refused",
+                            "cancellation_not_allowed",
+                            "cancellation_refused",
                             "terms_unknown",
                             "support_only",
                             "needs_attention"
@@ -7850,7 +7855,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a rate that only keeps the whole total has action cancel instead. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+                  "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
                 },
                 "penalty": {
                   "anyOf": [
@@ -8884,12 +8889,14 @@
                         "count": {
                           "type": "integer",
                           "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
+                          "maximum": 9007199254740991,
+                          "description": "How many of the search's matching hotels belong to the locality."
                         },
-                        "total": {
+                        "localityTotal": {
                           "type": "integer",
                           "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
+                          "maximum": 9007199254740991,
+                          "description": "How many matching hotels the locality has as a locality, beyond this search's scope too."
                         },
                         "includes": {
                           "type": "array",
@@ -8961,7 +8968,7 @@
                       "required": [
                         "place",
                         "count",
-                        "total",
+                        "localityTotal",
                         "includes"
                       ],
                       "additionalProperties": {}

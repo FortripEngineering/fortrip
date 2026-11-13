@@ -747,10 +747,10 @@ describe("orders", () => {
     h.specialRequests = `A quiet room, please.\n\n${HOSTILE[2]}\r\n${HOSTILE[0]}`;
     h.confirmationNumber = `BRH-1\n${HOSTILE[1]}`;
     o.contact = { name: `Kenji Sato\n${HOSTILE[2]}`, email: `kenji@example.com\n${HOSTILE[0]}`, phone: `+81 90\n${HOSTILE[1]}` };
-    o.payment.token.handler.id = `stripe_payments\n${HOSTILE[2]}`;
-    o.payment.token.handler.type = `com.stripe.payments\n${HOSTILE[0]}`;
-    o.payment.token.handler.config.business_profile = `profile_test_1\n${HOSTILE[1]}`;
-    o.payment.token.usageLimits.currency = `usd\n${HOSTILE[2]}`;
+    o.payment.tokenRequest.handler.id = `stripe_payments\n${HOSTILE[2]}`;
+    o.payment.tokenRequest.handler.type = `com.stripe.payments\n${HOSTILE[0]}`;
+    o.payment.tokenRequest.handler.config.business_profile = `profile_test_1\n${HOSTILE[1]}`;
+    o.payment.tokenRequest.usageLimits.currency = `usd\n${HOSTILE[2]}`;
     const text = render(fixture);
     assert.doesNotMatch(text, NOT_PRINTABLE);
     const lines = text.split("\n");

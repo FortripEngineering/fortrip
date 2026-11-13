@@ -51,6 +51,16 @@ describe("money", () => {
       total.safeParse("10.00").error?.issues[0]?.message,
       'total must be Money: { amount: "132.40", currency: "USD" or "CNY" }',
     );
+    // An unknown key is told as any input tells it.
+    assert.equal(
+      total.safeParse({ amount: "10.00", currency: "USD", extra: 1, more: 2 }).error?.issues[0]?.message,
+      "Unknown fields: extra, more",
+    );
+    // A Money in fewer currencies names those alone.
+    const usd = requestMoney("total", ["USD"]);
+    assert.equal(usd.safeParse({ amount: "10.00", currency: "USD" }).success, true);
+    assert.equal(usd.safeParse({ amount: "10.00", currency: "CNY" }).error?.issues[0]?.message, "currency must be USD");
+    assert.equal(usd.safeParse(10).error?.issues[0]?.message, 'total must be Money: { amount: "132.40", currency: "USD" }');
   });
 
   it("formats as currency then amount", () => {

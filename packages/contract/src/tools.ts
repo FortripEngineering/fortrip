@@ -77,6 +77,20 @@ export const SERVER_INFO: {
 };
 
 /**
+ * The `_meta` keys of an MCP result. The hosted server and the CLI's bridge
+ * both write them, so both take the names from here. `requestId`: on every
+ * successful result, the request id to quote to support. `replayed`: on
+ * `create_order`, true when the answer is an order the same details already
+ * created. `error`: on every error, the error envelope as the HTTP API
+ * answers it.
+ */
+export const META_KEYS = {
+  requestId: "ai.fortrip/requestId",
+  replayed: "ai.fortrip/replayed",
+  error: "ai.fortrip/error",
+} as const;
+
+/**
  * The consent rule. It ends every result whose text holds a payment link:
  * some clients never show the model the server instructions, and the last
  * paragraph is the one a model reads last before it answers. Only the pay

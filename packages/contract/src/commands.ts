@@ -453,7 +453,7 @@ const payFlags = flagsOf(payOrderInput, [
     placeholder: "<decimal>",
     required: "always",
     description:
-      "The total the user approved, exactly as `orders get` shows it, in the order's currency, e.g. `125.00`.",
+      "The total the user approved, exactly as `orders get` shows it, e.g. `125.00`. In USD: a token pays a USD order only.",
   },
 ]);
 

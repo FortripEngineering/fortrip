@@ -81,8 +81,8 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "orderList.data.payment.localCurrencyAtCheckout",
   ],
   available_instruments: [
-    "order.payment.token.handler.available_instruments",
-    "orderList.data.payment.token.handler.available_instruments",
+    "order.payment.tokenRequest.handler.available_instruments",
+    "orderList.data.payment.tokenRequest.handler.available_instruments",
   ],
   bookable: ["hotel.bookable"],
   cityLike: [], // nullable wherever it appears

@@ -13,9 +13,11 @@ import {
  */
 export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
   awaiting_payment:
-    "Created and unpaid; nothing is charged. It can be paid until `payment.expiresAt`: by `payment.url`, or with a token while `payment.token` is set.",
+    "Created and unpaid; nothing is charged. It can be paid until `payment.expiresAt`: by `payment.url`, or with a token while `payment.tokenRequest` is set.",
   expired:
-    "Not paid: the time to pay ran out, or the order was closed, and nothing was charged. It can't be paid any more: get offers again and order anew.",
+    "Not paid: the time to pay ran out, and nothing was charged. It can't be paid any more: get offers again and order anew.",
+  closed:
+    "Not paid: the order was closed at the caller's request (`cancel_order` with `close: true`), and nothing was charged. It can't be paid any more: get offers again and order anew.",
   confirming:
     "Paid, or the amount held, and the booking is with the hotel. Next comes `confirmed` once the hotel confirms and the payment is charged, `failed` if the hotel can't confirm, or `needs_attention` if a person has to resolve it.",
   confirmed:
@@ -23,7 +25,7 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
   failed:
     "No stay was booked. `failure.reason` says why, and `payment.status` what became of the money: `released` when a hold was let go, `refund_pending` then `refunded` when a charge is refunded in full, `unpaid` when the payment never went through.",
   cancelling:
-    "A cancellation is under way with the hotel. If the hotel refuses it, the order reads as it did before, with `cancel.blockedBy` `refused`.",
+    "A cancellation is under way with the hotel. If the hotel refuses it, the order reads as it did before, with `cancel.blockedBy` `cancellation_refused`.",
   cancelled:
     "Cancelled under its terms. `cancelled` holds what the cancellation kept (`penalty`) and returned (`refund`): `payment.status` is `refund_pending` then `refunded`, `released` when the amount was only held, or stays `paid` when the penalty takes the whole amount.",
   needs_attention: `Something needs a person to resolve, and Fortrip is looking into it. The user can email ${SUPPORT_EMAIL} with the order's \`reference\`.`,
@@ -64,8 +66,8 @@ export const CANCEL_BLOCKER_DOCS: Record<CancelBlocker, string> = {
   cancelling: "A cancellation is already under way. Read the order again later.",
   already_cancelled: "It is already cancelled; `cancelled` says what that kept and returned.",
   stay_started: `The stay has started. For help, ${SUPPORT}.`,
-  non_refundable: `The hotel takes no cancellation for this order at all, even one that keeps the whole total, and the booking stands. A rate that only keeps the whole total is not this: it reads \`action: "cancel"\` with a \`penalty\` equal to the total. For help, ${SUPPORT}.`,
-  refused: `The hotel refused a cancellation, and the booking stands. For help, ${SUPPORT}.`,
+  cancellation_not_allowed: `The hotel takes no cancellation for this order at all, even one that keeps the whole total, and the booking stands. A non-refundable rate, which only keeps the whole total, is not this: it reads \`action: "cancel"\` with a \`penalty\` equal to the total. For help, ${SUPPORT}.`,
+  cancellation_refused: `The hotel refused a cancellation, and the booking stands. For help, ${SUPPORT}.`,
   terms_unknown: `The cancellation terms are not on record. For help, ${SUPPORT}.`,
   support_only: `The booking stands, and it can't be cancelled here. To cancel it, ${SUPPORT}.`,
   needs_attention: `The order's status is \`needs_attention\`: Fortrip is looking into it. For help, ${SUPPORT}.`,

@@ -6,6 +6,8 @@ import { describe, it } from "node:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { META_KEYS } from "@fortrip/agent-contract";
+
 import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
@@ -24,8 +26,8 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /changelog/);
     assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
     const payments = pageText("/payments");
-    // An order offers a token as payment.token; no list of methods.
-    assert.ok(payments.includes("payment.token"));
+    // An order offers a token as payment.tokenRequest; no list of methods.
+    assert.ok(payments.includes("payment.tokenRequest"));
     assert.doesNotMatch(payments, /with method|payment\.methods/);
   });
 
@@ -40,7 +42,8 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /_meta\["ai\.fortrip\/error"\] carries the error envelope/);
     // Every _meta key the hosted server returns has its row.
     const html = pageHtml("/mcp");
-    for (const key of ["ai.fortrip/requestId", "ai.fortrip/replayed", "ai.fortrip/error"]) {
+    assert.deepEqual(Object.values(META_KEYS), ["ai.fortrip/requestId", "ai.fortrip/replayed", "ai.fortrip/error"]);
+    for (const key of Object.values(META_KEYS)) {
       assert.ok(html.includes(`<td><code>${key}</code></td>`), key);
     }
     // Where a developer gets JSON instead.

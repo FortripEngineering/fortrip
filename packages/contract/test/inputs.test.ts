@@ -222,7 +222,7 @@ describe("stay", () => {
 
   it("names an unknown key", () => {
     const issues = refusalOf(stay, { ...goodStay, nights: 2 });
-    assert.equal(issues[0]?.message, "Unknown argument(s): nights");
+    assert.equal(issues[0]?.message, "Unknown field: nights");
   });
 });
 
@@ -258,7 +258,7 @@ describe("destination", () => {
         countryCode: "JP",
         radiusMeters: 5,
       })[0]?.message,
-      "Unknown argument(s): radiusMeters",
+      "Unknown field: radiusMeters",
     );
     assertRefusedAt(
       destination,
@@ -565,14 +565,14 @@ describe("searchHotelsInput", () => {
   it("names an unknown key", () => {
     assert.equal(
       refusalOf(searchHotelsInput, { text: "x", page: 2 })[0]?.message,
-      "Unknown argument(s): page",
+      "Unknown field: page",
     );
     assert.equal(
       refusalOf(searchHotelsInput, {
         text: "x",
         filters: { brand: "hilton" },
       })[0]?.message,
-      "Unknown argument(s): brand",
+      "Unknown field: brand",
     );
   });
 });
@@ -598,7 +598,7 @@ describe("getHotelInput", () => {
     assertRefusedAt(getHotelInput, { hotelId: hotel, locale: "fr" }, "locale");
     assert.equal(
       refusalOf(getHotelInput, { hotelId: hotel, rooms: true })[0]?.message,
-      "Unknown argument(s): rooms",
+      "Unknown field: rooms",
     );
   });
 });
@@ -619,7 +619,7 @@ describe("hotelOffersInput", () => {
       assert.match(issue?.message ?? "", /CNY/);
       assert.equal(
         refusalOf(schema, { ...value, displayCurrency: "CNY" })[0]?.message,
-        "Unknown argument(s): displayCurrency",
+        "Unknown field: displayCurrency",
       );
     }
   });
@@ -689,7 +689,7 @@ describe("hotelOffersInput", () => {
     assert.equal(
       refusalOf(hotelOffersInput, { ...base, filters: { board: "BB" } })[0]
         ?.message,
-      "Unknown argument(s): board",
+      "Unknown field: board",
     );
   });
 
@@ -841,7 +841,7 @@ describe("createOrderInput", () => {
     for (const key of ["firstName", "lastName"]) {
       assert.equal(
         refusalOf(createOrderInput, withContact({ [key]: "Wei" }))[0]?.message,
-        `Unknown argument(s): ${key}`,
+        `Unknown field: ${key}`,
       );
     }
   });
@@ -993,7 +993,7 @@ describe("createOrderInput", () => {
     ]) {
       assert.match(
         refusalOf(createOrderInput, value)[0]?.message ?? "",
-        /^Unknown argument\(s\): /,
+        /^Unknown fields?: /,
       );
     }
   });
@@ -1010,7 +1010,7 @@ describe("getOrderInput and listOrdersInput", () => {
     assert.equal(
       refusalOf(getOrderInput, { orderId: "ord_aaaaaaaaaaaaaaaaaaaa", x: 1 })[0]
         ?.message,
-      "Unknown argument(s): x",
+      "Unknown field: x",
     );
   });
 
@@ -1024,7 +1024,7 @@ describe("getOrderInput and listOrdersInput", () => {
     assertRefusedAt(listOrdersInput, { cursor: "" }, "cursor");
     assert.equal(
       refusalOf(listOrdersInput, { status: "confirmed" })[0]?.message,
-      "Unknown argument(s): status",
+      "Unknown field: status",
     );
   });
 });
@@ -1081,7 +1081,7 @@ describe("cancelOrderInput", () => {
     assertRefusedAt(cancelOrderInput, { close: true }, "orderId");
     assert.equal(
       refusalOf(cancelOrderInput, { orderId, close: true, refund: 1 })[0]?.message,
-      "Unknown argument(s): refund",
+      "Unknown field: refund",
     );
   });
 
@@ -1126,7 +1126,7 @@ describe("payOrderInput", () => {
     assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token }, "total");
   });
 
-  it("holds the token to spt_ and the total to Money in USD or CNY", () => {
+  it("holds the token to spt_ and the total to Money in USD, the one currency a token pays in", () => {
     for (const sharedPaymentToken of ["tok_1", "", "spt_", "spt_a-b", 5]) {
       assert.deepEqual(
         refusalOf(payOrderInput, { orderId, sharedPaymentToken, total }),
@@ -1140,6 +1140,18 @@ describe("payOrderInput", () => {
       "total.currency",
     );
     assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token, total: 132.4 }, "total");
+    // No token pays a CNY order (it offers none to request), so the schema names no CNY.
+    assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total: { amount: "880.00", currency: "CNY" } }), [
+      { path: "total.currency", message: "currency must be USD" },
+    ]);
+    assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total: "132.40" }), [
+      { path: "total", message: 'total must be Money: { amount: "132.40", currency: "USD" }' },
+    ]);
+    assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total: { ...total, extra: 1 } }), [
+      { path: "total", message: "Unknown field: extra" },
+    ]);
+    const currency = (z.toJSONSchema(payOrderInput, { io: "input" }) as any).properties.total.properties.currency;
+    assert.deepEqual([currency.enum ?? [currency.const], currency.description], [["USD"], "USD."]);
   });
 
   it("takes no other way to pay: no UCP payment object, no method", () => {
@@ -1157,11 +1169,11 @@ describe("payOrderInput", () => {
     ] as const) {
       // With the token or in its place, the key is unknown.
       assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total, [key]: value }), [
-        { path: "", message: `Unknown argument(s): ${key}` },
+        { path: "", message: `Unknown field: ${key}` },
       ]);
       assert.ok(
         refusalOf(payOrderInput, { orderId, total, [key]: value }).some(
-          (issue) => issue.message === `Unknown argument(s): ${key}`,
+          (issue) => issue.message === `Unknown field: ${key}`,
         ),
         key,
       );
@@ -1172,11 +1184,11 @@ describe("payOrderInput", () => {
     const json = z.toJSONSchema(payOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.sharedPaymentToken?.description,
-      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.token.usageLimits).",
+      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.tokenRequest.usageLimits).",
     );
     assert.equal(
       json.properties?.total?.description,
-      "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total).",
+      "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total). In USD: a token pays a USD order only, and any other order is paid by its payment link.",
     );
     // Paid by token only: no other way to send one, and no method to name.
     assert.doesNotMatch(JSON.stringify(json), /Exactly one of|instrument|method/);

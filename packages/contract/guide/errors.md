@@ -9,7 +9,7 @@
 | `offer_expired` | Get offers again and let the user choose again |
 | `offer_unavailable` | The offer is sold out or was refused, and other offers for the same room may be gone too: get offers again and let the user choose again |
 | `order_in_progress` | The order is still being created, or still being confirmed when cancelling it: wait as long as the error says, then {{#if claude-skill}}call again with the same details{{/if}}{{#if cli}}run the command again with identical flags{{/if}} |
-| `offer_already_ordered` | This offer was already ordered with other details: show the order the error names instead. An offer is ordered once, even when its order failed or expired: to order with other details, get offers again |
+| `offer_already_ordered` | This offer was already ordered with other details: show the order the error names instead. An offer is ordered once, even when its order failed, expired or was closed: to order with other details, get offers again |
 | `stay_unsupported` | Rooms for different parties: order once per party. Too many nights: the error says the most one order takes |
 | `currency_unavailable` | Prices in that currency aren't available yet: tell the user, and ask whether to see USD prices |
 | `stay_in_past` | Check-in has passed in the hotel's time zone: ask for new dates |

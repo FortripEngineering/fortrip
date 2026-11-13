@@ -38,7 +38,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   offer_changed:
     "The price or a term changed since the offer, and nothing was ordered. `changes` lists every change by the offer's key that changed (`field`), and `offer` is a new offer with the new terms. Show the changes, ask the user again, then order the new offer.",
   offer_already_ordered:
-    "The offer was ordered with different details. An offer is ordered once, even when its order failed or expired: read the order in `orderId`, or get a new offer.",
+    "The offer was ordered with different details. An offer is ordered once, even when its order failed, expired or was closed: read the order in `orderId`, or get a new offer.",
   order_in_progress:
     "The same offer is being ordered by another request right now, or (for `cancel_order`) the order is still being confirmed. Retry after `retryAfterSeconds` to get its answer.",
   cancellation_changed:
@@ -51,13 +51,13 @@ const MEANINGS: Record<ErrorCode, string> = {
   payment_total_mismatch:
     "The `total` sent isn't the order's; `details.total` is, and it hasn't changed. Confirm that total with the user, then call again with it and the same token. This call charged nothing.",
   payment_credential_invalid:
-    "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the order's `payment.token.usageLimits`), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
+    "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the order's `payment.tokenRequest.usageLimits`), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
   payment_declined:
     "The card was declined; `declineCode` is the bank's reason when it gives one. The user can pick another payment method in their wallet, or pay by `payment.url`, which stays open.",
   payment_action_required:
     "The card needs a verification (such as 3-D Secure) that a token payment can't give. The user pays by `payment.url`, which stays open.",
   payment_method_unavailable:
-    "No token can pay the order, whatever the token. `reason`: `payment_open_on_page` (the user has a payment open on the order's payment page, and finishes it there), `token_not_offered` (the order's `payment.token` is `null`) or `charge_refused` (Stripe refused the charge for a reason a new token wouldn't fix). The user pays by `payment.url`. This call charged nothing.",
+    "No token can pay the order, whatever the token. `reason`: `payment_open_on_page` (the user has a payment open on the order's payment page, and finishes it there), `token_not_offered` (the order's `payment.tokenRequest` is `null`) or `charge_refused` (Stripe refused the charge for a reason a new token wouldn't fix). The user pays by `payment.url`. This call charged nothing.",
   destination_ambiguous:
     `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:

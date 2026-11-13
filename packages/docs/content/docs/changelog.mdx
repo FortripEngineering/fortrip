@@ -23,10 +23,12 @@ What an integration must change, most urgent first. The [migration table](#v6-mi
 - **The contact has one name.** Send `contact.name` in place of `contact.firstName` and `contact.lastName` (`--name` in the CLI).
 - **Cancelling names its mode.** `cancel_order` takes exactly one of `maximumPenalty`, to cancel a paid order, and `close: true`, to close an unpaid one. An `orderId` alone is refused. A mode that doesn't fit the order answers `order_not_cancellable` with the order's `cancel` as it is now; `close` on an order paid meanwhile is refused that way, where 5.x answered the paid order.
 - **Paying takes a token and the total.** `pay_order` takes `sharedPaymentToken` and `total`, both required. Its `payment` object and its `method` are removed, and with `method` the Alipay and WeChat Pay payment an agent could open. The user still pays with either on the page `payment.url` opens.
-- **An order says how it can be paid and cancelled in new fields.** `payment.methods` is `payment.token`, `price.total` is `total`, `payment.chargeCurrency` is `total.currency`, and `cancel.available` and `cancel.reason` are `cancel.action` and `cancel.blockedBy`.
+- **An order says how it can be paid and cancelled in new fields.** `payment.methods` is `payment.tokenRequest` (what a token is requested with), `price.total` is `total`, `payment.chargeCurrency` is `total.currency`, and `cancel.available` and `cancel.reason` are `cancel.action` and `cancel.blockedBy`.
+- **A closed order has its own status.** An unpaid order closed at the caller's request is `closed`; `expired` now means only that the time to pay ran out.
+- **`pay_order` takes a total in USD only.** A token pays a USD order; a `total` in CNY is `invalid_request`.
 - **An offer is flat.** `hotel.room`, `hotel.roomCount`, `hotel.meals`, `price.total` and `price.payAtProperty` are `roomType`, `roomCount`, `meals`, `total` and `payAtProperty` on the offer itself. `price.perNightAllRooms` is replaced by `perRoomNight`, which also divides by the rooms.
 - **An order's room type and meals are per room**, on each entry of `items[].hotel.rooms`, not on the hotel item.
-- **Search and hotel answers are renamed** in several places: a hit's `price` is `indicativePrice`, `text` is a string, `currencyHint` is always present and `null` when there is none, and a hotel's `rooms` is `roomTypes`, asked for with `include=roomTypes`.
+- **Search and hotel answers are renamed** in several places: a hit's `price` is `indicativePrice`, `text` is a string, `currencyHint` is always present and `null` when there is none, a locality's `total` is `localityTotal`, and a hotel's `rooms` is `roomTypes`, asked for with `include=roomTypes`.
 - **Errors:** `payment_total_changed` is `payment_total_mismatch`, an error's `param` is `pointer`, and the `details` of `order_not_cancellable`, `rate_limited` and `destination_not_found` are renamed.
 - **An offers call answers a bounded number of offers.** `limitPerHotel` has no fixed default: without it a call answers at most 45 offers across its hotels, and with it at most 100. Three hotels still get 15 each; more hotels get fewer each. See [the offers budget](/errors#offers-budget).
 - **A search filters only by the nine amenity codes that can filter.** Any other code is `invalid_request`; the `filterable` and `share` details of that refusal are removed.
@@ -80,6 +82,8 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `pay_order`: `payment`, with `payment.instruments[]` | `sharedPaymentToken` |
 | `pay_order`: `method: "stripe_alipay_wechat_pay"` | — (the user pays on `payment.url`) |
 | `pay_order`: `sharedPaymentToken` optional, one of three | `sharedPaymentToken` required |
+| `pay_order`: `total.currency` `USD` or `CNY` | `USD` |
+| An unknown key: "Unknown argument(s): a, b", and "Unknown field(s): a" inside a Money | "Unknown field: a", or "Unknown fields: a, b" |
 | `get_hotel`: `include: "rooms"`, `?include=rooms` | `include: "roomTypes"`, `?include=roomTypes` |
 | `filters.amenities`: any amenity code | One of the nine codes a search can filter by |
 | `limitPerHotel`: default 15 | No default: 15 per hotel within 45 offers a call; given, up to 30 per hotel within 100 |
@@ -102,11 +106,11 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `cancellation.asOf` (offers and orders) | `cancellation.readAt` |
 | Order: `price.total` | `total` |
 | Order: `payment.chargeCurrency` | `total.currency` |
-| Order: `payment.methods[]` | `payment.token`, `null` where no token can pay |
-| Order: the `stripe_shared_payment_token` entry's `handler` | `payment.token.handler` |
-| Order: that entry's `limits.maxAmount` | `payment.token.usageLimits.max_amount` |
-| Order: that entry's `limits.currency` | `payment.token.usageLimits.currency` |
-| Order: that entry's `limits.expiresAt` (an instant) | `payment.token.usageLimits.expires_at` (Unix seconds, a ten-digit integer; a value in milliseconds doesn't parse) |
+| Order: `payment.methods[]` | `payment.tokenRequest`, `null` where no token can pay |
+| Order: the `stripe_shared_payment_token` entry's `handler` | `payment.tokenRequest.handler` |
+| Order: that entry's `limits.maxAmount` | `payment.tokenRequest.usageLimits.max_amount` |
+| Order: that entry's `limits.currency` | `payment.tokenRequest.usageLimits.currency` |
+| Order: that entry's `limits.expiresAt` (an instant) | `payment.tokenRequest.usageLimits.expires_at` (Unix seconds, a ten-digit integer; a value in milliseconds doesn't parse) |
 | Order: the `stripe_alipay_wechat_pay` entry (`open`, `current`, `wechatPay`, `alipay`) | — |
 | Order: `items[].hotel.room` | `items[].hotel.rooms[].roomType` |
 | Order: `items[].hotel.meals` | `items[].hotel.rooms[].meals` |
@@ -115,10 +119,11 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | Order: `cancel.reason` `unpaid` | `cancel.action` `close` |
 | Order: `cancel.reason` `already_cancelled` | `cancel.blockedBy` `already_cancelled` |
 | Order: `cancel.reason` `in_progress` | `cancel.blockedBy` `confirming` or `cancelling` |
+| Order: `status` `expired` for an order that was closed | `status` `closed` (`expired`: the time to pay ran out) |
 | Order: `cancel.reason` `not_confirmed` | `cancel.blockedBy` `payment_in_progress`, `website_checkout`, `expired`, `closed` or `failed` |
 | Order: `cancel.reason` `stay_started` | `cancel.blockedBy` `stay_started` |
-| Order: `cancel.reason` `non_refundable` | `cancel.blockedBy` `non_refundable`, now only an order the hotel takes no cancellation for at all. A rate that keeps the whole total reads `cancel.action` `cancel`, with `penalty` equal to the total |
-| Order: `cancel.reason` `refused` | `cancel.blockedBy` `refused` |
+| Order: `cancel.reason` `non_refundable` | `cancel.blockedBy` `cancellation_not_allowed`, only an order the hotel takes no cancellation for at all. A non-refundable rate (`cancellation.status` `non_refundable`), which keeps the whole total, reads `cancel.action` `cancel`, with `penalty` equal to the total |
+| Order: `cancel.reason` `refused` | `cancel.blockedBy` `cancellation_refused` |
 | Order: `cancel.reason` `terms_unknown` | `cancel.blockedBy` `terms_unknown` |
 | Order: `cancel.reason` `needs_attention` | `cancel.blockedBy` `needs_attention` (the order's status is `needs_attention`) or `support_only` (a sound booking that can't be cancelled here) |
 | Order: a failed order gave no reason | `failure.reason`: `rate_unavailable`, `hotel_refused` or `unknown` |
@@ -128,6 +133,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | Search: `text.value` | `text` (a string) |
 | Search: `text.match` | — |
 | Search: `pricing.scope` | `pricing.covers` |
+| Search: `coverage.localities.items[].total` | `coverage.localities.items[].localityTotal` |
 | Search: `currencyHint` absent | `currencyHint: null` |
 | Search: `notes[]` is `{ code, message }` for every code | A union picked by `code`: `{ code, message }`, with an optional `details` on `area_absorbed` and `locality_available` |
 | Search: `destination.place.scope` | — (read `destination.scope`) |
@@ -141,7 +147,8 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | --- | --- |
 | `payment_total_changed` | `payment_total_mismatch` |
 | `error.param` | `error.pointer` |
-| `order_not_cancellable`: `details.reason` | `details.cancel`, the order's `cancel` |
+| `order_not_cancellable`: `details.reason` | `details.cancel`, the order's `cancel`, and `details.orderId` |
+| `search_too_broad`: `details.localities.items[].total` | `details.localities.items[].localityTotal` |
 | `rate_limited`: `details.scope` | `details.rateLimit` |
 | `destination_not_found`: `details.hub` | `details.locality` |
 | `destination_not_found`: `details.hubTotal` | `details.localityTotal` |
@@ -188,7 +195,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `HTTP_ROUTES.book_hotel`, the `ToolName` `book_hotel` | `HTTP_ROUTES.create_order`, `create_order` |
 | `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `filterable`, `cancel.available`, `payment.methods`, `payment.methods.open` | — |
 
-- New: `SERVER_INFO`, `SEARCH_NOTE_DETAILS`, `searchNote` and the type `SearchNote`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
+- New: `SERVER_INFO`, `META_KEYS` (the `_meta` keys of an MCP result), `unknownFieldsMessage`, `SEARCH_NOTE_DETAILS`, `searchNote` and the type `SearchNote`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
 - `renderToolResult` returns the whole text of a result, the presentation hint and the next-step paragraphs included: send it as the one text block and add nothing. `renderError` builds its text from the error's `code` and `details`.
 - `ToolSpec.annotations` of `create_order` and `pay_order` have `destructiveHint: true`; `create_order` has `idempotentHint: true`.
 

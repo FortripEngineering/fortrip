@@ -126,8 +126,8 @@ export function parseCommand(
 /**
  * The currency a request's money is in: the command's `--currency`, else
  * the `--body`'s, else the environment's, else USD. A command without a
- * currency (`orders pay` and `orders cancel`: the order's, which the CLI
- * reads next) gets USD as a placeholder. A `--body` currency is upper-cased
+ * currency gets USD: `orders pay` is paid in it, and for `orders cancel` it
+ * is a placeholder until the CLI has read the order. A `--body` currency is upper-cased
  * in the body, as `--currency` is.
  */
 function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: NodeJS.ProcessEnv): string {

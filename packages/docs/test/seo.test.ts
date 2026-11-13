@@ -232,7 +232,7 @@ describe("Markdown pages", () => {
   // token and a paid order to cancel.
   it("the rules of a tool's result come in the order the contract writes them", () => {
     const payable = JSON.parse(readFileSync(new URL("../lib/reference/fixtures/order-awaiting-payment.json", import.meta.url), "utf8"));
-    assert.ok(payable.payment.url && payable.payment.token);
+    assert.ok(payable.payment.url && payable.payment.tokenRequest);
     const cancellable = {
       ...payable,
       status: "confirmed",

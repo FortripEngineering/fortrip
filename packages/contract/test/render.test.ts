@@ -6,7 +6,7 @@ import { strictOutput } from "../src/conventions/open.ts";
 import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { renderOrder } from "../src/render/order.ts";
-import { CANCEL_BLOCKERS, FAILURE_REASONS, type Order, PAYMENT_METHOD_UNAVAILABLE_REASONS } from "../src/outputs/order.ts";
+import { CANCEL_BLOCKERS, FAILURE_REASONS, type Order, ORDER_STATUSES, PAYMENT_METHOD_UNAVAILABLE_REASONS } from "../src/outputs/order.ts";
 import { SEARCH_NOTE_CODES } from "../src/outputs/search.ts";
 import {
   CANCEL_NEXT_STEP,
@@ -76,7 +76,7 @@ function copy<T>(value: T): T {
 /** The order awaiting payment, payable by token: its payment holds the token. */
 function withToken(): Record<string, any> {
   const data = copy((load("order-awaiting-payment") as ToolFixture).data) as Record<string, any>;
-  data.payment.token = {
+  data.payment.tokenRequest = {
     handler: {
       id: "stripe_payments",
       type: "com.stripe.payments",
@@ -412,9 +412,9 @@ describe("search results", () => {
 
   it("shows count and total when a locality reaches beyond the scope", () => {
     const fixture = copy(load("search-shanghai-area")) as ToolFixture;
-    const loc = (fixture.data.coverage as { localities: { items: { total: number }[] } })
+    const loc = (fixture.data.coverage as { localities: { items: { localityTotal: number }[] } })
       .localities.items[1]!;
-    loc.total = 5000;
+    loc.localityTotal = 5000;
     const text = render(fixture);
     assert.ok(text.includes('"Pudong" plc_9100021 4,120 here, 5,000 as a locality'), text);
   });
@@ -538,7 +538,7 @@ describe("errors that lead to a next call", () => {
   });
 
   type TooBroad = {
-    localities: { items: { count: number; total: number }[] };
+    localities: { items: { count: number; localityTotal: number }[] };
     center: { place: { placeId: string } | null } | null;
   };
   const tooBroad = (f: ErrorFixture) => f.envelope.error.details as TooBroad;
@@ -557,7 +557,7 @@ describe("errors that lead to a next call", () => {
   it("search_too_broad offers no radiusMeters when the top locality is within the pool", () => {
     const small = copy(load("error-search-too-broad-bali")) as ErrorFixture;
     tooBroad(small).localities.items[0]!.count = 3000;
-    tooBroad(small).localities.items[0]!.total = 3000;
+    tooBroad(small).localities.items[0]!.localityTotal = 3000;
     assert.doesNotMatch(render(small), /radiusMeters/);
   });
 
@@ -1320,8 +1320,9 @@ describe("orders and the consent rule", () => {
   it("each order that can be neither cancelled nor closed says the one thing that blocks it", () => {
     const support = "for help, the user emails info@fortrip.ai with the order's reference";
     const cases: [Golden, string, string][] = [
-      ["order-expired", "not paid: the time ran out or it was closed", "its time to pay ran out, so there is nothing to cancel or close"],
-      ["order-closed", "not paid: the time ran out or it was closed", "it was closed unpaid, as asked, so there is nothing to cancel or close"],
+      // Two statuses, as two blockers: the time ran out, or the caller closed it.
+      ["order-expired", "not paid: the time to pay ran out", "its time to pay ran out, so there is nothing to cancel or close"],
+      ["order-closed", "closed unpaid, as asked", "it was closed unpaid, as asked, so there is nothing to cancel or close"],
       ["order-stay-started", "confirmed", `the stay has started; ${support}`],
       ["order-needs-attention", "needs attention from Fortrip", `Fortrip is looking into this order; ${support}`],
       ["order-terms-unknown", "confirmed", `its cancellation terms are not on record; ${support}`],
@@ -1409,6 +1410,26 @@ describe("orders and the consent rule", () => {
     }
   });
 
+  // One status each for the two ways an unpaid order ends: its time ran out, or the caller closed it.
+  it("words every order status, each its own: an expired order is not a closed one", () => {
+    assert.deepEqual([...ORDER_STATUSES], ["awaiting_payment", "expired", "closed", "confirming", "confirmed", "failed", "cancelling", "cancelled", "needs_attention"]);
+    const head = (status: string) => {
+      const data = copy((load("order-expired") as ToolFixture).data) as Record<string, any>;
+      data.status = status;
+      return renderOrder(data as Order).split("\n")[0]!.split(" · ")[2]!;
+    };
+    assert.equal(new Set(ORDER_STATUSES.map(head)).size, ORDER_STATUSES.length);
+    for (const status of ORDER_STATUSES) assert.notEqual(head(status), "status not recognized", status);
+    assert.equal(head("expired"), "not paid: the time to pay ran out");
+    assert.equal(head("closed"), "closed unpaid, as asked");
+    assert.equal(head("teleported"), "teleported");
+    // The fixtures say each in both places: the status, and what blocks a cancellation.
+    for (const way of ["expired", "closed"] as const) {
+      const data = (load(`order-${way}`) as ToolFixture).data as Record<string, any>;
+      assert.deepEqual([data.status, data.cancel.blockedBy], [way, way]);
+    }
+  });
+
   it("words everything that blocks a cancellation, one situation each, and shows an unknown one as it came", () => {
     const fixture = copy(load("order-confirmed")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
@@ -1428,7 +1449,7 @@ describe("orders and the consent rule", () => {
     };
     // No cancellation at all, which is not a cancellation that keeps the whole total.
     assert.equal(
-      line("non_refundable"),
+      line("cancellation_not_allowed"),
       "Cancel: not available: the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands",
     );
     // A sound booking only support can cancel is not an order Fortrip is looking into.
@@ -1440,7 +1461,7 @@ describe("orders and the consent rule", () => {
       line("needs_attention"),
       "Cancel: not available: Fortrip is looking into this order; for help, the user emails info@fortrip.ai with the order's reference",
     );
-    assert.equal(line("refused"), "Cancel: not available: the hotel refused the cancellation; the booking stands");
+    assert.equal(line("cancellation_refused"), "Cancel: not available: the hotel refused the cancellation; the booking stands");
     assert.equal(
       line("confirming"),
       "Cancel: not available: the booking is still being confirmed with the hotel; read the order again later",
@@ -1455,21 +1476,21 @@ describe("orders and the consent rule", () => {
   });
 
   it("the raw fallback adds the pay rule for an order that holds a token", () => {
-    const text = renderToolResult("get_order", { payment: { token: { handler: {} } }, junk: 1 });
+    const text = renderToolResult("get_order", { payment: { tokenRequest: { handler: {} } }, junk: 1 });
     assert.match(text, /^This get_order result is not in the expected shape/);
     assert.ok(text.endsWith(`\n\n${PAY_NEXT_STEP}`));
-    const list = renderToolResult("list_orders", { data: [{ payment: { token: null } }, { payment: { token: {} } }] });
+    const list = renderToolResult("list_orders", { data: [{ payment: { tokenRequest: null } }, { payment: { tokenRequest: {} } }] });
     assert.equal(list.split(PAY_NEXT_STEP).length, 2);
     // No token, or none at all: no rule.
-    for (const payment of [{ token: null }, {}, { token: "spt_1" }]) {
+    for (const payment of [{ tokenRequest: null }, {}, { tokenRequest: "spt_1" }, { token: {} }]) {
       assert.ok(!renderToolResult("get_order", { payment, junk: 1 }).includes(PAY_NEXT_STEP), JSON.stringify(payment));
     }
-    assert.ok(!renderToolResult("pay_order", { payment: { token: {} }, junk: 1 }).includes(PAY_NEXT_STEP));
+    assert.ok(!renderToolResult("pay_order", { payment: { tokenRequest: {} }, junk: 1 }).includes(PAY_NEXT_STEP));
   });
 
   it("an order with a token shows how to pay without the link, Stripe's usage limits by name, and the pay rule", () => {
     const data = withToken();
-    data.payment.token.handler.available_instruments.push({
+    data.payment.tokenRequest.handler.available_instruments.push({
       type: "link",
       config: { business_profile: "profile_test_1" },
     });
@@ -1488,11 +1509,11 @@ describe("orders and the consent rule", () => {
       assertClean(text);
     }
     // The instant in parentheses is the expires_at above it, read as Unix seconds.
-    data.payment.token.usageLimits.expires_at = 1793537400 + 3600;
+    data.payment.tokenRequest.usageLimits.expires_at = 1793537400 + 3600;
     assert.match(renderToolResult("get_order", data), /expires_at 1793541000 \(2026-11-01 13:50 UTC\)\.$/m);
     assert.match(render(load("order-payable-by-token")), /max_amount 36500 \(cents\), currency usd, expires_at 1793537400 \(2026-11-01 12:50 UTC\)\.$/m);
     // max_amount is in the currency's minor unit: cents is said of usd only.
-    data.payment.token.usageLimits.currency = "eur";
+    data.payment.tokenRequest.usageLimits.currency = "eur";
     assert.match(renderToolResult("get_order", data), /max_amount 36500 \(the currency's minor unit\), currency eur, expires_at /);
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
     assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
@@ -1505,7 +1526,7 @@ describe("orders and the consent rule", () => {
     assert.doesNotMatch(PAY_NEXT_STEP, /method|Alipay|WeChat/i);
     // An order with no token: the link alone, and only its rule.
     const unpayable = load("order-awaiting-payment") as ToolFixture;
-    assert.equal((unpayable.data as Record<string, any>).payment.token, null);
+    assert.equal((unpayable.data as Record<string, any>).payment.tokenRequest, null);
     for (const tool of ["create_order", "get_order", "list_orders"] as const) {
       const data = tool === "list_orders" ? { data: [unpayable.data], nextCursor: null } : unpayable.data;
       const plain = renderToolResult(tool, data);
@@ -1520,7 +1541,7 @@ describe("orders and the consent rule", () => {
   it("the instant beside expires_at is printed only for a plausible Unix-seconds value", () => {
     const tokenLine = (expires_at: number, through: (data: Record<string, any>) => string) => {
       const data = withToken();
-      data.payment.token.usageLimits.expires_at = expires_at;
+      data.payment.tokenRequest.usageLimits.expires_at = expires_at;
       return through(data).split("\n").find((l) => l.startsWith("Pay without the link: ")) ?? through(data);
     };
     const parsed = (data: Record<string, any>) => renderToolResult("get_order", data);
@@ -1660,7 +1681,7 @@ describe("orders and the consent rule", () => {
     });
 
     it("what a token is requested with: the order then takes none, and is paid by its link", () => {
-      const request = () => copy((load("order-payable-by-token") as ToolFixture).data as Record<string, any>).payment.token;
+      const request = () => copy((load("order-payable-by-token") as ToolFixture).data as Record<string, any>).payment.tokenRequest;
       for (const token of [
         { ...request(), usageLimits: { max_amount: "36500", currency: "usd", expires_at: 1793537400 } },
         { ...request(), usageLimits: { ...request().usageLimits, expires_at: 1793537400000 } },
@@ -1669,10 +1690,10 @@ describe("orders and the consent rule", () => {
         "spt",
         true,
       ]) {
-        assertReadAs("order-payable-by-token", (o) => (o.payment.token = token), (o) => (o.payment.token = null));
+        assertReadAs("order-payable-by-token", (o) => (o.payment.tokenRequest = token), (o) => (o.payment.tokenRequest = null));
       }
       const data = copy((load("order-payable-by-token") as ToolFixture).data) as Record<string, any>;
-      data.payment.token = true;
+      data.payment.tokenRequest = true;
       const text = renderToolResult("get_order", data);
       // No line to pay without the link, and no rule for it: the link, and its rule, stand.
       assert.doesNotMatch(text, /Pay without the link|pay_order/);
@@ -1991,7 +2012,7 @@ describe("the order of the rules that end an order's text", () => {
   it("a result that does not parse keeps the same order", () => {
     const junk = {
       junk: 1,
-      payment: { url: "https://fortrip.ai/pay/x", token: { handler: {} } },
+      payment: { url: "https://fortrip.ai/pay/x", tokenRequest: { handler: {} } },
       cancel: { action: "cancel" },
     };
     for (const surface of SURFACES) {

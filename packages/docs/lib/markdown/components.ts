@@ -14,6 +14,7 @@ import {
   HTTP_ROUTES,
   LIMITS,
   MCP_SERVER_URL,
+  META_KEYS,
   ORDER_STATUSES,
   PAY_WAYS,
   PAYMENT_STATUSES,
@@ -28,7 +29,7 @@ import type { PhrasingContent } from "mdast";
 
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
-import { MCP_TEXT_RULES, RULE_DOCS } from "../prose/mcp-content.ts";
+import { MCP_TEXT_RULES, META_KEY_DOCS, RULE_DOCS } from "../prose/mcp-content.ts";
 import {
   CANCEL_BLOCKER_DOCS,
   FAILURE_REASON_DOCS,
@@ -493,6 +494,16 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
             ...(row.details ? [lineBreak(), code("details"), text(":"), ...row.details.flatMap((line) => [lineBreak(), ...inline(line)])] : []),
           ],
         ],
+      })),
+    ),
+  ],
+
+  /** The `_meta` keys of an MCP result, from the contract's `META_KEYS`. */
+  MetaKeys: () => [
+    table(
+      ["Key", "On", "Value"],
+      (Object.keys(META_KEYS) as (keyof typeof META_KEYS)[]).map((name) => ({
+        cells: [[code(META_KEYS[name])], inline(META_KEY_DOCS[name].on), inline(META_KEY_DOCS[name].value)],
       })),
     ),
   ],

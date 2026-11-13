@@ -117,7 +117,7 @@ the person agreed to exactly as shown; if the penalty has gone up since,
 nothing changes and the command exits 1 with `cancellation_changed`. An
 unpaid order is closed instead, once the person says they no longer want it:
 `orders cancel <orderId> --close` closes it, nothing is charged, and it
-becomes `expired`. Without `--max-penalty` or `--close` it changes nothing:
+becomes `closed`. Without `--max-penalty` or `--close` it changes nothing:
 it prints the order's penalty and refund, or that it can be closed, and
 exits 2.
 

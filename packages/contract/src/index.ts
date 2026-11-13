@@ -28,6 +28,7 @@ export {
   oneOf,
   strictInput,
   text,
+  unknownFieldsMessage,
   wholeNumber,
 } from "./fields.ts";
 export {
@@ -193,6 +194,7 @@ export {
   ORDER_NEXT_STEP,
   PAY_NEXT_STEP,
   payNextStep,
+  META_KEYS,
   PRESENTATION_HINT,
   type RenderSurface,
   SERVER_INFO,

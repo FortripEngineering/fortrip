@@ -8,12 +8,18 @@ import { z } from "zod";
  * one of its own reads "Invalid input" there.
  */
 
+/** How an input says it does not know a key: one wording, for an HTTP
+ *  body, a tool's arguments and the CLI's own check. */
+export function unknownFieldsMessage(keys: readonly string[]): string {
+  return `Unknown ${keys.length === 1 ? "field" : "fields"}: ${keys.join(", ")}`;
+}
+
 /** An object that names the keys it doesn't know instead of dropping them. */
 export function strictInput<T extends z.core.$ZodLooseShape>(shape: T) {
   return z.strictObject(shape, {
     error: (issue) =>
       issue.code === "unrecognized_keys"
-        ? `Unknown argument(s): ${issue.keys.join(", ")}`
+        ? unknownFieldsMessage(issue.keys)
         : "Expected a JSON object",
   });
 }

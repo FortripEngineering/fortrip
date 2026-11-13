@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "node:stream";
 
-import { CONTRACT_VERSION, renderError, renderGuide, SERVER_INFO, TOOLS } from "@fortrip/agent-contract";
+import { CONTRACT_VERSION, META_KEYS, renderError, renderGuide, SERVER_INFO, TOOLS } from "@fortrip/agent-contract";
 import {
   type FetchLike,
   isJSONRPCErrorResponse,
@@ -234,7 +234,7 @@ function toolErrorOf(error: unknown) {
   return {
     isError: true,
     content: [{ type: "text", text: text ?? renderError(envelope) }],
-    _meta: { "ai.fortrip/error": envelope },
+    _meta: { [META_KEYS.error]: envelope },
   };
 }
 

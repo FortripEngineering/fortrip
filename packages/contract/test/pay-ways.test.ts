@@ -13,9 +13,9 @@ describe("pay ways", () => {
     assert.deepEqual(fields, ["sharedPaymentToken"]);
   });
 
-  it("an order offers the token as payment.token, and lists no methods", () => {
+  it("an order offers the token as payment.tokenRequest, and lists no methods", () => {
     const keys = Object.keys(order.shape.payment.shape);
-    assert.ok(keys.includes("token"));
+    assert.ok(keys.includes("tokenRequest"));
     assert.ok(!keys.includes("methods"));
   });
 
