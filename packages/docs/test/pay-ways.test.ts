@@ -23,7 +23,7 @@ describe("ways to pay", () => {
     assert.ok(PAY_WAY_DOCS.stripe_shared_payment_token.body.includes("`sharedPaymentToken`"));
     assert.ok(
       pageText("/api").includes(
-        "takes sharedPaymentToken, the token the user approved for the order, and total, the order's price.total exactly as returned.",
+        "takes sharedPaymentToken, the token the user approved for the order, and total, the order's total exactly as returned.",
       ),
     );
   });
@@ -35,10 +35,11 @@ describe("ways to pay", () => {
     );
   });
 
-  it("the Link token way is for agents that can request one, and leaves its conditions to its payment.methods entry", () => {
+  it("the Link token way is for agents that can request one, and leaves its conditions to payment.token", () => {
     const { when, body } = PAY_WAY_DOCS.stripe_shared_payment_token;
     assert.match(when, /^Only for agents that can request a shared payment token from the user's Stripe Link wallet/);
-    assert.match(when, /`payment\.methods` has the `stripe_shared_payment_token` entry; that entry says why it can be absent/);
+    assert.match(when, /while the order's `payment\.token` is set; that field says when it is `null`/);
+    assert.match(body, /`payment\.token\.handler\.config\.business_profile` and `payment\.token\.usageLimits`/);
     // The eligibility conditions are the field's (A8), not repeated here.
     assert.doesNotMatch(`${when} ${body}`, /requiresSignIn|negotiated price|tokens tried/);
     assert.doesNotMatch(body, /instruments|stripe_payment_token/);

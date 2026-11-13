@@ -3,10 +3,12 @@
 // and its Markdown text are all made from these trees.
 import {
   ACCOUNT_ROUTES,
+  CANCEL_BLOCKERS,
   type Destination,
   destination,
   CURRENCIES,
   type ErrorCode,
+  FAILURE_REASONS,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
   HTTP_ROUTES,
@@ -26,8 +28,13 @@ import type { PhrasingContent } from "mdast";
 
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
-import { MCP_CONTENT } from "../prose/mcp-content.ts";
-import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
+import { MCP_TEXT_RULES, RULE_DOCS } from "../prose/mcp-content.ts";
+import {
+  CANCEL_BLOCKER_DOCS,
+  FAILURE_REASON_DOCS,
+  ORDER_STATUS_DOCS,
+  PAYMENT_STATUS_DOCS,
+} from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
 import { PAY_AFTER_TIMEOUT, RETRY_DOCS, RETRY_WAYS } from "../prose/retries.ts";
 import { ENDPOINTS, inputAnchor, referenceHref } from "../reference/api-docs.ts";
@@ -69,9 +76,9 @@ import { fields } from "./widgets.ts";
 
 type Props = Record<string, string>;
 
-/** A table of statuses in the contract's order, each with what it means. */
-function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, string>): Block[] {
-  return [table(["Status", "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
+/** A table of an enum's values in the contract's order, each with what it means. */
+function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, string>, head = "Status"): Block[] {
+  return [table([head, "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
 }
 
 /** What a call answers when the rate limiter is down and refuses it. */
@@ -343,6 +350,12 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The order's `payment.status`, each with what it means. */
   PaymentStatuses: () => statusTable(PAYMENT_STATUSES, PAYMENT_STATUS_DOCS),
 
+  /** The values of an order's `cancel.blockedBy`, each with what it means. */
+  CancelBlockers: () => statusTable(CANCEL_BLOCKERS, CANCEL_BLOCKER_DOCS, "blockedBy"),
+
+  /** The values of a failed order's `failure.reason`, each with what it means. */
+  FailureReasons: () => statusTable(FAILURE_REASONS, FAILURE_REASON_DOCS, "reason"),
+
   /** The tools, each linking to its page. */
   ToolList: () => [
     table(
@@ -353,29 +366,41 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
-  /** The tools whose successful `content` is more than the compact text,
-   *  from `MCP_CONTENT`. */
-  McpContentExceptions: () => {
-    const having = (block: (typeof MCP_CONTENT)[ToolName][number]) =>
-      TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
+  /** The rules that end a result's text after its data, each with the tools
+   *  that carry it and when, from `MCP_TEXT_RULES`. */
+  ResultRules: () => {
+    const rules = Object.keys(RULE_DOCS) as Array<keyof typeof RULE_DOCS>;
     return [
-      list([
-        [
-          ...codeList(having("presentation_hint")),
-          ...inline(
-            " add a block after the text, the presentation hint: it asks the model to show only what Fortrip returned, as cards where the client can draw them.",
-          ),
-        ],
-        [
-          ...codeList(having("wechat_code")),
-          ...inline(
-            " puts the WeChat Pay code first, as a PNG image, while its answer holds a live code, unless the image couldn't be fetched. The code and its links are in `structuredContent` either way.",
-          ),
-        ],
-        inline("So find a block by its `type` (`text`, `image`), not by its position."),
-      ]),
+      list(
+        rules.map((rule) => {
+          const { name, when, says } = RULE_DOCS[rule];
+          const tools = TOOLS.filter((tool) => MCP_TEXT_RULES[tool.name].includes(rule)).map((tool) => tool.name);
+          return [
+            ...codeList(tools),
+            ...inline(` end with ${name}${when ? `, when ${when}` : ""}: ${says}.`),
+          ];
+        }),
+      ),
     ];
   },
+
+  /** The tools with their annotations, as an MCP client is told them. */
+  ToolAnnotations: () => [
+    table(
+      ["Tool", "Reads only", "Destructive", "Idempotent", "Open world"],
+      TOOLS.map((tool) => ({
+        cells: [
+          [code(tool.name)],
+          ...[
+            tool.annotations.readOnlyHint,
+            tool.annotations.destructiveHint,
+            tool.annotations.idempotentHint,
+            tool.annotations.openWorldHint,
+          ].map((hint) => [text(hint ? "Yes" : "No")]),
+        ],
+      })),
+    ),
+  ],
 
   /** The commands, each linking to its page. */
   CommandList: () => [
@@ -483,7 +508,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The rate limits, then which calls the limiter refuses while it is down. */
   RateLimitsTable: () => [
     table(
-      ["Scope", "Calls", "Per minute"],
+      ["Rate limit", "Calls", "Per minute"],
       rateLimitRows().map((row) => ({
         cells: [
           [code(row.scope)],
@@ -562,15 +587,15 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     return [codeBlock("json", json(part === "details" ? (envelope.error as { details?: unknown }).details : envelope))];
   },
 
-  /** A tool's `content[0]` for its example answer: the compact text the
+  /** A tool's result for its example answer: the one text block the
    *  contract's `renderToolResult` writes, as the MCP server sends it. */
   ToolResultSample: ({ tool = "" }) => {
     if (!(tool in RESPONSES) || !TOOLS.some((t) => t.name === tool)) throw new Error(`<ToolResultSample> has no answer of ${tool}`);
     return [codeBlock("text", renderToolResult(tool as RenderedTool, RESPONSES[tool as OperationId], "mcp"))];
   },
 
-  /** An error's `content[0]`: the text the contract's `renderError` writes,
-   *  with no HTTP status, as the MCP server sends it. */
+  /** An error's result: the one text block the contract's `renderError`
+   *  writes, with no HTTP status, as the MCP server sends it. */
   ToolErrorSample: ({ code: errorCode = "" }) => {
     const { envelope } = errorExample(errorCode);
     return [codeBlock("text", renderError(envelope, undefined, "mcp"))];

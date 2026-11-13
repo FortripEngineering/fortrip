@@ -12,7 +12,7 @@ import { pageHtml, pageText } from "./built-page.ts";
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
 describe("stale statements stay fixed", () => {
-  it("/api: the pay inputs, and no additive-only promise; /payments: the order's payment methods", () => {
+  it("/api: the pay inputs, and no additive-only promise; /payments: the order's token", () => {
     const text = pageText("/api");
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
@@ -24,23 +24,28 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /changelog/);
     assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
     const payments = pageText("/payments");
-    assert.ok(payments.includes("payment.methods"));
-    assert.doesNotMatch(payments, /with method/);
+    // An order offers a token as payment.token; no list of methods.
+    assert.ok(payments.includes("payment.token"));
+    assert.doesNotMatch(payments, /with method|payment\.methods/);
   });
 
-  it("/mcp: content[0] is not always text", () => {
+  // Contract 6: a result is text only, on every tool.
+  it("/mcp: a result is one text block, with no structured content or output schema", () => {
     const text = pageText("/mcp");
-    assert.doesNotMatch(text, /content\[0\] is compact text/);
-    assert.match(text, /WeChat Pay code/);
-    assert.match(text, /content\[1\]/);
+    assert.match(text, /A result is text only\. content holds exactly one block, of type text/);
+    assert.match(text, /There is no structuredContent, and no tool declares an outputSchema/);
+    assert.doesNotMatch(text, /content\[1\]|WeChat Pay code|image/);
+    // An error is one text block too, its envelope in _meta.
+    assert.match(text, /A failed call has isError: true and one text block\./);
+    assert.match(text, /_meta\["ai\.fortrip\/error"\] carries the error envelope/);
+    // Where a developer gets JSON instead.
+    assert.match(text, /read it over the HTTP API, where each tool has an endpoint that answers JSON for the same input, or run the CLI command with --json/);
   });
 
-  it("/mcp: no nextStep field, the consent rule ends the text; blocks found by type", () => {
+  it("/mcp: no nextStep field, the consent rule ends the text", () => {
     const text = pageText("/mcp");
     assert.doesNotMatch(text, /nextStep/);
     assert.match(text, /The text of an answer that holds a payment link ends with the consent rule:/);
-    assert.match(text, /by its type \(text, image\), not by its position/);
-    assert.match(text, /unless the image couldn't be fetched/);
   });
 
   it("no page states the ways to pay or the pay inputs as a closed set by hand", () => {
@@ -58,9 +63,15 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(pageHtml("/quickstart"), /href="\/install#remote-mcp"/);
   });
 
-  it("a tool page says where its text is", () => {
-    assert.doesNotMatch(pageText("/mcp/pay-order"), /content\[0\] the same answer as compact text/);
-    assert.match(pageText("/mcp/pay-order"), /image/);
+  it("a tool page says its result is one text block, and where the JSON is", () => {
+    for (const route of ["/mcp/pay-order", "/mcp/search-hotels"]) {
+      const text = pageText(route);
+      assert.match(text, /The result is one text block, content\[0\]: the answer as compact text/, route);
+      assert.match(text, /There is no structuredContent: the same answer as JSON is the/, route);
+      assert.doesNotMatch(text, /image|content\[1\]/, route);
+    }
+    assert.match(pageText("/mcp/search-hotels"), /then the presentation hint\./);
+    assert.match(pageText("/mcp/pay-order"), /or fortrip orders pay --json\./);
   });
 
   // Agents no longer open an Alipay or WeChat Pay payment: the user pays
@@ -119,7 +130,7 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(pageText("/regions"), /\d\s?%/);
   });
 
-  // The facts contract 5 changed, as packages/contract/test/no-stale-copy.test.ts
+  // The facts contracts 5 and 6 changed, as packages/contract/test/no-stale-copy.test.ts
   // keeps them out of what agents read. Pages say "in USD" of nothing: only
   // the token is USD-only, and no page needs the phrase for it.
   // The lib's text (error meanings, pay ways, limits, environment…) renders
@@ -170,7 +181,31 @@ const STALE: readonly RegExp[] = [
   /get_planning_guide/,
   /fortrip guide/,
   /US dollars/,
-  /(?<!stripe_)alipay_wechat_pay/,
+  /alipay_wechat_pay/,
+  // Contract 6: one name and one place for each concept.
+  /book_hotel/,
+  /hotels book/,
+  /payment\.methods/,
+  /price\.total/,
+  /chargeCurrency/,
+  /cancel\.available/,
+  /cancel\.reason/,
+  /payment_total_changed/,
+  /perNightAllRooms/,
+  /hubTotal/,
+  /hubIncludes/,
+  /include=rooms/,
+  /collectedAt/,
+  /\basOf\b/,
+  /--method/,
+  /--first-name|--last-name/,
+  /contact\.(?:firstName|lastName)/,
+  /maxAmount/,
+  /pricing\.scope/,
+  /RateLimitScope/,
+  /`param`/,
+  /details_refused/,
+  /WeChat Pay code|qrData/,
   // One offer is one order: no per-stay check, cap or removed order.
   /order_exists/,
   /order_removed/,

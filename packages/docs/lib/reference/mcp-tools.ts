@@ -47,7 +47,7 @@ const DOCS: Record<
     group: "Hotels",
     access: "Read-only",
     human:
-      "Shows one hotel's details: address, check-in and check-out times, description, policies, amenities and, on request, its rooms. It only reads, and has no prices.",
+      "Shows one hotel's details: address, check-in and check-out times, description, policies, amenities and, on request, its room types. It only reads, and has no prices.",
   },
   get_hotel_offers: {
     group: "Hotels",
@@ -59,12 +59,13 @@ const DOCS: Record<
     group: "Orders",
     access: "Creates an unpaid order",
     human:
-      "Creates an order from one offer, with the guests and a contact. Nothing is charged: the order waits for the user to pay it, by its payment link or another way.",
+      "Creates an unpaid order from one offer, with the guests and a contact. Nothing is charged: the order waits for the user to pay it, on the page its payment link opens.",
   },
   get_order: {
     group: "Orders",
     access: "Read-only",
-    human: "Shows one of the user's orders: its status, payment, stay and terms. It only reads.",
+    human:
+      "Shows one of the user's orders: its status, payment, stay and terms, and what can be done to it now: pay, cancel or close. It only reads.",
   },
   list_orders: {
     group: "Orders",
@@ -73,15 +74,15 @@ const DOCS: Record<
   },
   cancel_order: {
     group: "Orders",
-    access: "Cancels an order",
+    access: "Cancels or closes an order",
     human:
-      "Cancels the user's booking under its cancellation terms, once they agree to the penalty and refund. The hotel booking is cancelled and the refund is issued.",
+      "Cancels a paid order under its cancellation terms, once the user agrees to the penalty and the refund. Or closes an unpaid order the user no longer wants, with nothing charged.",
   },
   pay_order: {
     group: "Orders",
     access: "Pays an order",
     human:
-      "Pays an order with a Link token (a shared payment token from the user's Stripe Link wallet), or opens an Alipay or WeChat Pay payment. A payment link needs no call.",
+      "Pays a USD order with a Link token, a shared payment token the user approves in their Stripe Link wallet. Paying by the order's payment link needs no call.",
   },
 };
 

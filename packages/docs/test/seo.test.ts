@@ -24,7 +24,7 @@ import { OPERATIONS } from "../lib/openapi/build.ts";
 import { MODEL_READS } from "../lib/markdown/pages.ts";
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
-import { MCP_CONTENT } from "../lib/prose/mcp-content.ts";
+import { MCP_TEXT_RULES, RULE_DOCS } from "../lib/prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../lib/prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../lib/prose/pay-ways.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
@@ -206,18 +206,15 @@ describe("Markdown pages", () => {
     includesAll(markdown, [`\`${MCP_SERVER_URL}\``, `\`${MCP_REGISTRY.name}\``], "remote server");
   });
 
-  it("/mcp.md, /cli.md: the tool and command lists, content blocks, flags and the raw body", () => {
+  it("/mcp.md, /cli.md: the tool and command lists, the rules that end a result, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
     includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
-    // The tools whose content is more than the compact text, by the block they add.
-    for (const [block, phrase] of [
-      ["presentation_hint", "the presentation hint"],
-      ["wechat_code", "WeChat Pay code first"],
-    ] as const) {
-      const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
-      assert.ok(tools.length > 0, block);
-      const line = mcp.split("\n").find((l) => l.includes(phrase)) ?? "";
-      includesAll(line, tools.map((tool) => `\`${tool}\``), block);
+    // The rules that end a result's text, each on the line of the tools that carry it.
+    for (const rule of Object.keys(RULE_DOCS) as Array<keyof typeof RULE_DOCS>) {
+      const tools = MCP_TOOLS.filter((tool) => MCP_TEXT_RULES[tool.name].includes(rule)).map((tool) => tool.name);
+      assert.ok(tools.length > 0, rule);
+      const line = mcp.split("\n").find((l) => l.startsWith("- ") && l.includes(` end with ${RULE_DOCS[rule].name}`)) ?? "";
+      includesAll(line, tools.map((tool) => `\`${tool}\``), rule);
     }
     const cli = pageMarkdown("/cli");
     includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");

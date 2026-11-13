@@ -13,7 +13,7 @@ description: Fees and terms, testing an integration, your account, getting help,
 ## Testing your integration [#testing]
 
 - Search, hotel details and live offers are free reads.
-- Creating an order charges nothing. An unpaid order expires at its `payment.expiresAt` and needs no cancelling.
+- Creating an order charges nothing. An unpaid order expires at its `payment.expiresAt` and needs no cancelling; to end it sooner, [close it](/payments#close).
 - There is no test environment. Any payment is real, and so is any cancellation penalty.
 - Each test order needs its own offer: an offer is ordered once.
 
@@ -24,11 +24,11 @@ Create one at [fortrip.ai](https://fortrip.ai). Orders belong to the account tha
 ## Help and support [#support]
 
 - **Paid, and still confirming.** The hotel is confirming the booking. Some hotels confirm at once and others take a while (the offer's `confirmation`). Ask your agent to check the order.
-- **Failed.** No stay was booked. A card hold is released, or the payment refunded in full.
+- **Failed.** No stay was booked. A card hold is released, or the payment refunded in full. The order's `failure.reason` says why.
 - **Your bookings.** See them on [fortrip.ai](https://fortrip.ai), signed in to the account that made them (an order's `manageUrl` links there).
 - **Anything else.** Email <Fact path="SUPPORT_EMAIL" /> with the booking number, which starts `FT-` (the order's `reference`), or, for an error, its `requestId`.
 - **A security issue.** Email <Fact path="SUPPORT_EMAIL" />.
 
 ## Can my agent pay without the user? [#agent-pay]
 
-No. The user confirms the total and the terms first. Then they pay themselves, on the payment link or with Alipay or WeChat Pay. A Link token, a shared payment token from the user's Stripe Link wallet, needs the user's approval in Link, and it pays one order only.
+No. The user confirms the total and the terms first. Then they pay themselves on the page the payment link opens, by card or, on a USD order, by Alipay or WeChat Pay. An agent can pay only with a Link token, a shared payment token from the user's Stripe Link wallet: it needs the user's approval in Link, and it pays one order only.

@@ -30,13 +30,13 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   offersPerHotelDefault: (l) => [
     "Offers per hotel",
     `1–${l.offersPerHotelMax}, default ${l.offersPerHotelDefault}`,
-    "`limitPerHotel`: a spread of choices (the cheapest, the cheapest free to cancel, the cheapest with breakfast, other rooms), listed cheapest first.",
+    "`limitPerHotel`: a spread of choices (the cheapest, the cheapest free to cancel, the cheapest with breakfast, other rooms), listed cheapest first. A hotel gets fewer when the call's hotels share its offers (next row).",
   ],
   offersPerHotelMax: null,
   offersPerCallDefault: (l) => [
     "Offers per call",
     `${l.offersPerCallDefault}, up to ${l.offersPerCallMax}`,
-    `Across the hotels of one offers call: ${l.offersPerCallDefault} when \`limitPerHotel\` is left out, up to ${l.offersPerCallMax} when it is given. When the hotels would have more, the offers are split evenly among those that have any.`,
+    `Across the hotels of one offers call: ${l.offersPerCallDefault} when \`limitPerHotel\` is left out, up to ${l.offersPerCallMax} when it is given. When the hotels would have more, the offers are split evenly among those that have any; each hotel's \`omitted.byCallLimit\` counts what a call for that hotel alone would add. See [the offers budget](#offers-budget).`,
   ],
   offersPerCallMax: null,
   pageSizeDefault: (l) => [
@@ -101,17 +101,17 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   tokenPaymentMaxUsd: (l) => [
     "Token payment",
     `up to $${n(l.tokenPaymentMaxUsd)}`,
-    "A USD order's total payable with a shared payment token (Link's cap on a spend request); a larger order's `payment.methods`, or a CNY order's, has no `stripe_shared_payment_token` entry.",
+    "A USD order's total payable with a shared payment token (Link's cap on a spend request); on a larger order, or a CNY order, `payment.token` is `null`.",
   ],
   payMinMinutesLeft: (l) => [
-    "Time left to offer a Link token or Alipay or WeChat Pay",
+    "Time left to offer a Link token",
     `${l.payMinMinutesLeft} minutes`,
-    "Once less is left before the order's `payment.expiresAt`, `payment.methods` offers no token and no Alipay or WeChat Pay payment can be opened.",
+    "Once less is left before the order's `payment.expiresAt`, `payment.token` is `null`: the user pays by the link.",
   ],
   payCutoffMinutes: (l) => [
     "Time left to pay",
     `${l.payCutoffMinutes} minutes`,
-    "Once less is left before the order's `payment.expiresAt`, `pay_order` answers `order_not_payable`, by Link token or by Alipay or WeChat Pay.",
+    "Once less is left before the order's `payment.expiresAt`, `pay_order` answers `order_not_payable`.",
   ],
   tokensPerOrder: (l) => [
     "Tokens per order",
@@ -139,13 +139,13 @@ export const OPERATION_NAMES: Record<ToolName, string> = {
   pay_order: "order payments",
 };
 
-/** The scopes the contract names (its type also admits any other string). */
+/** The rate limits the contract names (its type also admits any other string). */
 type Scope = RateLimitName extends infer S ? (S extends string ? (string extends S ? never : S) : never) : never;
 
 /** What the contract doesn't say about a rate limit: the tools whose calls
  *  count against it, and whether they are refused (in production) while the
- *  limiter is down. Keyed by scope, so a scope the contract gains fails the
- *  typecheck until it is described. */
+ *  limiter is down. Keyed by the limit's name, so one the contract gains
+ *  fails the typecheck until it is described. */
 const SCOPES: Record<Scope, { operations: ToolName[]; failClosed: boolean }> = {
   search: { operations: ["search_hotels"], failClosed: false },
   offers: { operations: ["get_hotel_offers"], failClosed: false },

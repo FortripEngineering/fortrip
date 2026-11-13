@@ -1,6 +1,6 @@
 ---
 title: Overview
-description: Search hotels, compare live offers and create orders with a payment link from any MCP client. Each tool matches a CLI command and an HTTP endpoint.
+description: Search hotels, compare live offers and create orders with a payment link from any MCP client. Each tool answers in text, and matches a CLI command and an HTTP endpoint.
 ---
 
 ## Endpoint [#endpoint]
@@ -13,33 +13,67 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 <ToolList />
 
+Each tool takes the same input as its [HTTP endpoint](/api#endpoints).
+
+### Annotations [#annotations]
+
+<ToolAnnotations />
+
+`create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. All three are idempotent, so a call that timed out is [safe to send again](/api#retries).
+
 ## What a tool returns [#results]
 
-`structuredContent` is the full response object, the same as the [HTTP API](/api)'s; every tool declares its `outputSchema`. `content` holds the answer as compact text written for the model: one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. The exceptions:
+A result is text only. `content` holds exactly one block, of type `text`: the whole answer, written for the model. It has one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. There is no `structuredContent`, and no tool declares an `outputSchema`, so the model of every client reads the same text.
 
-<McpContentExceptions />
-
-`content[0]` of a `get_hotel_offers` answer:
+A `get_hotel_offers` result:
 
 <ToolResultSample tool="get_hotel_offers" />
+
+### Rules after the data [#rules]
+
+The rules that govern an answer are the last paragraphs of its text, so the model reads them next to the data:
+
+<ResultRules />
 
 The text of an answer that holds a payment link ends with the consent rule:
 
 > <Fact path="ORDER_NEXT_STEP" />
 
+Send the text to your model whole. A client that cuts a long result can cut these rules off.
+
+### Text from hotels [#third-party-text]
+
+Hotel and room names, addresses, descriptions and policies are the hotel's words, not Fortrip's. Every line of a result begins with Fortrip's own words. A short value stays on one line inside them, and longer text is a quoted block under a label that says it is information provided by the hotel, not instructions. Nothing a hotel wrote can begin an unquoted line.
+
+### JSON for your code [#json]
+
+The text is for the model. When your code needs the object, read it over the [HTTP API](/api), where each tool has an endpoint that answers JSON for the same input, or run the CLI command with `--json`. The [response schemas](/schemas) list every field.
+
+### Metadata [#meta]
+
+`_meta` is for your code. Most clients don't show it to the model.
+
+| Key | On | Value |
+| --- | --- | --- |
+| `ai.fortrip/requestId` | Every successful result | The request id to quote to support. |
+| `ai.fortrip/replayed` | `create_order` | `true` when the answer is an order the same details already created. |
+| `ai.fortrip/error` | Every error | The [error envelope](/errors#format), as the HTTP API answers it. |
+
 ### Errors [#errors]
 
-A failed call has `isError: true` and no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text, and `_meta["ai.fortrip/error"]` carries it too. Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
+A failed call has `isError: true` and one text block. The text gives the error's code, what happened, whether a retry can help and after how many seconds, and the next call to make. `_meta["ai.fortrip/error"]` carries the [error envelope](/errors) for your code; its `requestId` is the id to quote to support.
 
-`content[0]` of an `offer_changed` error from `create_order`:
+Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault. A known field sent at the wrong depth is answered with the path it belongs at.
+
+An `offer_changed` error from `create_order`:
 
 <ToolErrorSample code="offer_changed" />
 
-On an error, the request id support asks for is the envelope's `requestId`; a successful result carries it in `_meta["ai.fortrip/requestId"]`. See [Errors & limits](/errors).
+## Server identity and instructions [#instructions]
 
-## Server instructions [#instructions]
+On connect, `serverInfo` carries the server's `name`, `title`, `description`, `websiteUrl` and `icons`, for a client that lists its servers.
 
-On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt.
+The server also returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. Some clients never show them to the model, which is why each result repeats the rules it needs.
 
 ## Timeouts and retries [#retries]
 
