@@ -11,8 +11,7 @@ token = os.environ["FORTRIP_TOKEN"]
 
 body = {
   "contact": {
-    "firstName": "Ada",
-    "lastName": "Lovelace",
+    "name": "Ada Lovelace",
     "email": "ada@example.com",
     "phone": "+14155550132"
   },

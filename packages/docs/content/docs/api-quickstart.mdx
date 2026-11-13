@@ -73,14 +73,6 @@ The answer, abridged:
 
 <ResponseExample name="pay-token" />
 
-### Alipay or WeChat Pay [#pay-wallet]
-
-<Example name="pay-wallet" />
-
-The answer, abridged:
-
-<ResponseExample name="pay-wallet" />
-
 ## List orders [#list]
 
 <Example name="list-orders" />
@@ -91,7 +83,7 @@ The answer, abridged:
 
 ## Cancel [#cancel]
 
-Cancel a paid order only while its `cancel.available` is `true`, with `maximumPenalty` the order's `cancel.penalty` that the user agreed to, exactly as returned. An unpaid order (`cancel.reason` `unpaid`) is closed instead, without `maximumPenalty`, once the user says they no longer want it.
+Cancel a paid order only while its `cancel.available` is `true`, with `maximumPenalty` the order's `cancel.penalty` that the user agreed to, exactly as returned. An unpaid order (`cancel.reason` `unpaid`) is closed instead, with `close: true` in place of `maximumPenalty`, once the user says they no longer want it.
 
 <Example name="cancel" />
 

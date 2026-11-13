@@ -13,7 +13,6 @@ import {
   containsCardNumber,
   createSearchHotelsInput,
   HTTP_ROUTES,
-  PAY_INPUT_WAYS,
   PAY_WAYS,
   PUBLIC_ORIGINS,
   routePath,
@@ -51,14 +50,13 @@ const EXAMPLES: Example[] = [
   { name: "offers", route: HTTP_ROUTES.get_hotel_offers, tool: "get_hotel_offers", body: true },
   { name: "order", route: HTTP_ROUTES.book_hotel, tool: "book_hotel", body: true },
   { name: "pay-token", route: HTTP_ROUTES.pay_order, tool: "pay_order", fromUrl: { orderId: ORDER }, body: true },
-  { name: "pay-wallet", route: HTTP_ROUTES.pay_order, tool: "pay_order", fromUrl: { orderId: ORDER }, body: true },
   { name: "get-order", route: HTTP_ROUTES.get_order, tool: "get_order", fromUrl: { orderId: ORDER } },
   { name: "list-orders", route: HTTP_ROUTES.list_orders, tool: "list_orders", fromUrl: { limit: 10 } },
   { name: "cancel", route: HTTP_ROUTES.cancel_order, tool: "cancel_order", fromUrl: { orderId: ORDER }, body: true },
 ];
 
 /** The examples that order or pay, which can take a couple of minutes. */
-const SLOW = new Set(["order", "pay-token", "pay-wallet"]);
+const SLOW = new Set(["order", "pay-token"]);
 
 const LANGS = [
   { dir: "curl", ext: "sh" },
@@ -153,17 +151,9 @@ describe("examples", () => {
     assert.deepEqual([...used].sort(), [HOTEL, OFFER, ORDER].sort());
   });
 
-  it("the pay examples cover every way that has a pay request, and payment_link has none", () => {
-    const sent = (name: string) =>
-      Object.keys(bodyOf(name)).flatMap((key) => (key in PAY_INPUT_WAYS ? [PAY_INPUT_WAYS[key as keyof typeof PAY_INPUT_WAYS]] : []));
-    const covered = new Set([...sent("pay-token"), ...sent("pay-wallet")]);
-    assert.deepEqual(
-      [...covered].sort(),
-      PAY_WAYS.filter((way) => way !== "payment_link").sort(),
-    );
-    // Exactly one way per request.
-    assert.equal(sent("pay-token").length, 1);
-    assert.equal(sent("pay-wallet").length, 1);
+  it("the pay example covers the one way that has a pay request, and payment_link has none", () => {
+    assert.deepEqual(PAY_WAYS.filter((way) => way !== "payment_link"), ["stripe_shared_payment_token"]);
+    assert.deepEqual(Object.keys(bodyOf("pay-token")).sort(), ["sharedPaymentToken", "total"]);
     // payment_link: the order's link, read from get_order.
     for (const lang of LANGS) assert.match(read(file(lang, "get-order")), /payment\.url|get\("url"\)/);
   });

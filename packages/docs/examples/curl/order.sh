@@ -11,8 +11,7 @@ curl -sS --fail-with-body --max-time 180 -X POST "https://api.fortrip.ai/v1/orde
   --data @- <<'JSON'
 {
   "contact": {
-    "firstName": "Ada",
-    "lastName": "Lovelace",
+    "name": "Ada Lovelace",
     "email": "ada@example.com",
     "phone": "+14155550132"
   },

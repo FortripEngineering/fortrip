@@ -13,7 +13,6 @@ import {
   LIMITS,
   MCP_SERVER_URL,
   ORDER_STATUSES,
-  PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
   TOOLS,
@@ -196,7 +195,7 @@ describe("Markdown pages", () => {
   it("/api.md: every endpoint, the pay inputs and the pre-release policy", () => {
     const markdown = pageMarkdown("/api");
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
-    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS), "or")}, for the way it pays.`), "pay inputs");
+    assert.ok(markdown.includes("takes `sharedPaymentToken`, the token the user approved for the order, and `total`"), "pay inputs");
     assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
     assert.ok(markdown.includes("Pre-release: breaking changes ship as a new major version"));
     assert.ok(pageMarkdown("/changelog").includes(PRE_RELEASE_POLICY.split(". ")[0]!));

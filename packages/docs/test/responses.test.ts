@@ -61,7 +61,7 @@ describe("example responses", () => {
       assert.equal(answer.orderId, EXAMPLE_IDS.orderId);
       assert.deepEqual(answer.price.total, created.price.total);
     }
-    for (const name of ["pay-token", "pay-wallet"]) assert.deepEqual(body(name).total, created.price.total);
+    assert.deepEqual(body("pay-token").total, created.price.total);
     assert.equal(created.status, "awaiting_payment");
     assert.ok(created.payment.url?.includes(EXAMPLE_IDS.orderId));
     // The changed offer is a new offer of the same hotel.

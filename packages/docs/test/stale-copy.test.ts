@@ -14,20 +14,20 @@ import { pageHtml, pageText } from "./built-page.ts";
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
 describe("stale statements stay fixed", () => {
-  it("/api: the pay inputs, and no additive-only promise; /payments: the Alipay or WeChat Pay input", () => {
+  it("/api: the pay inputs, and no additive-only promise; /payments: the order's payment methods", () => {
     const text = pageText("/api");
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
-    // §8.1 item 2: exactly one of the three inputs.
-    assert.match(text, /exactly one of sharedPaymentToken, payment or method, for the way it pays/);
+    // The pay input is the token and the total: no other way is sent.
+    assert.match(text, /takes sharedPaymentToken, the token the user approved for the order, and total/);
+    assert.doesNotMatch(text, /payment or method/);
     // §8.1 item 3, the owner's ruling, which the changelog states in full.
     assert.match(text, /major version/);
     assert.match(text, /changelog/);
     assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
     const payments = pageText("/payments");
-    assert.ok(payments.includes("method"));
     assert.ok(payments.includes("payment.methods"));
-    assert.ok(payments.includes('"stripe_alipay_wechat_pay"'));
+    assert.doesNotMatch(payments, /with method/);
   });
 
   it("/mcp: content[0] is not always text", () => {
@@ -69,10 +69,10 @@ describe("stale statements stay fixed", () => {
     assert.match(pageText("/mcp/pay-order"), /image/);
   });
 
-  it("the intro and quickstart name Alipay or WeChat Pay", () => {
-    for (const route of ["/", "/quickstart"]) {
-      assert.match(pageText(route), /Alipay|WeChat Pay/, route);
-    }
+  // Agents no longer open an Alipay or WeChat Pay payment: the user pays
+  // that way on the payment link's page.
+  it("the payments page names Alipay or WeChat Pay", () => {
+    assert.match(pageText("/payments"), /Alipay or WeChat Pay/);
   });
 
   it("the payment errors cover Alipay and WeChat Pay (checked against the pay handler)", () => {

@@ -36,7 +36,6 @@ import {
   type ToolName,
   type ToolSpec,
 } from "../src/tools.ts";
-import { FILTERABLE_AMENITIES } from "../src/vocabulary.ts";
 
 // The production bundle never runs zod's `config(en())`: messages asserted
 // here must be our own.
@@ -668,8 +667,7 @@ describe("COMMANDS", () => {
     assert.deepEqual(fields("hotels book"), {
       offer: "items.offerId",
       guest: "items.hotel.rooms.guests",
-      "first-name": "contact.firstName",
-      "last-name": "contact.lastName",
+      name: "contact.name",
       email: "contact.email",
       phone: "contact.phone",
       "special-requests": "items.hotel.specialRequests",
@@ -680,8 +678,8 @@ describe("COMMANDS", () => {
       limit: "limit",
       locale: "locale",
     });
-    assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
-    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", method: "method", total: "total" });
+    assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty", close: "close" });
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", total: "total" });
     for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -784,10 +782,6 @@ describe("COMMANDS", () => {
     );
   });
 
-  // `orders pay` sends its token as `--token`: `payment` is UCP's form of
-  // the same token, for agents that speak UCP.
-  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
-
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {
     for (const spec of COMMANDS) {
       if (!spec.tool || !tool(spec.tool).input) continue;
@@ -795,7 +789,6 @@ describe("COMMANDS", () => {
       const reachable = new Set([
         ...spec.flags.map((flag) => flag.field.split(".")[0]),
         ...(spec.positionals ?? []).map((p) => p.field),
-        ...(OTHER_FORMS[typed(spec)] ?? []),
       ]);
       assert.deepEqual(
         Object.keys(json.properties ?? {}).filter((key) => !reachable.has(key)),
@@ -849,7 +842,7 @@ describe("COMMANDS", () => {
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=rooms"]);
+    assert.deepEqual(valued, ["hotels get --rooms=roomTypes"]);
   });
 
   it("every flag description is non-empty", () => {
@@ -873,7 +866,7 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("a flag on an enum field lists the enum's values as its placeholder; --amenity the filterable ones", () => {
+  it("a flag on an enum field lists the enum's values as its placeholder", () => {
     const listed: string[] = [];
     for (const spec of COMMANDS) {
       if (!spec.flags.length) continue;
@@ -886,9 +879,7 @@ describe("COMMANDS", () => {
         if (!values) continue;
         const label = `${typed(spec)} --${flag.flag}`;
         listed.push(label);
-        const expected =
-          label === "hotels search --amenity" ? [...FILTERABLE_AMENITIES] : values;
-        assert.equal(flag.placeholder, expected.join("|"), label);
+        assert.equal(flag.placeholder, values.join("|"), label);
       }
     }
     assert.deepEqual(listed, [
@@ -902,7 +893,6 @@ describe("COMMANDS", () => {
       "hotels offers --currency",
       "orders get --locale",
       "orders list --locale",
-      "orders pay --method",
     ]);
   });
 
@@ -987,9 +977,9 @@ describe("CLI-only options", () => {
     );
   });
 
-  // `orders cancel` sends one field, the penalty the user agreed to, and only
-  // from its flag (C7); `--close` closes an unpaid order and is never sent.
-  it("--body is taken by the commands that send a body, but cancel, --close by cancel, --no-browser by login", () => {
+  // `orders cancel` sends its mode only from a flag (C7): the penalty the
+  // user agreed to, or `--close`.
+  it("--body is taken by the commands that send a body, but cancel, --no-browser by login", () => {
     const options = Object.fromEntries(
       COMMANDS.map((spec) => [typed(spec), all(spec.options ?? [])]),
     );
@@ -1000,7 +990,7 @@ describe("CLI-only options", () => {
       "hotels book": ["body"],
       "orders get": [],
       "orders list": [],
-      "orders cancel": ["close"],
+      "orders cancel": [],
       "orders pay": [],
       login: ["no-browser"],
       logout: [],
@@ -1008,7 +998,6 @@ describe("CLI-only options", () => {
       mcp: [],
     });
     assert.equal(command("login").options?.[0]?.type, "boolean");
-    assert.equal(command("orders cancel").options?.[0]?.type, "boolean");
     assert.equal(command("hotels search").options?.[0]?.type, "string");
   });
 

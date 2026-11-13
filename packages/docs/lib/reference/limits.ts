@@ -33,6 +33,13 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     "`limitPerHotel`: a spread of choices (the cheapest, the cheapest free to cancel, the cheapest with breakfast, other rooms), listed cheapest first.",
   ],
   offersPerHotelMax: null,
+  offersPerHotelFloor: null,
+  offersPerCallDefault: (l) => [
+    "Offers per call",
+    `${l.offersPerCallDefault}, up to ${l.offersPerCallMax}`,
+    `Across the hotels of one offers call: ${l.offersPerCallDefault} when \`limitPerHotel\` is left out, up to ${l.offersPerCallMax} when it is given. When the hotels would have more, the offers are split evenly among those that have any, never under ${l.offersPerHotelFloor} each.`,
+  ],
+  offersPerCallMax: null,
   pageSizeDefault: (l) => [
     "Page size",
     `1–${l.pageSizeMax}, default ${l.pageSizeDefault}`,
@@ -56,15 +63,10 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     `${l.guestName} characters`,
     "Each first or last name, in Latin letters.",
   ],
-  contactFirstName: (l) => [
-    "Contact first name",
-    `${l.contactFirstName} characters`,
-    "`contact.firstName` of an order.",
-  ],
-  contactLastName: (l) => [
-    "Contact last name",
-    `${l.contactLastName} characters`,
-    "`contact.lastName` of an order.",
+  contactName: (l) => [
+    "Contact name",
+    `${l.contactName} characters`,
+    "`contact.name` of an order.",
   ],
   contactPhoneMin: (l) => [
     "Contact phone",

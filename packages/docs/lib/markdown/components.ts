@@ -13,7 +13,6 @@ import {
   LIMITS,
   MCP_SERVER_URL,
   ORDER_STATUSES,
-  PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
   PUBLIC_ORIGINS,
@@ -612,8 +611,6 @@ function errorExample(errorCode: string) {
 
 /** Components that stand inside a sentence, by name. */
 export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
-  /** The fields of the pay input, one of which a call sends. */
-  PayInputs: () => codeList(Object.keys(PAY_INPUT_WAYS), "or"),
   /** The amenity codes a search can filter by. */
   FilterableAmenities: () => joined(FILTERABLE_AMENITIES.map((c) => [code(c)]), ", "),
   /** The currencies a request can ask for, besides USD. */

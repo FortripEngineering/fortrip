@@ -49,7 +49,7 @@ export interface FlagSpec {
   /** Given once per item; its field is a list. */
   multiple?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
-   *  `--rooms` sends `include: "rooms"`. */
+   *  `--rooms` sends `include: "roomTypes"`. */
   value?: string;
   /**
    * Fields the flag also sends, each with a constant: the variant of a union
@@ -353,7 +353,7 @@ const hotelFlags = flagsOf(getHotelInput, [
     flag: "rooms",
     field: "include",
     type: "boolean",
-    value: "rooms",
+    value: "roomTypes",
     description: "Add the hotel's rooms.",
   },
   localeFlag,
@@ -399,8 +399,7 @@ const bookFlags = flagsOf(createOrderInput, [
     description:
       "A guest, as `room:first:last`, e.g. `1:John:Smith` for room 1. Repeat for each guest: at least one per room of the offer, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
   },
-  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>", required: "unless-body" },
-  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>", required: "unless-body" },
+  { flag: "name", field: "contact.name", type: "string", placeholder: "<name>", required: "unless-body" },
   { flag: "email", field: "contact.email", type: "string", placeholder: "<email>", required: "unless-body" },
   { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>", required: "unless-body" },
   {
@@ -428,6 +427,13 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     description:
       "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it or --close, the command changes nothing: it shows the penalty and the refund, or that the order can be closed.",
   },
+  {
+    flag: "close",
+    field: "close",
+    type: "boolean",
+    description:
+      "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
+  },
 ]);
 
 const payFlags = flagsOf(payOrderInput, [
@@ -436,16 +442,9 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
+    required: "always",
     description:
-      "Required unless --method. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --method.",
-  },
-  {
-    flag: "method",
-    field: "method",
-    type: "string",
-    placeholder: "stripe_alipay_wechat_pay",
-    description:
-      "Pay by a method in the order's payment.methods instead of a token: stripe_alipay_wechat_pay is Alipay or WeChat Pay, and prints the WeChat Pay code and both links.",
+      "The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link.",
   },
   {
     flag: "total",
@@ -528,19 +527,11 @@ export const COMMANDS: readonly CommandSpec[] = [
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],
-    options: [
-      {
-        flag: "close",
-        type: "boolean",
-        description:
-          "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
-      },
-    ],
   },
   {
     group: "orders",
     name: "pay",
-    summary: "Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link",
+    summary: "Pay an order with a Link token (US and Canada), instead of its payment link",
     tool: "pay_order",
     flags: payFlags,
     positionals: [positional(payOrderInput, "orderId")],

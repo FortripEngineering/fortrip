@@ -87,13 +87,13 @@ describe("OpenAPI document", () => {
     }
   });
 
-  it("takes pay_order's method in its body", () => {
+  it("takes pay_order's token and total in its body", () => {
     const body = doc.paths?.["/v1/orders/{orderId}/pay"]?.post?.requestBody;
     assert.ok(body && !("$ref" in body));
     const schema = body.content?.["application/json"]?.schema as {
       properties: Record<string, { enum?: string[] }>;
     };
-    assert.deepEqual(schema.properties.method?.enum, ["stripe_alipay_wechat_pay"]);
+    assert.deepEqual(Object.keys(schema.properties), ["sharedPaymentToken", "total"]);
     // The path field is a parameter, not a body field.
     assert.equal("orderId" in schema.properties, false);
   });
@@ -335,7 +335,7 @@ describe("built OpenAPI", () => {
     }
     // The body sent is the example's.
     assert.ok(pageText("/api/reference/search_hotels").includes('"countryCode": "JP"'));
-    assert.ok(pageText("/api/reference/pay_order").includes("stripe_alipay_wechat_pay") || pageHtml("/api/reference/pay_order").includes("Alipay or WeChat Pay"));
+    assert.ok(pageText("/api/reference/pay_order").includes("spt_ExampleTokenFromTheUsersLinkWallet"));
   });
 
   it("quotes the tool description under its label, and sends no reader to the MCP page for it", () => {

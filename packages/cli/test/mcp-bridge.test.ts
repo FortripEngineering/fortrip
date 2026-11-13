@@ -688,8 +688,8 @@ describe("fortrip mcp bridge, signed out", () => {
       TOOLS.map((spec) => spec.name),
     );
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
-    // The MCP variants: get_hotel_offers' own default, book_hotel's nextStep.
-    assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, 15);
+    // The MCP variant: book_hotel's nextStep. The service resolves limitPerHotel.
+    assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, undefined);
     assert.ok(byName.get("book_hotel")?.outputSchema.properties.nextStep);
     assert.deepEqual(api.mcpRequests, []);
   });

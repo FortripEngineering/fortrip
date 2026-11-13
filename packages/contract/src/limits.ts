@@ -7,8 +7,19 @@ export const LIMITS = {
   nightsFortrip: 30,
   nightsSupplier: 15,
   offersHotels: 15,
+  /** Offers per hotel when the request gives no `limitPerHotel`, while the
+   *  call's hotels fit `offersPerCallDefault`. */
   offersPerHotelDefault: 15,
+  /** The most `limitPerHotel` can ask for. */
   offersPerHotelMax: 30,
+  /** Offers per hotel never go under this when a call's budget is split
+   *  among its hotels. */
+  offersPerHotelFloor: 3,
+  /** Offers a call answers in all, across its hotels, when the request gives
+   *  no `limitPerHotel`. */
+  offersPerCallDefault: 45,
+  /** Offers a call answers in all, across its hotels, at most. */
+  offersPerCallMax: 100,
   pageSizeDefault: 20,
   pageSizeMax: 50,
   textLength: 128,
@@ -16,8 +27,9 @@ export const LIMITS = {
   radiusMetersDefault: 8_000,
   amenityFilters: 9,
   guestName: 60,
-  contactFirstName: 59,
-  contactLastName: 59,
+  /** The contact's one name: two names of 59 and the space between, as the
+   *  order stores it. */
+  contactName: 119,
   contactPhoneMin: 3,
   contactPhoneMax: 40,
   specialRequests: 500,

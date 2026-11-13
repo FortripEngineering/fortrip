@@ -76,7 +76,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 
    ```bash
    fortrip hotels book --offer <offerId> --guest 1:John:Smith --guest 2:Mary:Smith \
-     --first-name John --last-name Smith --email john@example.com \
+     --name "John Smith" --email john@example.com \
      --phone "+8613800000000"
    ```
 
@@ -154,7 +154,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 - Call `fortrip hotels book` only for the offer the user picked, with at least one guest per room, named as the user gave them; never invent guests. Room 1 is the offer's first room, and a room takes no more guests than it sleeps.
 - Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–60 characters each, as `--guest 1:John:Smith` (room 1, first name, last name).
-- The contact's first and last name (up to 59 characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
+- The contact's name (up to 119 characters), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
 - `fortrip hotels book` can take about two minutes: allow the command at least 3 minutes. If it times out, run it again with identical flags: it returns the same order.
 - `fortrip hotels book` takes only these fields: a `--body` with any other field (such as `nationality`) is rejected with exit 2.
 

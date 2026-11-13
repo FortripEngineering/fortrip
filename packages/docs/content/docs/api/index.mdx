@@ -37,7 +37,7 @@ A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROU
 
 The [API reference](/api/reference/search_hotels) has each endpoint's parameters, body and answers, generated from the contract, as is the [OpenAPI 3.1 document](/openapi.json).
 
-A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUTES.get_hotel" />?include=rooms&amp;locale=en</code> takes what `get_hotel` takes as `{ hotelId, include: "rooms", locale: "en" }`. Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
+A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUTES.get_hotel" />?include=roomTypes&amp;locale=en</code> takes what `get_hotel` takes as `{ hotelId, include: "roomTypes", locale: "en" }`. Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
 
 ## Conventions [#conventions]
 
@@ -86,7 +86,7 @@ There are no webhooks. After you give the user the payment link, read the order 
 
 - <code><Fact path="ROUTES.book_hotel" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
 - It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; and `409 offer_already_ordered` when the offer was ordered with other details. An offer is ordered once, even when its order failed or expired: another order of the stay takes a new offer.
-- <code><Fact path="ROUTES.pay_order" /></code> takes `total`, the order's `price.total` exactly as returned, and exactly one of <PayInputs />, for the way it pays.
+- <code><Fact path="ROUTES.pay_order" /></code> takes `sharedPaymentToken`, the token the user approved for the order, and `total`, the order's `price.total` exactly as returned.
 - Orders can't be changed through the API.
 
 The whole flow, the ways to pay, the order statuses and cancelling are in [Orders and payment](/payments).

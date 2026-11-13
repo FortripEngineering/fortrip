@@ -69,8 +69,8 @@ A total other than the order's answers [`payment_total_changed`](/errors#code-pa
 
 ## The WeChat Pay code [#wechat-code]
 
-- A code lasts <Fact path="LIMITS.wechatCodeMinutes" /> minutes from when it is made, and goes dead earlier if the user opens the Alipay link. Either way the entry's `wechatPay.qrData` and `qrImageUrl` are then `null`: the user opens the WeChat Pay link again for a new code, or you pay again with `method` `"stripe_alipay_wechat_pay"` for one.
-- Paying again while a code is live answers the same code. The `stripe_alipay_wechat_pay` entry stays in `payment.methods` while its Alipay or WeChat Pay payment is open, however little time is left to pay; a new one can't be opened with less than <Fact path="LIMITS.payMinMinutesLeft" /> minutes left.
+- A code lasts <Fact path="LIMITS.wechatCodeMinutes" /> minutes from when it is made, and goes dead earlier if the user opens the Alipay link. Either way the entry's `wechatPay.qrData` and `qrImageUrl` are then `null`: the user opens the WeChat Pay link again for a new code.
+- The `stripe_alipay_wechat_pay` entry stays in `payment.methods` while its Alipay or WeChat Pay payment is open, however little time is left to pay; a new one can't be opened with less than <Fact path="LIMITS.payMinMinutesLeft" /> minutes left.
 - WeChat can't scan a code shown on the same phone it runs on. You can't tell which device the user is on, so offer both ways: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat Pay link on another screen. On a phone, the Alipay link opens the Alipay app.
 
 ## After payment [#after-payment]
@@ -92,4 +92,4 @@ Orders can't be changed through the API. The order's `cancel` says whether it ca
 
 The order is then `cancelling` while the hotel cancels, and `cancelled` once it has; the refund goes back to the payment the order was paid with. A booking that fails is released or refunded in full without a cancellation. For a change, or a cancellation these can't make, the user emails <Fact path="SUPPORT_EMAIL" /> with the order's `reference`.
 
-An unpaid order made through the API can be closed instead (`reason` `unpaid`, `penalty` and `refund` `null`): close it only once the user says they no longer want it, with the same call and no `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `expired`. While a payment of it is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly. An order made on the Fortrip website isn't closed through the API: it expires at `payment.expiresAt`.
+An unpaid order made through the API can be closed instead (`reason` `unpaid`, `penalty` and `refund` `null`): close it only once the user says they no longer want it, with the same call and `close: true` in place of `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `expired`. While a payment of it is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly. An order made on the Fortrip website isn't closed through the API: it expires at `payment.expiresAt`.

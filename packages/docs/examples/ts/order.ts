@@ -9,8 +9,7 @@ if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip access token");
 
 const body = {
   "contact": {
-    "firstName": "Ada",
-    "lastName": "Lovelace",
+    "name": "Ada Lovelace",
     "email": "ada@example.com",
     "phone": "+14155550132"
   },

@@ -80,7 +80,7 @@ test("the flag check accepts a command's own flags and rejects the 2.0 ones", ()
         "npx fortrip hotels search --place-name Kyoto --country JP --check-in 2026-12-01 --currency CNY",
         "fortrip hotels offers --hotel htl_1 --room 2:6,9 --json",
         "fortrip login --no-browser",
-        "fortrip orders pay ord_1 --method stripe_alipay_wechat_pay --total 125.00",
+        "fortrip orders pay ord_1 --token spt_1 --total 125.00",
         "fortrip hotels --help",
       ].join("\n"),
     ),

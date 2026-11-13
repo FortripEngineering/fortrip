@@ -5,7 +5,6 @@ import cancelBody from "../../examples/bodies/cancel.json" with { type: "json" }
 import offersBody from "../../examples/bodies/offers.json" with { type: "json" };
 import orderBody from "../../examples/bodies/order.json" with { type: "json" };
 import payTokenBody from "../../examples/bodies/pay-token.json" with { type: "json" };
-import payWalletBody from "../../examples/bodies/pay-wallet.json" with { type: "json" };
 import searchBody from "../../examples/bodies/search.json" with { type: "json" };
 import { EXAMPLE_IDS, type OperationId } from "./responses.ts";
 
@@ -41,10 +40,7 @@ export const EXAMPLE_REQUESTS: Record<OperationId, ExampleRequest[]> = {
   get_order: [{ name: "get-order", title: "Get order", params: { orderId: EXAMPLE_IDS.orderId } }],
   list_orders: [{ name: "list-orders", title: "List orders", params: { limit: 10 } }],
   cancel_order: [{ name: "cancel", title: "Cancel order", params: { orderId: EXAMPLE_IDS.orderId }, body: cancelBody }],
-  pay_order: [
-    { name: "pay-token", title: "Link token", params: { orderId: EXAMPLE_IDS.orderId }, body: payTokenBody },
-    { name: "pay-wallet", title: "Alipay or WeChat Pay", params: { orderId: EXAMPLE_IDS.orderId }, body: payWalletBody },
-  ],
+  pay_order: [{ name: "pay-token", title: "Link token", params: { orderId: EXAMPLE_IDS.orderId }, body: payTokenBody }],
   me: [{ name: "me", title: "Account" }],
   auth_config: [{ name: "device-login", title: "OAuth sign-in settings" }],
 };

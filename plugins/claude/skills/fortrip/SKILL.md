@@ -109,7 +109,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 - Call `fortrip:book_hotel` only for the offer the user picked, with at least one guest per room, named as the user gave them; never invent guests. Room 1 is the offer's first room, and a room takes no more guests than it sleeps.
 - Guest names: Latin letters as on the passport (Müller → Mueller), first and last name 1–60 characters each.
-- The contact's first and last name (up to 59 characters each), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
+- The contact's name (up to 119 characters), email and phone (with its country code) are all required. Special requests must be in English and aren't guaranteed.
 - `fortrip:book_hotel` can take about two minutes. If it times out, call it again with the same details: it returns the same order.
 
 ## Before giving the payment link

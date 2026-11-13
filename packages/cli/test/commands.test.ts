@@ -76,7 +76,7 @@ const ORDER = `ord_${"d4".repeat(10)}`;
 const PLACE = "plc_1850147";
 
 const CONTACT = [
-  ...["--first-name", "John", "--last-name", "Smith"],
+  ...["--name", "John Smith"],
   ...["--email", "john@example.com", "--phone", "+8613800000000"],
 ];
 
@@ -173,7 +173,7 @@ const CASES: {
     name: "hotels get",
     argv: [HOTEL, "--rooms", "--locale", "zh"],
     method: "GET",
-    path: `/v1/hotels/${HOTEL}?include=rooms&locale=zh`,
+    path: `/v1/hotels/${HOTEL}?include=roomTypes&locale=zh`,
   },
   {
     name: "hotels offers",
@@ -227,8 +227,7 @@ const CASES: {
         },
       ],
       contact: {
-        firstName: "John",
-        lastName: "Smith",
+        name: "John Smith",
         email: "john@example.com",
         phone: "+8613800000000",
       },
@@ -276,13 +275,13 @@ const CASES: {
     body: { maximumPenalty: { amount: "0", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
-  // Closing an unpaid order sends the order alone: --close is never sent.
+  // Closing an unpaid order sends its own mode.
   {
     name: "orders cancel",
     argv: [ORDER, "--close"],
     method: "POST",
     path: `/v1/orders/${ORDER}/cancel`,
-    body: {},
+    body: { close: true },
     inPath: { orderId: ORDER },
   },
   {
@@ -291,14 +290,6 @@ const CASES: {
     method: "POST",
     path: `/v1/orders/${ORDER}/pay`,
     body: { sharedPaymentToken: "spt_1TestToken0123456789", total: { amount: "125.00", currency: "USD" } },
-    inPath: { orderId: ORDER },
-  },
-  {
-    name: "orders pay",
-    argv: [ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "125.00"],
-    method: "POST",
-    path: `/v1/orders/${ORDER}/pay`,
-    body: { method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } },
     inPath: { orderId: ORDER },
   },
 ];
@@ -343,7 +334,7 @@ describe("every command builds the request the contract accepts", () => {
   });
 
   it("paths come from the contract", () => {
-    assert.equal(parse("hotels get", [HOTEL, "--rooms"]).path, API.hotel(HOTEL, { rooms: true }));
+    assert.equal(parse("hotels get", [HOTEL, "--rooms"]).path, API.hotel(HOTEL, { roomTypes: true }));
     assert.equal(parse("orders get", [ORDER]).path, API.order(ORDER));
     assert.ok(parse("orders list", []).path.startsWith(API.orders));
     assert.equal(parse("orders cancel", [ORDER, "--max-penalty", "1"]).path, API.orderCancel(ORDER));

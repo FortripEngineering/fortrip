@@ -6,11 +6,10 @@ import me from "./fixtures/me.json" with { type: "json" };
 import order from "./fixtures/order-awaiting-payment.json" with { type: "json" };
 import cancelling from "./fixtures/order-cancelling.json" with { type: "json" };
 import paidByToken from "./fixtures/order-paid-by-token.json" with { type: "json" };
-import walletOpen from "./fixtures/order-wallet-open.json" with { type: "json" };
 import search from "./fixtures/search-hotels.json" with { type: "json" };
 
 /*
- * Example answers: one per operation, the pay answers of both requests, and
+ * Example answers: one per operation, the pay answer of its request, and
  * the errors the reference shows. They chain as the examples' requests do:
  * the search finds the hotel the offers are for, and the order is of the
  * first offer. `responses.test.ts` parses each with the contract's strict
@@ -40,9 +39,8 @@ export const RESPONSES = {
 
 export type OperationId = keyof typeof RESPONSES;
 
-/** `pay_order`'s answer to each pay example: a token pays the order, and
- *  `method` opens an Alipay or WeChat Pay payment. */
-export const PAY_RESPONSES = { "pay-token": paidByToken, "pay-wallet": walletOpen } as const;
+/** `pay_order`'s answer to each pay example: a token pays the order. */
+export const PAY_RESPONSES = { "pay-token": paidByToken } as const;
 
 /** Error envelopes, with the HTTP status each is answered with. */
 export const ERRORS = {
@@ -141,7 +139,6 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
   order: { answer: order, paths: ["orderId", "reference", "status", "price.total", "payment.url", "payment.expiresAt"] },
   "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
-  "pay-wallet": { answer: walletOpen, paths: ["orderId", "status", "payment.methods"] },
   "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },
   cancel: { answer: cancelling, paths: ["orderId", "status", "cancel"] },
 };

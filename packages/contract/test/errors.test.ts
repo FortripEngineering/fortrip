@@ -98,6 +98,9 @@ describe("LIMITS and friends", () => {
       offersHotels: 15,
       offersPerHotelDefault: 15,
       offersPerHotelMax: 30,
+      offersPerHotelFloor: 3,
+      offersPerCallDefault: 45,
+      offersPerCallMax: 100,
       pageSizeDefault: 20,
       pageSizeMax: 50,
       textLength: 128,
@@ -105,8 +108,7 @@ describe("LIMITS and friends", () => {
       radiusMetersDefault: 8000,
       amenityFilters: 9,
       guestName: 60,
-      contactFirstName: 59,
-      contactLastName: 59,
+      contactName: 119,
       contactPhoneMin: 3,
       contactPhoneMax: 40,
       specialRequests: 500,
@@ -142,10 +144,10 @@ describe("v1 paths", () => {
   it("builds a hotel's and an order's path with optional query", () => {
     assert.equal(API.hotel("htl_x"), "/v1/hotels/htl_x");
     assert.equal(
-      API.hotel("htl_x", { rooms: true, locale: "zh" }),
-      "/v1/hotels/htl_x?include=rooms&locale=zh",
+      API.hotel("htl_x", { roomTypes: true, locale: "zh" }),
+      "/v1/hotels/htl_x?include=roomTypes&locale=zh",
     );
-    assert.equal(API.hotel("htl_x", { rooms: true }), "/v1/hotels/htl_x?include=rooms");
+    assert.equal(API.hotel("htl_x", { roomTypes: true }), "/v1/hotels/htl_x?include=roomTypes");
     assert.equal(API.hotel("htl_x", { locale: "en" }), "/v1/hotels/htl_x?locale=en");
     assert.equal(API.order("ord_x"), "/v1/orders/ord_x");
     assert.equal(API.order("ord_x", { locale: "zh" }), "/v1/orders/ord_x?locale=zh");
@@ -158,7 +160,7 @@ describe("v1 paths", () => {
       ...Object.values(PUBLIC_ORIGINS),
       MCP_PATH,
       ...Object.values(API).filter((v) => typeof v === "string"),
-      API.hotel("htl_x", { rooms: true, locale: "zh" }),
+      API.hotel("htl_x", { roomTypes: true, locale: "zh" }),
       API.order("ord_x", { locale: "en" }),
       API.orderCancel("ord_x"),
     ];

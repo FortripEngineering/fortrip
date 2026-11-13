@@ -108,7 +108,7 @@ const SEARCH = ["hotels", "search", "--place-name", "Bangkok", "--country", "TH"
 const OFFERS = ["hotels", "offers", "--hotel", HOTEL, ...STAY, "--room", "2:6", "--room", "2:6"];
 const BOOK = [
   ...["hotels", "book", "--offer", OFFER, "--guest", "1:John:Smith"],
-  ...["--first-name", "John", "--last-name", "Smith", "--email", "john@example.com"],
+  ...["--name", "John Smith", "--email", "john@example.com"],
   ...["--phone", "+8613800000000"],
 ];
 
@@ -116,7 +116,7 @@ describe("requests", () => {
   it("each command sends its method, path and body with the token", async () => {
     for (const [args, method, url] of [
       [SEARCH, "POST", "/v1/hotels/search"],
-      [["hotels", "get", HOTEL, "--rooms"], "GET", `/v1/hotels/${HOTEL}?include=rooms`],
+      [["hotels", "get", HOTEL, "--rooms"], "GET", `/v1/hotels/${HOTEL}?include=roomTypes`],
       [OFFERS, "POST", "/v1/hotels/offers"],
       [BOOK, "POST", "/v1/orders"],
       [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
@@ -263,7 +263,7 @@ describe("requests", () => {
     assert.equal(code, 0, stderr);
     assert.equal(stdout, `${renderToolResult("cancel_order", closed, "cli")}\n`);
     assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
-    assert.deepEqual(requests[1]?.body, {});
+    assert.deepEqual(requests[1]?.body, { close: true });
   });
 
   it("orders cancel --close answered with an order that isn't expired: not closed, it was paid meanwhile", async () => {
@@ -529,16 +529,18 @@ describe("output", () => {
     assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
   });
 
-  it("orders pay --method stripe_alipay_wechat_pay prints the links and, on a wide TTY, the entry's code", async () => {
+  // The CLI no longer opens a wallet payment (no --method); it still draws
+  // the code of an answer that holds one.
+  it("orders pay prints an open wallet entry's links and, on a wide TTY, its code", async () => {
     const { data } = await fixture("order-wallets-open");
     const read = { status: 200, body: (await fixture("order-awaiting-payment")).data };
-    const args = ["orders", "pay", ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "365.00"];
+    const args = ["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "365.00"];
     replies = [read, { status: 200, body: data }];
     // The spawned CLI has no TTY, so the code stays out and the links stay in.
     const { code, stdout, stderr } = await cli(args);
     assert.equal(code, 0, stderr);
     assert.deepEqual(requests[1]?.body, {
-      method: "stripe_alipay_wechat_pay",
+      sharedPaymentToken: "spt_1TestToken0123456789",
       total: { amount: "365.00", currency: "USD" },
     });
     assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
@@ -553,12 +555,15 @@ describe("output", () => {
     assert.ok(tty.stdout.endsWith(`\nOr scan this WeChat Pay code:\n${terminalQr(qrData, 200)}\n`), tty.stdout);
   });
 
-  it("orders pay --wallet is no flag: it exits 2 and sends nothing", async () => {
-    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.match(stderr, /--wallet/);
-    assert.equal(requests.length, 0);
+  it("orders pay --wallet and --method are no flags: each exits 2 and sends nothing", async () => {
+    for (const flag of ["--wallet", "--method"]) {
+      requests = [];
+      const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, flag, "--total", "365.00"]);
+      assert.equal(code, 2, flag);
+      assert.equal(stdout, "", flag);
+      assert.match(stderr, new RegExp(flag));
+      assert.equal(requests.length, 0, flag);
+    }
   });
 
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {

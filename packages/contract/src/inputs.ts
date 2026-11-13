@@ -19,7 +19,7 @@ import {
   normalizeGuestName,
 } from "./guest-name.ts";
 import { CURRENCIES, LIMITS } from "./limits.ts";
-import { AMENITY_CODES, SEARCH_SORTS } from "./vocabulary.ts";
+import { FILTERABLE_AMENITIES, SEARCH_SORTS } from "./vocabulary.ts";
 
 /*
  * What an agent may send to API v1 (spec §7.1, §8, §9.1, §10.1, §10.5). Every
@@ -195,7 +195,7 @@ function starBound(name: string) {
     });
 }
 
-const amenitiesError = `amenities must list 1 to ${LIMITS.amenityFilters} codes from: ${AMENITY_CODES.join(", ")}`;
+const amenitiesError = `amenities must list 1 to ${LIMITS.amenityFilters} codes from: ${FILTERABLE_AMENITIES.join(", ")}`;
 
 const searchFilters = strictInput({
   stars: strictInput({
@@ -224,12 +224,12 @@ const searchFilters = strictInput({
       "Star rating range. Unrated hotels are left out whenever it is set.",
     ),
   amenities: z
-    .array(oneOf("Each amenity", AMENITY_CODES), { error: amenitiesError })
+    .array(oneOf("Each amenity", FILTERABLE_AMENITIES), { error: amenitiesError })
     .min(1, { error: amenitiesError })
     .max(LIMITS.amenityFilters, { error: amenitiesError })
     .optional()
     .describe(
-      "Amenities every hotel must list. Only some codes can filter; asking for one that cannot is answered with the list that can.",
+      `Amenities every hotel must list, 1 to ${LIMITS.amenityFilters} of the codes a search can filter by. A hotel's own amenities can hold other codes.`,
     ),
   price: strictInput({
     maxPerRoomNight: requestMoney("filters.price.maxPerRoomNight").describe(
@@ -368,9 +368,9 @@ export type SearchHotelsInput = z.input<typeof searchHotelsInput>;
 /** `GET /v1/hotels/{hotelId}` and the MCP `get_hotel` arguments. */
 export const getHotelInput = strictInput({
   hotelId: hotelId.describe("hotelId from a search response."),
-  include: oneOf("include", ["rooms"] as const)
+  include: oneOf("include", ["roomTypes"] as const)
     .optional()
-    .describe("`rooms` adds the room list."),
+    .describe("`roomTypes` adds the hotel's room types."),
   locale: locale.optional(),
 });
 
@@ -380,6 +380,30 @@ export type GetHotelInput = z.input<typeof getHotelInput>;
 // Offers
 
 const hotelIdsError = `hotelIds must list 1 to ${LIMITS.offersHotels} distinct hotelIds`;
+
+/**
+ * How many offers each hotel of an offers call gets: what `limitPerHotel`
+ * resolves to, on every surface. `limitPerHotel` is the request's, or
+ * undefined when it gave none; `hotelsWithOffers` counts the call's hotels
+ * that have any offer. The limit (the default one when none was given) holds
+ * while every such hotel can have it within the call's budget; past that the
+ * budget is split evenly among them, never under the floor. The budget is
+ * smaller when no limit was given.
+ */
+export function offersPerHotel(
+  limitPerHotel: number | undefined,
+  hotelsWithOffers: number,
+): number {
+  const budget =
+    limitPerHotel === undefined
+      ? LIMITS.offersPerCallDefault
+      : LIMITS.offersPerCallMax;
+  const share = Math.max(
+    LIMITS.offersPerHotelFloor,
+    Math.floor(budget / hotelsWithOffers),
+  );
+  return Math.min(limitPerHotel ?? LIMITS.offersPerHotelDefault, share);
+}
 
 /** `POST /v1/hotels/offers` and the MCP `get_hotel_offers` arguments. */
 export const hotelOffersInput = strictInput({
@@ -405,9 +429,9 @@ export const hotelOffersInput = strictInput({
     .optional()
     .describe("Filters every offer must pass."),
   limitPerHotel: wholeNumber("limitPerHotel", 1, LIMITS.offersPerHotelMax)
-    .default(LIMITS.offersPerHotelDefault)
+    .optional()
     .describe(
-      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Default ${LIMITS.offersPerHotelDefault}.`,
+      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Left out: ${LIMITS.offersPerHotelDefault} for each hotel that has offers while that is at most ${LIMITS.offersPerCallDefault} offers in all, otherwise ${LIMITS.offersPerCallDefault} split evenly among those hotels, never under ${LIMITS.offersPerHotelFloor} each (5 hotels: ${offersPerHotel(undefined, 5)} each; ${LIMITS.offersHotels} hotels: ${offersPerHotel(undefined, LIMITS.offersHotels)} each). Given: that many for each hotel while that is at most ${LIMITS.offersPerCallMax} offers in all, otherwise ${LIMITS.offersPerCallMax} split evenly the same way.`,
     ),
   locale: locale.optional(),
   currency: oneOf("currency", CURRENCIES)
@@ -451,23 +475,18 @@ function guestName(name: string) {
     );
 }
 
-/** A contact's first or last name: any script, at most `max` characters once
- *  normalized, so the joined name fits the order core's limit. */
-function contactName(name: string, max: number) {
-  return z
-    .string({ error: `${name} must be text of 1 to ${max} characters` })
-    .refine((value) => !containsCardNumber(value), {
-      error: CARD_NUMBER_MESSAGE,
-      abort: true,
-    })
-    .refine(
-      (value) => {
-        const length = normalizeGuestName(value).length;
-        return length >= 1 && length <= max;
-      },
-      { error: `${name} must be text of 1 to ${max} characters` },
-    );
-}
+const contactNameError = `name must be text of 1 to ${LIMITS.contactName} characters`;
+
+/** The contact's name: one field, in any script, trimmed. */
+const contactName = z
+  .string({ error: contactNameError })
+  .trim()
+  .min(1, { error: contactNameError })
+  .max(LIMITS.contactName, { error: contactNameError })
+  .refine((value) => !containsCardNumber(value), {
+    error: CARD_NUMBER_MESSAGE,
+    abort: true,
+  });
 
 const emailError = "email must be an email address";
 const guestsError = "guests must list at least one guest per room";
@@ -476,11 +495,8 @@ const maxGuestsPerRoom = LIMITS.adultsPerRoom + LIMITS.childrenPerRoom;
 /** `POST /v1/orders` and the MCP `book_hotel` arguments. */
 export const createOrderInput = strictInput({
   contact: strictInput({
-    firstName: contactName("firstName", LIMITS.contactFirstName).describe(
-      `Contact person's first name, at most ${LIMITS.contactFirstName} characters.`,
-    ),
-    lastName: contactName("lastName", LIMITS.contactLastName).describe(
-      `Contact person's last name, at most ${LIMITS.contactLastName} characters.`,
+    name: contactName.describe(
+      `Contact person's full name, in any script, at most ${LIMITS.contactName} characters.`,
     ),
     email: z
       .string({ error: emailError })
@@ -578,17 +594,37 @@ export const listOrdersInput = strictInput({
 
 export type ListOrdersInput = z.input<typeof listOrdersInput>;
 
+const cancelModeError =
+  "Send exactly one of close and maximumPenalty: close (true) closes an unpaid order; maximumPenalty cancels a paid one, with the penalty the user agreed to as a ceiling";
+
 /** `POST /v1/orders/{orderId}/cancel` and the MCP `cancel_order` arguments:
- *  the order and, to cancel a paid order, the penalty the user agreed to as a
- *  ceiling; an unpaid order is closed with the order alone. The server
- *  computes the refund; a higher penalty now answers `cancellation_changed`. */
+ *  the order and its mode, exactly one of `close` (an unpaid order) and
+ *  `maximumPenalty` (a paid one, with the penalty the user agreed to as a
+ *  ceiling). The server computes the refund; a higher penalty now answers
+ *  `cancellation_changed`. */
 export const cancelOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to cancel."),
+  close: z
+    .literal(true, { error: "close must be true" })
+    .optional()
+    .describe(
+      "Send true to close an unpaid order: nothing is charged. Send exactly one of close and maximumPenalty.",
+    ),
   maximumPenalty: echoedMoney("maximumPenalty")
     .optional()
     .describe(
-      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
+      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling (the order's cancel.penalty, exactly as returned). Send exactly one of close and maximumPenalty.",
     ),
+}).superRefine((input, ctx) => {
+  const both = input.close !== undefined && input.maximumPenalty !== undefined;
+  if (both || (input.close === undefined && input.maximumPenalty === undefined)) {
+    // Both: the second is the extra. Neither: the first is what is missing.
+    ctx.addIssue({
+      code: "custom",
+      path: [both ? "maximumPenalty" : "close"],
+      message: cancelModeError,
+    });
+  }
 });
 
 export type CancelOrderInput = z.input<typeof cancelOrderInput>;
@@ -598,213 +634,26 @@ const sharedPaymentTokenRe = /^spt_[A-Za-z0-9]{1,250}$/;
 const sharedPaymentTokenError =
   "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
 
-const instrumentTokenError =
-  "credential.token must be a Stripe shared payment token: spt_ followed by letters and digits";
-
-const instrumentsError = "payment.instruments must be a list of 1 to 8 instruments";
-
-const instrumentCardError =
-  "payment.instruments must not hold card details: pay with the shared payment token alone";
-
-/** One instrument of UCP's Complete Checkout payment, as UCP defines it:
- *  UCP's other fields (`billing_address`, `network`, …) pass through and
- *  aren't used to pay, and an instrument may be another handler's. Only the
- *  selected one is held to `selectedCard`. UCP's own names, in snake case. */
-const ucpInstrument = z
-  .looseObject(
-    {
-      id: nonEmpty("id").describe("The instrument's id, as the agent's UCP client names it."),
-      handler_id: nonEmpty("handler_id").describe(
-        "The id of the handler the instrument pays through: the order's stripe_payments for the selected one.",
-      ),
-      type: nonEmpty("type").describe(
-        "The instrument type: card for the selected one. A Link token is presented as a card instrument, whatever Link funds it with.",
-      ),
-      selected: flag("selected")
-        .optional()
-        .describe(
-          "Whether this is the instrument to pay with. Exactly one is selected; a lone instrument without it is the one.",
-        ),
-      credential: z
-        .looseObject(
-          {
-            type: nonEmpty("credential.type").describe(
-              "The credential type: stripe_payment_token for the selected one.",
-            ),
-            token: z
-              .string({ error: instrumentTokenError })
-              .optional()
-              .describe(
-                "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
-              ),
-          },
-          { error: "credential must be a JSON object" },
-        )
-        .optional()
-        .describe("The instrument's credential: for the selected one, the shared payment token."),
-      display: z
-        .looseObject({}, { error: "display must be a JSON object" })
-        .optional()
-        .describe("How the wallet shows the instrument, as UCP has it. Not used to pay."),
-    },
-    { error: "Each instrument must be a JSON object" },
-  )
-  .describe("A UCP payment instrument.");
-
-type UcpInstrument = z.output<typeof ucpInstrument>;
-
-/** What the selected instrument must be: a card of the order's
- *  `stripe_payments` handler, its credential a shared payment token. */
-const selectedCard = z.looseObject({
-  handler_id: z.literal("stripe_payments", {
-    error: "The selected instrument's handler_id must be stripe_payments",
-  }),
-  type: z.literal("card", { error: "The selected instrument's type must be card" }),
-  credential: z.looseObject(
-    {
-      type: z.literal("stripe_payment_token", {
-        error: "The selected instrument's credential.type must be stripe_payment_token",
-      }),
-      token: z
-        .string({ error: instrumentTokenError })
-        .regex(sharedPaymentTokenRe, { error: instrumentTokenError }),
-    },
-    { error: "The selected instrument needs a credential: its shared payment token" },
-  ),
-});
-
-/** The instruments a payment pays with: those with `selected: true`, or a
- *  lone instrument that doesn't say. */
-function selectedOf(instruments: readonly (UcpInstrument | null | undefined)[]) {
-  const chosen = instruments.flatMap((i, at) => (i?.selected === true ? [{ i, at }] : []));
-  const lone = instruments[0];
-  if (chosen.length === 0 && instruments.length === 1 && lone && lone.selected === undefined) {
-    return [{ i: lone, at: 0 }];
-  }
-  return chosen;
-}
-
 /** The ways an order is paid: the order's own link, or through `pay_order`
- *  one of its `payment.methods`, by id (a shared payment token, or
- *  Alipay/WeChat Pay). */
-export const PAY_WAYS = ["payment_link", "stripe_shared_payment_token", "stripe_alipay_wechat_pay"] as const;
+ *  a shared payment token, named by its id in the order's `payment.methods`. */
+export const PAY_WAYS = ["payment_link", "stripe_shared_payment_token"] as const;
 export type PayWay = (typeof PAY_WAYS)[number];
 
-/** The way each exclusive field of `payOrderInput` pays by. */
-export const PAY_INPUT_WAYS: Record<"sharedPaymentToken" | "payment" | "method", PayWay> = {
-  sharedPaymentToken: "stripe_shared_payment_token",
-  payment: "stripe_shared_payment_token",
-  method: "stripe_alipay_wechat_pay",
-};
-
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
- *  order, how to pay it, and the total the user approved. The way is a
- *  Stripe shared payment token granted for the order, or `method`
- *  (Alipay or WeChat Pay); with a token it is `sharedPaymentToken` or, as UCP's Complete
- *  Checkout sends it, the credential of `payment`'s selected instrument.
- *  Exactly one of `sharedPaymentToken`, `payment` and `method`. A total other than the order's answers
+ *  order, the Stripe shared payment token granted for it, and the total the
+ *  user approved. A total other than the order's answers
  *  `payment_total_changed` and charges nothing. */
 export const payOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to pay."),
   sharedPaymentToken: z
     .string({ error: sharedPaymentTokenError })
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
-    .optional()
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method. Exactly one of sharedPaymentToken, payment and method.",
-    ),
-  payment: strictInput({
-    instruments: z
-      .array(ucpInstrument, { error: instrumentsError })
-      .min(1, { error: instrumentsError })
-      .max(8, { error: instrumentsError })
-      .describe("The instruments, exactly one of them selected."),
-  })
-    .superRefine((payment, ctx) => {
-      // The list's own length error stands alone.
-      if (payment.instruments.length < 1 || payment.instruments.length > 8) return;
-      // What passes through is never card details. A phone number counts
-      // only from 16 digits, so a billing address's phone isn't one.
-      const phones: unknown[] = [];
-      const rest = JSON.stringify(payment.instruments, (key, value) => {
-        if (key !== "phone_number") return value;
-        phones.push(value);
-        return undefined;
-      });
-      if (containsCardNumber(rest) || containsCardNumber(JSON.stringify(phones), 16)) {
-        ctx.addIssue({ code: "custom", path: ["instruments"], message: instrumentCardError });
-        return;
-      }
-      const chosen = selectedOf(payment.instruments);
-      const [only] = chosen;
-      if (chosen.length !== 1 || !only) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["instruments"],
-          message: `payment.instruments must have exactly one instrument with selected: true, not ${chosen.length}`,
-        });
-        return;
-      }
-      // An instrument that isn't even a UCP one has its refusal already.
-      if (!ucpInstrument.safeParse(only.i).success) return;
-      const card = selectedCard.safeParse(only.i);
-      for (const issue of card.success ? [] : card.error.issues) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["instruments", only.at, ...issue.path],
-          message: issue.message,
-        });
-      }
-    })
-    .optional()
-    .describe(
-      "UCP's Complete Checkout payment, in place of sharedPaymentToken: the token as the stripe_payment_token credential of the one selected stripe_payments card instrument. Exactly one of sharedPaymentToken, payment and method.",
-    ),
-  method: oneOf("method", ["stripe_alipay_wechat_pay"] as const)
-    .optional()
-    .describe(
-      "Pay by a method in payment.methods other than the token, which is paid with sharedPaymentToken or payment. Exactly one of sharedPaymentToken, payment and method.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
     ),
   total: requestMoney("total").describe(
     "The total the user approved: the order's price.total, in its currency, exactly as returned.",
   ),
-}).superRefine((input, ctx) => {
-  // Of the three ways to pay, in order: the last one given is the extra.
-  const given = (
-    [
-      ["sharedPaymentToken", input.sharedPaymentToken],
-      ["payment", input.payment],
-      ["method", input.method],
-    ] as const
-  ).filter(([, value]) => value !== undefined);
-  const extra = given.length > 1 ? given.at(-1) : undefined;
-  if (extra) {
-    ctx.addIssue({
-      code: "custom",
-      path: [extra[0]],
-      message: "Send exactly one of sharedPaymentToken, payment and method",
-    });
-  } else if (given.length === 0) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["sharedPaymentToken"],
-      message: sharedPaymentTokenError,
-    });
-  }
 });
 
 export type PayOrderInput = z.input<typeof payOrderInput>;
-
-/** The shared payment token a `pay_order` call pays with: `sharedPaymentToken`,
- *  or the credential of `payment`'s selected instrument. Takes what
- *  `payOrderInput` parsed, which holds exactly one. */
-export function sharedPaymentTokenOf(
-  input: Pick<z.output<typeof payOrderInput>, "sharedPaymentToken" | "payment">,
-): string {
-  const chosen = input.payment ? selectedOf(input.payment.instruments) : [];
-  const token = input.sharedPaymentToken ?? (chosen.length === 1 ? chosen[0]?.i.credential?.token : undefined);
-  if (token === undefined) {
-    throw new Error("sharedPaymentTokenOf: no token; parse with payOrderInput first");
-  }
-  return token;
-}

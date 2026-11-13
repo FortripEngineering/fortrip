@@ -25,8 +25,9 @@ It exports:
 - `searchHotelsInput`, `getHotelInput`, `hotelOffersInput`,
   `createOrderInput`, `getOrderInput`, `listOrdersInput`,
   `cancelOrderInput` and `payOrderInput`, the zod schemas of the requests,
-  with `sharedPaymentTokenOf(input)`, the token a parsed `payOrderInput`
-  pays with, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
+  with `offersPerHotel(limitPerHotel, hotelsWithOffers)`, the offers each
+  hotel of an offers call gets, and `searchResult`, `hotel`,
+  `hotelOffersResult`, `order`,
   `orderList`, `paymentHandler` and `errorEnvelope`, the open schemas of the
   responses, with `ERROR_DETAILS`, each error code's `details`, and
   `parseOpen`, a parser that keeps unknown fields and values;

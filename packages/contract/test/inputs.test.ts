@@ -15,9 +15,9 @@ import {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
+  offersPerHotel,
   payOrderInput,
   searchHotelsInput,
-  sharedPaymentTokenOf,
   stay,
 } from "../src/inputs.ts";
 import { LIMITS } from "../src/limits.ts";
@@ -309,7 +309,7 @@ describe("searchHotelsInput", () => {
       pricing: "indicative",
       filters: {
         stars: { min: 3.5, max: 5 },
-        amenities: ["pool", "spa"],
+        amenities: ["pool", "wifi"],
         price: { maxPerRoomNight: { amount: "200.00", currency: "CNY" } },
       },
       sort: "price_asc",
@@ -473,25 +473,55 @@ describe("searchHotelsInput", () => {
     }
   });
 
-  it("amenities take any amenity code, up to nine", () => {
-    assertAccepted(searchHotelsInput, {
-      text: "x",
-      filters: { amenities: ["spa"] },
-    });
+  it("amenities take only the codes that can filter, up to nine", () => {
+    for (const code of FILTERABLE_AMENITIES) {
+      assertAccepted(searchHotelsInput, {
+        text: "x",
+        filters: { amenities: [code] },
+      });
+    }
     assertAccepted(searchHotelsInput, {
       text: "x",
       filters: { amenities: [...FILTERABLE_AMENITIES] },
     });
-    const sauna = refusalOf(searchHotelsInput, {
-      text: "x",
-      filters: { amenities: ["sauna"] },
-    });
-    assert.ok(sauna.some((i) => i.path === "filters.amenities.0"));
-    assert.match(sauna[0]?.message ?? "", /pool/);
-    assertRefusedAt(
-      searchHotelsInput,
-      { text: "x", filters: { amenities: AMENITY_CODES.slice(0, 10) } },
-      "filters.amenities",
+    // A code a hotel can list but a search cannot filter by, and one nobody has.
+    for (const code of [...AMENITY_CODES.slice(FILTERABLE_AMENITIES.length), "sauna"]) {
+      assert.deepEqual(
+        refusalOf(searchHotelsInput, {
+          text: "x",
+          filters: { amenities: [code] },
+        }),
+        [
+          {
+            path: "filters.amenities.0",
+            message: `Each amenity must be one of: ${FILTERABLE_AMENITIES.join(", ")}`,
+          },
+        ],
+        code,
+      );
+    }
+    assert.deepEqual(
+      refusalOf(searchHotelsInput, {
+        text: "x",
+        filters: { amenities: [...FILTERABLE_AMENITIES, "pool"] },
+      }),
+      [
+        {
+          path: "filters.amenities",
+          message: `amenities must list 1 to 9 codes from: ${FILTERABLE_AMENITIES.join(", ")}`,
+        },
+      ],
+    );
+    assertRefusedAt(searchHotelsInput, { text: "x", filters: { amenities: [] } }, "filters.amenities");
+  });
+
+  it("describes the amenities filter by what it takes, with the codes in the schema", () => {
+    const json = z.toJSONSchema(searchHotelsInput, { io: "input" }) as Json;
+    const amenities = json.properties?.filters?.properties?.amenities;
+    assert.deepEqual(amenities?.items?.enum, [...FILTERABLE_AMENITIES]);
+    assert.equal(
+      amenities?.description,
+      "Amenities every hotel must list, 1 to 9 of the codes a search can filter by. A hotel's own amenities can hold other codes.",
     );
   });
 
@@ -552,10 +582,14 @@ describe("getHotelInput", () => {
     assertAccepted(getHotelInput, { hotelId: hotel });
     assertAccepted(getHotelInput, {
       hotelId: hotel,
-      include: "rooms",
+      include: "roomTypes",
       locale: "zh",
     });
     assertRefusedAt(getHotelInput, { hotelId: "12345" }, "hotelId");
+    // `rooms` is a stay's rooms; a hotel's list is its room types.
+    assert.deepEqual(refusalOf(getHotelInput, { hotelId: hotel, include: "rooms" }), [
+      { path: "include", message: "include must be one of: roomTypes" },
+    ]);
     assertRefusedAt(
       getHotelInput,
       { hotelId: hotel, include: "photos" },
@@ -590,7 +624,7 @@ describe("hotelOffersInput", () => {
     }
   });
 
-  it("accepts the full request and defaults limitPerHotel to 15", () => {
+  it("accepts the full request, and leaves limitPerHotel for the service to resolve", () => {
     assertAccepted(hotelOffersInput, {
       ...base,
       filters: { requireBreakfast: true, requireFreeCancellation: false },
@@ -598,8 +632,19 @@ describe("hotelOffersInput", () => {
       locale: "en",
       currency: "USD",
     });
-    assert.equal(hotelOffersInput.parse(base).limitPerHotel, 15);
-    assert.equal(LIMITS.offersPerHotelDefault, 15);
+    assertAccepted(hotelOffersInput, { ...base, limitPerHotel: 1 });
+    assert.equal(hotelOffersInput.parse(base).limitPerHotel, undefined);
+    const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
+    assert.equal(json.properties?.limitPerHotel?.default, undefined);
+    assert.deepEqual(json.required, ["hotelIds", "stay"]);
+  });
+
+  it("describes limitPerHotel by the rule that resolves it", () => {
+    const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
+    assert.equal(
+      json.properties?.limitPerHotel?.description,
+      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels, never under 3 each (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way.",
+    );
   });
 
   it("holds hotelIds to 1 to 15, distinct", () => {
@@ -656,6 +701,70 @@ describe("hotelOffersInput", () => {
   });
 });
 
+describe("offersPerHotel", () => {
+  it("pins the budget's limits", () => {
+    assert.equal(LIMITS.offersPerHotelDefault, 15);
+    assert.equal(LIMITS.offersPerHotelMax, 30);
+    assert.equal(LIMITS.offersPerHotelFloor, 3);
+    assert.equal(LIMITS.offersPerCallDefault, 45);
+    assert.equal(LIMITS.offersPerCallMax, 100);
+  });
+
+  it("without a limit: 15 per hotel while that fits 45 offers, otherwise 45 split evenly, never under 3", () => {
+    for (const [hotels, each] of [
+      [1, 15],
+      [3, 15],
+      [4, 11],
+      [5, 9],
+      [15, 3],
+    ] as const) {
+      assert.equal(offersPerHotel(undefined, hotels), each, `${hotels} hotels`);
+    }
+  });
+
+  it("with a limit: honoured per hotel while that fits 100 offers, otherwise 100 split evenly", () => {
+    for (const [limit, hotels, each] of [
+      [30, 1, 30],
+      [30, 3, 30],
+      [30, 4, 25],
+      [30, 5, 20],
+      [30, 15, 6],
+      [20, 5, 20],
+      [20, 15, 6],
+      // What the default would have cut is honoured when asked for.
+      [15, 4, 15],
+      [15, 5, 15],
+      [15, 15, 6],
+      // A limit under the floor is what the caller asked for.
+      [1, 1, 1],
+      [2, 15, 2],
+    ] as const) {
+      assert.equal(offersPerHotel(limit, hotels), each, `${limit} for ${hotels} hotels`);
+    }
+  });
+
+  it("the floor holds however many hotels there are, and never lifts a lower limit", () => {
+    // More hotels than a call takes today: an even share would be under 3.
+    assert.equal(offersPerHotel(undefined, 20), 3);
+    assert.equal(offersPerHotel(30, 50), 3);
+    assert.equal(offersPerHotel(2, 50), 2);
+  });
+
+  it("never answers more than the limit, nor more than the call's ceiling in all", () => {
+    for (const limit of [undefined, ...Array.from({ length: LIMITS.offersPerHotelMax }, (_, i) => i + 1)]) {
+      for (let hotels = 1; hotels <= LIMITS.offersHotels; hotels++) {
+        const each = offersPerHotel(limit, hotels);
+        const label = `${limit} for ${hotels} hotels`;
+        assert.ok(each >= 1 && each <= (limit ?? LIMITS.offersPerHotelDefault), label);
+        assert.ok(
+          each * hotels <= (limit === undefined ? LIMITS.offersPerCallDefault : LIMITS.offersPerCallMax),
+          label,
+        );
+      }
+    }
+  });
+});
+
 describe("createOrderInput", () => {
   const guest = { firstName: "Wei", lastName: "Zhang" };
   const item = {
@@ -664,8 +773,7 @@ describe("createOrderInput", () => {
   };
   const order = {
     contact: {
-      firstName: "Wei",
-      lastName: "Zhang",
+      name: "Wei Zhang",
       email: "wei@example.com",
       phone: "+86 138 0013 8000",
     },
@@ -711,34 +819,41 @@ describe("createOrderInput", () => {
     );
   });
 
-  it("holds each contact name to 59 characters after normalizing", () => {
-    assertAccepted(
-      createOrderInput,
-      withContact({ firstName: "a".repeat(59) }),
+  it("takes the contact's name as one field, in any script, trimmed", () => {
+    for (const name of ["Wei Zhang", "张伟", "José Müller-O’Brien", "Cher"]) {
+      assertAccepted(createOrderInput, withContact({ name }));
+    }
+    assert.equal(
+      createOrderInput.parse(withContact({ name: "  Wei Zhang \n" })).contact.name,
+      "Wei Zhang",
     );
-    assertRefusedAt(
-      createOrderInput,
-      withContact({ firstName: "a".repeat(60) }),
-      "contact.firstName",
-    );
-    assertRefusedAt(
-      createOrderInput,
-      withContact({ lastName: "a".repeat(60) }),
-      "contact.lastName",
-    );
-    // 62 characters typed, 59 once the run of spaces collapses.
-    assertAccepted(
-      createOrderInput,
-      withContact({ firstName: `${"a".repeat(30)}    ${"a".repeat(28)}` }),
-    );
-    assertRefusedAt(
-      createOrderInput,
-      withContact({ firstName: "   " }),
-      "contact.firstName",
-    );
-    assertAccepted(
-      createOrderInput,
-      withContact({ firstName: "伟", lastName: "张" }),
+    for (const name of ["", "   ", undefined, 5]) {
+      assert.deepEqual(
+        refusalOf(createOrderInput, withContact({ name })),
+        [{ path: "contact.name", message: "name must be text of 1 to 119 characters" }],
+        JSON.stringify(name),
+      );
+    }
+    // The two names of old are sent as one.
+    for (const key of ["firstName", "lastName"]) {
+      assert.equal(
+        refusalOf(createOrderInput, withContact({ [key]: "Wei" }))[0]?.message,
+        `Unknown argument(s): ${key}`,
+      );
+    }
+  });
+
+  it("holds the contact name to 119 characters: two names of 59 and the space between", () => {
+    assert.equal(LIMITS.contactName, 59 + 1 + 59);
+    const longest = `${"a".repeat(59)} ${"b".repeat(59)}`;
+    assertAccepted(createOrderInput, withContact({ name: longest }));
+    assertAccepted(createOrderInput, withContact({ name: ` ${longest}  ` }));
+    assertRefusedAt(createOrderInput, withContact({ name: `${longest}c` }), "contact.name");
+    const json = z.toJSONSchema(createOrderInput, { io: "input" }) as Json;
+    assert.deepEqual(json.properties?.contact?.required, ["name", "email", "phone"]);
+    assert.equal(
+      json.properties?.contact?.properties?.name?.description,
+      "Contact person's full name, in any script, at most 119 characters.",
     );
   });
 
@@ -828,14 +943,9 @@ describe("createOrderInput", () => {
       withItem({ specialRequests: "x".repeat(LIMITS.specialRequests + 1) }),
       "items.0.hotel.specialRequests",
     );
-    assert.equal(
-      refusalOf(createOrderInput, withContact({ firstName: VISA }))[0]?.message,
-      CARD_NUMBER_MESSAGE,
-    );
-    assert.equal(
-      refusalOf(createOrderInput, withContact({ lastName: VISA }))[0]?.message,
-      CARD_NUMBER_MESSAGE,
-    );
+    assert.deepEqual(refusalOf(createOrderInput, withContact({ name: `Wei Zhang ${VISA}` })), [
+      { path: "contact.name", message: CARD_NUMBER_MESSAGE },
+    ]);
     assert.equal(
       refusalOf(createOrderInput, withContact({ phone: "4111111111111111" }))[0]
         ?.message,
@@ -903,11 +1013,23 @@ describe("getOrderInput and listOrdersInput", () => {
 
 describe("cancelOrderInput", () => {
   const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
+  const penalty = { amount: "12.50", currency: "CNY" };
+  const exactlyOne =
+    "Send exactly one of close and maximumPenalty: close (true) closes an unpaid order; maximumPenalty cancels a paid one, with the penalty the user agreed to as a ceiling";
 
-  it("takes an order id and, to cancel a paid order, the penalty the user agreed to as Money", () => {
-    // Closing an unpaid order sends the order alone.
-    assertAccepted(cancelOrderInput, { orderId });
-    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "CNY" } });
+  it("closes an unpaid order with close: true", () => {
+    assertAccepted(cancelOrderInput, { orderId, close: true });
+    for (const close of [false, "true", 1, null]) {
+      assert.deepEqual(
+        refusalOf(cancelOrderInput, { orderId, close }),
+        [{ path: "close", message: "close must be true" }],
+        JSON.stringify(close),
+      );
+    }
+  });
+
+  it("cancels a paid order with the penalty the user agreed to, as Money", () => {
+    assertAccepted(cancelOrderInput, { orderId, maximumPenalty: penalty });
     assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "0.00", currency: "USD" } });
     // The order's cancel.penalty as returned: a website order's may be in any currency.
     assertAccepted(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "EUR" } });
@@ -919,20 +1041,39 @@ describe("cancelOrderInput", () => {
     ]);
     assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "-1", currency: "USD" } }, "maximumPenalty.amount");
     assertRefusedAt(cancelOrderInput, { orderId, maximumPenalty: { amount: "12.50", currency: "eur" } }, "maximumPenalty.currency");
-    assertRefusedAt(cancelOrderInput, { orderId: hotel }, "orderId");
-    assert.equal(
-      refusalOf(cancelOrderInput, { orderId, refund: 1 })[0]?.message,
-      "Unknown argument(s): refund",
-    );
-    // Closing is the order alone, never a field.
-    assert.equal(refusalOf(cancelOrderInput, { orderId, close: true })[0]?.message, "Unknown argument(s): close");
   });
 
-  it("describes maximumPenalty as the order's cancel.penalty, exactly as returned", () => {
+  it("takes exactly one of the two, and says what each is for", () => {
+    // Neither: the order alone no longer closes it.
+    assert.deepEqual(refusalOf(cancelOrderInput, { orderId }), [{ path: "close", message: exactlyOne }]);
+    assert.deepEqual(refusalOf(cancelOrderInput, { orderId, close: true, maximumPenalty: penalty }), [
+      { path: "maximumPenalty", message: exactlyOne },
+    ]);
+    // One mistake, one refusal: a close that isn't true is not also a missing mode.
+    assert.deepEqual(refusalOf(cancelOrderInput, { orderId, close: false, maximumPenalty: penalty }), [
+      { path: "close", message: "close must be true" },
+    ]);
+  });
+
+  it("needs the order and is strict", () => {
+    assertRefusedAt(cancelOrderInput, { orderId: hotel, close: true }, "orderId");
+    assertRefusedAt(cancelOrderInput, { close: true }, "orderId");
+    assert.equal(
+      refusalOf(cancelOrderInput, { orderId, close: true, refund: 1 })[0]?.message,
+      "Unknown argument(s): refund",
+    );
+  });
+
+  it("describes each mode by the order it acts on", () => {
     const json = z.toJSONSchema(cancelOrderInput, { io: "input" }) as Json;
     assert.equal(
+      json.properties?.close?.description,
+      "Send true to close an unpaid order: nothing is charged. Send exactly one of close and maximumPenalty.",
+    );
+    assert.equal(json.properties?.close?.const, true);
+    assert.equal(
       json.properties?.maximumPenalty?.description,
-      "The penalty the user agreed to: the order's cancel.penalty, exactly as returned. Ignored when closing an unpaid order.",
+      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling (the order's cancel.penalty, exactly as returned). Send exactly one of close and maximumPenalty.",
     );
     assert.deepEqual(json.required, ["orderId"]);
   });
@@ -942,166 +1083,74 @@ describe("payOrderInput", () => {
   const orderId = "ord_aaaaaaaaaaaaaaaaaaaa";
   const total = { amount: "132.40", currency: "USD" };
   const token = "spt_1TestToken0123456789";
-  const card = (selected: boolean, spt = token) => ({
-    id: selected ? "instr_1" : "instr_2",
-    handler_id: "stripe_payments",
-    type: "card",
-    selected,
-    credential: { type: "stripe_payment_token", token: spt },
+  const tokenError =
+    "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
+
+  it("takes the order, the token and the total, all required", () => {
+    assertAccepted(payOrderInput, { orderId, sharedPaymentToken: token, total });
+    assert.deepEqual(payOrderInput.parse({ orderId, sharedPaymentToken: token, total }), {
+      orderId,
+      sharedPaymentToken: token,
+      total,
+    });
+    const json = z.toJSONSchema(payOrderInput, { io: "input" }) as Json;
+    assert.deepEqual(Object.keys(json.properties ?? {}), ["orderId", "sharedPaymentToken", "total"]);
+    assert.deepEqual(json.required, ["orderId", "sharedPaymentToken", "total"]);
+    assertRefusedAt(payOrderInput, { sharedPaymentToken: token, total }, "orderId");
+    assert.deepEqual(refusalOf(payOrderInput, { orderId, total }), [
+      { path: "sharedPaymentToken", message: tokenError },
+    ]);
+    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token }, "total");
   });
 
-  it("takes the token as sharedPaymentToken", () => {
-    assertAccepted(payOrderInput, { orderId, sharedPaymentToken: token, total });
-    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: "tok_1", total }, "sharedPaymentToken");
-    assert.equal(
-      refusalOf(payOrderInput, { orderId, sharedPaymentToken: "", total })[0]?.message,
-      "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
-    );
-    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token }, "total");
+  it("holds the token to spt_ and the total to Money in USD or CNY", () => {
+    for (const sharedPaymentToken of ["tok_1", "", "spt_", "spt_a-b", 5]) {
+      assert.deepEqual(
+        refusalOf(payOrderInput, { orderId, sharedPaymentToken, total }),
+        [{ path: "sharedPaymentToken", message: tokenError }],
+        JSON.stringify(sharedPaymentToken),
+      );
+    }
     assertRefusedAt(
       payOrderInput,
       { orderId, sharedPaymentToken: token, total: { amount: "132.40", currency: "EUR" } },
       "total.currency",
     );
+    assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token, total: 132.4 }, "total");
   });
 
-  it("takes it as UCP's payment instead, the selected instrument's credential", () => {
-    assertAccepted(payOrderInput, { orderId, payment: { instruments: [card(true)] }, total });
-    assertAccepted(payOrderInput, {
-      orderId,
-      payment: { instruments: [card(false), { ...card(true), display: { brand: "visa", last_digits: "4242" } }] },
-      total,
-    });
-    assert.equal(
-      sharedPaymentTokenOf(
-        payOrderInput.parse({ orderId, payment: { instruments: [card(false, "spt_other1"), card(true)] }, total }),
-      ),
-      token,
-    );
-    assert.equal(sharedPaymentTokenOf(payOrderInput.parse({ orderId, sharedPaymentToken: token, total })), token);
-  });
-
-  it("passes UCP's other fields and handlers through: only the selected one is checked", () => {
-    const pays = (instruments: unknown[]) =>
-      sharedPaymentTokenOf(payOrderInput.parse({ orderId, payment: { instruments }, total }));
-    const billing_address = { street_address: "1 Main St", postal_code: "94107", address_country: "US" };
-    assert.equal(pays([{ ...card(true), billing_address, network: "visa" }]), token);
-    assert.equal(
-      pays([{ ...card(true), credential: { ...card(true).credential, expires_at: "2026-11-05T00:00:00Z" } }]),
-      token,
-    );
-    // A lone instrument that doesn't say is the selected one.
-    const { selected: _s, ...lone } = card(true);
-    assert.equal(pays([lone]), token);
-    // Another handler's instrument, not selected and without `selected`.
-    const googlePay = {
-      id: "gpay_1",
-      handler_id: "stripe-handler",
+  it("takes no other way to pay: no UCP payment object, no method", () => {
+    const card = {
+      id: "instr_1",
+      handler_id: "stripe_payments",
       type: "card",
-      credential: { type: "PAYMENT_GATEWAY", token: "{\"id\":\"tok_1\"}" },
+      selected: true,
+      credential: { type: "stripe_payment_token", token },
     };
-    assert.equal(pays([googlePay, card(true)]), token);
-  });
-
-  it("refuses a payment without exactly one selected stripe_payments card token", () => {
-    const refused = (instruments: unknown[], at: string) =>
-      assertRefusedAt(payOrderInput, { orderId, payment: { instruments }, total }, at);
-    refused([], "payment.instruments");
-    assert.equal(refusalOf(payOrderInput, { orderId, payment: { instruments: [] }, total }).length, 1);
-    refused(Array.from({ length: 9 }, (_, n) => card(n === 0)), "payment.instruments");
-    refused([card(false)], "payment.instruments");
-    refused([card(true), card(true)], "payment.instruments");
-    const { selected: _s, ...lone } = card(true);
-    refused([lone, lone], "payment.instruments");
-    refused([card(false), { ...card(true), handler_id: "google_pay" }], "payment.instruments.1.handler_id");
-    // One mistake, one refusal.
-    for (const wrong of [{ handler_id: "" }, { credential: { type: "stripe_payment_token", token: 5 } }]) {
-      assert.equal(
-        refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...wrong }] }, total }).length,
-        1,
-        JSON.stringify(wrong),
+    for (const [key, value] of [
+      ["payment", { instruments: [card] }],
+      ["method", "stripe_alipay_wechat_pay"],
+      ["credential", "x"],
+    ] as const) {
+      // With the token or in its place, the key is unknown.
+      assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total, [key]: value }), [
+        { path: "", message: `Unknown argument(s): ${key}` },
+      ]);
+      assert.ok(
+        refusalOf(payOrderInput, { orderId, total, [key]: value }).some(
+          (issue) => issue.message === `Unknown argument(s): ${key}`,
+        ),
+        key,
       );
     }
-    refused([{ ...card(true), type: "link" }], "payment.instruments.0.type");
-    refused(
-      [{ ...card(true), credential: { type: "network_token", token } }],
-      "payment.instruments.0.credential.type",
-    );
-    refused([card(true, "pm_card_visa")], "payment.instruments.0.credential.token");
-    refused([{ ...card(true), credential: undefined }], "payment.instruments.0.credential");
-    refused([{ ...card(true), display: "visa" }], "payment.instruments.0.display");
-    refused([{ ...card(true), selected: "yes" }], "payment.instruments.0.selected");
-    refused(["card"], "payment.instruments.0");
-    assert.match(
-      refusalOf(payOrderInput, { orderId, payment: { instruments: [card(false)] }, total })[0]?.message ?? "",
-      /exactly one instrument with selected: true, not 0/,
-    );
+  });
+
+  it("describes the token without naming another way to send it", () => {
+    const json = z.toJSONSchema(payOrderInput, { io: "input" }) as Json;
     assert.equal(
-      refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), type: "link" }] }, total })[0]
-        ?.message,
-      "The selected instrument's type must be card",
+      json.properties?.sharedPaymentToken?.description,
+      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
     );
-  });
-
-  it("never takes card details in an instrument", () => {
-    for (const extra of [
-      { number: "4242424242424242" },
-      { display: { pan: "4242 4242 4242 4242" } },
-      { display: { number: "378282246310005" } },
-      { network_token: "4222222222222" },
-    ]) {
-      assert.deepEqual(
-        refusalOf(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...extra }] }, total }),
-        [
-          {
-            path: "payment.instruments",
-            message: "payment.instruments must not hold card details: pay with the shared payment token alone",
-          },
-        ],
-        JSON.stringify(extra),
-      );
-    }
-    // A phone without its +, 13 digits that pass Luhn and start like a card.
-    assert.ok(containsCardNumber("4915123456787"));
-    const phone = { billing_address: { phone_number: "4915123456787" } };
-    assertAccepted(payOrderInput, { orderId, payment: { instruments: [{ ...card(true), ...phone }] }, total });
-  });
-
-  it("takes method stripe_alipay_wechat_pay with the total", () => {
-    assertAccepted(payOrderInput, { orderId, method: "stripe_alipay_wechat_pay", total: { amount: "125.00", currency: "USD" } });
-  });
-
-  it("refuses an unknown method, and the token's id: a token is sent as sharedPaymentToken or payment", () => {
-    for (const method of ["card", "stripe_shared_payment_token"]) {
-      const issues = refusalOf(payOrderInput, { orderId, method, total });
-      assert.deepEqual(
-        issues.map((i) => [i.path, i.message]),
-        [["method", "method must be one of: stripe_alipay_wechat_pay"]],
-        method,
-      );
-    }
-  });
-
-  it("takes exactly one of the three", () => {
-    const both = "Send exactly one of sharedPaymentToken, payment and method";
-    const payment = { instruments: [card(true)] };
-    const method = "stripe_alipay_wechat_pay";
-    const messageAt = (input: object, at: string) =>
-      refusalOf(payOrderInput, { orderId, total, ...input }).find((i) => i.path === at)?.message;
-    assert.equal(messageAt({ sharedPaymentToken: token, payment }, "payment"), both);
-    assert.equal(messageAt({ sharedPaymentToken: token, method }, "method"), both);
-    assert.equal(messageAt({ payment, method }, "method"), both);
-    assert.equal(messageAt({ sharedPaymentToken: token, payment, method }, "method"), both);
-    assert.deepEqual(refusalOf(payOrderInput, { orderId, total }), [
-      {
-        path: "sharedPaymentToken",
-        message: "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
-      },
-    ]);
-    assert.equal(
-      refusalOf(payOrderInput, { orderId, total, credential: "x" })[0]?.message,
-      "Unknown argument(s): credential",
-    );
-    assert.throws(() => sharedPaymentTokenOf({}), /parse with payOrderInput first/);
+    assert.doesNotMatch(JSON.stringify(json), /Exactly one of|instrument/);
   });
 });

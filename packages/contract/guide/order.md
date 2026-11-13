@@ -32,7 +32,7 @@
 
    ```bash
    {{tool:hotels book}} --offer <offerId> --guest 1:John:Smith --guest 2:Mary:Smith \
-     --first-name John --last-name Smith --email john@example.com \
+     --name "John Smith" --email john@example.com \
      --phone "+8613800000000"
    ```
 
