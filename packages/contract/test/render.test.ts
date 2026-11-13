@@ -39,6 +39,7 @@ const GOLDENS = [
   "error-destination-ambiguous-suzhou",
   "error-not-a-locality-patong",
   "hotel-long-description",
+  "hotel-json-policy",
   "offers-two-hotels-one-unavailable",
   "order-awaiting-payment",
   "order-confirmed",
@@ -622,14 +623,17 @@ describe("other errors", () => {
 });
 
 describe("hotel detail", () => {
-  it("keeps the full description and every policy (no truncation)", () => {
+  it("keeps every line of the description and of every policy (no truncation)", () => {
     const fixture = load("hotel-long-description") as ToolFixture;
     const data = fixture.data as Record<string, any>;
     const description = data.description.text as string;
     assert.equal(description.length, 18357);
-    const text = render(fixture);
-    assert.ok(text.includes(description));
-    for (const policy of data.policies.items) assert.ok(text.includes(policy.text));
+    const lines = new Set(render(fixture).split("\n"));
+    const quotedIn = (text: string) => text.split("\n").filter((line) => line.trim()).map((line) => `> ${line}`);
+    for (const line of quotedIn(description)) assert.ok(lines.has(line), line);
+    for (const policy of data.policies.items) {
+      for (const line of quotedIn(policy.text)) assert.ok(lines.has(line), line);
+    }
   });
 
   it("lists the room types only when they were asked for", () => {

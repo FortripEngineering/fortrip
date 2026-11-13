@@ -2,6 +2,7 @@ import { LIMITS } from "../limits.ts";
 import type { HotelSummary, SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
+import { oneLine } from "./third-party.ts";
 
 /* `search_hotels` (spec §12, §7.6, §7.8). */
 
@@ -45,16 +46,16 @@ function placeHeader(d: PlaceDestination, matched: number): string {
             ? `${p.kind}, radius not stated`
             : `${p.kind}, ${radiusWords(d.radiusMeters, d.radiusSource)}`
           : `${p.kind}, scope ${d.scope}`;
-  const where = [p.region && `${p.region.name} ${p.region.placeId}`, p.countryCode]
+  const where = [p.region && `${oneLine(p.region.name)} ${p.region.placeId}`, p.countryCode]
     .filter(Boolean)
     .join(", ");
   const other = [p.names.en, p.names.zh].find((n) => n && n !== p.name);
   return [
-    `${p.name} (${scope})`,
+    `${oneLine(p.name)} (${scope})`,
     plural(matched, "hotel"),
     p.placeId,
     where,
-    other ? `also named ${other}` : "",
+    other ? `also named ${oneLine(other)}` : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -65,7 +66,7 @@ function header(r: SearchResult): string {
   const matched = r.coverage.matched;
   let head: string;
   if (d === null) {
-    head = `${r.text ? `Text "${r.text}"` : "All hotels"} · ${plural(matched, "hotel")}`;
+    head = `${r.text ? `Text "${oneLine(r.text)}"` : "All hotels"} · ${plural(matched, "hotel")}`;
   } else if (d.kind === "place") {
     head = placeHeader(d as PlaceDestination, matched);
   } else if (d.kind === "point") {
@@ -75,7 +76,7 @@ function header(r: SearchResult): string {
   } else {
     head = `Destination of kind ${d.kind} · ${plural(matched, "hotel")}`;
   }
-  if (d !== null && r.text) head += ` · text "${r.text}" (exact words)`;
+  if (d !== null && r.text) head += ` · text "${oneLine(r.text)}" (exact words)`;
   return head;
 }
 
@@ -83,7 +84,7 @@ function centerLine(d: Destination | null): string | null {
   if (d === null || (d.kind !== "place" && d.kind !== "point")) return null;
   const c = (d as PlaceDestination | PointDestination).center;
   const from = c.place
-    ? `${c.place.name} ${c.place.placeId}`
+    ? `${oneLine(c.place.name)} ${c.place.placeId}`
     : `${c.location.lat}, ${c.location.lng}`;
   return `Distances from ${from} (${label(CENTER_BASES, c.basis)}).`;
 }
@@ -139,7 +140,7 @@ export function localitiesLines(
     `Localities: pass one back as ${back}, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").`,
   ];
   for (const item of loc.items) {
-    let line = `- ${item.place.name} ${item.place.placeId} ${num(item.count)}`;
+    let line = `- ${oneLine(item.place.name)} ${item.place.placeId} ${num(item.count)}`;
     if (item.total !== item.count) line += ` here, ${num(item.total)} as a locality`;
     const sameName =
       areaName !== null &&
@@ -149,7 +150,7 @@ export function localitiesLines(
     if (sameName) line += ` — the locality, not the whole of ${areaName}`;
     if (item.includes.length > 0) {
       const inc = item.includes.map(
-        (i) => `${i.place.name} ${i.place.placeId}, ${num(i.members)} hotels overall`,
+        (i) => `${oneLine(i.place.name)} ${i.place.placeId}, ${num(i.members)} hotels overall`,
       );
       line += ` (incl. ${inc.join("; ")})`;
     }
@@ -175,7 +176,8 @@ function priceWords(h: HotelSummary, status: string | null): string {
 }
 
 function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
-  const where = [h.address.region?.name, h.address.countryCode].filter(Boolean).join(", ");
+  const region = h.address.region;
+  const where = [region && oneLine(region.name), h.address.countryCode].filter(Boolean).join(", ");
   return [
     `${i + 1}. ${named(h.name, h.names)}`,
     h.stars === null ? "stars not listed" : `${h.stars}★`,
@@ -185,7 +187,7 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {
         ? "distance unknown"
         : km(h.distanceMeters),
     r.pricing.mode === "none" ? "" : priceWords(h, r.pricing.status),
-    h.address.line ? h.address.line.text : "address not listed",
+    h.address.line ? oneLine(h.address.line.text) : "address not listed",
     where,
     h.photo ? `photo ${h.photo.url}` : "",
     h.hotelId,
@@ -230,9 +232,10 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
       d !== null && (d.kind === "place" || d.kind === "point")
         ? (d as PlaceDestination | PointDestination)
         : null;
-    const around =
+    const around = oneLine(
       known?.center.place?.name ??
-      (known?.kind === "place" ? (known as PlaceDestination).place.name : "the center");
+        (known?.kind === "place" ? (known as PlaceDestination).place.name : "the center"),
+    );
     const priced = r.coverage.priced === null ? "" : ` ${num(r.coverage.priced)}`;
     lines.push(
       `Only the nearest${priced} matches were priced: "cheapest" here means cheapest within ${km(pool)} of ${around}.`,

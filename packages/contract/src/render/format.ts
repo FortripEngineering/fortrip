@@ -1,5 +1,6 @@
 import type { Money } from "../conventions/money.ts";
 import { countIsoDateDays } from "../dates.ts";
+import { oneLine } from "./third-party.ts";
 
 /*
  * Small pieces every renderer shares. Values reach these after `parseOpen`,
@@ -31,7 +32,7 @@ export function plural(n: number, one: string, many = `${one}s`): string {
 /** The name, plus the other language's form when it differs. */
 export function named(name: string, names: Names): string {
   const other = [names.en, names.zh].find((n) => n && n !== name);
-  return other ? `${name} (${other})` : name;
+  return other ? `${oneLine(name)} (${oneLine(other)})` : oneLine(name);
 }
 
 /** A known value's wording, or the raw value. */
@@ -116,7 +117,7 @@ export function roomFacts(r: RoomFacts): string[] {
       : `${r.areaSqm.min}–${r.areaSqm.max} m²`
     : "size not stated";
   return [
-    r.beds ? `beds: ${r.beds.text}` : "beds not listed",
+    r.beds ? `beds: ${oneLine(r.beds.text)}` : "beds not listed",
     area,
     r.maxOccupancy === null ? "max occupancy not listed" : `max ${plural(r.maxOccupancy, "guest")}`,
     r.window === null ? "window not listed" : label(WINDOWS, r.window),

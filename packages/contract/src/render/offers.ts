@@ -2,6 +2,7 @@ import type { RoomType } from "../outputs/hotel.ts";
 import type { HotelOffersResult, Offer } from "../outputs/offer.ts";
 import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, plural, roomFacts, stayLine, when } from "./format.ts";
+import { oneLine } from "./third-party.ts";
 
 /* `get_hotel_offers` (spec §9), and the terms orders and errors share. */
 
@@ -42,7 +43,7 @@ export function mealsText(m: Meals): string {
 /** Meals with the rate's own label, for offer and order lines. */
 export function mealsWithLabel(m: Meals): string {
   const text = mealsText(m);
-  return m.label ? `${text} (labelled "${m.label.text}")` : text;
+  return m.label ? `${text} (labelled "${oneLine(m.label.text)}")` : text;
 }
 
 export function cancellationText(c: Cancellation): string {
@@ -112,7 +113,7 @@ export function confirmationText(c: Confirmation): string {
 }
 
 function roomTypeText(r: RoomType): string {
-  return [r.name ? r.name.text : "room name not listed", ...roomFacts(r)].join(", ");
+  return [r.name ? oneLine(r.name.text) : "room name not listed", ...roomFacts(r)].join(", ");
 }
 
 /** One offer on one line, its id first. */
