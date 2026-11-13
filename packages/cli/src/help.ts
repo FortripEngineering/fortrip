@@ -141,7 +141,7 @@ Errors go to stderr, as text or, with --json, as JSON.
 Exit codes: 0 ok, 1 error (retry once when the error says it is retryable),
 2 invalid arguments, or orders cancel without --max-penalty or --close
 (nothing is cancelled), 3 not signed in or sign-in not accepted, 4 rate
-limited.
+limited, 5 this CLI is too old for Fortrip (the error says how to update it).
 
 Environment:
 ${ENVIRONMENT_LINES}

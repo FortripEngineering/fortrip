@@ -408,8 +408,13 @@ describe("a request the contract refuses is not sent", () => {
     ]);
   });
 
-  // The contract takes the token as sharedPaymentToken or as UCP's payment;
-  // the CLI sends only --token, and needs it.
+  // 6.0: an order is paid by token only, with the total the user approved.
+  it("orders pay takes --token and --total, and nothing else", () => {
+    const pay = COMMANDS.find((spec) => spec.tool === "pay_order");
+    assert.deepEqual(pay?.flags.map((flag) => flag.flag), ["token", "total"]);
+    assert.equal(pay?.options, undefined);
+  });
+
   it("orders pay needs --token", () => {
     const token = {
       pointer: "/sharedPaymentToken",

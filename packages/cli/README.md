@@ -144,14 +144,25 @@ Clients that start local servers can run the CLI as a bridge. `fortrip mcp`
 runs an MCP server on stdio that forwards to the hosted server with your saved
 sign-in.
 
+A tool's result is one block of text, the same from the bridge as from the
+hosted server; an error is a tool error (`isError: true`) whose one block of
+text says what happened and what to do next, with Fortrip's error envelope in
+`_meta["ai.fortrip/error"]`. For the JSON of a result, use a command with
+`--json`.
+
 You can add the bridge to a client before you sign in: signed out, it still
 starts and lists its tools. A tool call is then answered with a tool error
-(`isError: true`, code `unauthenticated`) whose message says to run
+(`isError: true`, code `unauthenticated`) whose text says to run
 `npx -y fortrip login` in a terminal, or to open the sign-in link it names and
 approve it. Once you have, the next tool call works, with no restart. If a
 sign-in stops working later, only the request that hit it fails, the same way
 for a tool call; any other request that hits a sign-in problem gets the
 JSON-RPC error `-32001` instead. The server keeps running.
+
+When this version of the CLI is too old for Fortrip, a tool call is answered
+with the tool error `client_outdated`, whose text says so and gives the
+command that updates the CLI. Update it, then restart the server in your
+client.
 
 Claude Desktop (Settings, Developer, Edit Config; on macOS
 `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows
@@ -213,6 +224,7 @@ that starts with `local_`.
 | 2 | Invalid arguments (local, or the API's `invalid_request`) |
 | 3 | Not signed in, or the sign-in wasn't accepted; `loginUrl` on stderr |
 | 4 | Rate limited (`retryAfterSeconds` on stderr) |
+| 5 | This version of the CLI is too old for Fortrip (`client_outdated`): stderr is Fortrip's message, with the command that updates the CLI. Update it, then run the command again |
 
 ## Support
 

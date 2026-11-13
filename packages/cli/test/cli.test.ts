@@ -24,13 +24,15 @@ import {
   strictOutput,
 } from "@fortrip/agent-contract";
 
+import { EXIT } from "../src/exit-codes.ts";
+
 const run = promisify(execFile);
 
 /** What the fake API answers next, and every request it has received. */
 let reply: { status: number; body: unknown; headers?: Record<string, string> };
 /** Answers for the next requests, in order; `reply` answers the rest. */
 let replies: (typeof reply)[];
-let requests: { method?: string; url?: string; authorization?: string; body: unknown }[];
+let requests: { method?: string; url?: string; authorization?: string; userAgent?: string; body: unknown }[];
 let server: Server;
 let apiUrl: string;
 
@@ -45,6 +47,7 @@ before(async () => {
         method: req.method,
         url: req.url,
         authorization: req.headers.authorization,
+        userAgent: req.headers["user-agent"],
         body: raw ? JSON.parse(raw) : undefined,
       });
       const answer = replies.shift() ?? reply;
@@ -348,25 +351,32 @@ describe("requests", () => {
     assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });
 
-  it("orders cancel --close answered invalid_request (paid meanwhile) exits 2 and never says closed", async () => {
+  // 6.0: a mode that doesn't fit the order's state is refused with the
+  // order's cancel as it is now; nothing is closed or cancelled by the other.
+  it("orders cancel --close answered order_not_cancellable (paid meanwhile) exits 1 with the action that applies, and closes nothing", async () => {
     const { data } = await fixture("order-awaiting-payment");
+    const { cancel } = (await fixture("order-confirmed")).data as { cancel: { action: string } };
+    assert.equal(cancel.action, "cancel");
     const envelope = {
       error: {
-        code: "invalid_request",
+        code: "order_not_cancellable",
         message: "This order is paid: cancel it under its terms with maximumPenalty.",
         retryable: false,
         requestId: "req_1",
-        details: { issues: [] },
+        details: { cancel },
       },
     };
     strictOutput(errorEnvelope).parse(envelope);
-    replies = [{ status: 200, body: data }, { status: 400, body: envelope }];
+    replies = [{ status: 200, body: data }, { status: 409, body: envelope }];
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 2);
+    assert.equal(code, 1);
     assert.equal(stdout, "");
-    assert.ok(stderr.startsWith(renderError(envelope, undefined, "cli")), stderr);
-    assert.doesNotMatch(stderr, /\bclosed\b/i);
-    assert.equal(requests.length, 2);
+    assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`);
+    // The penalty and the refund, and the command that cancels: never --close again.
+    assert.match(stderr, /it is cancelled under its terms, not closed: penalty USD 120\.00, refund USD 246\.00/);
+    assert.match(stderr, /run `fortrip orders cancel <orderId> --max-penalty <amount>`/);
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+    assert.deepEqual(requests[1]?.body, { close: true });
   });
 
   it("orders cancel --close on a paid order exits 2 naming --max-penalty, and posts nothing", async () => {
@@ -565,6 +575,24 @@ describe("output", () => {
     }
   });
 
+  // 6.0: the contact is one name.
+  it("orders create takes the contact's name as --name: --first-name and --last-name are no flags", async () => {
+    const { code, stderr } = await cli(BOOK);
+    assert.equal(code, 0, stderr);
+    assert.deepEqual((requests[0]?.body as { contact: unknown }).contact, {
+      name: "John Smith",
+      email: "john@example.com",
+      phone: "+8613800000000",
+    });
+    for (const flag of ["--first-name", "--last-name"]) {
+      requests = [];
+      const refused = await cli([...BOOK, flag, "John"]);
+      assert.equal(refused.code, 2, flag);
+      assert.match(refused.stderr, new RegExp(flag));
+      assert.equal(requests.length, 0, flag);
+    }
+  });
+
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 200, body: data };
@@ -627,6 +655,40 @@ describe("errors", () => {
     const limited = await cli(SEARCH);
     assert.equal(limited.code, 4);
     assert.match(limited.stderr, /^Error rate_limited: "rate_limited happened"\nRetryable: retry after 7 s\./);
+  });
+
+  // Spec D6b: the service's message is complete, and the exit code is its own.
+  it("client_outdated (HTTP 426) prints Fortrip's message as it is, exits 5, and nothing retries", async () => {
+    const message =
+      "This fortrip CLI (5.3.0) is too old for the service. Update it with `npm install -g fortrip@latest`, then run the command again.";
+    const envelope = { error: { code: "client_outdated", message, retryable: false, requestId: "req_1" } };
+    strictOutput(errorEnvelope).parse(envelope);
+    assert.deepEqual(ERROR_CODES.client_outdated.status, [426]);
+    reply = { status: 426, body: envelope };
+    for (const args of [SEARCH, ["hotels", "get", HOTEL], OFFERS, BOOK, ["orders", "get", ORDER], ["orders", "list"], ["whoami"]]) {
+      requests = [];
+      const { code, stdout, stderr } = await cli(args);
+      assert.equal(code, 5, args.join(" "));
+      assert.equal(stdout, "", args.join(" "));
+      assert.equal(stderr, `${message}\n`, args.join(" "));
+      assert.equal(requests.length, 1, args.join(" "));
+    }
+    // orders cancel and orders pay read the order first: refused there, nothing is posted.
+    for (const args of [
+      ["orders", "cancel", ORDER, "--max-penalty", "12.50"],
+      ["orders", "cancel", ORDER, "--close"],
+      ["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"],
+    ]) {
+      requests = [];
+      const { code, stderr } = await cli(args);
+      assert.equal(code, 5, args.join(" "));
+      assert.equal(stderr, `${message}\n`, args.join(" "));
+      assert.deepEqual(requests.map((r) => r.method), ["GET"], args.join(" "));
+    }
+    // With --json, the envelope, as for any error.
+    const json = await cli([...SEARCH, "--json"]);
+    assert.equal(json.code, 5);
+    assert.deepEqual(JSON.parse(json.stderr), { ...envelope, status: 426 });
   });
 
   it("an unknown error code falls back to the HTTP status", async () => {
@@ -914,6 +976,16 @@ describe("help", () => {
     assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
   });
 
+  it("--help lists every exit code", async () => {
+    const { stdout } = await cli(["--help"]);
+    const codes = flat(stdout).match(/Exit codes: (.*?)\. Environment:/)?.[1] ?? "";
+    assert.deepEqual(
+      [...codes.matchAll(/(?:^|, )(\d) /g)].map((m) => Number(m[1])),
+      Object.values(EXIT),
+    );
+    assert.match(codes, /5 this CLI is too old for Fortrip \(the error says how to update it\)$/);
+  });
+
   it("no help names an API path", async () => {
     for (const args of [["--help"], ["hotels", "offers", "--help"], ["orders", "create", "--help"]]) {
       assert.doesNotMatch((await cli(args)).stdout, /\/api\/|\/v1\//);
@@ -950,6 +1022,8 @@ describe("unknown commands", () => {
       ["hotels", "nope"],
       ["hotels", "login"],
       ["orders", "refund"],
+      // 6.0: an order is created with `orders create`.
+      ["hotels", "book"],
     ]) {
       const { code, stderr } = await cli([group as string, name as string]);
       assert.equal(code, 2, `${group} ${name}`);
@@ -972,5 +1046,14 @@ describe("other commands", () => {
       assert.equal(code, 0);
       assert.match(stdout, /^\d+\.\d+\.\d+/);
     }
+  });
+
+  it("the user agent of every request is fortrip-cli/<the version --version prints>", async () => {
+    const version = (await cli(["--version"])).stdout.trim();
+    assert.equal(version, JSON.parse(await readFile("package.json", "utf8")).version);
+    await cli(["orders", "list"]);
+    await cli(SEARCH);
+    assert.equal(requests.length, 2);
+    for (const request of requests) assert.equal(request.userAgent, `fortrip-cli/${version}`);
   });
 });

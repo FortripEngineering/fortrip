@@ -19,7 +19,7 @@ import {
 } from "../src/credentials.ts";
 import { CliError, EXIT, notices } from "../src/errors.ts";
 import { cli } from "./helpers/cli.ts";
-import { envelope, type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
+import { CLIENT_OUTDATED, envelope, type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
 
 let api: FakeApi;
 let apiUrl: string;
@@ -889,6 +889,63 @@ describe("a re-login revokes the session it replaced", () => {
     await refreshSession(apiUrl, saved.accessToken);
     assert.equal(api.counts.refreshes, 1);
     assert.deepEqual(api.revoked, []);
+  });
+});
+
+// Spec D6b: the service refuses a CLI whose major is behind its own with
+// HTTP 426, also on the endpoint the CLI reads before it signs in.
+describe("a CLI too old for the service (client_outdated)", () => {
+  const { message } = CLIENT_OUTDATED.body.error;
+
+  it("login says so before it starts a device login, and shows no code or link", async () => {
+    api.scripts.config = [CLIENT_OUTDATED];
+    const error = await failure(runLogin());
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.deepEqual(error.envelope, CLIENT_OUTDATED.body);
+    assert.equal(api.counts.config, 1);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(logs, []);
+
+    // The command: Fortrip's message alone on stderr, and a code of its own.
+    api.scripts.config = [CLIENT_OUTDATED];
+    const run = await cli(["login", "--no-browser"], cliEnv());
+    assert.equal(run.code, 5);
+    assert.equal(run.stdout, "");
+    assert.equal(run.stderr, `${message}\n`);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.equal(api.counts.polls, 0);
+  });
+
+  it("a signed-out command exits 5 with the message instead of a sign-in link", async () => {
+    api.scripts.config = [CLIENT_OUTDATED];
+    const error = await failure(requireToken(apiUrl));
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.equal(error.details.loginUrl, undefined);
+
+    api.scripts.config = [CLIENT_OUTDATED];
+    const text = await cli(["whoami"], cliEnv());
+    assert.equal(text.code, 5);
+    assert.equal(text.stderr, `${message}\n`);
+
+    api.scripts.config = [CLIENT_OUTDATED];
+    const json = await cli(["whoami", "--json"], cliEnv());
+    assert.equal(json.code, 5);
+    assert.deepEqual(JSON.parse(json.stderr), { ...CLIENT_OUTDATED.body, status: 426 });
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(await loadPendingLogins(apiUrl), []);
+  });
+
+  it("a signed-in command exits 5: one request, no refresh, no sign-in, the session kept", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.me = [CLIENT_OUTDATED];
+    const error = await failure(whoami(apiUrl));
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.equal(error.message, message);
+    assert.equal(api.counts.me, 1);
+    assert.equal(api.counts.refreshes, 0);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.equal((await loadSession(apiUrl))?.accessToken, session.accessToken);
   });
 });
 

@@ -11,6 +11,7 @@ import {
 } from "@fortrip/agent-contract";
 
 import { DEFAULT_API_URL, DEFAULT_MCP_URL } from "../src/credentials.ts";
+import { EXIT } from "../src/exit-codes.ts";
 import { overallHelp } from "../src/help.ts";
 
 /** A command as typed after `fortrip`: `hotels search`, `login`. */
@@ -92,29 +93,39 @@ describe("README", () => {
     );
   });
 
-  it("lists exit codes 0 to 4, each with its meaning", async () => {
+  it("lists every exit code, 0 to 5, each with its meaning", async () => {
     const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
     const section = readme.match(/^## Output and exit codes\n([\s\S]*?)(?=^## )/m)?.[1] ?? "";
     const rows = [...section.matchAll(/^\| (\d) \| (.*) \|$/gm)].map((m) => [m[1], m[2]]);
-    assert.deepEqual(rows.map(([code]) => code), ["0", "1", "2", "3", "4"]);
+    assert.deepEqual(rows.map(([code]) => Number(code)), Object.values(EXIT));
     const meaning = new Map(rows as [string, string][]);
     assert.match(meaning.get("0") as string, /^Success$/);
     assert.match(meaning.get("1") as string, /^Any other error.*destination_ambiguous.*offer_changed.*retryable/);
     assert.match(meaning.get("2") as string, /^Invalid arguments.*invalid_request/);
     assert.match(meaning.get("3") as string, /^Not signed in.*loginUrl/);
     assert.match(meaning.get("4") as string, /^Rate limited.*retryAfterSeconds/);
+    assert.match(meaning.get("5") as string, /^This version of the CLI is too old.*client_outdated.*Update it/);
   });
 
   it("says a signed-out MCP tool call gets a tool error, not -32001", async () => {
     const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
     const section = readme.match(/^## MCP server\n([\s\S]*?)(?=^## )/m)?.[1] ?? "";
     const paragraph = section.match(/^You can add the bridge[\s\S]*?(?=\n\n)/m)?.[0] ?? "";
-    assert.match(paragraph, /tool error[^.]*isError: true[^.]*unauthenticated/);
+    assert.match(paragraph, /tool error[^.]*isError: true[^.]*unauthenticated[^.]*whose text says/);
     assert.match(paragraph, /npx -y fortrip login/);
     assert.match(paragraph, /no restart/);
     // -32001 is only what a request other than a tool call gets.
     const [, afterToolCall = ""] = paragraph.split(/any other request/);
     assert.match(afterToolCall, /-32001/);
     assert.doesNotMatch(paragraph.replace(/any other request[\s\S]*/, ""), /-32001/);
+  });
+
+  it("says a tool's result is one block of text, an error's too, and names no removed shape", async () => {
+    const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+    const section = readme.match(/^## MCP server\n([\s\S]*?)(?=^## )/m)?.[1] ?? "";
+    assert.match(section, /A tool's result is one block of text/);
+    assert.match(section, /_meta\["ai\.fortrip\/error"\]/);
+    assert.match(section, /tool error `client_outdated`/);
+    assert.doesNotMatch(readme, /structuredContent|book_hotel|hotels book|--method|--first-name|--last-name|\bQR\b|Alipay|WeChat/i);
   });
 });

@@ -18,6 +18,8 @@ const MEANINGS: Record<ExitName, string> = {
   unauthenticated:
     'Not signed in, or the saved sign-in is no longer accepted (`unauthenticated`). stderr normally includes `loginUrl` and `userCode`: show them to the user and rerun the command once they have approved. When `FORTRIP_TOKEN` is set and Fortrip rejects it, stderr has `tokenSource: "FORTRIP_TOKEN"` and no link: replace or unset the token.',
   rateLimited: "Rate limited (`rate_limited`). stderr includes `retryAfterSeconds`.",
+  clientOutdated:
+    "This version of the CLI is too old for Fortrip (`client_outdated`). stderr is Fortrip's message, with the command that updates the CLI: update it, then run the command again.",
 };
 
 /** One row per CLI exit code, in the CLI's order. */

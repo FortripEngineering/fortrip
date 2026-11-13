@@ -2,7 +2,7 @@ import { ERROR_CODES, type ErrorCode } from "@fortrip/agent-contract";
 
 import { CliError, EXIT, type ErrorEnvelope, type ExitCode } from "./errors.ts";
 import { EXIT_BY_CODE, EXIT_BY_STATUS } from "./exit-codes.ts";
-import { VERSION } from "./version.ts";
+import { USER_AGENT } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
@@ -40,7 +40,7 @@ export async function request(
       method,
       headers: {
         accept: "application/json",
-        "user-agent": `fortrip-cli/${VERSION}`,
+        "user-agent": USER_AGENT,
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
@@ -84,7 +84,7 @@ export async function postForm(
       headers: {
         accept: "application/json",
         "content-type": "application/x-www-form-urlencoded",
-        "user-agent": `fortrip-cli/${VERSION}`,
+        "user-agent": USER_AGENT,
       },
       body: new URLSearchParams(form).toString(),
       redirect: "manual",
@@ -149,7 +149,7 @@ function exitCodeFor(code: string | undefined, status: number): ExitCode {
 /**
  * The resource a 2xx answer is, or a `CliError` carrying Fortrip's error
  * envelope, whose exit code follows the CLI contract: `invalid_request` 2,
- * `unauthenticated` 3, `rate_limited` 4, anything else 1.
+ * `unauthenticated` 3, `rate_limited` 4, `client_outdated` 5, anything else 1.
  */
 export function unwrap(response: ApiResponse): unknown {
   const { status, body, headers, raw } = response;
