@@ -185,7 +185,10 @@
       },
       "nameAsText": null
     },
-    "currencyHint": null,
+    "currencyHint": {
+      "currency": "CNY",
+      "reason": "request_location"
+    },
     "data": [
       {
         "hotelId": "htl_BundRiverside0000000",
@@ -226,7 +229,10 @@
             "currency": "USD"
           }
         },
-        "photo": null
+        "photo": {
+          "url": "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp",
+          "caption": null
+        }
       },
       {
         "hotelId": "htl_JinganCourt000000000",

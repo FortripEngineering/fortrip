@@ -49,7 +49,7 @@ export interface FlagSpec {
   /** Given once per item; its field is a list. */
   multiple?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
-   *  `--rooms` sends `include: "roomTypes"`. */
+   *  `--room-types` sends `include: "roomTypes"`. */
   value?: string;
   /**
    * Fields the flag also sends, each with a constant: the variant of a union
@@ -350,7 +350,7 @@ const searchFlags = flagsOf(searchHotelsInput, [
 
 const hotelFlags = flagsOf(getHotelInput, [
   {
-    flag: "rooms",
+    flag: "room-types",
     field: "include",
     type: "boolean",
     value: "roomTypes",

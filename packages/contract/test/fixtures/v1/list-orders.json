@@ -440,7 +440,7 @@
                   {
                     "startsAt": null,
                     "amount": {
-                      "amount": "120.00",
+                      "amount": "91.50",
                       "currency": "USD"
                     }
                   },
@@ -496,11 +496,11 @@
           "action": "cancel",
           "blockedBy": null,
           "penalty": {
-            "amount": "120.00",
+            "amount": "91.50",
             "currency": "USD"
           },
           "refund": {
-            "amount": "246.00",
+            "amount": "274.50",
             "currency": "USD"
           }
         },

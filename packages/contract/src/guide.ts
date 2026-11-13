@@ -18,7 +18,7 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  *   `fortrip` (`{{tool:hotels search}}`): `search_hotels` (mcp),
  *   `fortrip:search_hotels` (claude-skill), `fortrip hotels search` (cli).
  *   It throws on a surface without that tool: MCP has no `whoami`.
- * - `{{arg:<field>}}` names an input field: `rooms`, or the CLI's `--rooms`.
+ * - `{{arg:<field>}}` names an input field: `text`, or the CLI's `--text`.
  * - `{{limit:<key>}}` is a number from `LIMITS`; `{{support}}` is the
  *   support address.
  * - `{{#if <surface> …}}…{{/if}}` keeps its text only on the surfaces it

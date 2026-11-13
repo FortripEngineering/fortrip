@@ -11,7 +11,7 @@ Localities: pass one back as destination { kind: "locality", placeId }, never th
 Unassigned: 351 hotels in this search belong to no locality.
 More: 112 more localities; name one with place_name.
 
-1. Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · 5★ · 0.6 km · estimate from USD 182.50/room-night (USD 365.00 per room for the stay) · "88 Zhongshan East 1st Road, Huangpu" · "Shanghai", CN · htl_BundRiverside0000000
+1. Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · 5★ · 0.6 km · estimate from USD 182.50/room-night (USD 365.00 per room for the stay) · "88 Zhongshan East 1st Road, Huangpu" · "Shanghai", CN · photo https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp · htl_BundRiverside0000000
 2. Hotel: "Jing'an Court Hotel" ("静安阁酒店") · 4.5★ · 1.8 km · estimate from USD 96.10/room-night (USD 192.20 per room for the stay) · "1200 Nanjing West Road, Jing'an" · "Shanghai", CN · htl_JinganCourt000000000
 3. Hotel: "Riverside Inn" · stars not listed · distance unknown · no indicative price · address not listed · "Shanghai", CN · htl_NoAddress00000000000
 4. Hotel: "静安小筑" · 2★ · 2.4 km · estimate from USD 41.00/room-night (USD 82.00 per room for the stay) · "上海市静安区愚园路 168 号" · "Shanghai", CN · htl_ZhOnlyName0000000000
@@ -22,4 +22,6 @@ Notes:
 
 Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.
 
-Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Keep hotel names as returned, and never invent photos, ratings, reviews, prices, terms or coordinates.
+Currency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers with currency CNY.
+
+Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.

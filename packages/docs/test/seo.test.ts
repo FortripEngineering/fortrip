@@ -10,11 +10,16 @@ import {
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
+  cancelNextStep,
   LIMITS,
   MCP_SERVER_URL,
+  ORDER_NEXT_STEP,
   ORDER_STATUSES,
   PAY_WAYS,
   PAYMENT_STATUSES,
+  payNextStep,
+  PRESENTATION_HINT,
+  renderToolResult,
   TOOLS,
 } from "@fortrip/agent-contract";
 import { ENABLED_REGIONS } from "@fortrip/agent-contract/regions";
@@ -220,6 +225,34 @@ describe("Markdown pages", () => {
     includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");
     includesAll(cli, GLOBAL_FLAGS.map((flag) => `--${flag.flag}`), "global flags");
     assert.ok(cli.includes(JSON.stringify(RAW_BODY_EXAMPLE)));
+  });
+
+  // MCP_TEXT_RULES says in which order the rules end a text: checked against
+  // the contract's own renderer, on a page with an order to pay by link or
+  // token and a paid order to cancel.
+  it("the rules of a tool's result come in the order the contract writes them", () => {
+    const payable = JSON.parse(readFileSync(new URL("../lib/reference/fixtures/order-awaiting-payment.json", import.meta.url), "utf8"));
+    assert.ok(payable.payment.url && payable.payment.token);
+    const cancellable = {
+      ...payable,
+      status: "confirmed",
+      payment: { ...payable.payment, status: "paid", url: null, expiresAt: null, token: null },
+      cancel: { action: "cancel", blockedBy: null, penalty: { amount: "10.00", currency: "USD" }, refund: { amount: "122.40", currency: "USD" } },
+    };
+    const paragraphs: Record<string, string> = {
+      cancel: cancelNextStep("mcp"),
+      consent: ORDER_NEXT_STEP,
+      pay: payNextStep("mcp"),
+      presentation: PRESENTATION_HINT,
+    };
+    const page = renderToolResult("list_orders", { data: [payable, cancellable], nextCursor: null });
+    const order = page.split("\n\n").flatMap((block) => Object.keys(paragraphs).filter((rule) => paragraphs[rule] === block));
+    assert.deepEqual(order, [...MCP_TEXT_RULES.list_orders]);
+    assert.deepEqual(order, ["cancel", "consent", "pay"]);
+    assert.deepEqual([...MCP_TEXT_RULES.get_order], order);
+    // A new order has no cancel rule: the consent rule, then the pay rule.
+    const created = renderToolResult("create_order", payable);
+    assert.ok(created.endsWith(`\n\n${MCP_TEXT_RULES.create_order.map((rule) => paragraphs[rule]).join("\n\n")}`));
   });
 
   it("/errors.md: every error code, rate limit scope and limit", () => {

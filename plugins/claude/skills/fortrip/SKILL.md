@@ -20,6 +20,8 @@ The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip
 | `fortrip:cancel_order` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `fortrip:pay_order` | Pays an order without its link, by a shared payment token from the user's wallet |
 
+In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote: give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.
+
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
 ## Sign-in
@@ -117,9 +119,9 @@ An offer expires at the time its line gives, about 30 minutes after it was made;
 
 `fortrip:create_order` answers with an unpaid order, awaiting payment: its reference (the support number), the Total, the stay and its terms, and the Payment link, a Fortrip page that recaps the order and continues to the payment provider. Nothing is charged until the user pays.
 
-1. Show the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included. Show the names and contact as the order holds them, so the user can catch a wrong one before paying; to correct one, order a new offer (see below).
+1. Show the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included. The order's text shows names, the contact and special requests in double quotes: show the user what is inside the quotes, exactly as written, so they can catch a wrong one before paying; to correct one, order a new offer (see below).
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
-3. Then pay one way only: give the payment link exactly as shown (don't shorten, rebuild or re-encode it), or pay without the link as below.
+3. Then pay one way only: give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it), or pay without the link as below.
 
 - The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. When its line says the user signs in to Fortrip to pay (an order started on the Fortrip website), they sign in first.
 - The link expires at the time its line gives; the order then reads as not paid, and can no longer be paid. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
@@ -148,7 +150,7 @@ Check the order with `fortrip:get_order`; its first line has the status:
 
 ## Presenting hotels
 
-If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Keep hotel names as returned, and never invent photos, ratings, reviews, prices, terms or coordinates.
+If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.
 
 ## Errors
 
@@ -181,7 +183,7 @@ Any code:
 
 1. Show the user the stay (hotel, dates) and the penalty and the refund on the Cancel line (amount and currency). A refund of 0 means nothing is paid back: say so plainly.
 2. End that reply by asking the user to confirm the cancellation, and wait for a clear yes.
-3. Then call `fortrip:cancel_order` with `maximumPenalty` set to that penalty as shown. Never state a refund the order's text doesn't show, and never choose or work out an amount yourself.
+3. Then make the call the Cancel line gives, exactly as shown: `fortrip:cancel_order` with `maximumPenalty` set to the penalty on that line. Never state a refund the order's text doesn't show, and never choose or work out an amount yourself.
 
 The order is then cancelling, and cancelled once the hotel has cancelled and the refund is issued: check it with `fortrip:get_order`, which then says what the cancellation kept and returned. If the hotel refuses, the order is confirmed again and its Cancel line says so. `cancellation_changed` means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one.
 

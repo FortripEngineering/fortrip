@@ -1,6 +1,6 @@
 import { SUPPORT_EMAIL } from "../limits.ts";
 import { type Order, type OrderCancel, tokenUsageLimits } from "../outputs/order.ts";
-import { CALLS, type RenderSurface } from "../tools.ts";
+import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeText } from "./offers.ts";
 import { code, joined, type Ours, ours, theirs, token } from "./third-party.ts";
@@ -67,7 +67,9 @@ const CANCEL_BLOCKER_WORDS: Record<string, string> = {
 const FAILURE_WORDS: Record<string, string> = {
   rate_unavailable:
     "the rate could no longer be booked when the hotel was asked; get offers again and let the user choose again",
-  hotel_refused: `the hotel's booking system refused this order, and would refuse the same order again; check the guest names with the user (as on the passport) before ordering again, and ${SUPPORT}`,
+  // A cause is offered, never asserted, and a real name is never to be
+  // altered to get past the hotel's system: that is for support.
+  hotel_refused: `the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them: ${SUPPORT}`,
   unknown: `the reason is not on record; read the order again later, or ${SUPPORT}`,
 };
 
@@ -176,7 +178,7 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
     lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.token) lines.push(tokenLine(o, p.token, surface));
-  lines.push(ours`Cancel: ${cancelText(o, surface)}`);
+  lines.push(cancelLine(o.cancel, o.orderId, surface));
   lines.push(ours`Manage: ${token(o.manageUrl)}`);
   return lines;
 }
@@ -207,32 +209,52 @@ function tokenLine(
 
 /** "penalty USD 120.00, refund USD 246.00": what cancelling now keeps and
  *  returns. Figures are only ever the order's own. */
-export function cancelFigures(c: OrderCancel): Ours {
+function cancelFigures(c: OrderCancel): Ours {
   const figure = (m: OrderCancel["penalty"]) => (m ? money(m) : ours`not stated`);
   return ours`penalty ${figure(c.penalty)}, refund ${figure(c.refund)}`;
 }
 
-/** The call that cancels a paid order for `penalty`, as `surface` makes it. */
-function cancelCall(orderId: string, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
+/** The order a CLI command names: its id, or the placeholder where the
+ *  text has none to give (an error holds the order's cancel state, not its
+ *  id). A tool call names no order in these words: the caller has its id. */
+function orderArgument(orderId: string | null): Ours {
+  return orderId === null ? ours`<orderId>` : token(orderId);
+}
+
+/** The call that cancels a paid order for `penalty`, as `surface` makes it:
+ *  the penalty is the order's own, as the call takes it. */
+function cancelCall(orderId: string | null, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
   return surface === "cli"
-    ? ours`run \`fortrip orders cancel ${token(orderId)} --max-penalty ${token(penalty.amount)}\``
+    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --max-penalty ${token(penalty.amount)}\``
     : ours`call cancel_order with maximumPenalty { amount: ${theirs(penalty.amount)}, currency: ${theirs(penalty.currency)} }`;
 }
 
-/** What `cancel_order` can do to the order now, and by which of its two
- *  modes: cancel it (a paid order), with the penalty and the refund; close it
- *  (an unpaid one), on the user's word; or what blocks both. */
-function cancelText(o: Order, surface: RenderSurface): Ours {
-  const c = o.cancel;
+/** The call that closes an unpaid order, as `surface` makes it. */
+function closeCall(orderId: string | null, surface: RenderSurface): Ours {
+  return surface === "cli"
+    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --close\``
+    : ours`call cancel_order with close: true`;
+}
+
+/**
+ * The "Cancel: …" line: what `cancel_order` can do to an order now, and by
+ * which of its two modes. Cancel it (a paid order), with the penalty, the
+ * refund and the call that passes that penalty; close it (an unpaid one), on
+ * the user's word, with its call; or what blocks both. It is an order's
+ * line, and the line `order_not_cancellable` shows of the order it is about:
+ * the cancel rule (`cancelNextStep`) points at it for the figure and the
+ * call.
+ */
+export function cancelLine(c: OrderCancel, orderId: string | null, surface: RenderSurface): Ours {
   if (c.action === "close") {
-    return ours`can be closed now, nothing is charged; close it only if the user says they no longer want it (${CALLS[surface].close})`;
+    return ours`Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (${closeCall(orderId, surface)})`;
   }
   if (c.action === "cancel") {
-    const now = ours`can cancel now: ${cancelFigures(c)}`;
-    return c.penalty ? ours`${now} (only after the user's yes: ${cancelCall(o.orderId, c.penalty, surface)})` : now;
+    const now = ours`Cancel: can cancel now: ${cancelFigures(c)}`;
+    return c.penalty ? ours`${now} (only after the user's yes: ${cancelCall(orderId, c.penalty, surface)})` : now;
   }
-  if (c.action !== null) return code(c.action, ours`an action not recognized`);
-  return ours`not available: ${blockerText(c)}`;
+  if (c.action !== null) return ours`Cancel: ${code(c.action, ours`an action not recognized`)}`;
+  return ours`Cancel: not available: ${blockerText(c)}`;
 }
 
 /** What blocks both cancelling and closing, in words. An order with no

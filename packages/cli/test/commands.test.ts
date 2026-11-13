@@ -171,7 +171,7 @@ const CASES: {
   },
   {
     name: "hotels get",
-    argv: [HOTEL, "--rooms", "--locale", "zh"],
+    argv: [HOTEL, "--room-types", "--locale", "zh"],
     method: "GET",
     path: `/v1/hotels/${HOTEL}?include=roomTypes&locale=zh`,
   },
@@ -334,7 +334,9 @@ describe("every command builds the request the contract accepts", () => {
   });
 
   it("paths come from the contract", () => {
-    assert.equal(parse("hotels get", [HOTEL, "--rooms"]).path, API.hotel(HOTEL, { roomTypes: true }));
+    assert.equal(parse("hotels get", [HOTEL, "--room-types"]).path, API.hotel(HOTEL, { roomTypes: true }));
+    // The 5.x flag is gone, not kept as an alias.
+    assert.throws(() => parse("hotels get", [HOTEL, "--rooms"]), /--rooms/);
     assert.equal(parse("orders get", [ORDER]).path, API.order(ORDER));
     assert.ok(parse("orders list", []).path.startsWith(API.orders));
     assert.equal(parse("orders cancel", [ORDER, "--max-penalty", "1"]).path, API.orderCancel(ORDER));

@@ -43,7 +43,7 @@ What an integration must change, most urgent first. The [migration table](#v6-mi
 - Each hotel of an offers answer has `omitted.byCallLimit`: how many more offers a call for that hotel alone would show.
 - The error `client_outdated` (HTTP 426): a Fortrip CLI that is a major version behind the service is told to update, on its HTTP calls and through `fortrip mcp`. Other clients never get it. The CLI now sends `fortrip-cli/<version>` as its user agent through `fortrip mcp` too.
 - `payment_method_unavailable` has `details.reason`: `payment_open_on_page`, `token_not_offered` or `charge_refused`.
-- `invalid_request` names where a field belongs when a known field is sent at the wrong depth, such as `offerId` beside `items`.
+- `invalid_request` names where a field belongs when a known field is sent at the wrong depth, such as `offerId` beside `items`; when the field is in its place too, it says to remove the copy, or, if the two differ, that two values were sent. A 5.x `contact.firstName` or `contact.lastName` is told that the contact takes one name.
 - A guest name that the hotel's booking system would refuse answers `invalid_request` before an order is made, instead of an order that fails after payment.
 - `offer_unavailable` says that other offers for the same room may be gone too.
 - The MCP server's `serverInfo` has `title`, `description`, `websiteUrl` and `icons`.
@@ -158,6 +158,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | --- | --- |
 | `fortrip hotels book` | `fortrip orders create` |
 | `--first-name`, `--last-name` | `--name` |
+| `hotels get --rooms` | `hotels get --room-types` |
 | `orders pay --method stripe_alipay_wechat_pay` | — (the user pays on the order's payment link) |
 | `orders pay --token`: required unless `--method` | `--token` and `--total` always required |
 | `--json` answers in the 5.x shapes | The 6.0 shapes (Outputs, above) |

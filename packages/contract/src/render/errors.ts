@@ -9,7 +9,7 @@ import {
   type KnownErrorBody,
 } from "../outputs/error-details.ts";
 import type { OfferChange } from "../outputs/order.ts";
-import { CALLS, cancelNextStep, type RenderSurface } from "../tools.ts";
+import { cancelNextStep, type RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, plural, raw, when } from "./format.ts";
 import {
   cancellationText,
@@ -18,7 +18,7 @@ import {
   mealsText,
   offerLine,
 } from "./offers.ts";
-import { blockerText, cancelFigures, ORDER_STATUS_WORDS } from "./order.ts";
+import { blockerText, cancelLine, ORDER_STATUS_WORDS } from "./order.ts";
 import { localitiesLines } from "./search.ts";
 import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
 
@@ -229,18 +229,23 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
 }
 
 /** Which of cancel and close applies to the order instead of the one asked
- *  for, or what blocks both. With cancel comes the cancel rule: the caller
- *  may have the order's penalty from this error alone. */
+ *  for, or what blocks both. The mode that applies is shown as the order's
+ *  own Cancel line, with the call it takes: the caller may have the order's
+ *  penalty from this error alone, and the cancel rule after it points at
+ *  that line. The error holds no order id, so a CLI command names the order
+ *  as a placeholder: it is the order the caller just named. */
 function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurface): Ours[] {
   const c = d.cancel;
   if (c.action === "close") {
     return [
-      ours`This order isn't paid, so it is closed, not cancelled, and nothing is charged. Close it only if the user says they no longer want it (${CALLS[surface].close}).`,
+      ours`This order isn't paid, so it is closed, not cancelled. Its Cancel line now:`,
+      cancelLine(c, null, surface),
     ];
   }
   if (c.action === "cancel") {
     return [
-      ours`This order is paid, so it is cancelled under its terms, not closed: ${cancelFigures(c)}.`,
+      ours`This order is paid, so it is cancelled under its terms, not closed. Its Cancel line now:`,
+      cancelLine(c, null, surface),
       own(cancelNextStep(surface)),
     ];
   }
@@ -368,7 +373,12 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
         ours`The limit reached counts ${label(RATE_LIMIT_WORDS, e.details.rateLimit, ours`calls of a kind not recognized`)}: wait, then retry once.`,
       ];
     case "ordering_paused":
-      return [ours`Tell the user, and try again later: no sooner than the retry line says.`];
+      // The wait is on the retry line, when the server gives one.
+      return [
+        typeof e.retryAfterSeconds === "number"
+          ? ours`Tell the user, and try again later: no sooner than the retry line above says.`
+          : ours`Tell the user, and try again later.`,
+      ];
     case "service_unavailable":
       return [
         ours`Retry once with the same details (a payment with the same token, never a new one); if it fails again, tell the user.`,

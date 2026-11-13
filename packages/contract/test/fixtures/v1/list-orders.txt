@@ -43,15 +43,15 @@ Hotel: "Lakeside Garden Resort" ("湖畔花园度假酒店") · htl_LakesideGard
 Room: "Deluxe King Room", beds not listed, size not stated, max occupancy not listed, window not listed · room only
 Guests: "Ana Costa", "Tom Costa"
 Special requests: none
-Terms: partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
+Terms: partial penalty now: USD 91.50 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
 Hotel confirmation number: "LGR-449120"
 Contact: "Ana Costa" · "ana.costa@example.com" · "+351 912 345 678"
 Total: USD 366.00 · payment paid · the user's card may pay in its local currency at checkout · card charged EUR 339.80
-Cancel: can cancel now: penalty USD 120.00, refund USD 246.00 (only after the user's yes: call cancel_order with maximumPenalty { amount: "120.00", currency: "USD" })
+Cancel: can cancel now: penalty USD 91.50, refund USD 274.50 (only after the user's yes: call cancel_order with maximumPenalty { amount: "91.50", currency: "USD" })
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000
 
 Next page: call again with { cursor: "c_orders_page_2" }.
 
-Before you give the user an order's payment link, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them the payment link exactly as shown.
+Before you call cancel_order with maximumPenalty, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else. Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, with close: true and no maximumPenalty, only once the user says they no longer want it.
 
-Before you call cancel_order with maximumPenalty, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty as that penalty, exactly as shown ({ amount: "120.00", currency: "USD" } for a penalty of USD 120.00). Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, with close: true and no maximumPenalty, only once the user says they no longer want it.
+Before you give the user an order's payment link, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them the payment link exactly as shown.

@@ -6,7 +6,8 @@ import { z } from "zod";
  * line (`offerId` beside `items` instead of inside its item), the answer can
  * also say where, or that the key is there already and this copy is the one
  * to remove (a model that nests `offerId` correctly and also sends it beside
- * `items`). Read from the input's own JSON Schema, so it follows the schema.
+ * `items`), or that two different values were sent and one is to go. Read
+ * from the input's own JSON Schema, so it follows the schema.
  */
 
 /** A path into an input, as a zod issue has it: keys, and indexes into lists. */
@@ -23,7 +24,26 @@ export interface MisplacedKey {
    *  with the same value: it was sent twice, and this copy is the extra one.
    *  Empty when `misplacedKeys` was not given what was sent. */
   alreadyAt: Path[];
+  /** The places among `belongsAt` where what was sent has the key with
+   *  another value: two values were sent, and only the caller knows which
+   *  one is meant. Empty when `misplacedKeys` was not given what was sent. */
+  differsAt?: Path[];
+  /** For a key this release renamed (`RENAMED_KEYS`): what to send instead,
+   *  in words. Such a key has no place to belong at. */
+  renamed?: string;
 }
+
+/**
+ * Input keys that 6.0 renamed, by the object they were sent in and the key
+ * that replaced them there. For 5.x callers, whose request would otherwise
+ * be told only "unknown field": a renamed key is at no depth of the new
+ * input, so the depth hint has nothing to say of it. It can go once no 5.x
+ * caller is left to tell.
+ */
+const RENAMED_KEYS: readonly { in: string[]; key: string; now: string; says: string }[] = [
+  { in: ["contact"], key: "firstName", now: "name", says: "contact takes one name, the full name" },
+  { in: ["contact"], key: "lastName", now: "name", says: "contact takes one name, the full name" },
+];
 
 type JsonSchema = {
   const?: unknown;
@@ -112,6 +132,8 @@ function ruledOut(selectors: Selector[], sent: unknown, sentIn: Path): boolean {
   });
 }
 
+const pointerOf = (path: Path) => path.map((step) => `/${step}`).join("");
+
 /**
  * For each key a failed parse of `schema` did not know: where `schema` has
  * that key, when it has it above or below the object the key was sent in.
@@ -122,7 +144,9 @@ function ruledOut(selectors: Selector[], sent: unknown, sentIn: Path): boolean {
  * very place in another variant of a union. Given `sent` (the value that was
  * parsed), a key inside a union is looked for only in the variant the sent
  * discriminator selects, and a key that what was sent also has where it
- * belongs, with the same value, is reported as already there (`alreadyAt`).
+ * belongs is reported as already there (`alreadyAt`, the same value) or as
+ * a second value (`differsAt`, another one). A key this release renamed is
+ * answered from `RENAMED_KEYS`.
  */
 export function misplacedKeys(
   schema: z.ZodType,
@@ -148,27 +172,55 @@ export function misplacedKeys(
         const path = [...place.map((step, at) => (step === ITEM ? (sentIn[at] ?? 0) : step)), key];
         belongsAt.set(JSON.stringify(path), path);
       }
-      if (belongsAt.size === 0) return [];
       const path = [...sentIn, key];
+      if (belongsAt.size === 0) {
+        // Not a depth. A key this release renamed, sent where the schema
+        // has its new name, is told what replaced it.
+        const renamed = RENAMED_KEYS.find(
+          (was) =>
+            was.key === key &&
+            JSON.stringify(was.in) === JSON.stringify(sentIn) &&
+            known.some((now) => now.key === was.now && JSON.stringify(now.place) === JSON.stringify(was.in)),
+        );
+        if (!renamed) return [];
+        const says = `${renamed.says}: send it as ${pointerOf([...renamed.in, renamed.now])}`;
+        return [{ path, belongsAt: [], alreadyAt: [], differsAt: [], renamed: says }];
+      }
       const value = JSON.stringify(valueAt(sent, path));
-      const alreadyAt = [...belongsAt.values()].filter(
-        (home) => value !== undefined && JSON.stringify(valueAt(sent, home)) === value,
-      );
-      return [{ path, belongsAt: [...belongsAt.values()], alreadyAt }];
+      // What each home holds in what was sent: nothing, the same value, or another.
+      const homes = [...belongsAt.values()].map((home) => ({ home, held: JSON.stringify(valueAt(sent, home)) }));
+      const alreadyAt = homes.filter(({ held }) => value !== undefined && held === value).map(({ home }) => home);
+      const differsAt = homes
+        .filter(({ held }) => value !== undefined && held !== undefined && held !== value)
+        .map(({ home }) => home);
+      return [{ path, belongsAt: [...belongsAt.values()], alreadyAt, differsAt }];
     });
   });
 }
 
-const pointerOf = (path: Path) => path.map((step) => `/${step}`).join("");
-
 /**
- * What to tell the caller about a misplaced key, after its own pointer:
- * "belongs at /items/0/offerId", or, when what was sent has it there already,
- * "already given at /items/0/offerId: remove this one". Paths are JSON
- * Pointers into the caller's own request.
+ * What to tell the caller about a misplaced key, after its own pointer.
+ * Paths are JSON Pointers into the caller's own request.
+ *
+ * - "belongs at /items/0/offerId": it is nowhere it belongs.
+ * - "already given at /items/0/offerId: remove this one": what was sent has
+ *   it there too, with the same value.
+ * - "two different values were sent, this one and the one at
+ *   /items/0/offerId: send one only, at /items/0/offerId, the one the user
+ *   picked": what was sent has another value there. Never "belongs at",
+ *   which would be an order to overwrite the value in its place (the offer
+ *   the user picked) with the stray one.
+ * - For a key this release renamed, what replaced it.
  */
 export function misplacedKeyHint(key: MisplacedKey): string {
-  return key.alreadyAt.length > 0
-    ? `already given at ${key.alreadyAt.map(pointerOf).join(" and ")}: remove this one`
-    : `belongs at ${key.belongsAt.map(pointerOf).join(" or ")}`;
+  if (key.renamed !== undefined) return key.renamed;
+  if (key.alreadyAt.length > 0) {
+    return `already given at ${key.alreadyAt.map(pointerOf).join(" and ")}: remove this one`;
+  }
+  const differsAt = key.differsAt ?? [];
+  if (differsAt.length > 0) {
+    const homes = differsAt.map(pointerOf).join(" or ");
+    return `two different values were sent, this one and the one at ${differsAt.map(pointerOf).join(" and ")}: send one only, at ${homes}, the one the user picked`;
+  }
+  return `belongs at ${key.belongsAt.map(pointerOf).join(" or ")}`;
 }

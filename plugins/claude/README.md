@@ -129,8 +129,9 @@ bookings are subject to its [terms](https://fortrip.ai/terms).
   can sell out. Claude gets offers again so you can pick another.
 - **Booking failed after payment:** no stay was booked and the payment is
   released or refunded in full. Claude tells you whether the rate was no
-  longer available or the hotel refused the booking; check the guest names
-  are as on the passports before ordering again.
+  longer available or the hotel's booking system refused the order. A hotel's
+  system can refuse some guest names: if the names are as on the passports,
+  don't change them, and email info@fortrip.ai with the order's reference.
 - **Supplier unavailable:** the hotel supplier didn't respond. Claude retries
   once; if it still fails, try again in a few minutes.
 - **Too many requests:** Claude waits the time Fortrip asks for, then retries.

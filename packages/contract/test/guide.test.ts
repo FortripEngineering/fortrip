@@ -47,7 +47,7 @@ describe("renderGuide", () => {
       ),
     );
     assert.match(PRESENTATION_HINT, /estimate per room-night/);
-    assert.match(PRESENTATION_HINT, /never invent photos, ratings, reviews, prices, terms or coordinates/);
+    assert.match(PRESENTATION_HINT, /Never invent photos, ratings, reviews, prices, terms or coordinates\.$/);
     assert.match(PRESENTATION_HINT, /whole stay for all rooms, in its currency/);
   });
 
@@ -251,7 +251,7 @@ describe("the settled rules (design §3.4)", () => {
       );
     }
     for (const surface of ["claude-skill", "cli"] as const) {
-      assert.match(flat(renderGuide(surface, "main")), /exactly as shown \(don't shorten, rebuild or re-encode it\)/, surface);
+      assert.match(flat(renderGuide(surface, "main")), /exactly as shown \(it is not in quotes; don't shorten, rebuild or re-encode it\)/, surface);
     }
   });
 
@@ -311,7 +311,12 @@ describe("consent before cancelling an order", () => {
       assert.ok(
         text.includes("End that reply by asking the user to confirm the cancellation, and wait for a clear yes"),
       );
-      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to that penalty as shown`));
+      // The call is the one the Cancel line gives, with the order's own penalty in it.
+      assert.ok(
+        text.includes(
+          `Then ${surface === "cli" ? "run the command" : "make the call"} the Cancel line gives, exactly as shown: \`${cancel}\` with \`${penalty}\` set to the penalty on that line`,
+        ),
+      );
       assert.match(text, /Never state a refund the order's text doesn't show, and never choose or work out an amount yourself/);
       assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
       // Spec D7: the input picks the mode, and neither does the other's work.

@@ -30,7 +30,6 @@ import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
-  CALLS,
   CANCEL_NEXT_STEP,
   cancelNextStep,
   ORDER_NEXT_STEP,
@@ -446,8 +445,6 @@ describe("TOOLS", () => {
     assert.ok(description.length <= 1024, String(description.length));
     assert.equal(annotations.destructiveHint, true);
     assert.equal(annotations.idempotentHint, true);
-    assert.equal(CALLS.mcp.close, "call cancel_order with close: true");
-    assert.equal(CALLS.cli.close, "run `fortrip orders cancel <orderId> --close`");
   });
 
   it("a description names only tools there are", () => {
@@ -511,11 +508,14 @@ describe("CANCEL_NEXT_STEP", () => {
       /^Before you call cancel_order with maximumPenalty, show the user [^.]*stay[^.]*the penalty and the refund on its Cancel line \(amount and currency\)/,
     );
     assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
+    // The penalty is the order's own, by the call on its Cancel line: the
+    // paragraph gives no figure a model could pass in its place.
     assert.ok(
       CANCEL_NEXT_STEP.includes(
-        'Pass maximumPenalty as that penalty, exactly as shown ({ amount: "120.00", currency: "USD" } for a penalty of USD 120.00).',
+        "Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else.",
       ),
     );
+    assert.doesNotMatch(CANCEL_NEXT_STEP, /\d/);
     assert.match(CANCEL_NEXT_STEP, /Never state a refund the order's text does not show\./);
   });
 
@@ -658,7 +658,7 @@ describe("COMMANDS", () => {
       currency: "currency",
     });
     assert.deepEqual(fields("hotels get"), {
-      rooms: "include",
+      "room-types": "include",
       locale: "locale",
     });
     assert.deepEqual(fields("hotels offers"), {
@@ -844,13 +844,15 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("only --rooms sends a value instead of true", () => {
+  it("only --room-types sends a value instead of true", () => {
     const valued = COMMANDS.flatMap((spec) =>
       spec.flags
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=roomTypes"]);
+    assert.deepEqual(valued, ["hotels get --room-types=roomTypes"]);
+    // Named as what it adds, a hotel's room types: `rooms` is a stay's rooms.
+    assert.ok(!COMMANDS.some((spec) => spec.flags.some((flag) => flag.flag === "rooms")));
   });
 
   it("every flag description is non-empty", () => {

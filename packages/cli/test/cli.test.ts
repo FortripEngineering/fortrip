@@ -117,7 +117,7 @@ describe("requests", () => {
   it("each command sends its method, path and body with the token", async () => {
     for (const [args, method, url] of [
       [SEARCH, "POST", "/v1/hotels/search"],
-      [["hotels", "get", HOTEL, "--rooms"], "GET", `/v1/hotels/${HOTEL}?include=roomTypes`],
+      [["hotels", "get", HOTEL, "--room-types"], "GET", `/v1/hotels/${HOTEL}?include=roomTypes`],
       [OFFERS, "POST", "/v1/hotels/offers"],
       [BOOK, "POST", "/v1/orders"],
       [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
@@ -237,7 +237,8 @@ describe("requests", () => {
       [
         "Error: Not cancelled: nothing was sent.",
         renderToolResult("get_order", data, "cli").split("\n").find((line) => line.startsWith("Hotel: ")),
-        "Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run `fortrip orders cancel <orderId> --close`)",
+        // The contract's Cancel line names the order it read, as the cancel call does.
+        `Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run \`fortrip orders cancel ${(data as { orderId: string }).orderId} --close\`)`,
         `Only once the user says they no longer want this order, run \`fortrip orders cancel ${ORDER} --close\`.`,
         "",
       ].join("\n"),
@@ -372,9 +373,12 @@ describe("requests", () => {
     assert.equal(code, 1);
     assert.equal(stdout, "");
     assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`);
-    // The penalty and the refund, and the command that cancels: never --close again.
-    assert.match(stderr, /it is cancelled under its terms, not closed: penalty USD 120\.00, refund USD 246\.00/);
-    assert.match(stderr, /run `fortrip orders cancel <orderId> --max-penalty <amount>`/);
+    // The order's Cancel line, with its penalty, its refund and the command that cancels: never --close again.
+    assert.match(stderr, /^This order is paid, so it is cancelled under its terms, not closed\. Its Cancel line now:$/m);
+    assert.match(
+      stderr,
+      /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 \(only after the user's yes: run `fortrip orders cancel <orderId> --max-penalty 120\.00`\)$/m,
+    );
     assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
     assert.deepEqual(requests[1]?.body, { close: true });
   });

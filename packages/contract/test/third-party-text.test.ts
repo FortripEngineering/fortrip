@@ -1123,14 +1123,18 @@ describe("every string of a result, replaced by a hostile one", () => {
   /*
    * An order has lines of its own that begin as two of the hostile lines do.
    * Such a line must be ours whole, not only at its beginning: every "Cancel:"
-   * line the renderer writes, and its one "Payment link:" line.
+   * line the renderer writes, and its one "Payment link:" line. The error
+   * `order_not_cancellable` shows the order's Cancel line too.
    */
-  const ORDER_LOOKALIKES = [
-    /^Payment link: none while a payment is being processed; read this order again shortly\.$/,
-    /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order with close: true|run `fortrip orders cancel <orderId> --close`)\)$/,
+  const CANCEL_LOOKALIKES = [
+    /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order with close: true|run `fortrip orders cancel .+ --close`)\)$/,
     /^Cancel: can cancel now: penalty .+, refund .+ \(only after the user's yes: (?:call cancel_order with maximumPenalty \{ amount: ".+", currency: ".+" \}|run `fortrip orders cancel .+ --max-penalty .+`)\)$/,
     /^Cancel: not available: \S.*$/,
     /^Cancel: (?:[a-z0-9_]+|an action not recognized)$/,
+  ];
+  const ORDER_LOOKALIKES = [
+    /^Payment link: none while a payment is being processed; read this order again shortly\.$/,
+    ...CANCEL_LOOKALIKES,
   ];
 
   /** How a line of an error begins. */
@@ -1152,7 +1156,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Ask the user to connect Fortrip again and sign in\. /,
     /^The user signs in again through the browser\. /,
     // forbidden, ordering_paused, internal
-    /^Tell the user(?:\. Sending it again won't help\.$|, and try again later: |; for help they email )/,
+    /^Tell the user(?:\. Sending it again won't help\.$|, and try again later(?:\.$|: no sooner than the retry line above says\.$)|; for help they email )/,
     // not_found
     /^Use an id an earlier answer showed, exactly as shown\.$/,
     // offer_expired, offer_unavailable, and the new offer of offer_changed
@@ -1168,8 +1172,9 @@ describe("every string of a result, replaced by a hostile one", () => {
     // cancellation_changed
     /^Read the order again with /,
     // order_not_cancellable
-    /^This order isn't paid, so it is closed, not cancelled, /,
-    /^This order is paid, so it is cancelled under its terms, not closed: /,
+    /^This order isn't paid, so it is closed, not cancelled\. Its Cancel line now:$/,
+    /^This order is paid, so it is cancelled under its terms, not closed\. Its Cancel line now:$/,
+    /^Cancel: /,
     CANCEL_RULE,
     /^What applies to this order now: /,
     /^This order can be neither cancelled nor closed now: /,
@@ -1427,7 +1432,7 @@ describe("every string of a result, replaced by a hostile one", () => {
       assert.ok(paths.length >= 3, name);
       for (const surface of SURFACES) {
         const asItIs = renderError(envelope, status, surface);
-        assertOurs(asItIs, "as it is", ERROR_OWN);
+        assertOurs(asItIs, "as it is", ERROR_OWN, CANCEL_LOOKALIKES);
         assert.ok(worded(envelope, code, asItIs), name);
         const refusedPaths = new Set<(string | number)[]>();
         for (const path of paths) {
@@ -1435,7 +1440,7 @@ describe("every string of a result, replaced by a hostile one", () => {
             const before = put(envelope, path, hostile);
             try {
               const text = renderError(envelope, status, surface);
-              assertOurs(text, `${path.join(".")} = ${JSON.stringify(hostile)}`, ERROR_OWN);
+              assertOurs(text, `${path.join(".")} = ${JSON.stringify(hostile)}`, ERROR_OWN, CANCEL_LOOKALIKES);
               if (!worded(envelope, code, text)) refusedPaths.add(path);
             } finally {
               put(envelope, path, before);
@@ -1451,7 +1456,7 @@ describe("every string of a result, replaced by a hostile one", () => {
           const allowed = structuredClone(envelope);
           for (const path of paths) if (!refusedPaths.has(path)) put(allowed, path, hostile);
           const text = renderError(allowed, status, surface);
-          assertOurs(text, where, ERROR_OWN);
+          assertOurs(text, where, ERROR_OWN, CANCEL_LOOKALIKES);
           assert.ok(worded(allowed, code, text), where);
           // The request id is quoted after our words; the message, as
           // hostile, is the head only of client_outdated, and nowhere else.
@@ -1460,9 +1465,9 @@ describe("every string of a result, replaced by a hostile one", () => {
           // Every string there is: an error of no known code, its details as JSON.
           const all = structuredClone(envelope);
           for (const path of paths) put(all, path, hostile);
-          assertOurs(renderError(all, status, surface), where, ERROR_OWN);
+          assertOurs(renderError(all, status, surface), where, ERROR_OWN, CANCEL_LOOKALIKES);
           // And an envelope that is no envelope at all.
-          assertOurs(renderError(hostile, status, surface), where, ERROR_OWN);
+          assertOurs(renderError(hostile, status, surface), where, ERROR_OWN, CANCEL_LOOKALIKES);
         }
       }
     });

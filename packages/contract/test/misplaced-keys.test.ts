@@ -85,7 +85,11 @@ describe("misplacedKeys: create order", () => {
       hints(createOrderInput, { contact, items: [{ offerId, hotel: { rooms: [{ guests: [{ name: "Wei Zhang" }] }] } }] }),
       {},
     );
-    assert.deepEqual(hints(createOrderInput, { ...order, contact: { ...contact, firstName: "Wei" } }), {});
+    // The contact's old `firstName` is not a depth either: it has no place to
+    // go to, and is answered as a renamed key (below).
+    assert.deepEqual(hints(createOrderInput, { ...order, contact: { ...contact, firstName: "Wei" } }), {
+      "/contact/firstName": [],
+    });
   });
 
   it("says nothing for a key the schema does not know", () => {
@@ -105,7 +109,7 @@ describe("misplacedKeys: create order", () => {
   it("answers paths as a zod issue has them", () => {
     const result = createOrderInput.safeParse({ ...order, offerId });
     assert.deepEqual(misplacedKeys(createOrderInput, result.error?.issues ?? []), [
-      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [] },
+      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [], differsAt: [] },
     ]);
   });
 });
@@ -131,15 +135,40 @@ describe("misplacedKeys: a key that is already where it belongs", () => {
       "/offerId": "already given at /items/0/offerId: remove this one",
     });
     assert.deepEqual(misplacedKeys(createOrderInput, createOrderInput.safeParse({ ...order, offerId }).error?.issues ?? [], { ...order, offerId }), [
-      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [["items", 0, "offerId"]] },
+      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [["items", 0, "offerId"]], differsAt: [] },
     ]);
   });
 
-  it("says where it belongs when the home has none, or another value", () => {
+  it("says where it belongs when the home has none", () => {
     assert.deepEqual(said(createOrderInput, { contact, offerId, items: [{ hotel: order.items[0]?.hotel }] }), {
       "/offerId": "belongs at /items/0/offerId",
     });
-    assert.deepEqual(said(createOrderInput, { ...order, offerId: "off_bbbbbbbbbbbbbbbbbbbb" }), {
+  });
+
+  // "Belongs at /items/0/offerId" would be an order to overwrite the offer in
+  // the item, which is the one the user picked more often than not.
+  it("says there are two values when the home has another: send one, where it belongs, never 'belongs at'", () => {
+    const other = "off_bbbbbbbbbbbbbbbbbbbb";
+    const sent = { ...order, offerId: other };
+    assert.deepEqual(said(createOrderInput, sent), {
+      "/offerId":
+        "two different values were sent, this one and the one at /items/0/offerId: send one only, at /items/0/offerId, the one the user picked",
+    });
+    assert.doesNotMatch(said(createOrderInput, sent)["/offerId"]!, /belongs at/);
+    assert.deepEqual(misplacedKeys(createOrderInput, createOrderInput.safeParse(sent).error?.issues ?? [], sent), [
+      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [], differsAt: [["items", 0, "offerId"]] },
+    ]);
+    // Whole values, as for "already given".
+    const rooms = [{ guests: [{ ...guest, firstName: "Li" }] }];
+    assert.deepEqual(said(createOrderInput, { contact, items: [{ ...order.items[0], rooms }] }), {
+      "/items/0/rooms":
+        "two different values were sent, this one and the one at /items/0/hotel/rooms: send one only, at /items/0/hotel/rooms, the one the user picked",
+    });
+  });
+
+  it("a home that is empty is not a second value", () => {
+    // A key its home does not have, or has as undefined, is one value: it belongs there.
+    assert.deepEqual(said(createOrderInput, { contact, offerId, items: [{ offerId: undefined, hotel: order.items[0]?.hotel }] }), {
       "/offerId": "belongs at /items/0/offerId",
     });
   });
@@ -148,9 +177,6 @@ describe("misplacedKeys: a key that is already where it belongs", () => {
     const rooms = order.items[0]!.hotel.rooms;
     assert.deepEqual(said(createOrderInput, { contact, items: [{ ...order.items[0], rooms }] }), {
       "/items/0/rooms": "already given at /items/0/hotel/rooms: remove this one",
-    });
-    assert.deepEqual(said(createOrderInput, { contact, items: [{ ...order.items[0], rooms: [{ guests: [{ ...guest, firstName: "Li" }] }] }] }), {
-      "/items/0/rooms": "belongs at /items/0/hotel/rooms",
     });
     assert.deepEqual(said(createOrderInput, { ...order, contact: undefined, items: [{ ...order.items[0], contact }] }), {
       "/items/0/contact": "belongs at /contact",
@@ -166,12 +192,62 @@ describe("misplacedKeys: a key that is already where it belongs", () => {
     assert.deepEqual(said(searchHotelsInput, { text: "x", filters: { currency: "CNY" } }), {
       "/filters/currency": "belongs at /filters/price/maxPerRoomNight/currency or /currency",
     });
+    // One home has it already and another has another value: the copy goes, whatever the other is.
+    assert.deepEqual(
+      said(searchHotelsInput, { text: "x", currency: "USD", stay: goodStay, filters: { currency: "CNY", price } }),
+      { "/filters/currency": "already given at /filters/price/maxPerRoomNight/currency: remove this one" },
+    );
+    // No home has it, and one has another value: two values.
+    assert.deepEqual(said(searchHotelsInput, { text: "x", currency: "USD", filters: { currency: "CNY" } }), {
+      "/filters/currency":
+        "two different values were sent, this one and the one at /currency: send one only, at /currency, the one the user picked",
+    });
   });
 
   it("says where it belongs when it was not given what was sent", () => {
     const result = createOrderInput.safeParse({ ...order, offerId });
     const [key] = misplacedKeys(createOrderInput, result.error?.issues ?? []);
     assert.equal(misplacedKeyHint(key!), "belongs at /items/0/offerId");
+  });
+});
+
+/*
+ * A 5.x caller sends the contact's name in two parts. Neither part is a key
+ * of the 6.0 input at any depth, so the depth hint has nothing to say, and
+ * "Unknown field: firstName" alone does not say what replaced it.
+ */
+describe("misplacedKeys: a key this release renamed", () => {
+  it("the contact's firstName and lastName are told the contact takes one name", () => {
+    const sent = { ...order, contact: { firstName: "Wei", lastName: "Zhang", email: contact.email, phone: contact.phone } };
+    assert.deepEqual(said(createOrderInput, sent), {
+      "/contact/firstName": "contact takes one name, the full name: send it as /contact/name",
+      "/contact/lastName": "contact takes one name, the full name: send it as /contact/name",
+    });
+    // With the name given as well: the same words, and nothing about a depth.
+    assert.deepEqual(said(createOrderInput, { ...order, contact: { ...contact, lastName: "Zhang" } }), {
+      "/contact/lastName": "contact takes one name, the full name: send it as /contact/name",
+    });
+    assert.deepEqual(misplacedKeys(createOrderInput, createOrderInput.safeParse(sent).error?.issues ?? [], sent)[0], {
+      path: ["contact", "firstName"],
+      belongsAt: [],
+      alreadyAt: [],
+      differsAt: [],
+      renamed: "contact takes one name, the full name: send it as /contact/name",
+    });
+  });
+
+  it("only there: a guest keeps both names, and an input without that contact says nothing", () => {
+    assert.deepEqual(said(createOrderInput, { ...order, contact: { ...contact, middleName: "X" } }), {});
+    // A guest's firstName sent one level up is a depth, as before.
+    const rooms = [{ ...guest }];
+    assert.deepEqual(said(createOrderInput, { contact, items: [{ offerId, hotel: { rooms } }] }), {
+      "/items/0/hotel/rooms/0/firstName": "belongs at /items/0/hotel/rooms/0/guests/0/firstName",
+      "/items/0/hotel/rooms/0/lastName": "belongs at /items/0/hotel/rooms/0/guests/0/lastName",
+    });
+    // Another input with a `contact` of its own shape is not this release's rename.
+    const other = z.strictObject({ contact: z.strictObject({ label: z.string() }) });
+    const value = { contact: { label: "x", firstName: "Wei" } };
+    assert.deepEqual(misplacedKeys(other, other.safeParse(value).error?.issues ?? [], value), []);
   });
 });
 

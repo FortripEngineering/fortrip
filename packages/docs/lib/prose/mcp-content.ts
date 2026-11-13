@@ -16,15 +16,17 @@ type Rule =
  * The rules that can end each tool's result text, in the order they come,
  * keyed by the contract's tools so a new tool fails the typecheck until it
  * is described. A successful result is one text block on every tool: the
- * answer, then these paragraphs. Checked against `renderToolResult`.
+ * answer, then these paragraphs. The consent rule ends a text that holds a
+ * payment link, with only the pay rule, which repeats it, after it; the
+ * cancel rule comes before. Checked against `renderToolResult`.
  */
 export const MCP_TEXT_RULES: Record<ToolName, readonly Rule[]> = {
   search_hotels: ["presentation"],
   get_hotel: ["presentation"],
   get_hotel_offers: ["presentation"],
   create_order: ["consent", "pay"],
-  get_order: ["consent", "pay", "cancel"],
-  list_orders: ["consent", "pay", "cancel"],
+  get_order: ["cancel", "consent", "pay"],
+  list_orders: ["cancel", "consent", "pay"],
   cancel_order: [],
   pay_order: [],
 };

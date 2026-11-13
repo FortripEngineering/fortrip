@@ -14,7 +14,7 @@
 {{#if cli}}
 
    ```bash
-   {{tool:hotels get}} <hotelId> [--rooms]
+   {{tool:hotels get}} <hotelId> [--room-types]
    ```
 
 {{/if}}

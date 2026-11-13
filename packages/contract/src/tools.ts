@@ -77,11 +77,13 @@ export const SERVER_INFO: {
 };
 
 /**
- * The consent rule. It is the first next-step paragraph of every result
- * whose text holds a payment link: some clients never show the model the
- * server instructions. The pay paragraph after it repeats the rule on
- * purpose: as the result's last paragraph it keeps the model from giving the
- * link before a yes (paired eval, S6).
+ * The consent rule. It ends every result whose text holds a payment link:
+ * some clients never show the model the server instructions, and the last
+ * paragraph is the one a model reads last before it answers. Only the pay
+ * paragraph comes after it, and that one repeats the rule on purpose: as the
+ * result's last paragraph it keeps the model from giving the link before a
+ * yes (paired eval, S6). The cancel paragraph, when there is one, comes
+ * before both.
  */
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment link, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them the payment link exactly as shown.";
@@ -90,30 +92,26 @@ export const ORDER_NEXT_STEP =
  *  JSON arguments, or the CLI, which runs commands with flags. */
 export type RenderSurface = "mcp" | "cli";
 
-/** How each next step names the call it leads to. */
+/** How each next step names the call it leads to. None carries a figure:
+ *  the cancel call with the order's own penalty is on the order's Cancel
+ *  line, which `cancelWith` points at. */
 export const CALLS = {
   mcp: {
     cancel: "call cancel_order with maximumPenalty",
-    penalty:
-      'Pass maximumPenalty as that penalty, exactly as shown ({ amount: "120.00", currency: "USD" } for a penalty of USD 120.00).',
-    close: "call cancel_order with close: true",
+    cancelWith:
+      "make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else",
     closeMode: "with close: true and no maximumPenalty",
     pay: "call pay_order",
-    get: "call get_order",
-    poll: "poll get_order",
     payWith:
       "call pay_order with the token as sharedPaymentToken and the order's Total as total, amount and currency exactly as shown",
     paid: "pay_order",
   },
   cli: {
     cancel: "run `fortrip orders cancel <orderId> --max-penalty <amount>`",
-    penalty:
-      "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
-    close: "run `fortrip orders cancel <orderId> --close`",
+    cancelWith:
+      "run the command that Cancel line gives, exactly as shown: its --max-penalty is the amount of the penalty on that line, never a figure from anywhere else",
     closeMode: "with --close and no --max-penalty",
     pay: "run `fortrip orders pay`",
-    get: "run `fortrip orders get <orderId>`",
-    poll: "poll it with `fortrip orders get <orderId>`",
     payWith:
       "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with the token and the order's total",
     paid: "`fortrip orders pay`",
@@ -121,16 +119,19 @@ export const CALLS = {
 } as const satisfies Record<RenderSurface, Record<string, string>>;
 
 /**
- * The consent rule of a cancellation, as `surface` names the call. It is the
- * last paragraph of the text of every `get_order` and `list_orders` result
- * that holds an order whose Cancel line says it can be cancelled (a paid
- * one), after `ORDER_NEXT_STEP` when both apply; the `order_not_cancellable`
- * error carries it too. Its last sentence says which mode an unpaid order
- * takes instead: nothing is cancelled or closed by the other mode.
+ * The consent rule of a cancellation, as `surface` names the call. It
+ * follows the text of every `get_order` and `list_orders` result that holds
+ * an order whose Cancel line says it can be cancelled (a paid one): the last
+ * paragraph there, or the one before `ORDER_NEXT_STEP` when the result also
+ * holds a payment link. The `order_not_cancellable` error carries it too,
+ * after the order's Cancel line. It names no penalty: the figure and the
+ * call that passes it are the order's own, on that line. Its last sentence
+ * says which mode an unpaid order takes instead: nothing is cancelled or
+ * closed by the other mode.
  */
 export function cancelNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
-  return `Before you ${c.cancel}, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. ${c.penalty} Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, ${c.closeMode}, only once the user says they no longer want it.`;
+  return `Before you ${c.cancel}, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Then ${c.cancelWith}. Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, ${c.closeMode}, only once the user says they no longer want it.`;
 }
 
 /** `cancelNextStep` over MCP. */
@@ -140,7 +141,7 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
  * How to pay without the link, as `surface` names the call. It is the last
  * paragraph of the text of every `create_order`, `get_order` and
  * `list_orders` result that holds an order with a "Pay without the link"
- * line, after `ORDER_NEXT_STEP`.
+ * line, right after `ORDER_NEXT_STEP`, whose rule it repeats.
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
@@ -158,7 +159,7 @@ export const PAY_NEXT_STEP = payNextStep("mcp");
  * nothing else does.
  */
 export const PRESENTATION_HINT =
-  'Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip\'s tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search\'s "estimate from" price as an estimate per room-night and an offer\'s total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Keep hotel names as returned, and never invent photos, ratings, reviews, prices, terms or coordinates.';
+  'Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip\'s tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search\'s "estimate from" price as an estimate per room-night and an offer\'s total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel\'s name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.';
 
 const READ = {
   readOnlyHint: true,

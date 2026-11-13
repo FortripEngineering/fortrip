@@ -49,6 +49,7 @@ const GOLDENS = [
   "order-cancelled",
   "order-rooms-differ",
   "order-website-checkout",
+  "order-payment-processing",
   "order-free-to-cancel",
   "order-expired",
   "order-closed",
@@ -688,11 +689,11 @@ describe("other errors", () => {
 
     it("an unpaid order is closed: the caller asked to cancel it", () => {
       const cancel = { action: "close", blockedBy: null, penalty: null, refund: null };
-      assert.match(
-        refusal(cancel),
-        /^This order isn't paid, so it is closed, not cancelled, and nothing is charged\. Close it only if the user says they no longer want it \(call cancel_order with close: true\)\.$/m,
-      );
-      assert.match(refusal(cancel, "cli"), /\(run `fortrip orders cancel <orderId> --close`\)\.$/m);
+      const lines = refusal(cancel).split("\n");
+      const at = lines.indexOf("This order isn't paid, so it is closed, not cancelled. Its Cancel line now:");
+      assert.ok(at > 0, lines.join("\n"));
+      assert.equal(lines[at + 1], "Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order with close: true)");
+      assert.match(refusal(cancel, "cli"), /\(run `fortrip orders cancel <orderId> --close`\)$/m);
       assert.ok(!refusal(cancel).includes(CANCEL_NEXT_STEP));
     });
 
@@ -704,9 +705,11 @@ describe("other errors", () => {
         refund: { amount: "246.00", currency: "USD" },
       };
       const text = refusal(cancel);
+      // The order's own Cancel line, with the call that passes its penalty.
+      assert.match(text, /^This order is paid, so it is cancelled under its terms, not closed\. Its Cancel line now:$/m);
       assert.match(
         text,
-        /^This order is paid, so it is cancelled under its terms, not closed: penalty USD 120\.00, refund USD 246\.00\.$/m,
+        /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "120\.00", currency: "USD" \}\)$/m,
       );
       assert.equal(text.split(CANCEL_NEXT_STEP).length, 2);
       assert.equal(refusal(cancel, "cli").split(cancelNextStep("cli")).length, 2);
@@ -1162,10 +1165,12 @@ describe("orders and the consent rule", () => {
       return render(fixture).split("\n")[1]!;
     };
     assert.match(why("rate_unavailable"), /; get offers again and let the user choose again$/);
-    assert.match(
+    // Refused by the hotel's system: a cause is offered, not asserted, and a real name is never to be altered.
+    assert.equal(
       why("hotel_refused"),
-      /would refuse the same order again; check the guest names with the user \(as on the passport\) before ordering again, and for help, the user emails info@fortrip\.ai with the order's reference$/,
+      "Why it failed: the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them: for help, the user emails info@fortrip.ai with the order's reference",
     );
+    assert.doesNotMatch(why("hotel_refused"), /check the guest names|because|correct the/);
     assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails info@fortrip\.ai with the order's reference$/);
     data.failure = { reason: "struck_by_lightning" };
     assert.equal(render(fixture).split("\n")[1], "Why it failed: struck_by_lightning");
@@ -1209,9 +1214,10 @@ describe("orders and the consent rule", () => {
     assert.equal(text.split(ORDER_NEXT_STEP).length, 2);
   });
 
-  it("puts CANCEL_NEXT_STEP after ORDER_NEXT_STEP when both apply, each once", () => {
+  // The consent rule is last whenever a link is there to give: the cancel rule comes before it.
+  it("puts CANCEL_NEXT_STEP before ORDER_NEXT_STEP when both apply, each once", () => {
     const text = render(load("list-orders"));
-    assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`));
+    assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}\n\n${ORDER_NEXT_STEP}`));
     assert.equal(text.split(ORDER_NEXT_STEP).length, 2);
     assert.equal(text.split(CANCEL_NEXT_STEP).length, 2);
   });
@@ -1317,7 +1323,7 @@ describe("orders and the consent rule", () => {
     assert.deepEqual(data.cancel, { action: "close", blockedBy: null, penalty: null, refund: null });
     strictOutput(outputOf("get_order")).parse(data);
     for (const surface of ["mcp", "cli"] as const) {
-      const close = surface === "mcp" ? "call cancel_order with close: true" : "run `fortrip orders cancel <orderId> --close`";
+      const close = surface === "mcp" ? "call cancel_order with close: true" : `run \`fortrip orders cancel ${data.orderId} --close\``;
       const line = `Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (${close})`;
       for (const tool of ["get_order", "list_orders"] as const) {
         const text = renderToolResult(tool, tool === "list_orders" ? { data: [data], nextCursor: null } : data, surface);
@@ -1553,7 +1559,7 @@ describe("renderToolResult on malformed data", () => {
     const list = copy(load("list-orders")) as ToolFixture;
     (list.data.data as Record<string, any>[])[3]!.createdAt = "yesterday";
     assert.ok(
-      renderToolResult("list_orders", list.data).endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`),
+      renderToolResult("list_orders", list.data).endsWith(`\n\n${CANCEL_NEXT_STEP}\n\n${ORDER_NEXT_STEP}`),
     );
   });
 
@@ -1612,7 +1618,7 @@ describe("renderToolResult on malformed data", () => {
         });
       }
     }
-    assert.ok(whole.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`));
+    assert.ok(whole.endsWith(`\n\n${CANCEL_NEXT_STEP}\n\n${ORDER_NEXT_STEP}`));
     // The rules look at the unreadable order too: its link and its cancellation are in the JSON.
     const onlyBad = page((orders) => {
       orders.splice(0, 2);
@@ -1621,7 +1627,7 @@ describe("renderToolResult on malformed data", () => {
     });
     const text = renderToolResult("list_orders", onlyBad);
     assert.equal(text.split("\n").filter((l) => l.startsWith("This order is not in the expected shape; as JSON: ")).length, 2);
-    assert.ok(text.endsWith(`\n\nNext page: call again with { cursor: "c_orders_page_2" }.\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`), text);
+    assert.ok(text.endsWith(`\n\nNext page: call again with { cursor: "c_orders_page_2" }.\n\n${CANCEL_NEXT_STEP}\n\n${ORDER_NEXT_STEP}`), text);
     // A page that is no page is still shown whole, as JSON.
     for (const broken of [{ data: "nope", nextCursor: null }, { data: [], nextCursor: 7 }, { nextCursor: null }]) {
       assert.match(renderToolResult("list_orders", broken), /^This list_orders result is not in the expected shape; as JSON: /);
@@ -1712,7 +1718,7 @@ describe("the CLI surface", () => {
     const text = cli(load("order-confirmed"));
     assert.ok(text.endsWith(`\n\n${cancelNextStep("cli")}`));
     assert.match(cancelNextStep("cli"), /^Before you run `fortrip orders cancel <orderId> --max-penalty <amount>`, show the user/);
-    assert.ok(cancelNextStep("cli").includes("Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00)."));
+    assert.ok(cancelNextStep("cli").includes("Then run the command that Cancel line gives, exactly as shown: its --max-penalty is the amount of the penalty on that line, never a figure from anywhere else."));
     assert.equal(cancelNextStep("mcp"), CANCEL_NEXT_STEP);
   });
 
@@ -1757,5 +1763,214 @@ describe("the CLI surface", () => {
     hotels[0]!.omitted.byLimit = 3;
     const text = renderToolResult("get_hotel_offers", fixture.data, "cli");
     assert.match(text, /not shown \(--limit-per-hotel\); a filtered request \(--require-breakfast \/ --require-free-cancellation\)/);
+  });
+});
+
+/*
+ * The rules that end an order's text. A result that holds a payment link
+ * ends with the consent rule; when an order also has a "Pay without the
+ * link" line, the pay rule follows it and repeats it, as the evals pinned.
+ * The cancel rule comes before both, never after: the last thing a model
+ * reads before it answers is the rule about the link it could give away.
+ */
+describe("the order of the rules that end an order's text", () => {
+  const SURFACES = ["mcp", "cli"] as const;
+  const text = (fixture: Fixture, surface: "mcp" | "cli") =>
+    "tool" in fixture
+      ? renderToolResult(fixture.tool, fixture.data, surface)
+      : renderError(fixture.envelope, fixture.status, surface);
+
+  /** The paragraphs after the data: the blocks from the first rule on. */
+  function rules(result: string, surface: "mcp" | "cli"): string[] {
+    const known = [cancelNextStep(surface), ORDER_NEXT_STEP, payNextStep(surface)];
+    return result.split("\n\n").filter((block) => known.includes(block));
+  }
+
+  it("every fixture that holds a payment link ends with the consent rule, only the pay rule that repeats it after", () => {
+    const holding: string[] = [];
+    for (const name of GOLDENS) {
+      for (const surface of SURFACES) {
+        const result = text(load(name), surface);
+        if (!/^Payment link \(/m.test(result)) {
+          assert.ok(!result.includes(ORDER_NEXT_STEP), `${name} (${surface}) has no link and the consent rule`);
+          continue;
+        }
+        holding.push(name);
+        const payable = /^Pay without the link: /m.test(result);
+        const expected = [ORDER_NEXT_STEP, ...(payable ? [payNextStep(surface)] : [])];
+        const found = rules(result, surface);
+        assert.deepEqual(found.slice(-expected.length), expected, `${name} (${surface})`);
+        assert.ok(result.endsWith(`\n\n${expected.join("\n\n")}`), `${name} (${surface})`);
+        // Whatever comes before the consent rule is the cancel rule, once.
+        assert.deepEqual(
+          found.slice(0, -expected.length).filter((rule) => rule !== cancelNextStep(surface)),
+          [],
+          `${name} (${surface})`,
+        );
+      }
+    }
+    // An order awaiting payment, one payable by token, one from the website, and a page of orders.
+    assert.deepEqual([...new Set(holding)].sort(), ["list-orders", "order-awaiting-payment", "order-payable-by-token", "order-website-checkout"]);
+  });
+
+  it("a page with an order to pay and an order to cancel: the cancel rule, the consent rule, the pay rule", () => {
+    const confirmed = (load("order-confirmed") as ToolFixture).data;
+    for (const surface of SURFACES) {
+      const page = renderToolResult("list_orders", { data: [withToken(), confirmed], nextCursor: null }, surface);
+      assert.deepEqual(rules(page, surface), [cancelNextStep(surface), ORDER_NEXT_STEP, payNextStep(surface)], surface);
+      assert.ok(page.endsWith(`\n\n${cancelNextStep(surface)}\n\n${ORDER_NEXT_STEP}\n\n${payNextStep(surface)}`), surface);
+      // No token: the consent rule is the last paragraph.
+      const plain = renderToolResult("list_orders", { data: [unpaidOrder(), confirmed], nextCursor: null }, surface);
+      assert.ok(plain.endsWith(`\n\n${cancelNextStep(surface)}\n\n${ORDER_NEXT_STEP}`), surface);
+    }
+    // The golden page holds both: an order with a link, and one that can be cancelled.
+    assert.ok(render(load("list-orders")).endsWith(`\n\n${CANCEL_NEXT_STEP}\n\n${ORDER_NEXT_STEP}`));
+  });
+
+  it("a result that does not parse keeps the same order", () => {
+    const junk = {
+      junk: 1,
+      payment: { url: "https://fortrip.ai/pay/x", token: { handler: {} } },
+      cancel: { action: "cancel" },
+    };
+    for (const surface of SURFACES) {
+      const result = renderToolResult("get_order", junk, surface);
+      assert.match(result, /result is not in the expected shape; as JSON: /);
+      assert.ok(result.endsWith(`\n\n${cancelNextStep(surface)}\n\n${ORDER_NEXT_STEP}\n\n${payNextStep(surface)}`), surface);
+    }
+  });
+});
+
+/*
+ * The cancel rule carries no figure of its own. An example penalty in it
+ * ("USD 120.00") stood next to the order's own, and a model could pass the
+ * example. It points at the order's Cancel line, which gives the call with
+ * the order's penalty in it.
+ */
+describe("the cancel rule names the order's own penalty, never an example", () => {
+  it("has no figure in it, and points at the call on the Cancel line", () => {
+    assert.doesNotMatch(cancelNextStep("mcp"), /\d/);
+    assert.doesNotMatch(cancelNextStep("cli"), /\d/);
+    assert.ok(
+      cancelNextStep("mcp").includes(
+        " Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else. ",
+      ),
+    );
+    assert.ok(
+      cancelNextStep("cli").includes(
+        " Then run the command that Cancel line gives, exactly as shown: its --max-penalty is the amount of the penalty on that line, never a figure from anywhere else. ",
+      ),
+    );
+  });
+
+  it("every result with the rule shows the call on a Cancel line, and no penalty but the orders' own", () => {
+    let withRule = 0;
+    for (const name of GOLDENS) {
+      const fixture = load(name);
+      if (!("tool" in fixture)) continue;
+      for (const surface of ["mcp", "cli"] as const) {
+        const result = renderToolResult(fixture.tool, fixture.data, surface);
+        if (!result.includes(cancelNextStep(surface))) continue;
+        withRule++;
+        const call = surface === "mcp" ? /^Cancel: can cancel now: .* \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "[\d.]+", currency: "[A-Z]{3}" \}\)$/m : /^Cancel: can cancel now: .* \(only after the user's yes: run `fortrip orders cancel ord_[0-9A-Za-z]{20} --max-penalty [\d.]+`\)$/m;
+        assert.match(result, call, `${name} (${surface})`);
+        // Every amount in the text is one the data holds.
+        const held = new Set(stringsAt(fixture.data, "amount"));
+        for (const [, amount] of result.matchAll(/\b(?:USD|EUR|CNY) (\d+\.\d{2})\b/g)) assert.ok(held.has(amount!), `${name} (${surface}): ${amount}`);
+        for (const [, amount] of result.matchAll(/(?:amount: "|--max-penalty )(\d+\.\d{2})/g)) assert.ok(held.has(amount!), `${name} (${surface}): ${amount}`);
+      }
+    }
+    assert.ok(withRule >= 8, String(withRule));
+  });
+
+  it("a page whose order has another penalty shows that one alone", () => {
+    const page = load("list-orders") as ToolFixture;
+    const confirmed = (page.data.data as Record<string, any>[]).find((o) => o.cancel.action === "cancel")!;
+    assert.deepEqual(confirmed.cancel.penalty, { amount: "91.50", currency: "USD" });
+    for (const surface of ["mcp", "cli"] as const) {
+      const result = renderToolResult("list_orders", page.data, surface);
+      assert.ok(!result.includes("120.00"), surface);
+      assert.match(result, /^Cancel: can cancel now: penalty USD 91\.50, refund USD 274\.50 \(only after the user's yes: /m, surface);
+    }
+    assert.ok(render(page).includes('call cancel_order with maximumPenalty { amount: "91.50", currency: "USD" })'));
+    assert.ok(renderToolResult("list_orders", page.data, "cli").includes("run `fortrip orders cancel ord_LakeConfirmed0000000 --max-penalty 91.50`)"));
+  });
+
+  it("order_not_cancellable prints the Cancel line of the order it is about, with its own call", () => {
+    const refusal = (cancel: unknown, surface: "mcp" | "cli") =>
+      renderError({ error: { code: "order_not_cancellable", message: "m", retryable: false, requestId: "req_1", details: { cancel } } }, 409, surface);
+    const cancel = { action: "cancel", blockedBy: null, penalty: { amount: "91.50", currency: "USD" }, refund: { amount: "274.50", currency: "USD" } };
+    const mcp = refusal(cancel, "mcp").split("\n");
+    assert.ok(mcp.includes("This order is paid, so it is cancelled under its terms, not closed. Its Cancel line now:"), mcp.join("\n"));
+    assert.ok(mcp.includes('Cancel: can cancel now: penalty USD 91.50, refund USD 274.50 (only after the user\'s yes: call cancel_order with maximumPenalty { amount: "91.50", currency: "USD" })'), mcp.join("\n"));
+    // The rule after the line it names.
+    assert.equal(mcp.indexOf(CANCEL_NEXT_STEP), mcp.findIndex((line) => line.startsWith("Cancel: ")) + 1);
+    const cli = refusal(cancel, "cli").split("\n");
+    // The error does not hold the order's id: the command names the order as the caller did.
+    assert.ok(cli.includes("Cancel: can cancel now: penalty USD 91.50, refund USD 274.50 (only after the user's yes: run `fortrip orders cancel <orderId> --max-penalty 91.50`)"), cli.join("\n"));
+    for (const lines of [mcp, cli]) assert.ok(!lines.join("\n").includes("120.00"));
+    // An unpaid order: its Cancel line too, and no cancel rule.
+    const close = { action: "close", blockedBy: null, penalty: null, refund: null };
+    assert.ok(refusal(close, "mcp").split("\n").includes("Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order with close: true)"));
+    assert.ok(refusal(close, "cli").split("\n").includes("Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run `fortrip orders cancel <orderId> --close`)"));
+  });
+
+  it("on the CLI, the close call names the order as the cancel call does", () => {
+    const line = (name: Golden) => renderToolResult("get_order", (load(name) as ToolFixture).data, "cli").split("\n").find((l) => l.startsWith("Cancel: "));
+    assert.equal(
+      line("order-awaiting-payment"),
+      "Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run `fortrip orders cancel ord_BundAwaiting00000000 --close`)",
+    );
+    assert.equal(
+      line("order-confirmed"),
+      "Cancel: can cancel now: penalty USD 120.00, refund USD 246.00 (only after the user's yes: run `fortrip orders cancel ord_LakeConfirmed0000000 --max-penalty 120.00`)",
+    );
+    // No CLI text of an order names an order it could name as a placeholder.
+    for (const name of GOLDENS) {
+      const fixture = load(name);
+      if ("tool" in fixture && fixture.tool !== "search_hotels" && fixture.tool !== "get_hotel" && fixture.tool !== "get_hotel_offers") {
+        const data = renderToolResult(fixture.tool, fixture.data, "cli").split("\n\n").filter((block) => block.startsWith("Order ") || block.includes("\nOrder "));
+        for (const block of data) assert.doesNotMatch(block, /<orderId>/, name);
+      }
+    }
+  });
+});
+
+/* What the goldens show, so each line a rule names can be read in one. */
+describe("the goldens show the lines the rules name", () => {
+  const golden = (name: Golden) => readFileSync(new URL(`${name}.txt`, DIR), "utf8");
+
+  it("a search with a hotel's photo and the currency hint", () => {
+    const text = golden("search-shanghai-area");
+    assert.match(text, /^1\. Hotel: .* · photo https:\/\/fortrip\.ai\/hotel-photos\/hotels\/imgs\/1\/a\.webp · htl_BundRiverside0000000$/m);
+    assert.match(text, /^Currency: this request comes from mainland China\. Prices are also available in CNY/m);
+    // The hint is the last of the data; how to present hotels follows it.
+    assert.ok(text.trimEnd().endsWith(PRESENTATION_HINT));
+  });
+
+  it("an order with no payment link while a payment is processed", () => {
+    const text = golden("order-payment-processing");
+    assert.match(text, /^Payment link: none while a payment is being processed; read this order again shortly\.$/m);
+    assert.match(text, /^Cancel: not available: a payment is under way; read the order again shortly$/m);
+    for (const rule of [ORDER_NEXT_STEP, PAY_NEXT_STEP, CANCEL_NEXT_STEP]) assert.ok(!text.includes(rule));
+  });
+});
+
+/* An error whose advice depends on a wait says it only when there is one. */
+describe("ordering_paused", () => {
+  const paused = (after?: number) =>
+    renderError({ error: { code: "ordering_paused", message: "m", retryable: true, requestId: "req_1", ...(after === undefined ? {} : { retryAfterSeconds: after }) } }, 503).split("\n");
+
+  it("points at the retry line when it gives a wait", () => {
+    const lines = paused(120);
+    assert.equal(lines[1], "Retryable: retry after 120 s.");
+    assert.equal(lines[2], "Tell the user, and try again later: no sooner than the retry line above says.");
+  });
+
+  it("names no retry line when none gives a wait", () => {
+    const lines = paused();
+    assert.equal(lines[1], "Retryable.");
+    assert.equal(lines[2], "Tell the user, and try again later.");
+    assert.doesNotMatch(lines.join("\n"), /retry line/);
   });
 });

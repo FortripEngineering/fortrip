@@ -45,7 +45,7 @@ describe("stale statements stay fixed", () => {
   it("/mcp: no nextStep field, the consent rule ends the text", () => {
     const text = pageText("/mcp");
     assert.doesNotMatch(text, /nextStep/);
-    assert.match(text, /The text of an answer that holds a payment link ends with the consent rule:/);
+    assert.match(text, /The consent rule ends the text of every answer that holds a payment link\. Only the pay rule, which repeats it, can come after it; the cancel rule comes before it:/);
   });
 
   it("no page states the ways to pay or the pay inputs as a closed set by hand", () => {

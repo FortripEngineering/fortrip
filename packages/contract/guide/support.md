@@ -5,7 +5,7 @@
 
 1. Show the user the stay (hotel, dates) and the penalty and the refund on the Cancel line (amount and currency). A refund of 0 means nothing is paid back: say so plainly.
 2. End that reply by asking the user to confirm the cancellation, and wait for a clear yes.
-3. Then {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders cancel}}` with `{{arg:maximumPenalty}}` set to that penalty as shown{{#if cli}}, its amount: the CLI takes the currency from the order{{/if}}. Never state a refund the order's text doesn't show, and never choose or work out an amount yourself.
+3. Then {{#if claude-skill}}make the call{{/if}}{{#if cli}}run the command{{/if}} the Cancel line gives, exactly as shown: `{{tool:orders cancel}}` with `{{arg:maximumPenalty}}` set to the penalty on that line{{#if cli}}, its amount (the CLI takes the currency from the order){{/if}}. Never state a refund the order's text doesn't show, and never choose or work out an amount yourself.
 
 The order is then cancelling, and cancelled once the hotel has cancelled and the refund is issued: check it with `{{tool:orders get}}`, which then says what the cancellation kept and returned. If the hotel refuses, the order is confirmed again and its Cancel line says so. `cancellation_changed` means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one.
 

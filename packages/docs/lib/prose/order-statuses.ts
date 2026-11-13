@@ -78,6 +78,6 @@ export const CANCEL_BLOCKER_DOCS: Record<CancelBlocker, string> = {
 export const FAILURE_REASON_DOCS: Record<FailureReason, string> = {
   rate_unavailable:
     "The rate could no longer be booked when the hotel was asked. Get offers again and let the user choose again.",
-  hotel_refused: `The hotel's booking system refused this order, and would refuse the same order again. Check the guest names with the user, as on the passport, before ordering again; for help, ${SUPPORT}.`,
+  hotel_refused: `The hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause. If the names are as on the passport, don't change them: for help, ${SUPPORT}.`,
   unknown: `The reason is not on record. For help, ${SUPPORT}.`,
 };

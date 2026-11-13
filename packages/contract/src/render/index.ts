@@ -49,12 +49,13 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  * line, and the others are shown in full.
  *
  * After the data come the rules it governs, each a paragraph, last:
- * - the consent rule (`ORDER_NEXT_STEP`) whenever the result holds a payment
- *   link; the pay rule (`payNextStep`) after it when an order has a "Pay
- *   without the link" line; the cancel rule (`cancelNextStep`) after those
- *   when a `get_order` or `list_orders` result holds an order that can be
- *   cancelled now (one that can be closed carries none: closing has no
- *   penalty);
+ * - the cancel rule (`cancelNextStep`) when a `get_order` or `list_orders`
+ *   result holds an order that can be cancelled now (one that can be closed
+ *   carries none: closing has no penalty);
+ * - then the consent rule (`ORDER_NEXT_STEP`) whenever the result holds a
+ *   payment link, so that it ends the text; only the pay rule
+ *   (`payNextStep`) follows it, when an order has a "Pay without the link"
+ *   line, and that one repeats it;
  * - on MCP, how to present hotels (`PRESENTATION_HINT`) for `search_hotels`,
  *   `get_hotel` and `get_hotel_offers`. The CLI's text carries none: there
  *   the rule is the skill's, as before.
@@ -82,14 +83,11 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
     const name = surface === "cli" && spec ? commandInvocation(spec) : tool;
     // One line, after our words: the JSON's strings are the data's, in JSON's quotes.
     const text = ours`This ${own(name)} result is not in the expected shape; as JSON: ${raw(data)}`;
-    return [
-      text,
-      ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",
-      ORDER_TOOLS.has(tool) && holdsToken(data) ? payNextStep(surface) : "",
-      CANCEL_TOOLS.has(tool) && holdsCancellable(data) ? cancelNextStep(surface) : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    return withRules(text, surface, {
+      cancel: CANCEL_TOOLS.has(tool) && holdsCancellable(data),
+      consent: ORDER_TOOLS.has(tool) && holdsPaymentUrl(data),
+      pay: ORDER_TOOLS.has(tool) && holdsToken(data),
+    });
   }
   switch (tool) {
     case "search_hotels":
@@ -171,11 +169,29 @@ function withConsent(
 ): string {
   const some = (read: (o: Order) => boolean, held: (value: unknown) => boolean) =>
     orders.some((o) => (o instanceof UnreadableOrder ? held(o.value) : read(o)));
+  return withRules(text, surface, {
+    cancel: CANCEL_TOOLS.has(tool) && some((o) => o.cancel.action === "cancel", holdsCancellable),
+    consent: some((o) => o.payment.url !== null, holdsPaymentUrl),
+    pay: some((o) => o.payment.token !== null, holdsToken),
+  });
+}
+
+/**
+ * `text` and the rules that apply to it, in the one order they come in: the
+ * cancel rule first, then the consent rule, then the pay rule that repeats
+ * it. So a result that holds a payment link ends with the rule about giving
+ * that link, whatever else it holds.
+ */
+function withRules(
+  text: string,
+  surface: RenderSurface,
+  applies: { cancel: boolean; consent: boolean; pay: boolean },
+): string {
   return [
     text,
-    some((o) => o.payment.url !== null, holdsPaymentUrl) ? ORDER_NEXT_STEP : "",
-    some((o) => o.payment.token !== null, holdsToken) ? payNextStep(surface) : "",
-    CANCEL_TOOLS.has(tool) && some((o) => o.cancel.action === "cancel", holdsCancellable) ? cancelNextStep(surface) : "",
+    applies.cancel ? cancelNextStep(surface) : "",
+    applies.consent ? ORDER_NEXT_STEP : "",
+    applies.pay ? payNextStep(surface) : "",
   ]
     .filter(Boolean)
     .join("\n\n");
