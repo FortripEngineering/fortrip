@@ -49,7 +49,7 @@ Three codes answer with what to do instead of only what went wrong:
 
 <ExitCodes />
 
-A CLI that is a major version behind the service is answered `client_outdated` on every command, before it asks the user to sign in. The message gives the command that updates it.
+A CLI that is a major version behind the service is answered `client_outdated` on every command, before it asks the user to sign in. The message gives the command that updates it, and the CLI exits with a code of its own, the last row above, so an agent can tell "update the CLI" from a failed request. `fortrip logout` still forgets the sign-in on this machine.
 
 ## Rate limits [#rate-limits]
 

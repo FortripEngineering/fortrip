@@ -269,17 +269,6 @@ describe("requests", () => {
     assert.deepEqual(requests[1]?.body, { close: true });
   });
 
-  it("orders cancel --close answered with an order that isn't expired: not closed, it was paid meanwhile", async () => {
-    const { data } = await fixture("order-awaiting-payment");
-    const paid = (await fixture("order-confirmed")).data;
-    replies = [{ status: 200, body: data }, { status: 200, body: paid }];
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 1);
-    assert.equal(stdout, "");
-    assert.ok(stderr.startsWith("Error: Not closed: it was paid meanwhile.\n"), stderr);
-    assert.ok(stderr.includes(renderToolResult("cancel_order", paid, "cli")), stderr);
-  });
-
   it("orders cancel --close answered payment_in_progress prints that error and exits 1", async () => {
     const { data } = await fixture("order-awaiting-payment");
     const envelope = {

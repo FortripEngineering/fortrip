@@ -50,8 +50,10 @@ link is approved.
 You stay signed in. Access tokens are short-lived and the CLI renews them
 itself, before they run out; refresh tokens don't expire, so the sign-in lasts
 until you run `fortrip logout`, which revokes this machine's sign-in and
-deletes it (other machines stay signed in). `fortrip whoami` prints the
-signed-in account.
+deletes it (other machines stay signed in). When Fortrip can't be reached, or
+no longer takes this version of the CLI, `logout` deletes the sign-in all the
+same and warns that it was not revoked. `fortrip whoami` prints the signed-in
+account.
 
 The sign-in is saved in `~/.config/fortrip/credentials.json` (`$XDG_CONFIG_HOME`
 is honoured), mode `0600`, per API URL, so a token is only sent to the server

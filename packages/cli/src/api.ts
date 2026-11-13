@@ -110,6 +110,15 @@ export async function postForm(
   return { status: response.status, body };
 }
 
+/** The errors `transportError` made: no answer at all. */
+const unreachable = new WeakSet<CliError>();
+
+/** Whether `error` is a request that got no answer: the service could not be
+ *  reached, did not answer in time, or dropped the connection. */
+export function isUnreachable(error: unknown): boolean {
+  return error instanceof CliError && unreachable.has(error);
+}
+
 /** No answer, or the connection dropped: worth one retry. */
 function transportError(
   apiUrl: string,
@@ -121,10 +130,12 @@ function transportError(
     (error as Error)?.name === "TimeoutError"
       ? `No response from ${apiUrl} within ${timeoutMs / 1_000} s`
       : `Could not reach ${apiUrl}: ${(error as Error)?.message ?? String(error)}`;
-  return new CliError(message, EXIT.error, {
+  const failure = new CliError(message, EXIT.error, {
     ...(status !== undefined ? { status } : {}),
     retryable: true,
   });
+  unreachable.add(failure);
+  return failure;
 }
 
 /** Whether an answer is the v1 error envelope. */

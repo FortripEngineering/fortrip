@@ -827,6 +827,75 @@ describe("logout and whoami", () => {
   });
 });
 
+/*
+ * Forgetting a session on this machine is the user's own act: it must not
+ * need the service. A CLI too old for the service, or one that is offline,
+ * could otherwise never sign out.
+ */
+describe("logout when the service can't be asked to revoke", () => {
+  const NOT_REVOKED = /^The sign-in was removed from this machine, but Fortrip was not told to revoke it: /;
+
+  it("a CLI too old for the service still forgets the session, revokes nothing, and says so", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.config = [CLIENT_OUTDATED];
+    assert.deepEqual(await logout(apiUrl), { loggedOut: true, apiUrl, revoked: false });
+    assert.equal(await loadSession(apiUrl), null);
+    assert.deepEqual(api.revoked, []);
+    // The update command reaches the user: it is Fortrip's own message.
+    assert.match(String(notices.warning), NOT_REVOKED);
+    assert.ok(String(notices.warning).endsWith(CLIENT_OUTDATED.body.error.message));
+
+    // The command: signed out, exit 0, the warning beside the answer.
+    await saveSession(apiUrl, api.session());
+    api.scripts.config = [CLIENT_OUTDATED];
+    const run = await cli(["logout"], cliEnv());
+    assert.equal(run.code, 0, run.stderr);
+    assert.match(run.stdout, new RegExp(`^Logged out of ${apiUrl}\\.\nwarning: The sign-in was removed from this machine, but Fortrip was not told to revoke it: `));
+    assert.equal(await loadSession(apiUrl), null);
+    const again = await cli(["logout"], cliEnv());
+    assert.equal(again.code, EXIT.unauthenticated);
+  });
+
+  it("a service that can't be reached: the session is forgotten all the same", async () => {
+    // Nothing listens there: the sign-in config can't be read.
+    const offline = "http://127.0.0.1:9";
+    const session = api.session();
+    await saveSession(offline, session);
+    assert.deepEqual(await logout(offline), { loggedOut: true, apiUrl: offline, revoked: false });
+    assert.equal(await loadSession(offline), null);
+    assert.match(String(notices.warning), NOT_REVOKED);
+    assert.match(String(notices.warning), /Could not reach http:\/\/127\.0\.0\.1:9/);
+  });
+
+  it("a revocation endpoint that can't be reached: the same, with the recovery files", async () => {
+    const saved = api.session();
+    await saveSession(apiUrl, saved);
+    const older = api.session({ expiresAt: Date.now() + 60_000 });
+    await writeFile(
+      join(dirname(credentialsPath()), "credentials.recovered-1-a.json"),
+      JSON.stringify({ version: 2, sessions: { [apiUrl]: older } }),
+    );
+    const config = (await (await fetch(`${apiUrl}/v1/auth/config`)).json()) as Record<string, unknown>;
+    api.scripts.config = [{ status: 200, body: { ...config, revocationEndpoint: "http://127.0.0.1:9/oauth/token/revoke" } }];
+    assert.deepEqual(await logout(apiUrl), { loggedOut: true, apiUrl, revoked: false });
+    assert.equal(await loadSession(apiUrl), null);
+    assert.deepEqual(await loadRecoveredSessions(apiUrl), []);
+    assert.deepEqual(api.revoked, []);
+    assert.match(String(notices.warning), NOT_REVOKED);
+  });
+
+  it("a service that answers and refuses is another matter: the session is kept, so logout can be rerun", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.config = [{ status: 503, body: envelope("service_unavailable", "Try again shortly.", { retryable: true }) }];
+    const error = await failure(logout(apiUrl));
+    assert.equal(error.exitCode, EXIT.error);
+    assert.deepEqual(await loadSession(apiUrl), session);
+    assert.equal(notices.warning, undefined);
+  });
+});
+
 describe("a re-login revokes the session it replaced", () => {
   it("an agent command's re-login revokes the replaced refresh token, never the new one", async () => {
     const old = api.session();

@@ -196,12 +196,10 @@ async function cancelOrder(
       }
       throw new CliError(["Not closed: nothing was sent.", ...orderLines(order)].join("\n"), EXIT.error);
     }
+    // A close that is answered closed the order: one paid meanwhile is
+    // refused with `order_not_cancellable`, never answered as it is.
     const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body: request.body }));
-    const text = renderToolResult("cancel_order", data, "cli");
-    if ((data as ReadOrder)?.status !== "expired") {
-      throw new CliError(["Not closed: it was paid meanwhile.", text].join("\n"), EXIT.error);
-    }
-    return { data, text };
+    return { data, text: renderToolResult("cancel_order", data, "cli") };
   }
   const penalty = read?.cancel?.penalty?.currency;
   const currency = typeof penalty === "string" ? penalty : read?.total?.currency;

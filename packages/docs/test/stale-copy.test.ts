@@ -38,6 +38,11 @@ describe("stale statements stay fixed", () => {
     // An error is one text block too, its envelope in _meta.
     assert.match(text, /A failed call has isError: true and one text block\./);
     assert.match(text, /_meta\["ai\.fortrip\/error"\] carries the error envelope/);
+    // Every _meta key the hosted server returns has its row.
+    const html = pageHtml("/mcp");
+    for (const key of ["ai.fortrip/requestId", "ai.fortrip/replayed", "ai.fortrip/error"]) {
+      assert.ok(html.includes(`<td><code>${key}</code></td>`), key);
+    }
     // Where a developer gets JSON instead.
     assert.match(text, /read it over the HTTP API, where each tool has an endpoint that answers JSON for the same input, or run the CLI command with --json/);
   });

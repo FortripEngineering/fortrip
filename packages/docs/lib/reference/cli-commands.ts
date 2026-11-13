@@ -61,7 +61,8 @@ const DOCS: Record<string, { title: string; group: string; output?: string }> =
     logout: {
       title: "Sign out",
       group: "Account",
-      output: "Revokes the saved sign-in on this machine and forgets it.",
+      output:
+        "Revokes the saved sign-in on this machine and forgets it. When Fortrip can't be reached, or no longer takes this version of the CLI, the sign-in is forgotten all the same, and a `warning` says it was not revoked.",
     },
     whoami: {
       title: "Account",
