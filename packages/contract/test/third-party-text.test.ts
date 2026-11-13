@@ -519,7 +519,7 @@ describe("orders", () => {
     assert.equal(lines[7], `Contact: Kenji Sato ${HOSTILE[2]} · kenji@example.com ${HOSTILE[0]} · +81 90 ${HOSTILE[1]}`);
     assert.ok(
       lines[10]!.includes(
-        `via com.stripe.payments ${HOSTILE[0]} (handler stripe_payments ${HOSTILE[2]}, business_profile profile_test_1 ${HOSTILE[1]}); usage limits for the token request: max_amount 36500, currency usd ${HOSTILE[2]}, expires_at`,
+        `via com.stripe.payments ${HOSTILE[0]} (handler stripe_payments ${HOSTILE[2]}, business_profile profile_test_1 ${HOSTILE[1]}); usage limits for the token request: max_amount 36500 (the currency's minor unit), currency usd ${HOSTILE[2]}, expires_at`,
       ),
       text,
     );
@@ -809,6 +809,9 @@ describe("every string of a result, replaced by a hostile one", () => {
   /** A result the output schema refused: one line, the JSON after our words. */
   const NOT_IN_SHAPE = /^This (?:[a-z_]+|fortrip [a-z]+ [a-z]+) result is not in the expected shape; as JSON: [[{]/;
 
+  /** An order of a list the schema refused: its one line, the others shown in full. */
+  const ORDER_NOT_IN_SHAPE = /^This order is not in the expected shape; as JSON: \{/m;
+
   /** The localities block, in a search and in `search_too_broad`. */
   const LOCALITIES = [/^Localities: pass one back as /, /^- Locality: /, /^Unassigned: /, /^More: /];
 
@@ -874,6 +877,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   const ORDER_OWN = [
     /^$/,
     NOT_IN_SHAPE,
+    ORDER_NOT_IN_SHAPE,
     // The order
     /^Order /,
     /^Why it failed: /,
@@ -1056,7 +1060,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   function attack(tool: ToolName, data: unknown, surface: RenderSurface, where: string): boolean {
     const [own, lookalikes] = ORDER_TOOLS.has(tool) ? [ORDER_OWN, ORDER_LOOKALIKES] : [OWN, PRESENTATION_WHOLE];
     const text = renderToolResult(tool, data, surface);
-    const refused = NOT_IN_SHAPE.test(text);
+    const refused = NOT_IN_SHAPE.test(text) || (tool === "list_orders" && ORDER_NOT_IN_SHAPE.test(text));
     assertOurs(text, where, own, lookalikes);
     // The whole text is the function's: how to present hotels ends a hotel
     // result on MCP, once, and is in no other.

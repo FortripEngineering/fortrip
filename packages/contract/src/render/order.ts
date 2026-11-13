@@ -1,5 +1,5 @@
 import { SUPPORT_EMAIL } from "../limits.ts";
-import type { Order, OrderCancel, OrderList } from "../outputs/order.ts";
+import { type Order, type OrderCancel, tokenUsageLimits } from "../outputs/order.ts";
 import { CALLS, type RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeText } from "./offers.ts";
@@ -46,15 +46,18 @@ export const CANCEL_BLOCKER_WORDS: Record<string, string> = {
   payment_in_progress: "a payment is under way; read the order again shortly",
   website_checkout:
     "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there",
-  expired: "it expired unpaid, so there is nothing to cancel or close",
+  expired: "its time to pay ran out, so there is nothing to cancel or close",
+  closed: "it was closed unpaid, as asked, so there is nothing to cancel or close",
   failed: "no stay was booked, so there is nothing to cancel",
   confirming: "the booking is still being confirmed with the hotel; read the order again later",
   cancelling: "a cancellation is already under way; read the order again later",
   already_cancelled: "it is already cancelled",
   stay_started: `the stay has started; ${SUPPORT}`,
-  non_refundable: "this rate can't be cancelled",
+  non_refundable:
+    "the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands",
   refused: "the hotel refused the cancellation; the booking stands",
   terms_unknown: `its cancellation terms are not on record; ${SUPPORT}`,
+  support_only: `the booking stands, and it can't be cancelled here; to cancel it, the user emails ${SUPPORT_EMAIL} with the order's reference`,
   needs_attention: `Fortrip is looking into this order; ${SUPPORT}`,
 };
 
@@ -117,21 +120,21 @@ function contactLine(c: Order["contact"]): Ours {
   return ours`Contact: ${c.name} · ${c.email ?? "no email on record"} · ${c.phone ?? "no phone on record"}`;
 }
 
-/** What became of an order that is over: why a failed one booked nothing,
- *  what a cancelled one kept and returned. */
+/** What became of an order that is over: why a failed one booked nothing
+ *  (a failed order always says), and what a cancelled one kept and returned.
+ *  The second is a cancelled order's line alone: on an order of any other
+ *  status, figures of a cancellation are not its outcome. */
 function outcomeLines(o: Order): Ours[] {
   const lines: Ours[] = [];
   if (o.failure) {
     lines.push(ours`Why it failed: ${label(FAILURE_WORDS, o.failure.reason, ours`the reason is not recognized`)}`);
-  } else if (o.status === "failed") {
-    lines.push(ours`Why it failed: the reason is not on record`);
   }
-  if (o.cancelled) {
+  if (o.status === "cancelled") {
     lines.push(
-      ours`Cancelled ${when(o.cancelled.at, null)}: penalty kept ${money(o.cancelled.penalty)}, refund ${money(o.cancelled.refund)}`,
+      o.cancelled
+        ? ours`Cancelled ${when(o.cancelled.at, null)}: penalty kept ${money(o.cancelled.penalty)}, refund ${money(o.cancelled.refund)}`
+        : ours`Cancelled: the penalty kept and the refund are not on record`,
     );
-  } else if (o.status === "cancelled") {
-    lines.push(ours`Cancelled: the penalty kept and the refund are not on record`);
   }
   return lines;
 }
@@ -169,7 +172,10 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
 
 /** "Pay without the link: …": the handler by type with the business
  *  profile the token is granted for, and Stripe's usage limits for the
- *  token under Stripe's own names, as they go into the token request. */
+ *  token under Stripe's own names, as they go into the token request.
+ *  `max_amount` says its unit (cents, of usd), and `expires_at` is read as
+ *  an instant only when it is the Unix seconds the schema takes: any other
+ *  number is shown alone. */
 function tokenLine(
   o: Order,
   token: NonNullable<Order["payment"]["token"]>,
@@ -180,9 +186,11 @@ function tokenLine(
     surface === "cli"
       ? ours`\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.total.amount}\``
       : ours`pay_order`;
-  const expires = new Date(u.expires_at * 1000);
-  const limits = ours`max_amount ${u.max_amount}, currency ${u.currency}, expires_at ${u.expires_at}`;
-  const until = Number.isNaN(expires.getTime()) ? limits : ours`${limits} (${when(expires.toISOString(), null)})`;
+  const unit = u.currency === "usd" ? "cents" : "the currency's minor unit";
+  const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${u.currency}, expires_at ${u.expires_at}`;
+  const until = tokenUsageLimits.shape.expires_at.safeParse(u.expires_at).success
+    ? ours`${limits} (${when(new Date(u.expires_at * 1000).toISOString(), null)})`
+    : limits;
   return ours`Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); usage limits for the token request: ${until}.`;
 }
 
@@ -213,7 +221,19 @@ function cancelText(o: Order, surface: RenderSurface): Ours {
     return c.penalty ? ours`${now} (only after the user's yes: ${cancelCall(o.orderId, c.penalty, surface)})` : now;
   }
   if (c.action !== null) return code(c.action, ours`an action not recognized`);
-  return ours`not available: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy, ours`reason not recognized`)}`;
+  return ours`not available: ${blockerText(c)}`;
+}
+
+/** What blocks both cancelling and closing, in words. An order with no
+ *  action always names it. */
+export function blockerText(c: OrderCancel): Ours {
+  return label(CANCEL_BLOCKER_WORDS, c.blockedBy ?? "", ours`reason not recognized`);
+}
+
+/** An order of a list that this build can't read: kept as it came, and
+ *  shown as JSON on one line, so the orders around it still show in full. */
+export class UnreadableOrder {
+  constructor(readonly value: unknown) {}
 }
 
 export function orderLines(o: Order, surface: RenderSurface = "mcp"): Ours[] {
@@ -230,13 +250,23 @@ export function renderOrder(o: Order, surface: RenderSurface = "mcp"): string {
   return orderLines(o, surface).join("\n");
 }
 
-export function renderOrderList(list: OrderList, surface: RenderSurface = "mcp"): string {
+export function renderOrderList(
+  list: { data: (Order | UnreadableOrder)[]; nextCursor: string | null },
+  surface: RenderSurface = "mcp",
+): string {
   const lines = [
     list.data.length === 0
       ? ours`No orders on this page.`
       : ours`Orders, newest first: ${list.data.length} on this page.`,
   ];
-  for (const o of list.data) lines.push(ours``, ...orderLines(o, surface));
+  for (const o of list.data) {
+    lines.push(
+      ours``,
+      ...(o instanceof UnreadableOrder
+        ? [ours`This order is not in the expected shape; as JSON: ${raw(o.value)}`]
+        : orderLines(o, surface)),
+    );
+  }
   lines.push(
     ours``,
     list.nextCursor === null

@@ -1,0 +1,112 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_CanalTermsUnknown000",
+    "reference": "FT-U3K6ZM",
+    "status": "confirmed",
+    "createdAt": "2026-10-30T15:20:00Z",
+    "updatedAt": "2026-10-30T15:31:00Z",
+    "contact": {
+      "name": "Mateus Lima",
+      "email": "mateus.lima@example.com",
+      "phone": "+55 11 95555 0111"
+    },
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": null,
+          "name": "Canal House Lisbon",
+          "names": {
+            "en": "Canal House Lisbon",
+            "zh": null
+          },
+          "checkIn": "2026-12-03",
+          "checkOut": "2026-12-05",
+          "timeZone": "Europe/Lisbon",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": [],
+              "guests": [
+                {
+                  "firstName": "Mateus",
+                  "lastName": "Lima"
+                },
+                {
+                  "firstName": "Clara",
+                  "lastName": "Lima"
+                }
+              ],
+              "roomType": {
+                "name": {
+                  "text": "Classic Double",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 double bed",
+                  "locale": "en"
+                },
+                "areaSqm": {
+                  "min": 18,
+                  "max": 22
+                },
+                "maxOccupancy": 2,
+                "window": "yes"
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Bed and breakfast",
+                  "locale": "en"
+                }
+              }
+            }
+          ],
+          "specialRequests": null,
+          "cancellation": {
+            "status": "unknown",
+            "readAt": "2026-10-30T15:20:00Z",
+            "freeCancellationEndsAt": null,
+            "penalties": [],
+            "timeZone": "Europe/Lisbon"
+          },
+          "confirmation": null,
+          "payAtProperty": {
+            "disclosure": "incomplete",
+            "items": []
+          },
+          "confirmationNumber": "CHL-20944"
+        }
+      }
+    ],
+    "total": {
+      "amount": "236.00",
+      "currency": "EUR"
+    },
+    "payment": {
+      "status": "paid",
+      "url": null,
+      "requiresSignIn": false,
+      "expiresAt": null,
+      "localCurrencyAtCheckout": false,
+      "localCharge": null,
+      "token": null
+    },
+    "cancel": {
+      "action": null,
+      "blockedBy": "terms_unknown",
+      "penalty": null,
+      "refund": null
+    },
+    "cancelled": null,
+    "failure": null,
+    "manageUrl": "https://fortrip.ai/stays/orders/so_7m2Pq9d"
+  }
+}

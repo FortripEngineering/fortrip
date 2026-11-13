@@ -447,6 +447,13 @@ describe("v1 response fixtures parse, open and strict", () => {
     assert.equal(order.safeParse(withHandler(handler, null)).success, false);
     assert.equal(order.safeParse(withHandler(handler, { ...usageLimits, max_amount: 132.4 })).success, false);
     assert.equal(order.safeParse(withHandler(handler, { ...usageLimits, expires_at: "2026-10-25T08:00:00Z" })).success, false);
+    // expires_at is Unix seconds: a plausible instant, never milliseconds, zero or a fraction.
+    for (const expires_at of [1_000_000_000, 1_600_000_000, 1792915200, 9_999_999_999]) {
+      parsesBoth(order, withHandler(handler, { ...usageLimits, expires_at }));
+    }
+    for (const expires_at of [0, -1, 999_999_999, 10_000_000_000, 1792915200000, 1792915200.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assert.equal(order.safeParse(withHandler(handler, { ...usageLimits, expires_at })).success, false, String(expires_at));
+    }
     // The 5.x names are not the token's.
     assert.equal(order.safeParse(withHandler(handler, { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" })).success, false);
   });
@@ -531,6 +538,24 @@ describe("v1 response fixtures parse, open and strict", () => {
     assert.ok(orderCancel.safeParse(blockedBy("later")).success);
     assert.equal(strictOutput(orderCancel).safeParse(blockedBy("later")).success, false);
     assert.ok(orderCancel.safeParse({ action: "amend", blockedBy: null, penalty: null, refund: null }).success);
+    // One situation each: an unpaid order whose time ran out is not one that was closed, and an
+    // order a person at Fortrip is resolving is not a sound one only support can cancel.
+    assert.deepEqual([...CANCEL_BLOCKERS], [
+      "payment_in_progress",
+      "website_checkout",
+      "expired",
+      "closed",
+      "failed",
+      "confirming",
+      "cancelling",
+      "already_cancelled",
+      "stay_started",
+      "non_refundable",
+      "refused",
+      "terms_unknown",
+      "support_only",
+      "needs_attention",
+    ]);
     // An order always says it.
     const { cancel: _cancel, ...withoutCancel } = orderFixture;
     assert.equal(order.safeParse(withoutCancel).success, false);
@@ -570,6 +595,25 @@ describe("v1 response fixtures parse, open and strict", () => {
     }
   });
 
+  // The rules above are for the actions this build knows. An action it does
+  // not know is not held to them: the enum stays open, whatever comes with it.
+  it("an order's cancel with an action this build does not know reads, whatever it carries", () => {
+    const later: unknown[] = [
+      { action: "amend", blockedBy: null, penalty: null, refund: null },
+      { action: "amend", blockedBy: null, penalty: usd("20.00"), refund: usd("112.40") },
+      { action: "amend", blockedBy: null, penalty: usd("20.00"), refund: null },
+      { action: "amend", blockedBy: "later", penalty: null, refund: null },
+    ];
+    for (const cancel of later) {
+      assert.ok(orderCancel.safeParse(cancel).success, JSON.stringify(cancel));
+      assert.ok(order.safeParse({ ...orderFixture, status: "confirmed", cancel }).success, JSON.stringify(cancel));
+      assert.ok(orderList.safeParse({ data: [orderFixture, { ...orderFixture, cancel }], nextCursor: null }).success);
+      assert.ok(errorEnvelope.safeParse(envelope("order_not_cancellable", { cancel })).success, JSON.stringify(cancel));
+      // The strict copy knows only this build's actions.
+      assert.equal(strictOutput(orderCancel).safeParse(cancel).success, false, JSON.stringify(cancel));
+    }
+  });
+
   it("a cancelled order's figures, and a failed order's reason", () => {
     const cancelled = { at: "2026-10-26T09:41:00Z", penalty: usd("66.20"), refund: usd("66.20") };
     parsesBoth(order, { ...orderFixture, status: "cancelled", cancel: blockedBy("already_cancelled"), cancelled });
@@ -588,6 +632,15 @@ describe("v1 response fixtures parse, open and strict", () => {
     assert.ok(order.safeParse(later).success);
     assert.equal(strictOutput(order).safeParse(later).success, false);
     assert.equal(order.safeParse({ ...orderFixture, failure: {} }).success, false);
+    // A failed order always says why: a reason not on record is `unknown`, never a null failure.
+    const failed = { ...orderFixture, status: "failed", cancel: blockedBy("failed") };
+    assert.equal(order.safeParse({ ...failed, failure: null }).success, false);
+    assert.equal(strictOutput(order).safeParse({ ...failed, failure: null }).success, false);
+    assert.equal(orderList.safeParse({ data: [{ ...failed, failure: null }], nextCursor: null }).success, false);
+    parsesBoth(order, { ...failed, failure: { reason: "unknown" } });
+    // Every other status has none, and a status this build does not know is not held to the rule.
+    parsesBoth(order, { ...orderFixture, failure: null });
+    assert.ok(order.safeParse({ ...orderFixture, status: "later", failure: null }).success);
     // An order always says both, null when they don't apply.
     for (const field of ["cancelled", "failure"] as const) {
       const { [field]: _gone, ...without } = orderFixture;

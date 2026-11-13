@@ -18,7 +18,7 @@ import {
   mealsText,
   offerLine,
 } from "./offers.ts";
-import { CANCEL_BLOCKER_WORDS, cancelFigures, ORDER_STATUS_WORDS } from "./order.ts";
+import { blockerText, cancelFigures, ORDER_STATUS_WORDS } from "./order.ts";
 import { localitiesLines } from "./search.ts";
 import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
 
@@ -246,7 +246,7 @@ function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurf
     return [ours`What applies to this order now: ${code(c.action, ours`an action not recognized`)}.`];
   }
   return [
-    ours`This order can be neither cancelled nor closed now: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy, ours`reason not recognized`)}.`,
+    ours`This order can be neither cancelled nor closed now: ${blockerText(c)}.`,
   ];
 }
 

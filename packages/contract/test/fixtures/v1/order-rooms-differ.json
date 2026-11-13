@@ -5,7 +5,7 @@
     "reference": "FT-D3G6LS",
     "status": "confirmed",
     "createdAt": "2026-10-30T15:20:00Z",
-    "updatedAt": "2026-10-30T15:26:00Z",
+    "updatedAt": "2026-11-20T08:00:00Z",
     "contact": {
       "name": "Inês Duarte",
       "email": "ines.duarte@example.com",
@@ -96,12 +96,12 @@
           ],
           "specialRequests": null,
           "cancellation": {
-            "status": "non_refundable",
+            "status": "free",
             "readAt": "2026-10-30T15:20:00Z",
-            "freeCancellationEndsAt": null,
+            "freeCancellationEndsAt": "2026-11-15T00:00:00Z",
             "penalties": [
               {
-                "startsAt": null,
+                "startsAt": "2026-11-15T00:00:00Z",
                 "amount": {
                   "amount": "410.00",
                   "currency": "EUR"
@@ -133,10 +133,16 @@
       "token": null
     },
     "cancel": {
-      "action": null,
-      "blockedBy": "non_refundable",
-      "penalty": null,
-      "refund": null
+      "action": "cancel",
+      "blockedBy": null,
+      "penalty": {
+        "amount": "410.00",
+        "currency": "EUR"
+      },
+      "refund": {
+        "amount": "0.00",
+        "currency": "EUR"
+      }
     },
     "cancelled": null,
     "failure": null,

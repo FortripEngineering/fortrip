@@ -1,0 +1,119 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_BundExpired000000000",
+    "reference": "FT-E6P3RK",
+    "status": "expired",
+    "createdAt": "2026-11-01T09:05:00Z",
+    "updatedAt": "2026-11-01T12:50:00Z",
+    "contact": {
+      "name": "Olu Adeyemi",
+      "email": "olu.adeyemi@example.com",
+      "phone": "+234 803 555 0142"
+    },
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": "htl_BundRiverside0000000",
+          "name": "The Bund Riverside Hotel",
+          "names": {
+            "en": "The Bund Riverside Hotel",
+            "zh": "外滩江畔酒店"
+          },
+          "checkIn": "2026-11-14",
+          "checkOut": "2026-11-16",
+          "timeZone": "Asia/Shanghai",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": [],
+              "guests": [
+                {
+                  "firstName": "Olu",
+                  "lastName": "Adeyemi"
+                }
+              ],
+              "roomType": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 king bed",
+                  "locale": "en"
+                },
+                "areaSqm": {
+                  "min": 32,
+                  "max": 32
+                },
+                "maxOccupancy": 2,
+                "window": "yes"
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Breakfast for 2",
+                  "locale": "en"
+                }
+              }
+            }
+          ],
+          "specialRequests": null,
+          "cancellation": {
+            "status": "free",
+            "readAt": "2026-11-01T09:00:00Z",
+            "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+            "penalties": [
+              {
+                "startsAt": "2026-11-12T16:00:00Z",
+                "amount": {
+                  "amount": "182.50",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Shanghai"
+          },
+          "confirmation": {
+            "mode": "instant",
+            "withinMinutes": null
+          },
+          "payAtProperty": {
+            "disclosure": "complete",
+            "items": []
+          },
+          "confirmationNumber": null
+        }
+      }
+    ],
+    "total": {
+      "amount": "365.00",
+      "currency": "USD"
+    },
+    "payment": {
+      "status": "unpaid",
+      "url": null,
+      "requiresSignIn": false,
+      "expiresAt": null,
+      "localCurrencyAtCheckout": true,
+      "localCharge": null,
+      "token": null
+    },
+    "cancel": {
+      "action": null,
+      "blockedBy": "expired",
+      "penalty": null,
+      "refund": null
+    },
+    "cancelled": null,
+    "failure": null,
+    "manageUrl": "https://fortrip.ai/orders/ord_BundExpired000000000"
+  }
+}

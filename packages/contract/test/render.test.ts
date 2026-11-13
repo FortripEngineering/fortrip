@@ -5,7 +5,8 @@ import { describe, it } from "node:test";
 import { strictOutput } from "../src/conventions/open.ts";
 import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
-import { CANCEL_BLOCKERS, FAILURE_REASONS, PAYMENT_METHOD_UNAVAILABLE_REASONS } from "../src/outputs/order.ts";
+import { renderOrder } from "../src/render/order.ts";
+import { CANCEL_BLOCKERS, FAILURE_REASONS, type Order, PAYMENT_METHOD_UNAVAILABLE_REASONS } from "../src/outputs/order.ts";
 import { SEARCH_NOTE_CODES } from "../src/outputs/search.ts";
 import {
   CANCEL_NEXT_STEP,
@@ -48,6 +49,13 @@ const GOLDENS = [
   "order-cancelled",
   "order-rooms-differ",
   "order-website-checkout",
+  "order-free-to-cancel",
+  "order-expired",
+  "order-closed",
+  "order-stay-started",
+  "order-needs-attention",
+  "order-terms-unknown",
+  "order-confirming",
   "list-orders",
   "cancel-order",
   "error-payment-total-mismatch",
@@ -1112,9 +1120,11 @@ describe("orders and the consent rule", () => {
     assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails info@fortrip\.ai with the order's reference$/);
     data.failure = { reason: "struck_by_lightning" };
     assert.equal(render(fixture).split("\n")[1], "Why it failed: struck_by_lightning");
-    // Unknown is not no: a failed order with no failure on record still says so.
+    // One encoding: a failed order whose reason is not on record says `unknown`. One with no
+    // failure at all is not an order this build reads.
     data.failure = null;
-    assert.equal(render(fixture).split("\n")[1], "Why it failed: the reason is not on record");
+    assert.match(render(fixture), /^This get_order result is not in the expected shape; as JSON: /);
+    data.failure = { reason: "unknown" };
     assertClean(render(fixture));
     // An order that didn't fail has no such line.
     assert.doesNotMatch(render(load("order-confirmed")), /Why it failed/);
@@ -1124,6 +1134,8 @@ describe("orders and the consent rule", () => {
     const fixture = copy(load("order-cancelled")) as ToolFixture;
     const lines = render(fixture).split("\n");
     assert.match(lines[0]!, / · cancelled · /);
+    // When it was cancelled, not when the order last changed (its refund settled later).
+    assert.match(lines[0]!, / · updated 2026-11-04 06:15 UTC$/);
     assert.equal(lines[1], "Cancelled 2026-11-02 09:41 UTC: penalty kept USD 120.00, refund USD 246.00");
     assert.ok(lines.some((l) => l.startsWith("Total: USD 366.00 · payment refunded")));
     assert.ok(lines.includes("Cancel: not available: it is already cancelled"));
@@ -1132,6 +1144,14 @@ describe("orders and the consent rule", () => {
     assert.equal(render(fixture).split("\n")[1], "Cancelled: the penalty kept and the refund are not on record");
     assertClean(render(fixture));
     assert.doesNotMatch(render(load("order-confirmed")), /^Cancelled/m);
+    // The line is a cancelled order's: figures on an order of any other status are not shown as its outcome.
+    const cancelled = (load("order-cancelled") as ToolFixture).data.cancelled;
+    for (const name of ["order-confirmed", "cancel-order", "order-needs-attention"] as const) {
+      const other = copy(load(name)) as ToolFixture;
+      (other.data as Record<string, any>).cancelled = cancelled;
+      strictOutput(outputOf(other.tool)).parse(other.data);
+      assert.doesNotMatch(render(other), /^Cancelled/m, name);
+    }
   });
 
   it("ends with ORDER_NEXT_STEP when payment.url is set", () => {
@@ -1172,17 +1192,46 @@ describe("orders and the consent rule", () => {
   });
 
   it("a paid order past its free deadline can still be cancelled: the whole total kept, nothing refunded", () => {
-    const data = copy((load("order-confirmed") as ToolFixture).data) as Record<string, any>;
-    data.cancel = {
-      action: "cancel",
-      blockedBy: null,
-      penalty: { amount: "366.00", currency: "USD" },
-      refund: { amount: "0.00", currency: "USD" },
-    };
-    strictOutput(outputOf("get_order")).parse(data);
-    const text = renderToolResult("get_order", data);
-    assert.match(text, /^Cancel: can cancel now: penalty USD 366\.00, refund USD 0\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "366\.00", currency: "USD" \}\)$/m);
+    const fixture = load("order-rooms-differ") as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    assert.deepEqual(data.cancel, { action: "cancel", blockedBy: null, penalty: data.total, refund: { amount: "0.00", currency: "EUR" } });
+    const text = render(fixture);
+    assert.match(text, /^Terms: free cancellation until 2026-11-15 00:00 UTC \(2026-11-15 00:00 Europe\/Lisbon\), then EUR 410\.00 from 2026-11-15 00:00 UTC /m);
+    assert.match(text, /^Cancel: can cancel now: penalty EUR 410\.00, refund EUR 0\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "410\.00", currency: "EUR" \}\)$/m);
     assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
+    // A rate that keeps the whole total from booking reads the same way: it is cancelled, not blocked.
+    const strict = copy(data);
+    strict.items[0].hotel.cancellation = { ...strict.items[0].hotel.cancellation, status: "non_refundable", freeCancellationEndsAt: null, penalties: [{ startsAt: null, amount: strict.total }] };
+    strictOutput(outputOf("get_order")).parse(strict);
+    const kept = renderToolResult("get_order", strict);
+    assert.match(kept, /^Terms: non-refundable: EUR 410\.00 from booking /m);
+    assert.match(kept, /^Cancel: can cancel now: penalty EUR 410\.00, refund EUR 0\.00 /m);
+  });
+
+  it("an order free to cancel says so: no penalty, the whole total returned", () => {
+    const text = render(load("order-free-to-cancel"));
+    assert.match(text, /^Cancel: can cancel now: penalty USD 0\.00, refund USD 365\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "0\.00", currency: "USD" \}\)$/m);
+    assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
+  });
+
+  it("each order that can be neither cancelled nor closed says the one thing that blocks it", () => {
+    const support = "for help, the user emails info@fortrip.ai with the order's reference";
+    const cases: [Golden, string, string][] = [
+      ["order-expired", "not paid: the time ran out or it was closed", "its time to pay ran out, so there is nothing to cancel or close"],
+      ["order-closed", "not paid: the time ran out or it was closed", "it was closed unpaid, as asked, so there is nothing to cancel or close"],
+      ["order-stay-started", "confirmed", `the stay has started; ${support}`],
+      ["order-needs-attention", "needs attention from Fortrip", `Fortrip is looking into this order; ${support}`],
+      ["order-terms-unknown", "confirmed", `its cancellation terms are not on record; ${support}`],
+      ["order-confirming", "confirming with the hotel", "the booking is still being confirmed with the hotel; read the order again later"],
+    ];
+    for (const [name, status, why] of cases) {
+      const text = render(load(name));
+      const lines = text.split("\n");
+      assert.ok(lines[0]!.includes(` · ${status} · created `), `${name}: ${lines[0]}`);
+      assert.ok(lines.includes(`Cancel: not available: ${why}`), `${name}: ${text}`);
+      for (const rule of [CANCEL_NEXT_STEP, ORDER_NEXT_STEP, PAY_NEXT_STEP]) assert.ok(!text.includes(rule), name);
+      assert.doesNotMatch(text, /^Payment link|^Pay without the link/m, name);
+    }
   });
 
   it("leaves CANCEL_NEXT_STEP out when no order can be cancelled now", () => {
@@ -1243,17 +1292,6 @@ describe("orders and the consent rule", () => {
     assert.equal(renderToolResult("list_orders", list).split(CANCEL_NEXT_STEP).length, 2);
   });
 
-  it("an expired order was not paid: the time ran out or it was closed", () => {
-    const data = unpaidOrder();
-    data.status = "expired";
-    data.payment.url = null;
-    data.payment.expiresAt = null;
-    data.cancel = blocked("expired");
-    const lines = renderToolResult("get_order", data).split("\n");
-    assert.match(lines[0]!, / · not paid: the time ran out or it was closed · /);
-    assert.ok(lines.includes("Cancel: not available: it expired unpaid, so there is nothing to cancel or close"));
-  });
-
   it("an unpaid order that can't be closed says which: on the website's checkout, or a payment under way", () => {
     assert.match(
       render(load("order-website-checkout")),
@@ -1285,7 +1323,20 @@ describe("orders and the consent rule", () => {
       data.cancel = blocked(blockedBy);
       return renderToolResult("get_order", data).split("\n").find((l) => l.startsWith("Cancel: "));
     };
-    assert.equal(line("non_refundable"), "Cancel: not available: this rate can't be cancelled");
+    // No cancellation at all, which is not a cancellation that keeps the whole total.
+    assert.equal(
+      line("non_refundable"),
+      "Cancel: not available: the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands",
+    );
+    // A sound booking only support can cancel is not an order Fortrip is looking into.
+    assert.equal(
+      line("support_only"),
+      "Cancel: not available: the booking stands, and it can't be cancelled here; to cancel it, the user emails info@fortrip.ai with the order's reference",
+    );
+    assert.equal(
+      line("needs_attention"),
+      "Cancel: not available: Fortrip is looking into this order; for help, the user emails info@fortrip.ai with the order's reference",
+    );
     assert.equal(line("refused"), "Cancel: not available: the hotel refused the cancellation; the booking stands");
     assert.equal(
       line("confirming"),
@@ -1326,7 +1377,7 @@ describe("orders and the consent rule", () => {
         text
           .split("\n")
           .includes(
-            "Pay without the link: pay_order with a shared payment token via com.stripe.payments (handler stripe_payments, business_profile profile_test_1); usage limits for the token request: max_amount 36500, currency usd, expires_at 1793537400 (2026-11-01 12:50 UTC).",
+            "Pay without the link: pay_order with a shared payment token via com.stripe.payments (handler stripe_payments, business_profile profile_test_1); usage limits for the token request: max_amount 36500 (cents), currency usd, expires_at 1793537400 (2026-11-01 12:50 UTC).",
           ),
         `${tool}: ${text}`,
       );
@@ -1336,7 +1387,10 @@ describe("orders and the consent rule", () => {
     // The instant in parentheses is the expires_at above it, read as Unix seconds.
     data.payment.token.usageLimits.expires_at = 1793537400 + 3600;
     assert.match(renderToolResult("get_order", data), /expires_at 1793541000 \(2026-11-01 13:50 UTC\)\.$/m);
-    assert.match(render(load("order-payable-by-token")), /max_amount 36500, currency usd, expires_at 1793537400 \(2026-11-01 12:50 UTC\)\.$/m);
+    assert.match(render(load("order-payable-by-token")), /max_amount 36500 \(cents\), currency usd, expires_at 1793537400 \(2026-11-01 12:50 UTC\)\.$/m);
+    // max_amount is in the currency's minor unit: cents is said of usd only.
+    data.payment.token.usageLimits.currency = "eur";
+    assert.match(renderToolResult("get_order", data), /max_amount 36500 \(the currency's minor unit\), currency eur, expires_at /);
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
     assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
     assert.match(PAY_NEXT_STEP, /Pay one way only: either give the payment link or call pay_order\./);
@@ -1355,6 +1409,31 @@ describe("orders and the consent rule", () => {
       assert.doesNotMatch(plain, /^Pay without the link/m, tool);
       assert.ok(!plain.includes(PAY_NEXT_STEP), tool);
       assert.ok(plain.endsWith(`\n\n${ORDER_NEXT_STEP}`), tool);
+    }
+  });
+
+  // expires_at is Unix seconds. The schema refuses a value that can't be (so the order shows as
+  // JSON); the line itself, given one, prints the number and no instant read from it.
+  it("the instant beside expires_at is printed only for a plausible Unix-seconds value", () => {
+    const tokenLine = (expires_at: number, through: (data: Record<string, any>) => string) => {
+      const data = withToken();
+      data.payment.token.usageLimits.expires_at = expires_at;
+      return through(data).split("\n").find((l) => l.startsWith("Pay without the link: ")) ?? through(data);
+    };
+    const parsed = (data: Record<string, any>) => renderToolResult("get_order", data);
+    const direct = (data: Record<string, any>) => renderOrder(data as Order);
+    // A past value is still an instant.
+    for (const through of [parsed, direct]) {
+      assert.match(tokenLine(1_600_000_000, through), /expires_at 1600000000 \(2020-09-13 12:26 UTC\)\.$/);
+      assert.match(tokenLine(1_000_000_000, through), /expires_at 1000000000 \(2001-09-09 01:46 UTC\)\.$/);
+      assert.match(tokenLine(9_999_999_999, through), /expires_at 9999999999 \(2286-11-20 17:46 UTC\)\.$/);
+    }
+    // Zero, milliseconds, a value no date can hold, and no number at all.
+    for (const bad of [0, 999_999_999, 10_000_000_000, 1793537400000, 8.7e15, 1e21, Number.NaN, Number.POSITIVE_INFINITY, 1793537400.5]) {
+      assert.match(tokenLine(bad, parsed), /^This get_order result is not in the expected shape; as JSON: /, String(bad));
+      const line = tokenLine(bad, direct);
+      assert.ok(line.endsWith(`, expires_at ${bad}.`), `${bad}: ${line}`);
+      assert.doesNotMatch(line, /UTC|Invalid/, String(bad));
     }
   });
 
@@ -1440,6 +1519,74 @@ describe("renderToolResult on malformed data", () => {
     }
     (order.data as Record<string, any>).cancel = blocked("stay_started");
     assert.ok(!renderToolResult("get_order", order.data).includes(CANCEL_NEXT_STEP));
+  });
+
+  // One order of a page that this build can't read must not cost the page: the others are shown
+  // in full, the one as JSON on one line under our words, and the rules follow as they would.
+  it("a list degrades per order: the others render in full, the unreadable one as one line of JSON", () => {
+    const page = (change: (orders: Record<string, any>[]) => void) => {
+      const list = copy((load("list-orders") as ToolFixture).data) as { data: Record<string, any>[]; nextCursor: string };
+      change(list.data);
+      return list;
+    };
+    const whole = renderToolResult("list_orders", page(() => {}));
+    // An action this build does not know, with figures: the order reads, and so does its page.
+    const amended = page((orders) => {
+      orders[3]!.cancel = { action: "amend", blockedBy: null, penalty: orders[3]!.cancel.penalty, refund: orders[3]!.cancel.refund };
+    });
+    const later = renderToolResult("list_orders", amended);
+    assert.doesNotMatch(later, /not in the expected shape/);
+    assert.equal(later.split("\n").filter((l) => l.startsWith("Order ord_")).length, 4);
+    assert.ok(later.split("\n").includes("Cancel: amend"));
+    assert.ok(!later.includes(CANCEL_NEXT_STEP));
+    assert.match(renderToolResult("get_order", amended.data[3]), /^Cancel: amend$/m);
+    // One order that does not parse: a failed order that does not say why.
+    for (const surface of ["mcp", "cli"] as const) {
+      for (const at of [0, 1, 2, 3]) {
+        const list = page((orders) => {
+          orders[at] = { ...orders[at]!, status: "failed", failure: null };
+        });
+        const text = renderToolResult("list_orders", list, surface);
+        const lines = text.split("\n");
+        assert.equal(lines[0], "Orders, newest first: 4 on this page.");
+        const bad = lines.filter((l) => l.startsWith("This order is not in the expected shape; as JSON: "));
+        assert.equal(bad.length, 1, text);
+        assert.equal(bad[0], `This order is not in the expected shape; as JSON: ${JSON.stringify(list.data[at])}`);
+        assert.doesNotMatch(text, /^This (?:list_orders|fortrip orders list) result is not in the expected shape/m);
+        // Every other order is there whole, line for line as in the page that reads.
+        const full = renderToolResult("list_orders", page(() => {}), surface).split("\n\n");
+        const blocks = text.split("\n\n");
+        assert.equal(blocks.length, full.length, text);
+        blocks.forEach((block, i) => {
+          if (i === at + 1) assert.equal(block, bad[0]);
+          else assert.equal(block, full[i], `order ${i - 1}`);
+        });
+      }
+    }
+    assert.ok(whole.endsWith(`\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`));
+    // The rules look at the unreadable order too: its link and its cancellation are in the JSON.
+    const onlyBad = page((orders) => {
+      orders.splice(0, 2);
+      orders[0] = { ...orders[0]!, createdAt: "yesterday" };
+      orders[1] = { ...orders[1]!, createdAt: "yesterday" };
+    });
+    const text = renderToolResult("list_orders", onlyBad);
+    assert.equal(text.split("\n").filter((l) => l.startsWith("This order is not in the expected shape; as JSON: ")).length, 2);
+    assert.ok(text.endsWith(`\n\nNext page: call again with { cursor: "c_orders_page_2" }.\n\n${ORDER_NEXT_STEP}\n\n${CANCEL_NEXT_STEP}`), text);
+    // A page that is no page is still shown whole, as JSON.
+    for (const broken of [{ data: "nope", nextCursor: null }, { data: [], nextCursor: 7 }, { nextCursor: null }]) {
+      assert.match(renderToolResult("list_orders", broken), /^This list_orders result is not in the expected shape; as JSON: /);
+    }
+  });
+
+  // A replayed create_order can answer an order paid and confirmed meanwhile: its Cancel line
+  // says what cancelling keeps, and the cancel rule stays with the reads.
+  it("a create_order answer that holds a confirmed order carries no cancel rule", () => {
+    const confirmed = (load("order-confirmed") as ToolFixture).data;
+    const text = renderToolResult("create_order", confirmed);
+    assert.match(text, /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 /m);
+    assert.ok(!text.includes(CANCEL_NEXT_STEP));
+    assert.ok(renderToolResult("get_order", confirmed).endsWith(`\n\n${CANCEL_NEXT_STEP}`));
   });
 
   it("adds no consent rule to a malformed result without a payment.url", () => {

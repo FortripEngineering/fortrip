@@ -340,7 +340,10 @@ describe("requests", () => {
     assert.equal(code, 1);
     assert.equal(stdout, "");
     assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
-    assert.ok(stderr.includes("\nCancel: not available: this rate can't be cancelled\n"), stderr);
+    assert.ok(
+      stderr.includes("\nCancel: not available: the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands\n"),
+      stderr,
+    );
     assert.doesNotMatch(stderr, /--max-penalty/);
     assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });

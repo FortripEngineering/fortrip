@@ -45,15 +45,21 @@ export type CancelAction = (typeof CANCEL_ACTIONS)[number];
 /** What keeps an order from being cancelled or closed now, one situation
  *  each. `payment_in_progress`: unpaid, with a payment under way.
  *  `website_checkout`: unpaid, on the Fortrip website's own checkout.
- *  `expired` and `failed`: nothing is booked. `confirming`: paid or held,
- *  the booking still with the hotel. `cancelling`: a cancellation is under
- *  way. `non_refundable`: a rate the hotel takes no cancellation for.
+ *  `expired`: unpaid, its time to pay ran out. `closed`: unpaid, closed at
+ *  the caller's request. `failed`: no stay was booked. `confirming`: paid or
+ *  held, the booking still with the hotel. `cancelling`: a cancellation is
+ *  under way. `non_refundable`: the hotel takes no cancellation for the
+ *  order at all, even one that keeps the whole total (a rate that only
+ *  keeps the whole total can still be cancelled: action `cancel`).
  *  `refused`: the hotel refused a cancellation, the booking standing as it
- *  was. */
+ *  was. `support_only`: a sound booking that `cancel_order` can't cancel;
+ *  Fortrip's support can. `needs_attention`: the order's status is
+ *  `needs_attention`. */
 export const CANCEL_BLOCKERS = [
   "payment_in_progress",
   "website_checkout",
   "expired",
+  "closed",
   "failed",
   "confirming",
   "cancelling",
@@ -62,6 +68,7 @@ export const CANCEL_BLOCKERS = [
   "non_refundable",
   "refused",
   "terms_unknown",
+  "support_only",
   "needs_attention",
 ] as const;
 
@@ -125,6 +132,10 @@ export const paymentHandler = openObject({
 
 export type PaymentHandler = z.infer<typeof paymentHandler>;
 
+/** The Unix seconds an instant of ours can be: ten digits, 2001 to 2286. The
+ *  same instant in milliseconds is past the range. */
+const UNIX_SECONDS = { min: 1_000_000_000, max: 9_999_999_999 } as const;
+
 /** What a shared payment token for an order must allow: Stripe's usage
  *  limits, named and valued as Stripe takes them (snake case), like
  *  `paymentHandler`. */
@@ -139,15 +150,18 @@ export const tokenUsageLimits = openObject({
   expires_at: z
     .number()
     .int()
+    .min(UNIX_SECONDS.min)
+    .max(UNIX_SECONDS.max)
     .describe("When the order's time to pay ends, in Unix seconds; the order can't be paid after it."),
 });
 
 export type TokenUsageLimits = z.infer<typeof tokenUsageLimits>;
 
 /** `order.cancel`, and what `order_not_cancellable` carries: what
- *  `cancel_order` can do to the order now. Exactly one of `action` and
- *  `blockedBy` is set; `penalty` and `refund` are set with `action` `cancel`,
- *  and only then. */
+ *  `cancel_order` can do to the order now. For the actions this build knows:
+ *  `cancel` comes with `penalty` and `refund`, `close` with neither, and no
+ *  action (null) with `blockedBy`. An action it does not know is not held to
+ *  any of that, so a later one still reads. */
 export const orderCancel = openObject({
   action: openEnum(CANCEL_ACTIONS)
     .nullable()
@@ -157,7 +171,7 @@ export const orderCancel = openObject({
   blockedBy: openEnum(CANCEL_BLOCKERS)
     .nullable()
     .describe(
-      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired, failed: nothing is booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the rate can't be cancelled. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. needs_attention: a person at Fortrip has to resolve it.",
+      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. non_refundable: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a rate that only keeps the whole total has action cancel instead. refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it.",
     ),
   penalty: money
     .nullable()
@@ -170,12 +184,19 @@ export const orderCancel = openObject({
       "What a cancellation now returns: what was paid less the penalty, in the total's currency; 0 when the penalty is the whole total. null unless action is cancel.",
     ),
 })
-  .refine((c) => (c.action === null) !== (c.blockedBy === null), {
-    error: "exactly one of action and blockedBy is set",
-  })
-  .refine((c) => (c.action === "cancel") === (c.penalty !== null) && (c.penalty === null) === (c.refund === null), {
-    error: "penalty and refund are set when action is cancel, and only then",
-  })
+  .refine(
+    (c) => {
+      const figures = c.penalty !== null || c.refund !== null;
+      if (c.action === "cancel") return c.blockedBy === null && c.penalty !== null && c.refund !== null;
+      if (c.action === "close") return c.blockedBy === null && !figures;
+      if (c.action === null) return c.blockedBy !== null && !figures;
+      return true;
+    },
+    {
+      error:
+        "cancel comes with penalty and refund, close with neither, and both without blockedBy; a null action comes with blockedBy alone",
+    },
+  )
   .describe("What cancel_order can do to the order now: cancel it for a penalty and a refund, close it, or neither.");
 
 export type OrderCancel = z.infer<typeof orderCancel>;
@@ -227,7 +248,7 @@ export const order = openObject({
   orderId,
   reference: orderReference,
   status: openEnum(ORDER_STATUSES).describe(
-    "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid; the time ran out or the order was closed. Nothing charged. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it.",
+    "awaiting_payment: not paid yet (a payment just made may still be settling); payable until payment.expiresAt. expired: not paid, and nothing charged; the time to pay ran out or the order was closed, and cancel.blockedBy says which. confirming: paid or held, the booking is with the hotel. confirmed: the hotel confirmed and the payment is charged. failed: no stay was booked; failure says why and payment.status what became of the money. cancelling, then cancelled: a cancellation under the terms; cancelled says what it kept and returned. needs_attention: a person at Fortrip has to resolve it.",
   ),
   createdAt: instant,
   updatedAt: instant,
@@ -298,8 +319,12 @@ export const order = openObject({
     ),
   })
     .nullable()
-    .describe("Why no stay was booked. null unless status is failed."),
+    .describe(
+      "Why no stay was booked: always set on a failed order, its reason unknown when not on record. null unless status is failed.",
+    ),
   manageUrl: z.string(),
+}).refine((o) => o.status !== "failed" || o.failure !== null, {
+  error: "a failed order says why: failure is set, with the reason unknown when it is not on record",
 });
 
 export type Order = z.infer<typeof order>;

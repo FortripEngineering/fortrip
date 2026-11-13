@@ -1,8 +1,10 @@
+import { z } from "zod";
+
 import { COMMANDS, commandInvocation } from "../commands.ts";
-import { parseOpen } from "../conventions/open.ts";
+import { openObject, parseOpen } from "../conventions/open.ts";
 import type { Hotel } from "../outputs/hotel.ts";
 import type { HotelOffersResult } from "../outputs/offer.ts";
-import type { Order, OrderList } from "../outputs/order.ts";
+import { type Order, order as orderSchema } from "../outputs/order.ts";
 import type { SearchResult } from "../outputs/search.ts";
 import {
   cancelNextStep,
@@ -16,7 +18,7 @@ import {
 import { raw } from "./format.ts";
 import { renderHotel } from "./hotel.ts";
 import { renderOffers } from "./offers.ts";
-import { renderOrder, renderOrderList } from "./order.ts";
+import { renderOrder, renderOrderList, UnreadableOrder } from "./order.ts";
 import { renderSearch } from "./search.ts";
 import { ours } from "./third-party.ts";
 
@@ -42,7 +44,9 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  *
  * `data` is parsed with the tool's open output schema: unknown fields are
  * ignored, and an unknown value is shown as it came only when it reads as a
- * code. A result that does not parse is shown as JSON, never thrown.
+ * code. A result that does not parse is shown as JSON, never thrown. A list
+ * of orders degrades per order: one that does not parse is JSON on its one
+ * line, and the others are shown in full.
  *
  * After the data come the rules it governs, each a paragraph, last:
  * - the consent rule (`ORDER_NEXT_STEP`) whenever the result holds a payment
@@ -64,8 +68,11 @@ export function renderToolResult(
   return surface === "mcp" && HOTEL_TOOLS.has(tool) ? `${text}\n\n${PRESENTATION_HINT}` : text;
 }
 
+/** A page of orders, whatever its orders are: each is read on its own. */
+const orderPage = openObject({ data: z.array(z.unknown()), nextCursor: z.string().nullable() });
+
 function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): string {
-  const schema = TOOLS.find((t) => t.name === tool)?.output;
+  const schema = tool === "list_orders" ? orderPage : TOOLS.find((t) => t.name === tool)?.output;
   let parsed: unknown;
   try {
     if (!schema) throw new Error(`no output schema for ${tool}`);
@@ -97,8 +104,12 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
       return withConsent(tool, surface, renderOrder(order, surface), [order]);
     }
     case "list_orders": {
-      const list = parsed as OrderList;
-      return withConsent(tool, surface, renderOrderList(list, surface), list.data);
+      const page = parsed as z.output<typeof orderPage>;
+      const orders = page.data.map((value) => {
+        const read = orderSchema.safeParse(value);
+        return read.success ? read.data : new UnreadableOrder(value);
+      });
+      return withConsent(tool, surface, renderOrderList({ ...page, data: orders }, surface), orders);
     }
     case "cancel_order":
     case "pay_order":
@@ -150,17 +161,21 @@ function holdsCancellable(value: unknown, seen = new Set<unknown>()): boolean {
   return Object.values(value).some((v) => holdsCancellable(v, seen));
 }
 
+/** The rules an order's text is followed by. An order of a list that did
+ *  not parse is looked through as it came, as a whole result that did not. */
 function withConsent(
   tool: RenderedTool,
   surface: RenderSurface,
   text: string,
-  orders: Order[],
+  orders: (Order | UnreadableOrder)[],
 ): string {
+  const some = (read: (o: Order) => boolean, held: (value: unknown) => boolean) =>
+    orders.some((o) => (o instanceof UnreadableOrder ? held(o.value) : read(o)));
   return [
     text,
-    orders.some((o) => o.payment.url !== null) ? ORDER_NEXT_STEP : "",
-    orders.some((o) => o.payment.token !== null) ? payNextStep(surface) : "",
-    CANCEL_TOOLS.has(tool) && orders.some((o) => o.cancel.action === "cancel") ? cancelNextStep(surface) : "",
+    some((o) => o.payment.url !== null, holdsPaymentUrl) ? ORDER_NEXT_STEP : "",
+    some((o) => o.payment.token !== null, holdsToken) ? payNextStep(surface) : "",
+    CANCEL_TOOLS.has(tool) && some((o) => o.cancel.action === "cancel", holdsCancellable) ? cancelNextStep(surface) : "",
   ]
     .filter(Boolean)
     .join("\n\n");

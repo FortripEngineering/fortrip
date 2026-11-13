@@ -1,0 +1,11 @@
+Order ord_LakeStayStarted00000 · reference FT-S8Y4GD · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
+Hotel: Lakeside Garden Resort (湖畔花园度假酒店) · htl_LakesideGarden000000 · 2026-10-21 → 2026-10-24 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
+Room: Deluxe King Room, beds not listed, size not stated, max occupancy not listed, window not listed · room only
+Guests: Jing Chen, Hao Chen
+Special requests: none
+Terms: non-refundable: USD 366.00 from booking · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
+Hotel confirmation number: LGR-449120
+Contact: Jing Chen · chen.jing@example.com · +86 139 0013 9000
+Total: USD 366.00 · payment paid · the user's card may pay in its local currency at checkout · card charged EUR 339.80
+Cancel: not available: the stay has started; for help, the user emails info@fortrip.ai with the order's reference
+Manage: https://fortrip.ai/orders/ord_LakeStayStarted00000
