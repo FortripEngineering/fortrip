@@ -1,11 +1,11 @@
 Order ord_BundTokenPay00000000 · reference FT-T6KN2P · awaiting payment · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:05 UTC
-Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
-Room: Deluxe King Room, beds: 1 king bed, 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
-Guests: Kenji Sato, Tom Sato
+Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds: "1 king bed", 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
+Guests: "Kenji Sato", "Tom Sato"
 Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
-Contact: Kenji Sato · kenji.sato@example.com · +81 90 1234 5678
+Contact: "Kenji Sato" · "kenji.sato@example.com" · "+81 90 1234 5678"
 Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
 Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/pay/ord_BundTokenPay00000000?t=pl_test_e5F6g7H8
 Pay without the link: pay_order with a shared payment token via com.stripe.payments (handler stripe_payments, business_profile profile_test_1); usage limits for the token request: max_amount 36500 (cents), currency usd, expires_at 1793537400 (2026-11-01 12:50 UTC).

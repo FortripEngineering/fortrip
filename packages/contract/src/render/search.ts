@@ -2,9 +2,11 @@ import { LIMITS } from "../limits.ts";
 import type { HotelSummary, SearchNoteCode, SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
-import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
+import { code, joined, type Ours, ours, theirs, token } from "./third-party.ts";
 
-/* `search_hotels` (spec §12, §7.6, §7.8). */
+/* `search_hotels` (spec §12, §7.6, §7.8). The names of places and hotels,
+ * address lines and the caller's own text are in quotes; ids, country codes
+ * and URLs are bare. */
 
 type Destination = NonNullable<SearchResult["destination"]>;
 type PlaceDestination = Extract<Destination, { kind: "place" }>;
@@ -31,7 +33,7 @@ function radiusWords(meters: number, source: string | null): Ours {
   return source === "default" ? ours`within ${km(meters)}, the default radius` : ours`within ${km(meters)}`;
 }
 
-/** "Place: Phuket (locality) · 2,752 hotels · plc_… · Phuket Province, TH · also named 普吉". */
+/** `Place: "Phuket" (locality) · 2,752 hotels · plc_… · "Phuket Province" plc_…, TH · also named "普吉"`. */
 function placeHeader(d: PlaceDestination, matched: number): Ours {
   const p = d.place;
   const kind = code(p.kind, ours`kind not recognized`);
@@ -50,11 +52,11 @@ function placeHeader(d: PlaceDestination, matched: number): Ours {
   const other = [p.names.en, p.names.zh].find((n) => n && n !== p.name);
   return joined(
     [
-      ours`Place: ${p.name} (${scope})`,
+      ours`Place: ${theirs(p.name)} (${scope})`,
       plural(matched, "hotel"),
-      oneLine(p.placeId),
-      joined([p.region && ours`${p.region.name} ${p.region.placeId}`, oneLine(p.countryCode)], ", "),
-      other ? ours`also named ${other}` : "",
+      token(p.placeId),
+      joined([p.region && ours`${theirs(p.region.name)} ${token(p.region.placeId)}`, token(p.countryCode)], ", "),
+      other ? ours`also named ${theirs(other)}` : "",
     ],
     " · ",
   );
@@ -63,7 +65,7 @@ function placeHeader(d: PlaceDestination, matched: number): Ours {
 function header(r: SearchResult): Ours {
   const d = r.destination;
   const hotels = plural(r.coverage.matched, "hotel");
-  if (d === null) return r.text ? ours`Text "${r.text}" · ${hotels}` : ours`All hotels · ${hotels}`;
+  if (d === null) return r.text ? ours`Text ${theirs(r.text)} · ${hotels}` : ours`All hotels · ${hotels}`;
   let head: Ours;
   if (d.kind === "place") {
     head = placeHeader(d as PlaceDestination, r.coverage.matched);
@@ -74,13 +76,13 @@ function header(r: SearchResult): Ours {
   } else {
     head = ours`Destination of kind ${code(d.kind, ours`not recognized`)} · ${hotels}`;
   }
-  return r.text ? ours`${head} · text "${r.text}" (exact words)` : head;
+  return r.text ? ours`${head} · text ${theirs(r.text)} (exact words)` : head;
 }
 
 function centerLine(d: Destination | null): Ours | null {
   if (d === null || (d.kind !== "place" && d.kind !== "point")) return null;
   const c = (d as PlaceDestination | PointDestination).center;
-  const from = c.place ? ours`${c.place.name} ${c.place.placeId}` : ours`${c.location.lat}, ${c.location.lng}`;
+  const from = c.place ? ours`${theirs(c.place.name)} ${token(c.place.placeId)}` : ours`${c.location.lat}, ${c.location.lng}`;
   return ours`Distances from ${from} (${label(CENTER_BASES, c.basis, ours`basis not recognized`)}).`;
 }
 
@@ -101,8 +103,8 @@ function countsLine(r: SearchResult): Ours {
   const c = r.coverage;
   const country =
     r.destination?.kind === "place"
-      ? (r.destination as PlaceDestination).place.countryCode
-      : "the country";
+      ? token((r.destination as PlaceDestination).place.countryCode)
+      : ours`the country`;
   const parts = [ours`${num(c.matched)} matched`];
   if (c.priced !== null) parts.push(ours`${num(c.priced)} priced`);
   if (c.withPrice !== null) parts.push(ours`${num(c.withPrice)} with a price`);
@@ -138,17 +140,17 @@ export function localitiesLines(
     ours`Localities: pass one back as ${back}, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").`,
   ];
   for (const item of loc.items) {
-    let line = ours`- Locality: ${item.place.name} ${item.place.placeId} ${num(item.count)}`;
+    let line = ours`- Locality: ${theirs(item.place.name)} ${token(item.place.placeId)} ${num(item.count)}`;
     if (item.total !== item.count) line = ours`${line} here, ${num(item.total)} as a locality`;
     const sameName =
       areaName !== null &&
       [item.place.name, item.place.names.en, item.place.names.zh].some(
         (n) => n?.toLowerCase() === areaName.toLowerCase(),
       );
-    if (sameName) line = ours`${line} — the locality, not the whole of ${areaName}`;
+    if (sameName) line = ours`${line} — the locality, not the whole of ${theirs(areaName)}`;
     if (item.includes.length > 0) {
       const inc = item.includes.map(
-        (i) => ours`${i.place.name} ${i.place.placeId}, ${num(i.members)} hotels overall`,
+        (i) => ours`${theirs(i.place.name)} ${token(i.place.placeId)}, ${num(i.members)} hotels overall`,
       );
       line = ours`${line} (incl. ${joined(inc, "; ")})`;
     }
@@ -185,10 +187,10 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): Ours {
           ? ours`distance unknown`
           : km(h.distanceMeters),
       r.pricing.mode === "none" ? "" : priceWords(h, r.pricing.status),
-      h.address.line ? oneLine(h.address.line.text) : ours`address not listed`,
-      joined([region && oneLine(region.name), h.address.countryCode && oneLine(h.address.countryCode)], ", "),
-      h.photo ? ours`photo ${h.photo.url}` : "",
-      oneLine(h.hotelId),
+      h.address.line ? theirs(h.address.line.text) : ours`address not listed`,
+      joined([region && theirs(region.name), h.address.countryCode && token(h.address.countryCode)], ", "),
+      h.photo ? ours`photo ${token(h.photo.url)}` : "",
+      token(h.hotelId),
     ],
     " · ",
   );
@@ -215,9 +217,9 @@ function currencyHintLine(hint: NonNullable<SearchResult["currencyHint"]>, surfa
 function placeOf(r: SearchResult): { name: Ours; kind: Ours; countryCode: Ours } {
   const place = r.destination?.kind === "place" ? (r.destination as PlaceDestination).place : null;
   return {
-    name: place ? oneLine(place.name) : ours`This place`,
+    name: place ? theirs(place.name) : ours`This place`,
     kind: place ? code(place.kind, ours`area`) : ours`area`,
-    countryCode: place ? oneLine(place.countryCode) : ours`the country`,
+    countryCode: place ? token(place.countryCode) : ours`the country`,
   };
 }
 
@@ -260,7 +262,7 @@ function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ou
         : ours`amenity filters match hotels that list the amenity; not listed is not absent. ${plural(c.excludedNoFacilityData, "hotel")} here list no facilities at all and were left out.`;
     case "place_resolved_dominant":
       return d
-        ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${d.place.placeId}.`
+        ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${token(d.place.placeId)}.`
         : ours`the name also belongs to other places; this is the most populous.`;
     case "area_absorbed":
       return ours`${p.name} is searched as the whole ${p.kind}: smaller places of the same name are inside it.`;
@@ -290,7 +292,7 @@ function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ou
       return ours`no hotels to show. Next: ${nextSteps(r)}.`;
     case "locality_available": {
       if (!d) return ours`this place is also a locality: search it as a locality for exactly its hotels instead of this circle.`;
-      const as = surface === "cli" ? ours`--locality ${d.place.placeId}` : ours`{ kind: "locality", placeId: "${d.place.placeId}" }`;
+      const as = surface === "cli" ? ours`--locality ${token(d.place.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(d.place.placeId)} }`;
       return ours`${p.name} is also a locality: search ${as} for exactly its hotels instead of this circle.`;
     }
     default:
@@ -321,9 +323,9 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
       d !== null && (d.kind === "place" || d.kind === "point")
         ? (d as PlaceDestination | PointDestination)
         : null;
-    const around =
-      known?.center.place?.name ??
-      (known?.kind === "place" ? (known as PlaceDestination).place.name : "the center");
+    const name =
+      known?.center.place?.name ?? (known?.kind === "place" ? (known as PlaceDestination).place.name : null);
+    const around = name === null ? ours`the center` : theirs(name);
     const priced =
       r.coverage.priced === null
         ? ours`Only the nearest matches were priced`
@@ -348,7 +350,7 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
       // Ours for a code this build knows; the server's message, after our
       // words, only for one it does not.
       ...r.notes.map(
-        (n) => ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${noteText(n.code, r, surface) ?? n.message}`,
+        (n) => ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${noteText(n.code, r, surface) ?? theirs(n.message)}`,
       ),
     );
   }
@@ -357,8 +359,8 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
     r.nextCursor === null
       ? ours`Last page.`
       : surface === "cli"
-        ? ours`Next page: run again with only --cursor ${r.nextCursor} and, optionally, --limit.`
-        : ours`Next page: call again with only the cursor and, optionally, limit: { cursor: "${r.nextCursor}" }.`,
+        ? ours`Next page: run again with only --cursor ${token(r.nextCursor)} and, optionally, --limit.`
+        : ours`Next page: call again with only the cursor and, optionally, limit: { cursor: ${theirs(r.nextCursor)} }.`,
   );
   if (r.currencyHint?.currency === "CNY") lines.push(ours``, currencyHintLine(r.currencyHint, surface));
   return lines.join("\n");

@@ -1,11 +1,11 @@
 Order ord_CanalTwoRooms0000000 · reference FT-D3G6LS · confirmed · created 2026-10-30 15:20 UTC · updated 2026-11-20 08:00 UTC
-Hotel: Canal House Lisbon · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 2 rooms: room 1 2 adults; room 2 1 adult and 1 child (age 9) · time zone Europe/Lisbon
-Room 1: Classic Double, beds: 1 double bed, 18–22 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Bed and breakfast") · guests: Inês Duarte, Rui Duarte
-Room 2: Attic Twin, beds not listed, size not stated, max occupancy not listed, no window · meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · guests: none named yet
+Hotel: "Canal House Lisbon" · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 2 rooms: room 1 2 adults; room 2 1 adult and 1 child (age 9) · time zone Europe/Lisbon
+Room 1: "Classic Double", beds: "1 double bed", 18–22 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Bed and breakfast") · guests: "Inês Duarte", "Rui Duarte"
+Room 2: "Attic Twin", beds not listed, size not stated, max occupancy not listed, no window · meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · guests: none named yet
 Special requests: none
 Terms: free cancellation until 2026-11-15 00:00 UTC (2026-11-15 00:00 Europe/Lisbon), then EUR 410.00 from 2026-11-15 00:00 UTC (2026-11-15 00:00 Europe/Lisbon) · confirmation mode not on record · fees not fully disclosed (fees or amounts may be missing)
-Hotel confirmation number: CHL-20871
-Contact: Inês Duarte · ines.duarte@example.com · no phone on record
+Hotel confirmation number: "CHL-20871"
+Contact: "Inês Duarte" · "ines.duarte@example.com" · no phone on record
 Total: EUR 410.00 · payment paid
 Cancel: can cancel now: penalty EUR 410.00, refund EUR 0.00 (only after the user's yes: call cancel_order with maximumPenalty { amount: "410.00", currency: "EUR" })
 Manage: https://fortrip.ai/stays/orders/so_4t8Yq2m

@@ -1,11 +1,11 @@
 Order ord_BundConfirming000000 · reference FT-G5X2WT · confirming with the hotel · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:12 UTC
-Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
-Room: Deluxe King Room, beds: 1 king bed, 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
-Guests: Noor Haddad
+Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds: "1 king bed", 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
+Guests: "Noor Haddad"
 Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · confirmation on request, within 120 min · nothing to pay at the property
 Hotel confirmation number: none yet
-Contact: Noor Haddad · noor.haddad@example.com · +971 50 555 0170
+Contact: "Noor Haddad" · "noor.haddad@example.com" · "+971 50 555 0170"
 Total: USD 365.00 · payment authorized (held, not yet charged)
 Cancel: not available: the booking is still being confirmed with the hotel; read the order again later
 Manage: https://fortrip.ai/orders/ord_BundConfirming000000

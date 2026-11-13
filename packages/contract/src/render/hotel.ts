@@ -1,10 +1,12 @@
 import type { Hotel, RoomType } from "../outputs/hotel.ts";
 import { label, money, named, roomFacts } from "./format.ts";
-import { code, FROM_THE_HOTEL, joined, oneLine, type Ours, ours, quoted } from "./third-party.ts";
+import { code, FROM_THE_HOTEL, joined, oneLine, type Ours, ours, quoted, theirs, token } from "./third-party.ts";
 
 /*
  * `get_hotel` (spec §8): the full description and every policy (C8), as
- * quoted blocks: they are the hotel's words, not Fortrip's.
+ * quoted blocks: they are the hotel's words, not Fortrip's. Its one-line
+ * texts (names, the address, the phone, room and amenity names) are in
+ * quotes.
  */
 
 type Times = Hotel["checkInTimes"];
@@ -12,7 +14,8 @@ type Policy = Hotel["policies"]["items"][number];
 
 function times(what: "Check-in" | "Check-out", range: Times): Ours {
   if (range.from === null && range.until === null) return ours`${what}: not listed`;
-  return ours`${what} from ${range.from ?? "not listed"}, until ${range.until ?? "not listed"}`;
+  const time = (value: string | null) => (value === null ? ours`not listed` : token(value));
+  return ours`${what} from ${time(range.from)}, until ${time(range.until)}`;
 }
 
 function deposit(d: Hotel["deposit"]): Ours {
@@ -22,7 +25,7 @@ function deposit(d: Hotel["deposit"]): Ours {
 }
 
 function roomTypeLine(r: RoomType): Ours {
-  return joined([ours`- Room type: ${r.name ? r.name.text : "name not listed"}`, ...roomFacts(r)], " · ");
+  return joined([r.name ? ours`- Room type: ${theirs(r.name.text)}` : ours`- Room type: name not listed`, ...roomFacts(r)], " · ");
 }
 
 /** The longest website shown. */
@@ -41,7 +44,7 @@ function website(value: string | null): Ours | null {
     const url = new URL(text);
     const web = url.protocol === "http:" || url.protocol === "https:";
     const plain = !url.username && !url.password;
-    return web && plain && url.href.length <= WEBSITE_MAX ? oneLine(url.href) : null;
+    return web && plain && url.href.length <= WEBSITE_MAX ? token(url.href) : null;
   } catch {
     return null;
   }
@@ -53,37 +56,37 @@ const isNested = (value: unknown) => typeof value === "object" && value !== null
 /** A JSON value on one line: "key: value, key: value", a list's items
  *  joined by "; ", nulls and empty strings left out. An object or a list
  *  inside a list, and an object inside an object, is in brackets, so two of
- *  them cannot run together. */
-function flat(value: unknown): Ours {
-  if (value === null) return ours``;
+ *  them cannot run together. The hotel's text still: `quoted` prints it. */
+function flat(value: unknown): string {
+  if (value === null) return "";
   if (Array.isArray(value)) {
-    return joined(
-      value.map((item) => {
+    return value
+      .map((item) => {
         const text = flat(item);
-        return text && isNested(item) ? ours`(${text})` : text;
-      }),
-      "; ",
-    );
+        return text && isNested(item) ? `(${text})` : text;
+      })
+      .filter(Boolean)
+      .join("; ");
   }
   if (typeof value !== "object") return oneLine(String(value));
-  return joined(
-    Object.entries(value).map(([key, v]) => {
+  return Object.entries(value)
+    .map(([key, v]) => {
       const text = flat(v);
-      return text && ours`${key}: ${isNested(v) && !Array.isArray(v) ? ours`(${text})` : text}`;
-    }),
-    ", ",
-  );
+      return text && `${oneLine(key)}: ${isNested(v) && !Array.isArray(v) ? `(${text})` : text}`;
+    })
+    .filter(Boolean)
+    .join(", ");
 }
 
 /** The lines of a policy the catalogue holds as a JSON string: one per item
  *  of a list or per field of an object. null when the text is not that, or
  *  nests too deep to be read. */
-function dataLines(text: string): Ours[] | null {
+function dataLines(text: string): string[] | null {
   if (!/^\s*[[{]/.test(text)) return null;
   try {
     const value: unknown = JSON.parse(text);
     const lines = Array.isArray(value)
-      ? value.map(flat).filter(Boolean).map((item) => ours`- ${item}`)
+      ? value.map(flat).filter(Boolean).map((item) => `- ${item}`)
       : Object.entries(value as object).map(([key, v]) => flat({ [key]: v })).filter(Boolean);
     return lines.length > 0 ? lines : null;
   } catch {
@@ -128,28 +131,28 @@ export function renderHotel(h: Hotel): string {
       [
         ours`Hotel: ${named(h.name, h.names)}`,
         h.stars === null ? ours`stars not listed` : ours`${h.stars}★`,
-        oneLine(h.hotelId),
+        token(h.hotelId),
         !h.bookable && ours`no longer bookable (it has left the catalogue)`,
       ],
       " · ",
     ),
     joined(
       [
-        ours`Address: ${h.address.line ? h.address.line.text : "not listed"}`,
-        region && ours`${region.name} ${region.placeId}`,
-        h.address.countryCode && oneLine(h.address.countryCode),
+        h.address.line ? ours`Address: ${theirs(h.address.line.text)}` : ours`Address: not listed`,
+        region && ours`${theirs(region.name)} ${token(region.placeId)}`,
+        h.address.countryCode && token(h.address.countryCode),
         h.location ? ours`coordinates ${h.location.lat}, ${h.location.lng}` : ours`coordinates not listed`,
-        ours`time zone ${h.timeZone ?? "not listed"}`,
+        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token(h.timeZone)}`,
       ],
       " · ",
     ),
     ours`${times("Check-in", h.checkInTimes)} · ${times("Check-out", h.checkOutTimes)} (local time)`,
     ours`Breakfast served: ${h.breakfastServed === null ? "not stated" : h.breakfastServed ? "yes" : "no"}`,
     deposit(h.deposit),
-    ours`Phone: ${h.contact.phone ?? "not listed"} · Website: ${website(h.contact.website) ?? "not listed"}`,
+    ours`Phone: ${h.contact.phone === null ? "not listed" : theirs(h.contact.phone)} · Website: ${website(h.contact.website) ?? "not listed"}`,
   ];
   if (h.photos?.length) {
-    const shown = joined(h.photos.slice(0, PHOTOS_SHOWN).map((p) => oneLine(p.url)), " · ");
+    const shown = joined(h.photos.slice(0, PHOTOS_SHOWN).map((p) => token(p.url)), " · ");
     const more = h.photos.length - PHOTOS_SHOWN;
     lines.push(more > 0 ? ours`Photos: ${shown} (+${more} more)` : ours`Photos: ${shown}`);
   }
@@ -160,7 +163,7 @@ export function renderHotel(h: Hotel): string {
     lines.push(ours`Amenities: none listed`);
   } else {
     const items = h.amenities.items.map(
-      (a) => ours`${a.name.text} (${code(a.code, ours`code not recognized`)})`,
+      (a) => ours`${theirs(a.name.text)} (${code(a.code, ours`code not recognized`)})`,
     );
     lines.push(ours`Amenities listed (others may exist): ${joined(items, ", ")}`);
   }
@@ -182,7 +185,7 @@ export function renderHotel(h: Hotel): string {
   if (h.description === null) {
     lines.push(ours`Description: not listed`);
   } else {
-    lines.push(ours`Description (${h.description.locale}; ${FROM_THE_HOTEL}):`, ...quoted(h.description.text));
+    lines.push(ours`Description (${token(h.description.locale)}; ${FROM_THE_HOTEL}):`, ...quoted(h.description.text));
   }
   return lines.join("\n");
 }

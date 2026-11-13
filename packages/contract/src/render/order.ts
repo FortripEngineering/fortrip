@@ -3,15 +3,17 @@ import { type Order, type OrderCancel, tokenUsageLimits } from "../outputs/order
 import { CALLS, type RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeText } from "./offers.ts";
-import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
+import { code, joined, type Ours, ours, theirs, token } from "./third-party.ts";
 
 /*
  * An order, as `create_order`, `get_order`, `list_orders`, `cancel_order`
- * and `pay_order` answer it. Every line begins with Fortrip's words, and
- * every value of the order (names, the contact, special requests, ids,
- * links) is one line inside them. The labels that begin its lines ("Total",
- * "Payment link", "Pay without the link", "Cancel") are what the rules after
- * it, the tool descriptions and the guide name.
+ * and `pay_order` answer it. Every line begins with Fortrip's words. What
+ * someone else wrote (the names of the hotel, the room and the guests, the
+ * contact, special requests, the hotel's confirmation number) is in quotes;
+ * what Fortrip generates (ids, links, amounts, dates) is bare. The labels
+ * that begin its lines ("Total", "Payment link", "Pay without the link",
+ * "Cancel") are what the rules after it, the tool descriptions and the
+ * guide name.
  */
 
 type Item = Order["items"][number];
@@ -69,9 +71,9 @@ const FAILURE_WORDS: Record<string, string> = {
   unknown: `the reason is not on record; read the order again later, or ${SUPPORT}`,
 };
 
-/** "Mary Smith, Tom Smith", or "none named yet". */
+/** Each guest's name in quotes ("Mary Smith", "Tom Smith"), or: none named yet. */
 function guestsText(room: Room): Ours {
-  const names = (room.guests ?? []).map((g) => oneLine(`${g.firstName} ${g.lastName}`));
+  const names = (room.guests ?? []).map((g) => theirs(`${g.firstName} ${g.lastName}`));
   return names.length ? joined(names, ", ") : ours`none named yet`;
 }
 
@@ -101,23 +103,32 @@ function itemLines(item: Item): Ours[] {
     joined(
       [
         ours`Hotel: ${named(h.name, h.names)}`,
-        h.hotelId === null ? ours`not in the hotel catalogue` : oneLine(h.hotelId),
+        h.hotelId === null ? ours`not in the hotel catalogue` : token(h.hotelId),
         stayLine(h.checkIn, h.checkOut),
         party(h.rooms),
-        ours`time zone ${h.timeZone ?? "not listed"}`,
+        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token(h.timeZone)}`,
       ],
       " · ",
     ),
     ...roomLines(h.rooms),
-    ours`Special requests: ${h.specialRequests ?? "none"}`,
+    h.specialRequests === null ? ours`Special requests: none` : ours`Special requests: ${theirs(h.specialRequests)}`,
     ours`Terms: ${cancellationText(h.cancellation)} · ${h.confirmation ? confirmationText(h.confirmation) : "confirmation mode not on record"} · ${feesText(h.payAtProperty)}`,
-    ours`Hotel confirmation number: ${h.confirmationNumber ?? "none yet"}`,
+    h.confirmationNumber === null
+      ? ours`Hotel confirmation number: none yet`
+      : ours`Hotel confirmation number: ${theirs(h.confirmationNumber)}`,
   ];
 }
 
 function contactLine(c: Order["contact"]): Ours {
   if (c === null) return ours`Contact: none on record yet`;
-  return ours`Contact: ${c.name} · ${c.email ?? "no email on record"} · ${c.phone ?? "no phone on record"}`;
+  return joined(
+    [
+      ours`Contact: ${theirs(c.name)}`,
+      c.email === null ? ours`no email on record` : theirs(c.email),
+      c.phone === null ? ours`no phone on record` : theirs(c.phone),
+    ],
+    " · ",
+  );
 }
 
 /** What became of an order that is over: why a failed one booked nothing
@@ -160,13 +171,13 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
       ],
       "; ",
     );
-    lines.push(ours`Payment link (${about}): ${p.url}`);
+    lines.push(ours`Payment link (${about}): ${token(p.url)}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
     lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.token) lines.push(tokenLine(o, p.token, surface));
   lines.push(ours`Cancel: ${cancelText(o, surface)}`);
-  lines.push(ours`Manage: ${o.manageUrl}`);
+  lines.push(ours`Manage: ${token(o.manageUrl)}`);
   return lines;
 }
 
@@ -178,20 +189,20 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
  *  number is shown alone. */
 function tokenLine(
   o: Order,
-  token: NonNullable<Order["payment"]["token"]>,
+  request: NonNullable<Order["payment"]["token"]>,
   surface: RenderSurface,
 ): Ours {
-  const { handler: h, usageLimits: u } = token;
+  const { handler: h, usageLimits: u } = request;
   const pay =
     surface === "cli"
-      ? ours`\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.total.amount}\``
+      ? ours`\`fortrip orders pay ${token(o.orderId)} --token <spt_…> --total ${token(o.total.amount)}\``
       : ours`pay_order`;
   const unit = u.currency === "usd" ? "cents" : "the currency's minor unit";
-  const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${u.currency}, expires_at ${u.expires_at}`;
+  const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${token(u.currency)}, expires_at ${u.expires_at}`;
   const until = tokenUsageLimits.shape.expires_at.safeParse(u.expires_at).success
     ? ours`${limits} (${when(new Date(u.expires_at * 1000).toISOString(), null)})`
     : limits;
-  return ours`Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); usage limits for the token request: ${until}.`;
+  return ours`Pay without the link: ${pay} with a shared payment token via ${token(h.type)} (handler ${token(h.id)}, business_profile ${token(h.config.business_profile)}); usage limits for the token request: ${until}.`;
 }
 
 /** "penalty USD 120.00, refund USD 246.00": what cancelling now keeps and
@@ -204,8 +215,8 @@ export function cancelFigures(c: OrderCancel): Ours {
 /** The call that cancels a paid order for `penalty`, as `surface` makes it. */
 function cancelCall(orderId: string, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
   return surface === "cli"
-    ? ours`run \`fortrip orders cancel ${orderId} --max-penalty ${penalty.amount}\``
-    : ours`call cancel_order with maximumPenalty { amount: "${penalty.amount}", currency: "${penalty.currency}" }`;
+    ? ours`run \`fortrip orders cancel ${token(orderId)} --max-penalty ${token(penalty.amount)}\``
+    : ours`call cancel_order with maximumPenalty { amount: ${theirs(penalty.amount)}, currency: ${theirs(penalty.currency)} }`;
 }
 
 /** What `cancel_order` can do to the order now, and by which of its two
@@ -238,7 +249,7 @@ export class UnreadableOrder {
 
 export function orderLines(o: Order, surface: RenderSurface = "mcp"): Ours[] {
   return [
-    ours`Order ${o.orderId} · reference ${o.reference} · ${label(ORDER_STATUS_WORDS, o.status, ours`status not recognized`)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
+    ours`Order ${token(o.orderId)} · reference ${token(o.reference)} · ${label(ORDER_STATUS_WORDS, o.status, ours`status not recognized`)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
     ...outcomeLines(o),
     ...o.items.flatMap(itemLines),
     contactLine(o.contact),
@@ -272,8 +283,8 @@ export function renderOrderList(
     list.nextCursor === null
       ? ours`Last page.`
       : surface === "cli"
-        ? ours`Next page: run again with --cursor ${list.nextCursor}.`
-        : ours`Next page: call again with { cursor: "${list.nextCursor}" }.`,
+        ? ours`Next page: run again with --cursor ${token(list.nextCursor)}.`
+        : ours`Next page: call again with { cursor: ${theirs(list.nextCursor)} }.`,
   );
   return lines.join("\n");
 }

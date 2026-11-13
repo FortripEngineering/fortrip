@@ -20,7 +20,7 @@ import { renderHotel } from "./hotel.ts";
 import { renderOffers } from "./offers.ts";
 import { renderOrder, renderOrderList, UnreadableOrder } from "./order.ts";
 import { renderSearch } from "./search.ts";
-import { ours } from "./third-party.ts";
+import { ours, own } from "./third-party.ts";
 
 export { renderError } from "./errors.ts";
 
@@ -80,8 +80,8 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
   } catch {
     const spec = COMMANDS.find((command) => command.tool === tool);
     const name = surface === "cli" && spec ? commandInvocation(spec) : tool;
-    // One line, after our words: the JSON's strings are the data's.
-    const text = ours`This ${name} result is not in the expected shape; as JSON: ${raw(data)}`;
+    // One line, after our words: the JSON's strings are the data's, in JSON's quotes.
+    const text = ours`This ${own(name)} result is not in the expected shape; as JSON: ${raw(data)}`;
     return [
       text,
       ORDER_TOOLS.has(tool) && holdsPaymentUrl(data) ? ORDER_NEXT_STEP : "",

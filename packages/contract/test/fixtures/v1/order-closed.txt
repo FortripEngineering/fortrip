@@ -1,11 +1,11 @@
 Order ord_BundClosed0000000000 · reference FT-L2C9HV · not paid: the time ran out or it was closed · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:40 UTC
-Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
-Room: Deluxe King Room, beds: 1 king bed, 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
-Guests: Sofia Rossi, Luca Rossi
+Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds: "1 king bed", 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
+Guests: "Sofia Rossi", "Luca Rossi"
 Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
-Contact: Sofia Rossi · sofia.rossi@example.com · +39 347 555 0199
+Contact: "Sofia Rossi" · "sofia.rossi@example.com" · "+39 347 555 0199"
 Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
 Cancel: not available: it was closed unpaid, as asked, so there is nothing to cancel or close
 Manage: https://fortrip.ai/orders/ord_BundClosed0000000000

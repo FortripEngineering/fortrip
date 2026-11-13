@@ -1,6 +1,6 @@
 Order ord_CanalCheckout0000000 · reference FT-W5J7XA · awaiting payment · created 2026-11-02 10:00 UTC · updated 2026-11-02 10:00 UTC
-Hotel: Canal House Lisbon · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 1 adult · time zone Europe/Lisbon
-Room: Classic Double, beds not listed, size not stated, max occupancy not listed, window not listed · meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking
+Hotel: "Canal House Lisbon" · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 1 adult · time zone Europe/Lisbon
+Room: "Classic Double", beds not listed, size not stated, max occupancy not listed, window not listed · meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking
 Guests: none named yet
 Special requests: none
 Terms: cancellation terms unknown · confirmation mode not on record · fees not fully disclosed (fees or amounts may be missing)

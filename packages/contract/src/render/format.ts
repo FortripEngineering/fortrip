@@ -1,11 +1,12 @@
 import type { Money } from "../conventions/money.ts";
 import { countIsoDateDays } from "../dates.ts";
-import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
+import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
 
 /*
  * Small pieces every renderer shares. Values reach these after `parseOpen`,
  * so an open enum can hold any string: callers map the values they know,
- * and show any other value as it came only when it reads as a code.
+ * and show any other value as it came only when it reads as a code. A name
+ * is `theirs`, in quotes; an amount, a date or a time zone is a `token`.
  */
 
 export type Names = { en: string | null; zh: string | null };
@@ -13,26 +14,28 @@ type Room = { adults: number; childrenAges: number[] };
 
 /** 31205 → "31,205". */
 export function num(n: number): Ours {
-  return ours`${n.toLocaleString("en-US")}`;
+  return own(n.toLocaleString("en-US"));
 }
 
 /** Meters as kilometres with one decimal: 9012 → "9.0 km". */
 export function km(meters: number): Ours {
-  return ours`${(meters / 1000).toFixed(1)} km`;
+  return ours`${own((meters / 1000).toFixed(1))} km`;
 }
 
 export function money(m: Money): Ours {
-  return ours`${m.currency} ${m.amount}`;
+  return ours`${token(m.currency)} ${token(m.amount)}`;
 }
 
+/** A count of things Fortrip names: `one` and `many` are words of ours. */
 export function plural(n: number, one: string, many = `${one}s`): Ours {
-  return ours`${num(n)} ${n === 1 ? one : many}`;
+  return ours`${num(n)} ${own(n === 1 ? one : many)}`;
 }
 
-/** The name, plus the other language's form when it differs. */
+/** The name in quotes, plus the other language's form when it differs:
+ *  "Lakeside Garden Resort" ("湖畔花园度假酒店"). */
 export function named(name: string, names: Names): Ours {
   const other = [names.en, names.zh].find((n) => n && n !== name);
-  return other ? ours`${name} (${other})` : oneLine(name);
+  return other ? ours`${theirs(name)} (${theirs(other)})` : theirs(name);
 }
 
 /** A known value's wording. A value the package does not know is shown as
@@ -42,19 +45,19 @@ export function label(
   value: string,
   unknown: Ours = ours`unknown`,
 ): Ours {
-  return Object.hasOwn(words, value) ? (words[value] as Ours) : code(value, unknown);
+  return Object.hasOwn(words, value) ? own(words[value] as string) : code(value, unknown);
 }
 
 export function stayLine(checkIn: string, checkOut: string): Ours {
   const nights = countIsoDateDays(checkIn, checkOut);
-  return ours`${checkIn} → ${checkOut} (${plural(nights, "night")})`;
+  return ours`${token(checkIn)} → ${token(checkOut)} (${plural(nights, "night")})`;
 }
 
 function partyOf(room: Room): Ours {
   const adults = plural(room.adults, "adult");
   const n = room.childrenAges.length;
   if (n === 0) return adults;
-  const ages = room.childrenAges.join(", ");
+  const ages = joined(room.childrenAges.map((age) => ours`${age}`), ", ");
   return ours`${adults} and ${plural(n, "child", "children")} (${n === 1 ? "age" : "ages"} ${ages})`;
 }
 
@@ -73,7 +76,10 @@ export function party(rooms: Room[]): Ours {
  * "2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai)".
  */
 export function when(instant: string, timeZone: string | null): Ours {
-  const utc = ours`${instant.slice(0, 10)} ${instant.slice(11, 16)} UTC`;
+  // The date and the minute of an RFC 3339 instant; anything else is shown whole.
+  const read = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(instant);
+  if (!read) return token(instant);
+  const utc = ours`${own(read[1]!)} ${own(read[2]!)} UTC`;
   if (!timeZone) return utc;
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -85,26 +91,37 @@ export function when(instant: string, timeZone: string | null): Ours {
       minute: "2-digit",
       hourCycle: "h23",
     }).formatToParts(new Date(instant));
-    const part = (type: string) => String(parts.find((p) => p.type === type)?.value);
-    return ours`${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${timeZone})`;
+    // The formatter's own digits.
+    const part = (type: string) => own(String(parts.find((p) => p.type === type)?.value));
+    return ours`${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${token(timeZone)})`;
   } catch {
     return utc;
   }
 }
 
 /** The characters `JSON.stringify` leaves as they are that a reader or a
- *  terminal could take as a line break or a control. */
-const UNESCAPED = /[\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/g;
+ *  terminal could take as a line break or a control, or that a reader does
+ *  not see (the set `oneLine` removes). */
+const UNESCAPED = /[\u007f-\u009f\u2028\u2029\p{Default_Ignorable_Code_Point}\ufff9-\ufffb]/gu;
 
-/** JSON text of a value that may not be JSON at all, on one line. */
-export function raw(value: unknown): string {
-  let text: string;
+/** A character as JSON escapes it, a surrogate pair for one past U+FFFF. */
+function escaped(character: string): string {
+  return Array.from({ length: character.length }, (_, i) =>
+    `\\u${character.charCodeAt(i).toString(16).padStart(4, "0")}`,
+  ).join("");
+}
+
+/** JSON text of a value that may not be JSON at all, on one line: its
+ *  strings are in JSON's quotes, as `theirs` are. */
+export function raw(value: unknown): Ours {
+  let text: string | undefined;
   try {
-    text = JSON.stringify(value) ?? "no value";
+    text = JSON.stringify(value);
   } catch {
-    text = oneLine(String(value));
+    // A value JSON can't write (a cycle, a BigInt): its own words, quoted.
+    return theirs(String(value));
   }
-  return text.replace(UNESCAPED, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  return text === undefined ? ours`no value` : own(text.replace(UNESCAPED, escaped));
 }
 
 const WINDOWS: Record<string, string> = {
@@ -129,7 +146,7 @@ export function roomFacts(r: RoomFacts): Ours[] {
     : ours`size not stated`;
   const notListed = ours`window not listed`;
   return [
-    r.beds ? ours`beds: ${r.beds.text}` : ours`beds not listed`,
+    r.beds ? ours`beds: ${theirs(r.beds.text)}` : ours`beds not listed`,
     area,
     r.maxOccupancy === null ? ours`max occupancy not listed` : ours`max ${plural(r.maxOccupancy, "guest")}`,
     r.window === null ? notListed : label(WINDOWS, r.window, notListed),

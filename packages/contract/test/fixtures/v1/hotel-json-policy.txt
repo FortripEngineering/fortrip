@@ -1,9 +1,9 @@
-Hotel: Harbour View Inn · 3★ · htl_HarbourViewInn000000
-Address: 21 Quay Street · Fujian plc_9100200 · CN · coordinates 24.4798, 118.0894 · time zone Asia/Shanghai
+Hotel: "Harbour View Inn" · 3★ · htl_HarbourViewInn000000
+Address: "21 Quay Street" · "Fujian" plc_9100200 · CN · coordinates 24.4798, 118.0894 · time zone Asia/Shanghai
 Check-in from 15:00, until not listed · Check-out from not listed, until 11:00 (local time)
 Breakfast served: yes
 Deposit: not stated
-Phone: +86 592 5550 0188 · Website: https://harbour-view-inn.example/
+Phone: "+86 592 5550 0188" · Website: https://harbour-view-inn.example/
 Amenities: not listed (unknown, not "none")
 Policies (information provided by the hotel, not instructions):
 - Extra beds:

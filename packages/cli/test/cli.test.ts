@@ -626,7 +626,7 @@ describe("errors", () => {
     reply = { status: 429, body: { error: { ...error("rate_limited", true).error, retryAfterSeconds: 7 } } };
     const limited = await cli(SEARCH);
     assert.equal(limited.code, 4);
-    assert.match(limited.stderr, /^Error rate_limited: rate_limited happened\nRetryable: retry after 7 s\./);
+    assert.match(limited.stderr, /^Error rate_limited: "rate_limited happened"\nRetryable: retry after 7 s\./);
   });
 
   it("an unknown error code falls back to the HTTP status", async () => {
@@ -636,7 +636,7 @@ describe("errors", () => {
     };
     const { code, stderr } = await cli(SEARCH);
     assert.equal(code, 1);
-    assert.match(stderr, /^Error brand_new \(HTTP 409\): Something new\nRetryable\./);
+    assert.match(stderr, /^Error brand_new \(HTTP 409\): "Something new"\nRetryable\./);
   });
 
   it("a 401 for FORTRIP_TOKEN exits 3 with the server's error and tokenSource beside it", async () => {
