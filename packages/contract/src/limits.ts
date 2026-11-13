@@ -12,9 +12,6 @@ export const LIMITS = {
   offersPerHotelDefault: 15,
   /** The most `limitPerHotel` can ask for. */
   offersPerHotelMax: 30,
-  /** Offers per hotel never go under this when a call's budget is split
-   *  among its hotels. */
-  offersPerHotelFloor: 3,
   /** Offers a call answers in all, across its hotels, when the request gives
    *  no `limitPerHotel`. */
   offersPerCallDefault: 45,

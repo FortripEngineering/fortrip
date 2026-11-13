@@ -98,7 +98,6 @@ describe("LIMITS and friends", () => {
       offersHotels: 15,
       offersPerHotelDefault: 15,
       offersPerHotelMax: 30,
-      offersPerHotelFloor: 3,
       offersPerCallDefault: 45,
       offersPerCallMax: 100,
       pageSizeDefault: 20,

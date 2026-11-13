@@ -643,7 +643,7 @@ describe("hotelOffersInput", () => {
     const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.limitPerHotel?.description,
-      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels, never under 3 each (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way.",
+      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way.",
     );
   });
 
@@ -705,12 +705,11 @@ describe("offersPerHotel", () => {
   it("pins the budget's limits", () => {
     assert.equal(LIMITS.offersPerHotelDefault, 15);
     assert.equal(LIMITS.offersPerHotelMax, 30);
-    assert.equal(LIMITS.offersPerHotelFloor, 3);
     assert.equal(LIMITS.offersPerCallDefault, 45);
     assert.equal(LIMITS.offersPerCallMax, 100);
   });
 
-  it("without a limit: 15 per hotel while that fits 45 offers, otherwise 45 split evenly, never under 3", () => {
+  it("without a limit: 15 per hotel while that fits 45 offers, otherwise 45 split evenly", () => {
     for (const [hotels, each] of [
       [1, 15],
       [3, 15],
@@ -735,7 +734,7 @@ describe("offersPerHotel", () => {
       [15, 4, 15],
       [15, 5, 15],
       [15, 15, 6],
-      // A limit under the floor is what the caller asked for.
+      // A small limit is what the caller asked for.
       [1, 1, 1],
       [2, 15, 2],
     ] as const) {
@@ -743,11 +742,10 @@ describe("offersPerHotel", () => {
     }
   });
 
-  it("the floor holds however many hotels there are, and never lifts a lower limit", () => {
-    // More hotels than a call takes today: an even share would be under 3.
-    assert.equal(offersPerHotel(undefined, 20), 3);
-    assert.equal(offersPerHotel(30, 50), 3);
-    assert.equal(offersPerHotel(2, 50), 2);
+  it("with no hotel that has offers, the answer is still at least 1 and the usual limit", () => {
+    assert.equal(offersPerHotel(undefined, 0), LIMITS.offersPerHotelDefault);
+    assert.equal(offersPerHotel(30, 0), 30);
+    assert.equal(offersPerHotel(2, 0), 2);
   });
 
   it("never answers more than the limit, nor more than the call's ceiling in all", () => {
@@ -827,7 +825,12 @@ describe("createOrderInput", () => {
       createOrderInput.parse(withContact({ name: "  Wei Zhang \n" })).contact.name,
       "Wei Zhang",
     );
-    for (const name of ["", "   ", undefined, 5]) {
+    // Every run of whitespace, tabs and newlines too, becomes one space.
+    assert.equal(
+      createOrderInput.parse(withContact({ name: " Wei \t\n  Zhang\u00a0 Jr " })).contact.name,
+      "Wei Zhang Jr",
+    );
+    for (const name of ["", "   ", undefined, 5, "\u200b", " \u200b\u200d\ufeff ", "\u2060 \u00ad"]) {
       assert.deepEqual(
         refusalOf(createOrderInput, withContact({ name })),
         [{ path: "contact.name", message: "name must be text of 1 to 119 characters" }],
@@ -854,6 +857,21 @@ describe("createOrderInput", () => {
     assert.equal(
       json.properties?.contact?.properties?.name?.description,
       "Contact person's full name, in any script, at most 119 characters.",
+    );
+  });
+
+  it("refuses a card number inside the contact name, 15 digits or 16, and an over-long one as both mistakes", () => {
+    const AMEX = "3782 8224 6310 005";
+    assert.equal(containsCardNumber(AMEX), true);
+    for (const card of [AMEX, "378282246310005", "4111111111111111", VISA]) {
+      assert.deepEqual(refusalOf(createOrderInput, withContact({ name: `Wei Zhang ${card}` })), [
+        { path: "contact.name", message: CARD_NUMBER_MESSAGE },
+      ]);
+    }
+    // Same as the other free-text fields: a card is reported beside the length.
+    assert.deepEqual(
+      refusalOf(createOrderInput, withContact({ name: `${"a".repeat(120)} ${VISA}` })).map((issue) => issue.message),
+      ["name must be text of 1 to 119 characters", CARD_NUMBER_MESSAGE],
     );
   });
 
@@ -1017,12 +1035,15 @@ describe("cancelOrderInput", () => {
   const exactlyOne =
     "Send exactly one of close and maximumPenalty: close (true) closes an unpaid order; maximumPenalty cancels a paid one, with the penalty the user agreed to as a ceiling";
 
+  const closeError =
+    "close must be true to close an unpaid order; leave it out when cancelling a paid order with maximumPenalty";
+
   it("closes an unpaid order with close: true", () => {
     assertAccepted(cancelOrderInput, { orderId, close: true });
     for (const close of [false, "true", 1, null]) {
       assert.deepEqual(
         refusalOf(cancelOrderInput, { orderId, close }),
-        [{ path: "close", message: "close must be true" }],
+        [{ path: "close", message: closeError }],
         JSON.stringify(close),
       );
     }
@@ -1051,7 +1072,7 @@ describe("cancelOrderInput", () => {
     ]);
     // One mistake, one refusal: a close that isn't true is not also a missing mode.
     assert.deepEqual(refusalOf(cancelOrderInput, { orderId, close: false, maximumPenalty: penalty }), [
-      { path: "close", message: "close must be true" },
+      { path: "close", message: closeError },
     ]);
   });
 
