@@ -4,6 +4,11 @@
   "status": "cancelling",
   "createdAt": "2027-02-20T08:04:12Z",
   "updatedAt": "2027-02-24T03:15:08Z",
+  "contact": {
+    "name": "Mary Smith",
+    "email": "mary.smith@example.com",
+    "phone": "+1 415 555 0134"
+  },
   "items": [
     {
       "type": "hotel",
@@ -20,9 +25,20 @@
         "rooms": [
           {
             "adults": 2,
-            "childrenAges": []
+            "childrenAges": [],
+            "guests": [
+              {
+                "firstName": "Mary",
+                "lastName": "Smith"
+              },
+              {
+                "firstName": "Tom",
+                "lastName": "Smith"
+              }
+            ]
           }
         ],
+        "specialRequests": null,
         "room": {
           "name": {
             "text": "Standard Double Room",

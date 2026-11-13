@@ -148,6 +148,7 @@ const orderFixture = {
   status: "awaiting_payment",
   createdAt: "2026-10-24T08:00:00Z",
   updatedAt: "2026-10-24T08:01:00Z",
+  contact: { name: "Mary Smith", email: "mary.smith@example.com", phone: "+1 415 555 0134" },
   items: [
     {
       type: "hotel",
@@ -158,7 +159,17 @@ const orderFixture = {
         checkIn: "2026-11-10",
         checkOut: "2026-11-12",
         timeZone: "Asia/Shanghai",
-        rooms: [{ adults: 2, childrenAges: [] }],
+        rooms: [
+          {
+            adults: 2,
+            childrenAges: [],
+            guests: [
+              { firstName: "Mary", lastName: "Smith" },
+              { firstName: "Tom", lastName: "Smith" },
+            ],
+          },
+        ],
+        specialRequests: null,
         room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
         meals: {
           known: false,

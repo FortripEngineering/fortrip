@@ -162,7 +162,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 `fortrip hotels book` answers with an unpaid order: `status` `awaiting_payment`, its `reference` (the support number), `price.total`, the stay and its terms, and `payment.url`, a Fortrip page that recaps the order and continues to the payment provider. Nothing is charged until the user pays.
 
-1. Show the order's total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included.
+1. Show the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included. Show the names and contact as the order holds them, so the user can catch a wrong one before paying; to correct one, order a new offer (see below).
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
 3. Then pay one way only: give `payment.url` exactly as returned (don't shorten, rebuild or re-encode it), or use one of the ways below.
 

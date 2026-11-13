@@ -5616,6 +5616,51 @@
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
       },
+      "contact": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The contact's full name, as given when ordering."
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Where the confirmation is sent; null when none is on record."
+              },
+              "phone": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The contact's phone number; null when none is on record."
+              }
+            },
+            "required": [
+              "name",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
+      },
       "items": {
         "minItems": 1,
         "type": "array",
@@ -5709,14 +5754,53 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             }
+                          },
+                          "guests": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                           }
                         },
                         "required": [
                           "adults",
-                          "childrenAges"
+                          "childrenAges",
+                          "guests"
                         ],
                         "additionalProperties": {}
                       }
+                    },
+                    "specialRequests": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                     },
                     "room": {
                       "type": "object",
@@ -6188,6 +6272,7 @@
                     "checkOut",
                     "timeZone",
                     "rooms",
+                    "specialRequests",
                     "room",
                     "meals",
                     "cancellation",
@@ -6699,6 +6784,7 @@
       "status",
       "createdAt",
       "updatedAt",
+      "contact",
       "items",
       "price",
       "payment",
@@ -6748,6 +6834,51 @@
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
       },
+      "contact": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The contact's full name, as given when ordering."
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Where the confirmation is sent; null when none is on record."
+              },
+              "phone": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The contact's phone number; null when none is on record."
+              }
+            },
+            "required": [
+              "name",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
+      },
       "items": {
         "minItems": 1,
         "type": "array",
@@ -6841,14 +6972,53 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             }
+                          },
+                          "guests": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                           }
                         },
                         "required": [
                           "adults",
-                          "childrenAges"
+                          "childrenAges",
+                          "guests"
                         ],
                         "additionalProperties": {}
                       }
+                    },
+                    "specialRequests": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                     },
                     "room": {
                       "type": "object",
@@ -7320,6 +7490,7 @@
                     "checkOut",
                     "timeZone",
                     "rooms",
+                    "specialRequests",
                     "room",
                     "meals",
                     "cancellation",
@@ -7827,6 +7998,7 @@
       "status",
       "createdAt",
       "updatedAt",
+      "contact",
       "items",
       "price",
       "payment",
@@ -7875,6 +8047,51 @@
       "updatedAt": {
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+      },
+      "contact": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The contact's full name, as given when ordering."
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Where the confirmation is sent; null when none is on record."
+              },
+              "phone": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The contact's phone number; null when none is on record."
+              }
+            },
+            "required": [
+              "name",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
       },
       "items": {
         "minItems": 1,
@@ -7969,14 +8186,53 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             }
+                          },
+                          "guests": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                           }
                         },
                         "required": [
                           "adults",
-                          "childrenAges"
+                          "childrenAges",
+                          "guests"
                         ],
                         "additionalProperties": {}
                       }
+                    },
+                    "specialRequests": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                     },
                     "room": {
                       "type": "object",
@@ -8448,6 +8704,7 @@
                     "checkOut",
                     "timeZone",
                     "rooms",
+                    "specialRequests",
                     "room",
                     "meals",
                     "cancellation",
@@ -8959,6 +9216,7 @@
       "status",
       "createdAt",
       "updatedAt",
+      "contact",
       "items",
       "price",
       "payment",
@@ -9012,6 +9270,51 @@
             "updatedAt": {
               "type": "string",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+            },
+            "contact": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The contact's full name, as given when ordering."
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the confirmation is sent; null when none is on record."
+                    },
+                    "phone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The contact's phone number; null when none is on record."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "email",
+                    "phone"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
             },
             "items": {
               "minItems": 1,
@@ -9106,14 +9409,53 @@
                                     "minimum": -9007199254740991,
                                     "maximum": 9007199254740991
                                   }
+                                },
+                                "guests": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "firstName": {
+                                            "type": "string"
+                                          },
+                                          "lastName": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "firstName",
+                                          "lastName"
+                                        ],
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                                 }
                               },
                               "required": [
                                 "adults",
-                                "childrenAges"
+                                "childrenAges",
+                                "guests"
                               ],
                               "additionalProperties": {}
                             }
+                          },
+                          "specialRequests": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                           },
                           "room": {
                             "type": "object",
@@ -9585,6 +9927,7 @@
                           "checkOut",
                           "timeZone",
                           "rooms",
+                          "specialRequests",
                           "room",
                           "meals",
                           "cancellation",
@@ -10092,6 +10435,7 @@
             "status",
             "createdAt",
             "updatedAt",
+            "contact",
             "items",
             "price",
             "payment",
@@ -10163,6 +10507,51 @@
       "updatedAt": {
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+      },
+      "contact": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The contact's full name, as given when ordering."
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Where the confirmation is sent; null when none is on record."
+              },
+              "phone": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The contact's phone number; null when none is on record."
+              }
+            },
+            "required": [
+              "name",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
       },
       "items": {
         "minItems": 1,
@@ -10257,14 +10646,53 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             }
+                          },
+                          "guests": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                           }
                         },
                         "required": [
                           "adults",
-                          "childrenAges"
+                          "childrenAges",
+                          "guests"
                         ],
                         "additionalProperties": {}
                       }
+                    },
+                    "specialRequests": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                     },
                     "room": {
                       "type": "object",
@@ -10736,6 +11164,7 @@
                     "checkOut",
                     "timeZone",
                     "rooms",
+                    "specialRequests",
                     "room",
                     "meals",
                     "cancellation",
@@ -11243,6 +11672,7 @@
       "status",
       "createdAt",
       "updatedAt",
+      "contact",
       "items",
       "price",
       "payment",
@@ -11327,6 +11757,51 @@
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
       },
+      "contact": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The contact's full name, as given when ordering."
+              },
+              "email": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Where the confirmation is sent; null when none is on record."
+              },
+              "phone": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The contact's phone number; null when none is on record."
+              }
+            },
+            "required": [
+              "name",
+              "email",
+              "phone"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
+      },
       "items": {
         "minItems": 1,
         "type": "array",
@@ -11420,14 +11895,53 @@
                               "minimum": -9007199254740991,
                               "maximum": 9007199254740991
                             }
+                          },
+                          "guests": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": {}
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                           }
                         },
                         "required": [
                           "adults",
-                          "childrenAges"
+                          "childrenAges",
+                          "guests"
                         ],
                         "additionalProperties": {}
                       }
+                    },
+                    "specialRequests": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                     },
                     "room": {
                       "type": "object",
@@ -11899,6 +12413,7 @@
                     "checkOut",
                     "timeZone",
                     "rooms",
+                    "specialRequests",
                     "room",
                     "meals",
                     "cancellation",
@@ -12406,6 +12921,7 @@
       "status",
       "createdAt",
       "updatedAt",
+      "contact",
       "items",
       "price",
       "payment",
@@ -12459,6 +12975,51 @@
             "updatedAt": {
               "type": "string",
               "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
+            },
+            "contact": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "The contact's full name, as given when ordering."
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Where the confirmation is sent; null when none is on record."
+                    },
+                    "phone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The contact's phone number; null when none is on record."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "email",
+                    "phone"
+                  ],
+                  "additionalProperties": {}
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout."
             },
             "items": {
               "minItems": 1,
@@ -12553,14 +13114,53 @@
                                     "minimum": -9007199254740991,
                                     "maximum": 9007199254740991
                                   }
+                                },
+                                "guests": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "firstName": {
+                                            "type": "string"
+                                          },
+                                          "lastName": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "firstName",
+                                          "lastName"
+                                        ],
+                                        "additionalProperties": {}
+                                      }
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout."
                                 }
                               },
                               "required": [
                                 "adults",
-                                "childrenAges"
+                                "childrenAges",
+                                "guests"
                               ],
                               "additionalProperties": {}
                             }
+                          },
+                          "specialRequests": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."
                           },
                           "room": {
                             "type": "object",
@@ -13032,6 +13632,7 @@
                           "checkOut",
                           "timeZone",
                           "rooms",
+                          "specialRequests",
                           "room",
                           "meals",
                           "cancellation",
@@ -13539,6 +14140,7 @@
             "status",
             "createdAt",
             "updatedAt",
+            "contact",
             "items",
             "price",
             "payment",

@@ -6,6 +6,11 @@
     "status": "confirmed",
     "createdAt": "2026-10-20T03:12:00Z",
     "updatedAt": "2026-10-20T03:40:00Z",
+    "contact": {
+      "name": "Ana Costa",
+      "email": "ana.costa@example.com",
+      "phone": "+351 912 345 678"
+    },
     "items": [
       {
         "type": "hotel",
@@ -25,9 +30,20 @@
               "childrenAges": [
                 5,
                 9
+              ],
+              "guests": [
+                {
+                  "firstName": "Ana",
+                  "lastName": "Costa"
+                },
+                {
+                  "firstName": "Tom",
+                  "lastName": "Costa"
+                }
               ]
             }
           ],
+          "specialRequests": "Late arrival, around 23:00. A quiet room if possible.",
           "room": {
             "name": {
               "text": "Deluxe King Room",

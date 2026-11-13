@@ -221,6 +221,7 @@ const orderFixture = {
   status: "awaiting_payment",
   createdAt: "2026-10-24T08:00:00Z",
   updatedAt: "2026-10-24T08:01:00.123Z",
+  contact: { name: "Mary Smith", email: "mary.smith@example.com", phone: "+1 415 555 0134" },
   items: [
     {
       type: "hotel",
@@ -231,7 +232,17 @@ const orderFixture = {
         checkIn: "2026-11-10",
         checkOut: "2026-11-12",
         timeZone: "Asia/Shanghai",
-        rooms: [{ adults: 2, childrenAges: [] }],
+        rooms: [
+          {
+            adults: 2,
+            childrenAges: [],
+            guests: [
+              { firstName: "Mary", lastName: "Smith" },
+              { firstName: "Tom", lastName: "Smith" },
+            ],
+          },
+        ],
+        specialRequests: null,
         room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
         meals,
         cancellation,
@@ -663,9 +674,9 @@ const PUBLIC_KEYS = new Set([
   "coverage", "alipay", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
-  "filterable", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
-  "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
-  "issuer", "issues", "items", "kind", "known", "label", "lat", "line", "listed", "listedShare",
+  "filterable", "firstName", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
+  "guests", "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
+  "issuer", "issues", "items", "kind", "known", "label", "lastName", "lat", "line", "listed", "listedShare",
   "limits", "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
   "manageUrl", "mandatory", "match", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
   "message", "methods", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
@@ -675,7 +686,7 @@ const PUBLIC_KEYS = new Set([
   "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
-  "sort", "spec", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
+  "sort", "spec", "specialRequests", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
   "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "website", "wechatPay", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",

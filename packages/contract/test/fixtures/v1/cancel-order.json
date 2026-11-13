@@ -6,6 +6,11 @@
     "status": "cancelling",
     "createdAt": "2026-10-20T03:12:00Z",
     "updatedAt": "2026-11-02T09:30:00Z",
+    "contact": {
+      "name": "Wei Wang",
+      "email": "wei.wang@example.com",
+      "phone": "+86 138 0013 8000"
+    },
     "items": [
       {
         "type": "hotel",
@@ -25,9 +30,20 @@
               "childrenAges": [
                 5,
                 9
+              ],
+              "guests": [
+                {
+                  "firstName": "Wei",
+                  "lastName": "Wang"
+                },
+                {
+                  "firstName": "Jun",
+                  "lastName": "Wang"
+                }
               ]
             }
           ],
+          "specialRequests": null,
           "room": {
             "name": {
               "text": "Deluxe King Room",

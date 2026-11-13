@@ -4,6 +4,11 @@
   "status": "confirming",
   "createdAt": "2027-02-20T08:04:12Z",
   "updatedAt": "2027-02-20T08:11:37Z",
+  "contact": {
+    "name": "Ana Costa",
+    "email": "ana.costa@example.com",
+    "phone": "+351 912 345 678"
+  },
   "items": [
     {
       "type": "hotel",
@@ -20,9 +25,20 @@
         "rooms": [
           {
             "adults": 2,
-            "childrenAges": []
+            "childrenAges": [],
+            "guests": [
+              {
+                "firstName": "Ana",
+                "lastName": "Costa"
+              },
+              {
+                "firstName": "Tom",
+                "lastName": "Costa"
+              }
+            ]
           }
         ],
+        "specialRequests": null,
         "room": {
           "name": {
             "text": "Standard Double Room",

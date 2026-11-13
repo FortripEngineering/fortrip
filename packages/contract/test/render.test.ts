@@ -748,6 +748,31 @@ describe("meals", () => {
 });
 
 describe("orders and the consent rule", () => {
+  it("asks for the guests, the contact and the requests before the link", () => {
+    assert.match(
+      ORDER_NEXT_STEP,
+      /^Before you give the user an order's payment\.url, show them its total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\. /,
+    );
+  });
+
+  it("shows each room's guests, the contact and the requests as the order holds them", () => {
+    const fixture = copy(load("order-awaiting-payment")) as ToolFixture;
+    const o = fixture.data as Record<string, any>;
+    const hotel = o.items[0].hotel;
+    hotel.rooms = [hotel.rooms[0], { adults: 1, childrenAges: [], guests: null }];
+    hotel.specialRequests = "High floor,\nnear the lift";
+    o.contact = { name: "王小明", email: null, phone: "+86 138 0013 8000" };
+    const lines = render(fixture).split("\n");
+    assert.ok(lines.includes("Guests: room 1 Mary Smith, Tom Smith; room 2 none named yet"));
+    assert.ok(lines.includes("Special requests: High floor, near the lift"));
+    assert.ok(lines.includes("Contact: 王小明 · no email on record · +86 138 0013 8000"));
+    o.contact = null;
+    hotel.rooms = hotel.rooms.map((r: Record<string, unknown>) => ({ ...r, guests: null }));
+    const none = render(fixture).split("\n");
+    assert.ok(none.includes("Guests: none named yet"));
+    assert.ok(none.includes("Contact: none on record yet"));
+  });
+
   it("ends with ORDER_NEXT_STEP when payment.url is set", () => {
     const text = render(load("order-awaiting-payment"));
     assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`));
@@ -909,7 +934,7 @@ describe("orders and the consent rule", () => {
     // paragraph it keeps the model from giving the link early (paired eval, S6).
     assert.match(
       WALLET_NEXT_STEP,
-      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then ask them to confirm, and wait for a clear yes\. /,
+      /^Before you call pay_order with method stripe_alipay_wechat_pay and the order's price\.total, show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then ask them to confirm, and wait for a clear yes\. /,
     );
     assert.match(WALLET_NEXT_STEP, /Then show the stripe_alipay_wechat_pay entry of payment\.methods: /);
     assert.match(WALLET_NEXT_STEP, /Then poll get_order\.$/);
@@ -980,7 +1005,7 @@ describe("orders and the consent rule", () => {
       assertClean(text);
     }
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
-    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, rooms and guests per room\) and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
+    assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
     assert.match(PAY_NEXT_STEP, /Pay one way only: either give payment\.url or call pay_order\./);
     assert.match(
       PAY_NEXT_STEP,
