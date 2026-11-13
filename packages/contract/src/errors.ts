@@ -13,7 +13,7 @@ export type ErrorCode =
   | "order_not_cancellable"
   | "order_not_payable"
   | "payment_in_progress"
-  | "payment_total_changed"
+  | "payment_total_mismatch"
   | "payment_credential_invalid"
   | "payment_declined"
   | "payment_action_required"
@@ -29,6 +29,7 @@ export type ErrorCode =
   | "ordering_paused"
   | "service_unavailable"
   | "supplier_unavailable"
+  | "client_outdated"
   | "internal";
 
 /** The statuses `supplier_unavailable` is sent with (by its `details.outcome`:
@@ -52,7 +53,7 @@ export const ERROR_CODES: Readonly<
   order_not_cancellable: { status: [409], retryable: false },
   order_not_payable: { status: [409], retryable: false },
   payment_in_progress: { status: [409], retryable: true },
-  payment_total_changed: { status: [409], retryable: false },
+  payment_total_mismatch: { status: [409], retryable: false },
   payment_credential_invalid: { status: [422], retryable: false },
   payment_declined: { status: [402], retryable: false },
   payment_action_required: { status: [402], retryable: false },
@@ -68,5 +69,6 @@ export const ERROR_CODES: Readonly<
   ordering_paused: { status: [503], retryable: true },
   service_unavailable: { status: [503], retryable: true },
   supplier_unavailable: { status: SUPPLIER_STATUSES, retryable: true },
+  client_outdated: { status: [426], retryable: false },
   internal: { status: [500], retryable: false },
 };

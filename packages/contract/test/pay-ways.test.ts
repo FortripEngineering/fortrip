@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { PAY_WAYS, PAYMENT_METHOD_IDS, payOrderInput } from "../src/index.ts";
+import * as contract from "../src/index.ts";
+import { order, PAY_WAYS, payOrderInput } from "../src/index.ts";
 
 describe("pay ways", () => {
   it("an order is paid by its link or, through pay_order, by a shared payment token", () => {
@@ -12,8 +13,15 @@ describe("pay ways", () => {
     assert.deepEqual(fields, ["sharedPaymentToken"]);
   });
 
-  it("names every way but the link by its payment method's id", () => {
-    const ids: readonly string[] = PAYMENT_METHOD_IDS;
-    for (const way of PAY_WAYS.filter((w) => w !== "payment_link")) assert.ok(ids.includes(way), way);
+  it("an order offers the token as payment.token, and lists no methods", () => {
+    const keys = Object.keys(order.shape.payment.shape);
+    assert.ok(keys.includes("token"));
+    assert.ok(!keys.includes("methods"));
+  });
+
+  it("exports nothing of the wallet method, which agents no longer have", () => {
+    for (const name of ["PAYMENT_METHOD_IDS", "paymentMethod", "WALLET_NEXT_STEP", "walletNextStep"]) {
+      assert.ok(!(name in contract), name);
+    }
   });
 });

@@ -4,7 +4,7 @@
     "error": {
       "code": "destination_ambiguous",
       "message": "Several places in CN are named \"Suzhou\". Ask the user which one, then search it by placeId.",
-      "param": "/destination/name",
+      "pointer": "/destination/name",
       "retryable": false,
       "details": {
         "name": "Suzhou",

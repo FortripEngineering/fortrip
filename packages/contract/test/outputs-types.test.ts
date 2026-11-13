@@ -42,7 +42,7 @@ function checkIn(item: Order["items"][number]): string | null {
 
 function previousTotal(change: OfferChange): string | null {
   const known = change as KnownBranch<OfferChange, "field">;
-  return known.field === "price" ? known.previous.amount : null;
+  return known.field === "total" ? known.previous.amount : null;
 }
 
 function changedFields(body: KnownErrorBody): string[] {

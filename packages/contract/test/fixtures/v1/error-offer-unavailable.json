@@ -1,0 +1,15 @@
+{
+  "status": 422,
+  "envelope": {
+    "error": {
+      "code": "offer_unavailable",
+      "message": "This offer is sold out.",
+      "retryable": false,
+      "details": {
+        "offerId": "off_BundKingBreakfast000",
+        "reason": "sold_out"
+      },
+      "requestId": "req_4Kd9sSold"
+    }
+  }
+}

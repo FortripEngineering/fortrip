@@ -9,7 +9,7 @@ import {
   type KnownErrorBody,
 } from "../outputs/error-details.ts";
 import type { OfferChange } from "../outputs/order.ts";
-import type { RenderSurface } from "../tools.ts";
+import { CALLS, cancelNextStep, type RenderSurface } from "../tools.ts";
 import { km, label, money, num, plural, raw, when } from "./format.ts";
 import {
   cancellationText,
@@ -18,7 +18,7 @@ import {
   mealsText,
   offerLine,
 } from "./offers.ts";
-import { CANCEL_REASON_WORDS, ORDER_STATUS_WORDS } from "./order.ts";
+import { CANCEL_BLOCKER_WORDS, cancelFigures, ORDER_STATUS_WORDS } from "./order.ts";
 
 const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
   not_found: "was not found",
@@ -28,6 +28,16 @@ const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
   deactivated: "was revoked",
   used: "was already used, or is held for another order",
   other_seller: "was granted to another seller",
+};
+
+/** Why `pay_order` takes no token for the order, and what the user does
+ *  instead. */
+const PAYMENT_METHOD_UNAVAILABLE_WORDS: Record<string, string> = {
+  payment_open_on_page:
+    "The user has a payment open on the order's payment page, so a token can't pay it: they finish paying on that page",
+  token_not_offered: "This order takes no token now: the user pays by its payment link",
+  charge_refused:
+    "The charge was refused for a reason a new token wouldn't fix: the user pays by the order's payment link",
 };
 import { localitiesLines } from "./search.ts";
 import { oneLine } from "./third-party.ts";
@@ -50,15 +60,15 @@ function changeLine(c: OfferChange): string {
   const pair = (show: (v: never) => string) =>
     `${show(c.previous as never)} → ${show(c.current as never)}`;
   switch (c.field) {
-    case "price":
-      return `- price: ${pair(money)}${worse}`;
+    case "total":
+      return `- total: ${pair(money)}${worse}`;
     case "meals":
       return `- meals: ${pair(mealsText)}${worse}`;
     case "cancellation":
       return `- cancellation: ${pair(cancellationText)}${worse}`;
     case "confirmation":
       return `- confirmation: ${pair(confirmationText)}${worse}`;
-    case "pay_at_property":
+    case "payAtProperty":
       return `- fees not in the total: ${pair(feesText)}${worse}`;
     default:
       return `- ${c.field}: ${raw(c.previous)} → ${raw(c.current)}${worse}`;
@@ -145,21 +155,34 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
   }
 }
 
+/** Which of cancel and close applies to the order instead of the one asked
+ *  for, or what blocks both. With cancel comes the cancel rule: the caller
+ *  may have the order's penalty from this error alone. */
+function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurface): string[] {
+  const c = d.cancel;
+  if (c.action === "close") {
+    return [
+      `This order isn't paid, so it is closed, not cancelled, and nothing is charged. Close it only if the user says they no longer want it (${CALLS[surface].close}).`,
+    ];
+  }
+  if (c.action === "cancel") {
+    return [
+      `This order is paid, so it is cancelled under its terms, not closed: ${cancelFigures(c)}.`,
+      cancelNextStep(surface),
+    ];
+  }
+  if (c.action !== null) return [`What applies to this order now: ${c.action}.`];
+  return [
+    `This order can be neither cancelled nor closed now: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy)}.`,
+  ];
+}
+
 function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
   if (!("details" in e)) return [];
   const getOrder = (id: string) => (surface === "cli" ? `\`fortrip orders get ${id}\`` : "get_order");
   switch (e.code) {
-    case "invalid_request": {
-      const d = e.details;
-      const lines = d.issues.map((i) => `- ${i.pointer}: ${i.message}`);
-      if (d.filterable) lines.push(`Filterable amenities: ${d.filterable.join(", ")}.`);
-      if (d.share) {
-        lines.push(
-          `${d.share.code} is listed by ${(d.share.listedShare * 100).toFixed(1)} % of hotels that list any facility.`,
-        );
-      }
-      return lines;
-    }
+    case "invalid_request":
+      return e.details.issues.map((i) => `- ${i.pointer}: ${i.message}`);
     case "cursor_invalid":
       return [`The cursor is ${e.details.reason}: search again without a cursor.`];
     case "offer_expired":
@@ -176,24 +199,28 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
     case "order_in_progress":
       return [`Order ${e.details.orderId}.`];
     case "order_not_cancellable":
-      return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
+      return notCancellable(e.details, surface);
     case "order_not_payable":
       return [
         `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with ${getOrder(e.details.orderId)}; this call charged nothing.`,
       ];
     case "payment_in_progress":
       return [`Order ${e.details.orderId}: read it with ${getOrder(e.details.orderId)} in a few seconds.`];
-    case "payment_total_changed":
+    case "payment_total_mismatch":
       return [
-        `Order ${e.details.orderId} totals ${money(e.details.total)}, not the total sent: confirm this total with the user, then ${
+        `The total sent is not the order's: order ${e.details.orderId} totals ${money(e.details.total)}, and that has not changed. Confirm this total with the user, then ${
           surface === "cli"
             ? `run the same \`fortrip orders pay ${e.details.orderId}\` command again with \`--total ${e.details.total.amount}\``
-            : "call pay_order again with it, the same way (the same token, or method stripe_alipay_wechat_pay)"
+            : "call pay_order again with it and the same token"
         }. Nothing was charged.`,
       ];
     case "payment_credential_invalid":
       return [
-        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the limits of the order's stripe_shared_payment_token method. Nothing was charged.`,
+        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the usage limits on the order's "Pay without the link" line. Nothing was charged.`,
+      ];
+    case "payment_method_unavailable":
+      return [
+        `${label(PAYMENT_METHOD_UNAVAILABLE_WORDS, e.details.reason)}. Read the order with ${getOrder("<orderId>")}. This call charged nothing.`,
       ];
     case "payment_declined":
       return [
@@ -217,7 +244,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       return [`Check-in ${e.details.checkIn} is already past${e.details.timeZone ? ` in ${e.details.timeZone}` : ""}.`];
     case "offer_unavailable":
       return [
-        `Offer ${e.details.offerId}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason)}. Get fresh offers.`,
+        `Offer ${e.details.offerId}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason)}. Other offers for the same room may be gone too: get offers again.`,
       ];
     case "currency_unavailable":
       return [`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`];
@@ -272,7 +299,7 @@ export function renderError(
     `Error ${code}${http}${typeof body.message === "string" ? `: ${body.message}` : ""}`,
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
-  if (typeof body.param === "string") lines.push(`Field: ${body.param}`);
+  if (typeof body.pointer === "string") lines.push(`Field: ${body.pointer}`);
   if (known) lines.push(...detailLines(known, surface));
   else if (body.details !== undefined) lines.push(`Details: ${raw(body.details)}`);
   if (typeof body.requestId === "string") lines.push(`Request id: ${body.requestId}`);

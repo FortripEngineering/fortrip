@@ -1,0 +1,145 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_CanalTwoRooms0000000",
+    "reference": "FT-D3G6LS",
+    "status": "confirmed",
+    "createdAt": "2026-10-30T15:20:00Z",
+    "updatedAt": "2026-10-30T15:26:00Z",
+    "contact": {
+      "name": "Inês Duarte",
+      "email": "ines.duarte@example.com",
+      "phone": null
+    },
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": null,
+          "name": "Canal House Lisbon",
+          "names": {
+            "en": "Canal House Lisbon",
+            "zh": null
+          },
+          "checkIn": "2026-12-03",
+          "checkOut": "2026-12-05",
+          "timeZone": "Europe/Lisbon",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": [],
+              "guests": [
+                {
+                  "firstName": "Inês",
+                  "lastName": "Duarte"
+                },
+                {
+                  "firstName": "Rui",
+                  "lastName": "Duarte"
+                }
+              ],
+              "roomType": {
+                "name": {
+                  "text": "Classic Double",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 double bed",
+                  "locale": "en"
+                },
+                "areaSqm": {
+                  "min": 18,
+                  "max": 22
+                },
+                "maxOccupancy": 2,
+                "window": "yes"
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Bed and breakfast",
+                  "locale": "en"
+                }
+              }
+            },
+            {
+              "adults": 1,
+              "childrenAges": [
+                9
+              ],
+              "guests": null,
+              "roomType": {
+                "name": {
+                  "text": "Attic Twin",
+                  "locale": "en"
+                },
+                "beds": null,
+                "areaSqm": null,
+                "maxOccupancy": null,
+                "window": "no"
+              },
+              "meals": {
+                "known": false,
+                "included": null,
+                "unspecifiedMainMeals": null,
+                "allInclusive": null,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              }
+            }
+          ],
+          "specialRequests": null,
+          "cancellation": {
+            "status": "non_refundable",
+            "readAt": "2026-10-30T15:20:00Z",
+            "freeCancellationEndsAt": null,
+            "penalties": [
+              {
+                "startsAt": null,
+                "amount": {
+                  "amount": "410.00",
+                  "currency": "EUR"
+                }
+              }
+            ],
+            "timeZone": "Europe/Lisbon"
+          },
+          "confirmation": null,
+          "payAtProperty": {
+            "disclosure": "incomplete",
+            "items": []
+          },
+          "confirmationNumber": "CHL-20871"
+        }
+      }
+    ],
+    "total": {
+      "amount": "410.00",
+      "currency": "EUR"
+    },
+    "payment": {
+      "status": "paid",
+      "url": null,
+      "requiresSignIn": false,
+      "expiresAt": null,
+      "localCurrencyAtCheckout": false,
+      "localCharge": null,
+      "token": null
+    },
+    "cancel": {
+      "action": null,
+      "blockedBy": "non_refundable",
+      "penalty": null,
+      "refund": null
+    },
+    "cancelled": null,
+    "failure": null,
+    "manageUrl": "https://fortrip.ai/stays/orders/so_4t8Yq2m"
+  }
+}

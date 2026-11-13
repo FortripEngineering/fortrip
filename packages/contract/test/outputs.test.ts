@@ -10,7 +10,14 @@ import { authConfig, meResult } from "../src/outputs/account.ts";
 import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs/hotel.ts";
 import { FEE_KINDS, hotelOffersResult, offer, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
-import { offerChange, order, orderList, PAYMENT_METHOD_IDS } from "../src/outputs/order.ts";
+import {
+  CANCEL_BLOCKERS,
+  FAILURE_REASONS,
+  offerChange,
+  order,
+  orderCancel,
+  orderList,
+} from "../src/outputs/order.ts";
 import { place } from "../src/outputs/place.ts";
 import { SEARCH_NOTE_CODES, searchResult } from "../src/outputs/search.ts";
 import { jsonSchemaOf, OUTPUT_SCHEMAS, type JsonSchema } from "./output-schemas.ts";
@@ -229,57 +236,66 @@ const orderFixture = {
               { firstName: "Mary", lastName: "Smith" },
               { firstName: "Tom", lastName: "Smith" },
             ],
+            roomType: {
+              name: { text: "Deluxe King", locale: "en" },
+              beds: null,
+              areaSqm: null,
+              maxOccupancy: 2,
+              window: null,
+            },
+            meals,
           },
         ],
         specialRequests: null,
-        room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
-        meals,
         cancellation,
+        confirmation,
         payAtProperty,
         confirmationNumber: null,
       },
     },
   ],
-  price: { total: usd("132.40") },
+  total: usd("132.40"),
   payment: {
     status: "unpaid",
     url: "https://fortrip.ai/booking-status?session_id=cs_test_1",
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
-    chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    methods: [],
+    token: null,
   },
-  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
+  cancel: { action: "close", blockedBy: null, penalty: null, refund: null },
+  cancelled: null,
+  failure: null,
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
-const priceChange = { field: "price", previous: usd("132.40"), current: usd("140.00"), worse: true };
+const cancelNow = { action: "cancel", blockedBy: null, penalty: usd("66.20"), refund: usd("66.20") };
+const blockedBy = (reason: string) => ({ action: null, blockedBy: reason, penalty: null, refund: null });
+
+const totalChange = { field: "total", previous: usd("132.40"), current: usd("140.00"), worse: true };
 
 const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   invalid_request: {
     issues: [{ pointer: "/filters/amenities/0", message: "spa cannot filter" }],
-    filterable: ["parking", "wifi"],
-    share: { code: "spa", listedShare: 0.12 },
   },
   cursor_invalid: { reason: "expired" },
   unauthenticated: undefined,
   forbidden: undefined,
   not_found: undefined,
   offer_expired: { offerId: OFF, expiredAt: "2026-10-24T09:00:00Z" },
-  offer_changed: { changes: [priceChange], offer: offerFixture },
+  offer_changed: { changes: [totalChange], offer: offerFixture },
   offer_already_ordered: { orderId: ORD },
   order_in_progress: { orderId: ORD },
   cancellation_changed: undefined,
-  order_not_cancellable: { reason: "stay_started" },
+  order_not_cancellable: { cancel: cancelNow },
   order_not_payable: { orderId: ORD, status: "expired" },
   payment_in_progress: { orderId: ORD },
-  payment_total_changed: { orderId: ORD, total: usd("140.00") },
+  payment_total_mismatch: { orderId: ORD, total: usd("140.00") },
   payment_credential_invalid: { reason: "amount" },
   payment_declined: { declineCode: "insufficient_funds" },
   payment_action_required: undefined,
-  payment_method_unavailable: undefined,
+  payment_method_unavailable: { reason: "payment_open_on_page" },
   destination_ambiguous: {
     name: "Suzhou",
     countryCode: "CN",
@@ -307,6 +323,7 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   ordering_paused: undefined,
   service_unavailable: undefined,
   supplier_unavailable: { outcome: "not_started" },
+  client_outdated: undefined,
   internal: undefined,
 };
 
@@ -381,8 +398,8 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     parsesBoth(orderList, { data: [orderFixture], nextCursor: null });
   });
-  it("an order's token method, its handler in UCP's shape", () => {
-    const limits = { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" };
+  it("an order's payment token: the handler in UCP's shape, the usage limits in Stripe's", () => {
+    const usageLimits = { max_amount: 13240, currency: "usd", expires_at: 1792915200 };
     const handler = {
       id: "stripe_payments",
       type: "com.stripe.payments",
@@ -395,10 +412,8 @@ describe("v1 response fixtures parse, open and strict", () => {
       ],
       config: { environment: "testmode", business_profile: "profile_test_1" },
     };
-    const withHandler = (h: unknown, l: unknown = limits) => ({
-      ...orderFixture,
-      payment: { ...orderFixture.payment, methods: [{ id: "stripe_shared_payment_token", handler: h, limits: l }] },
-    });
+    const withToken = (token: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, token } });
+    const withHandler = (h: unknown, l: unknown = usageLimits) => withToken({ handler: h, usageLimits: l });
     parsesBoth(order, withHandler(handler));
     // An instrument's config is UCP's: the strict copy keeps what it doesn't know.
     const hinted = { ...handler, available_instruments: [{ type: "link", config: { hint: { any: ["thing"] } } }] };
@@ -407,12 +422,14 @@ describe("v1 response fixtures parse, open and strict", () => {
     assert.ok(order.safeParse(withHandler({ ...handler, config: { ...handler.config, environment: "staging" } })).success);
     // What the contract closes stays closed in the strict copy.
     for (const leaked of [
-      { ...handler, available_instruments: [{ type: "card", extra: 1 }] },
-      { ...handler, config: { ...handler.config, extra: 1 } },
-      { ...handler, networkId: "profile_test_1" },
+      withHandler({ ...handler, available_instruments: [{ type: "card", extra: 1 }] }),
+      withHandler({ ...handler, config: { ...handler.config, extra: 1 } }),
+      withHandler({ ...handler, networkId: "profile_test_1" }),
+      withHandler(handler, { ...usageLimits, maxAmount: 13240 }),
+      withToken({ handler, usageLimits, limits: usageLimits }),
     ]) {
-      assert.ok(order.safeParse(withHandler(leaked)).success);
-      assert.equal(strictOutput(order).safeParse(withHandler(leaked)).success, false);
+      assert.ok(order.safeParse(leaked).success);
+      assert.equal(strictOutput(order).safeParse(leaked).success, false);
     }
     for (const field of ["schema", "available_instruments", "config"] as const) {
       const { [field]: _gone, ...without } = handler;
@@ -422,117 +439,196 @@ describe("v1 response fixtures parse, open and strict", () => {
       order.safeParse(withHandler({ ...handler, config: { environment: "testmode" } })).success,
       false,
     );
-    // The token entry always carries its limits.
-    for (const field of ["maxAmount", "currency", "expiresAt"] as const) {
-      const { [field]: _gone, ...without } = limits;
+    // The usage limits are Stripe's object, whole: its three names, its value types.
+    for (const field of ["max_amount", "currency", "expires_at"] as const) {
+      const { [field]: _gone, ...without } = usageLimits;
       assert.equal(order.safeParse(withHandler(handler, without)).success, false, field);
     }
     assert.equal(order.safeParse(withHandler(handler, null)).success, false);
+    assert.equal(order.safeParse(withHandler(handler, { ...usageLimits, max_amount: 132.4 })).success, false);
+    assert.equal(order.safeParse(withHandler(handler, { ...usageLimits, expires_at: "2026-10-25T08:00:00Z" })).success, false);
+    // The 5.x names are not the token's.
+    assert.equal(order.safeParse(withHandler(handler, { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" })).success, false);
   });
 
-  it("an order's Alipay or WeChat Pay method, offered and open", () => {
-    const withWallet = (entry: object) => ({
-      ...orderFixture,
-      payment: { ...orderFixture.payment, methods: [{ id: "stripe_alipay_wechat_pay", ...entry }] },
-    });
-    parsesBoth(order, withWallet({ open: false, current: null, wechatPay: null, alipay: null }));
-    parsesBoth(
-      order,
-      withWallet({
-        open: true,
-        current: "wechat_pay",
-        wechatPay: {
-          qrData: "weixin://wxpay/bizpayurl?pr=abc",
-          qrImageUrl: "https://qr.stripe.com/test_1.png",
-          url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/wechat?t=tok",
-        },
-        alipay: { url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/alipay?t=tok" },
-      }),
-    );
-    // Not on WeChat Pay now: no live code, and a wallet this contract doesn't know reads.
-    parsesBoth(
-      order,
-      withWallet({
-        open: true,
-        current: "alipay",
-        wechatPay: { qrData: null, qrImageUrl: null, url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/wechat?t=tok" },
-        alipay: { url: "https://fortrip.ai/pay/ord_0123456789abcdefABCD/alipay?t=tok" },
-      }),
-    );
-    // A known id with its fields missing is malformed, not a method this contract doesn't know.
-    assert.equal(order.safeParse(withWallet({})).success, false);
-    assert.equal(order.safeParse(withWallet({ current: null, wechatPay: null, alipay: null })).success, false);
-  });
-
-  it("an order's payment.methods: both entries, none, or one this contract doesn't know", () => {
-    const token = {
-      id: "stripe_shared_payment_token",
-      handler: {
-        id: "stripe_payments",
-        type: "com.stripe.payments",
-        version: "2026-06-25",
-        spec: "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-        schema: "https://ucp.stripe.com/payments/2026-06-25/schema.json",
-        available_instruments: [{ type: "card" }],
-        config: { environment: "testmode", business_profile: "profile_test_1" },
-      },
-      limits: { maxAmount: 13240, currency: "usd", expiresAt: "2026-10-25T08:00:00Z" },
-    };
-    const wallet = { id: "stripe_alipay_wechat_pay", open: false, current: null, wechatPay: null, alipay: null };
-    const withMethods = (methods: unknown) => ({ ...orderFixture, payment: { ...orderFixture.payment, methods } });
-    parsesBoth(order, withMethods([]));
-    parsesBoth(order, withMethods([token, wallet]));
-    // An open union: a method this contract doesn't know reads, and the strict copy refuses it.
-    const other = withMethods([{ id: "other_method" }]);
-    assert.ok(order.safeParse(other).success);
-    assert.equal(strictOutput(order).safeParse(other).success, false);
-    // Every known id is a branch of the union: alone, its id is malformed.
-    for (const id of PAYMENT_METHOD_IDS) {
-      assert.equal(order.safeParse(withMethods([{ id }])).success, false, id);
-    }
-    // An order always lists its methods, the one field for every way to pay but the link.
-    const { methods: _gone, ...without } = orderFixture.payment;
+  it("an order's payment: a token or null, always said, and nothing of a method list or a charge currency", () => {
+    parsesBoth(order, orderFixture);
+    const { token: _gone, ...without } = orderFixture.payment;
     assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false);
+    for (const gone of [{ methods: [] }, { chargeCurrency: "USD" }]) {
+      assert.equal(strictOutput(order).safeParse({ ...orderFixture, payment: { ...orderFixture.payment, ...gone } }).success, false);
+    }
     const payment = (jsonSchemaOf(order).properties as Record<string, JsonSchema>).payment!;
     assert.deepEqual(Object.keys(payment.properties as Record<string, unknown>), [
       "status",
       "url",
       "requiresSignIn",
       "expiresAt",
-      "chargeCurrency",
       "localCurrencyAtCheckout",
       "localCharge",
-      "methods",
+      "token",
     ]);
   });
 
-  it("an order's cancel quote, cancellable or not", () => {
-    const cancellable = {
-      ...orderFixture,
-      status: "confirmed",
-      cancel: { available: true, reason: "cancellable", penalty: usd("66.20"), refund: usd("66.20") },
-    };
-    parsesBoth(order, cancellable);
+  it("an order's total is the order's own, not under price", () => {
+    const { total: _total, ...without } = orderFixture;
+    assert.equal(order.safeParse(without).success, false);
+    assert.equal(order.safeParse({ ...without, price: { total: orderFixture.total } }).success, false);
+    assert.equal(strictOutput(order).safeParse({ ...orderFixture, price: { total: orderFixture.total } }).success, false);
+  });
+
+  it("an order's rooms each carry the party, the guests, the room type and the meals", () => {
+    const [item] = orderFixture.items;
+    const [room] = item!.hotel.rooms;
+    const withRoom = (r: unknown) => ({ ...orderFixture, items: [{ ...item, hotel: { ...item!.hotel, rooms: [r] } }] });
+    parsesBoth(order, withRoom(room));
+    // Rooms can differ: each has its own type and meals.
     parsesBoth(order, {
       ...orderFixture,
-      cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
+      items: [
+        {
+          ...item,
+          hotel: {
+            ...item!.hotel,
+            rooms: [room, { ...room, guests: null, roomType: { ...room!.roomType, name: null }, meals: { ...meals, included: [] } }],
+          },
+        },
+      ],
     });
-    // An unknown reason stays open; an order always says whether it can be cancelled.
-    assert.ok(order.safeParse({ ...cancellable, cancel: { ...cancellable.cancel, reason: "later" } }).success);
-    const { cancel: _cancel, ...withoutCancel } = cancellable;
-    assert.equal(order.safeParse(withoutCancel).success, false);
-    assert.equal(order.safeParse({ ...cancellable, cancel: { available: true } }).success, false);
+    for (const field of ["roomType", "meals", "guests", "adults"] as const) {
+      const { [field]: _gone, ...without } = room!;
+      assert.equal(order.safeParse(withRoom(without)).success, false, field);
+    }
+    // A room type is always an object; a fact not on record is null inside it.
+    assert.equal(order.safeParse(withRoom({ ...room, roomType: null })).success, false);
+    // The item holds no room or meals of its own.
+    for (const gone of [{ room: { name: null, beds: null } }, { meals }]) {
+      const leaked = { ...orderFixture, items: [{ ...item, hotel: { ...item!.hotel, ...gone } }] };
+      assert.equal(strictOutput(order).safeParse(leaked).success, false, Object.keys(gone)[0]);
+    }
   });
+
+  it("an order's hotel item carries the stay's terms by an offer's names", () => {
+    const [item] = orderFixture.items;
+    const hotelWith = (change: object) => ({ ...orderFixture, items: [{ ...item, hotel: { ...item!.hotel, ...change } }] });
+    // A confirmation mode not on record is null.
+    parsesBoth(order, hotelWith({ confirmation: null }));
+    for (const field of ["cancellation", "confirmation", "payAtProperty"] as const) {
+      const { [field]: _gone, ...without } = item!.hotel;
+      assert.equal(order.safeParse({ ...orderFixture, items: [{ ...item, hotel: without }] }).success, false, field);
+      assert.ok(field in offerFixture, field);
+    }
+    assert.equal(order.safeParse(hotelWith({ cancellation: null })).success, false);
+  });
+
+  it("an order's cancel: an action, or what blocks both", () => {
+    parsesBoth(order, { ...orderFixture, status: "confirmed", cancel: cancelNow });
+    parsesBoth(order, { ...orderFixture, cancel: { action: "close", blockedBy: null, penalty: null, refund: null } });
+    for (const reason of CANCEL_BLOCKERS) parsesBoth(orderCancel, blockedBy(reason));
+    // A paid order past its free deadline: the whole total kept, nothing refunded.
+    parsesBoth(orderCancel, { ...cancelNow, penalty: usd("132.40"), refund: usd("0.00") });
+    // Both stay open: an action or a blocker this contract doesn't know reads.
+    assert.ok(orderCancel.safeParse(blockedBy("later")).success);
+    assert.equal(strictOutput(orderCancel).safeParse(blockedBy("later")).success, false);
+    assert.ok(orderCancel.safeParse({ action: "amend", blockedBy: null, penalty: null, refund: null }).success);
+    // An order always says it.
+    const { cancel: _cancel, ...withoutCancel } = orderFixture;
+    assert.equal(order.safeParse(withoutCancel).success, false);
+    for (const field of ["action", "blockedBy", "penalty", "refund"] as const) {
+      const { [field]: _gone, ...without } = cancelNow;
+      assert.equal(orderCancel.safeParse(without).success, false, field);
+    }
+    // The 5.x values that were no reasons, and the one that meant four situations, are gone.
+    for (const gone of ["cancellable", "unpaid", "not_confirmed", "in_progress"]) {
+      assert.ok(!(CANCEL_BLOCKERS as readonly string[]).includes(gone), gone);
+      assert.equal(strictOutput(orderCancel).safeParse(blockedBy(gone)).success, false, gone);
+    }
+    assert.equal(strictOutput(order).safeParse({ ...orderFixture, cancel: { available: true, reason: "unpaid", penalty: null, refund: null } }).success, false);
+  });
+
+  it("an order's cancel holds exactly one of action and blockedBy, and figures only with action cancel", () => {
+    const refused: unknown[] = [
+      { action: null, blockedBy: null, penalty: null, refund: null },
+      { ...cancelNow, blockedBy: "stay_started" },
+      { action: "close", blockedBy: "payment_in_progress", penalty: null, refund: null },
+      // A penalty and a refund come with cancel, both, and only then.
+      { action: "close", blockedBy: null, penalty: usd("0.00"), refund: null },
+      { ...blockedBy("non_refundable"), penalty: usd("132.40"), refund: usd("0.00") },
+      { ...cancelNow, penalty: null },
+      { ...cancelNow, refund: null },
+      { ...cancelNow, penalty: null, refund: null },
+    ];
+    for (const cancel of refused) {
+      assert.equal(orderCancel.safeParse(cancel).success, false, JSON.stringify(cancel));
+      assert.equal(strictOutput(orderCancel).safeParse(cancel).success, false, JSON.stringify(cancel));
+      assert.equal(order.safeParse({ ...orderFixture, cancel }).success, false, JSON.stringify(cancel));
+      assert.equal(
+        errorEnvelope.safeParse(envelope("order_not_cancellable", { cancel })).success,
+        false,
+        JSON.stringify(cancel),
+      );
+    }
+  });
+
+  it("a cancelled order's figures, and a failed order's reason", () => {
+    const cancelled = { at: "2026-10-26T09:41:00Z", penalty: usd("66.20"), refund: usd("66.20") };
+    parsesBoth(order, { ...orderFixture, status: "cancelled", cancel: blockedBy("already_cancelled"), cancelled });
+    // Not on record: null, never figures of zero.
+    parsesBoth(order, { ...orderFixture, status: "cancelled", cancel: blockedBy("already_cancelled"), cancelled: null });
+    for (const field of ["at", "penalty", "refund"] as const) {
+      const { [field]: _gone, ...without } = cancelled;
+      assert.equal(order.safeParse({ ...orderFixture, cancelled: without }).success, false, field);
+    }
+    for (const reason of FAILURE_REASONS) {
+      parsesBoth(order, { ...orderFixture, status: "failed", cancel: blockedBy("failed"), failure: { reason } });
+    }
+    assert.deepEqual([...FAILURE_REASONS], ["sold_out", "hotel_refused", "details_refused", "unknown"]);
+    const later = { ...orderFixture, status: "failed", cancel: blockedBy("failed"), failure: { reason: "later" } };
+    assert.ok(order.safeParse(later).success);
+    assert.equal(strictOutput(order).safeParse(later).success, false);
+    assert.equal(order.safeParse({ ...orderFixture, failure: {} }).success, false);
+    // An order always says both, null when they don't apply.
+    for (const field of ["cancelled", "failure"] as const) {
+      const { [field]: _gone, ...without } = orderFixture;
+      assert.equal(order.safeParse(without).success, false, field);
+    }
+  });
+
+  it("order_not_cancellable carries the order's cancel, the same object", () => {
+    assert.equal(ERROR_DETAILS.order_not_cancellable.shape.cancel._zod.def, orderCancel._zod.def);
+    for (const cancel of [cancelNow, { action: "close", blockedBy: null, penalty: null, refund: null }, blockedBy("stay_started")]) {
+      parsesBoth(errorEnvelope, envelope("order_not_cancellable", { cancel }));
+    }
+    assert.equal(errorEnvelope.safeParse(envelope("order_not_cancellable", { reason: "stay_started" })).success, false);
+  });
+
+  it("an error's locator is pointer, on the error and on each issue", () => {
+    const located = envelope("invalid_request", ERROR_FIXTURES.invalid_request);
+    parsesBoth(errorEnvelope, { error: { ...located.error, pointer: "/filters/amenities/0" } });
+    assert.equal(strictOutput(errorEnvelope).safeParse({ error: { ...located.error, param: "/filters" } }).success, false);
+    // The amenities refusal's own details are gone with it.
+    for (const gone of [{ filterable: ["parking"] }, { share: { code: "spa", listedShare: 0.1 } }]) {
+      const details = { ...(ERROR_FIXTURES.invalid_request as object), ...gone };
+      assert.equal(strictOutput(errorEnvelope).safeParse(envelope("invalid_request", details)).success, false);
+    }
+  });
+
   it("every change field", () => {
     for (const [field, value] of [
       ["meals", meals],
       ["cancellation", cancellation],
       ["confirmation", confirmation],
-      ["pay_at_property", payAtProperty],
+      ["payAtProperty", payAtProperty],
     ] as const) {
       parsesBoth(offerChange, { field, previous: value, current: value, worse: false });
     }
-    parsesBoth(offerChange, priceChange);
+    parsesBoth(offerChange, totalChange);
+    // The field is the offer's key that changed: the 5.x names read as unknown ones.
+    for (const field of ["price", "pay_at_property"]) {
+      const change = { field, previous: 1, current: 2, worse: false };
+      assert.ok(offerChange.safeParse(change).success, field);
+      assert.equal(strictOutput(offerChange).safeParse(change).success, false, field);
+    }
   });
   it("account", () => {
     parsesBoth(meResult, { userId: "user_1", email: null, name: "Ann" });
@@ -581,7 +677,7 @@ describe("open where the spec says, strict in server tests", () => {
 
   it("fails a malformed known branch instead of falling back", () => {
     assert.equal(
-      offerChange.safeParse({ field: "price", previous: "132.40", current: usd("1.00"), worse: true }).success,
+      offerChange.safeParse({ field: "total", previous: "132.40", current: usd("1.00"), worse: true }).success,
       false,
     );
     assert.equal(
@@ -671,29 +767,31 @@ describe("shape rules", () => {
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
   "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "areaSqm",
-  "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byCallLimit", "byFilters", "byLimit", "byNationality",
-  "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
+  "basis", "beds", "business_profile", "bookable", "breakfastServed", "byCallLimit", "byFilters", "byLimit", "byNationality",
+  "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
   "code", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
-  "coverage", "covers", "alipay", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
+  "coverage", "covers", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
-  "filterable", "firstName", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
+  "firstName", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
   "guests", "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "included", "includes", "indicativePrice",
-  "issuer", "issues", "items", "kind", "known", "label", "lastName", "lat", "line", "listed", "listedShare",
-  "limits", "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "locality", "localityTotal", "location",
-  "manageUrl", "mandatory", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
-  "message", "methods", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
-  "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
+  "issuer", "issues", "items", "kind", "known", "label", "lastName", "lat", "line", "listed",
+  "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "locality", "localityTotal", "location",
+  "manageUrl", "mandatory", "matched", "max", "maxOccupancy", "meals", "members",
+  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
+  "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome",
   "payAtProperty", "payment", "penalties", "penalty", "perRoomNight", "phone", "photo", "photos", "place", "placeId",
-  "open", "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
-  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "readAt", "reason", "reference", "refund",
+  "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous",
+  "priced", "pricing", "radiusMeters", "radiusSource", "readAt", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
-  "retryable", "revocationEndpoint", "room", "roomCount", "roomType", "roomTypes", "rooms", "schema", "scope", "scopes", "share",
+  "retryable", "revocationEndpoint", "roomCount", "roomType", "roomTypes", "rooms", "schema", "scope", "scopes",
   "sort", "spec", "specialRequests", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
-  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "version", "website", "wechatPay", "window",
+  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "version", "website", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
+  // Orders and errors in 6.0.
+  "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "max_amount", "token", "usageLimits",
 ]);
 
 function propertyNames(node: JsonSchema, into = new Set<string>()): Set<string> {
@@ -749,11 +847,31 @@ function descriptionsAt(schema: z.ZodType, path: string): string[] {
 }
 
 describe("field descriptions", () => {
-  it("the token method states its limits from LIMITS", () => {
-    const text = descriptionsAt(order, "payment.methods").find((d) => d.includes("a token can't pay")) ?? "";
-    assert.ok(text.includes(`over $${LIMITS.tokenPaymentMaxUsd}`), text);
-    assert.match(text, /not charged in USD/);
-    assert.match(text, /then give payment\.url or use another entry\.$/);
+  it("the payment token says when it is null, its cap from LIMITS", () => {
+    const text = descriptionAt(order, "payment.token") ?? "";
+    assert.match(text, /^What to request a Stripe shared payment token with, for pay_order\. null when no token can pay this order: /);
+    assert.match(text, /a CNY order, an order from the Fortrip website's own checkout, /);
+    assert.ok(text.includes(`a total over $${LIMITS.tokenPaymentMaxUsd}`), text);
+    assert.match(text, /then the user pays by url\.$/);
+  });
+
+  it("the usage limits say they go into the token request as they are, each in Stripe's unit", () => {
+    assert.match(
+      descriptionAt(order, "payment.token.usageLimits") ?? "",
+      /^Stripe's usage limits for the token: copy these values as they are into the token request\.$/,
+    );
+    assert.match(descriptionAt(order, "payment.token.usageLimits.max_amount") ?? "", /minor unit \(cents for usd\)/);
+    assert.match(descriptionAt(order, "payment.token.usageLimits.currency") ?? "", /lowercase/);
+    assert.match(descriptionAt(order, "payment.token.usageLimits.expires_at") ?? "", /Unix seconds/);
+  });
+
+  it("cancel explains each action and everything that blocks both; failure, every reason", () => {
+    const action = descriptionAt(order, "cancel.action") ?? "";
+    for (const value of ["cancel: ", "close: ", "null: "]) assert.ok(action.includes(value), value);
+    const blocked = descriptionAt(order, "cancel.blockedBy") ?? "";
+    for (const value of CANCEL_BLOCKERS) assert.ok(blocked.includes(value), value);
+    const reason = descriptionAt(order, "failure.reason") ?? "";
+    for (const value of FAILURE_REASONS) assert.ok(reason.includes(`${value}: `), value);
   });
 
   // The fields a caller acts on say what they mean, where the docs and an
@@ -791,13 +909,21 @@ describe("field descriptions", () => {
       order,
       [
         "status",
-        "price.total",
+        "total",
+        "items.hotel.rooms.roomType",
+        "items.hotel.rooms.meals",
         "items.hotel.cancellation",
+        "items.hotel.confirmation",
         "items.hotel.payAtProperty",
         "payment.expiresAt",
-        "payment.chargeCurrency",
         "payment.localCurrencyAtCheckout",
         "payment.localCharge",
+        "payment.token",
+        "cancel",
+        "cancel.penalty",
+        "cancel.refund",
+        "cancelled",
+        "failure",
       ],
     ],
     [

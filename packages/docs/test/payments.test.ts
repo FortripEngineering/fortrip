@@ -21,9 +21,9 @@ describe("order and payment guide", () => {
     }
   });
 
-  it("states the WeChat Pay code's lifetime from the contract, and leaves the token's conditions to its payment.methods entry", () => {
+  it("has no WeChat Pay code section, and leaves the token's conditions to its payment.methods entry", () => {
     const text = pageText("/payments");
-    assert.ok(text.includes(`${fact("LIMITS.wechatCodeMinutes")} minutes`));
+    assert.doesNotMatch(text, /The WeChat Pay code|qrData/);
     assert.ok(!text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
     assert.match(text, /payment\.methods has the stripe_shared_payment_token entry; that entry says why it can be absent/);
   });
@@ -37,11 +37,8 @@ describe("order and payment guide", () => {
     assert.match(pageHtml("/payments"), /href="https:\/\/fortrip\.ai\/privacy"/);
   });
 
-  it("says to pay one way only, and that WeChat can't scan a code on its own screen", () => {
-    const text = pageText("/payments");
-    assert.match(text, /Pay one way only/);
-    assert.match(text, /can't scan a code shown on the same phone/);
-    assert.match(text, /Alipay link/);
+  it("says to pay one way only", () => {
+    assert.match(pageText("/payments"), /Pay one way only/);
   });
 
   it("covers after payment: confirmation number, manageUrl, support, and the cancel pages", () => {

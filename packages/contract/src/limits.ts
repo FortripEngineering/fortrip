@@ -36,15 +36,13 @@ export const LIMITS = {
   localitiesShown: 8,
   tokenPaymentMaxUsd: 500,
   /** Minutes that must be left before the order's payment window closes
-   *  (`payment.expiresAt`) for the order to offer a token or wallet payment
-   *  (an entry of `payment.methods`). */
+   *  (`payment.expiresAt`) for the order to offer a token payment
+   *  (`payment.token`). */
   payMinMinutesLeft: 15,
-  /** `pay_order` refuses (`order_not_payable`), by token or wallet, when the
-   *  order's payment window (`payment.expiresAt`) closes within this many
-   *  minutes. */
+  /** `pay_order` refuses (`order_not_payable`) when the order's payment
+   *  window (`payment.expiresAt`) closes within this many minutes. */
   payCutoffMinutes: 2,
   tokensPerOrder: 5,
-  wechatCodeMinutes: 120,
 } as const;
 
 /** Currencies a v1 request can price and charge in (USD is the default). */

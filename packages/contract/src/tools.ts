@@ -53,9 +53,9 @@ export interface ToolSpec {
  * The consent rule (spec §6). It rides on every MCP result that holds a
  * non-null `payment.url`, as `nextStep` and as the first next-step paragraph
  * of the text: some clients never show the model the server instructions.
- * The pay and wallet paragraphs after it repeat the rule on purpose: as the
- * result's last paragraph it keeps the model from giving the link before a
- * yes (paired eval, S6).
+ * The pay paragraph after it repeats the rule on purpose: as the result's
+ * last paragraph it keeps the model from giving the link before a yes
+ * (paired eval, S6).
  */
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.";
@@ -69,9 +69,8 @@ export const CALLS = {
   mcp: {
     cancel: "call cancel_order",
     penalty: "Pass maximumPenalty as cancel.penalty, exactly as returned.",
-    close: "call cancel_order",
+    close: "call cancel_order with close: true",
     pay: "call pay_order",
-    payWallet: " with method stripe_alipay_wechat_pay and the order's price.total",
     get: "call get_order",
     poll: "poll get_order",
     payWith: "call pay_order with it and the order's price.total",
@@ -83,7 +82,6 @@ export const CALLS = {
     penalty:
       "Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00).",
     pay: "run `fortrip orders pay`",
-    payWallet: " with --method stripe_alipay_wechat_pay --total <total>",
     get: "run `fortrip orders get <orderId>`",
     poll: "poll it with `fortrip orders get <orderId>`",
     payWith:
@@ -95,8 +93,8 @@ export const CALLS = {
 /**
  * The consent rule of a cancellation (spec §5.7, C11), as `surface` names
  * the call. It rides as the last paragraph of the text of every `get_order`
- * and `list_orders` result that holds an order with `cancel.available`
- * (an unpaid one, reason `unpaid`, aside: it is closed with no penalty),
+ * and `list_orders` result that holds an order whose `cancel.action` is
+ * `cancel` (one that can be closed carries none: closing has no penalty),
  * after `ORDER_NEXT_STEP` when both apply, and never as `nextStep`, which
  * keeps its payment-only meaning.
  */
@@ -111,9 +109,8 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
 /**
  * How to pay without the link, as `surface` names the call. It rides as the
  * last paragraph of the text of every `book_hotel`, `get_order` and
- * `list_orders` result that holds an order whose `payment.methods` has the
- * `stripe_shared_payment_token` entry, after `ORDER_NEXT_STEP`; never as
- * `nextStep`.
+ * `list_orders` result that holds an order whose `payment.token` is not
+ * null, after `ORDER_NEXT_STEP`; never as `nextStep`.
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
@@ -122,21 +119,6 @@ export function payNextStep(surface: RenderSurface): string {
 
 /** `payNextStep` over MCP. */
 export const PAY_NEXT_STEP = payNextStep("mcp");
-
-/**
- * How to pay with Alipay or WeChat Pay (spec §7), as `surface` names the
- * call. It rides as the last paragraph of the text of every `book_hotel`,
- * `get_order` and `list_orders` result that holds an order whose
- * `payment.methods` has the `stripe_alipay_wechat_pay` entry, not yet open;
- * never as `nextStep`.
- */
-export function walletNextStep(surface: RenderSurface): string {
-  const c = CALLS[surface];
-  return `Before you ${c.pay}${c.payWallet}, show the user the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then ask them to confirm, and wait for a clear yes. Then show the stripe_alipay_wechat_pay entry of payment.methods: the WeChat code as an image if you can, and both links. The user pays once, by one of them. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. Then ${c.poll}.`;
-}
-
-/** `walletNextStep` over MCP. */
-export const WALLET_NEXT_STEP = walletNextStep("mcp");
 
 /**
  * How to present hotels (the `presentation` guide, in one line). It rides as
@@ -254,7 +236,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "pay_order",
     title: "Pay order",
     description:
-      `Pay a USD order without its link, by one of its payment.methods: a Stripe shared payment token, only if you can request one from the user's Link wallet (US and Canadian accounts; never ask the user for one), or Alipay/WeChat Pay (method stripe_alipay_wechat_pay). Call it only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes. Token: request it with the entry's handler config.business_profile and limits, and pass it with price.total; a token pays one order. Wallet: pass method and price.total, then show the entry it returns: the WeChat code as an image if you can, and both links; the user pays once, by either. A code lasts ${LIMITS.wechatCodeMinutes} minutes; then the WeChat link opens a new one, or call again. Pay one way only: success closes payment.url, a failure leaves it open, and each error says how to recover. Then poll get_order.`,
+      "Pay a USD order without its link, with a Stripe shared payment token, only if you can request one from the user's Link wallet (US and Canadian accounts; never ask the user for one) and the order's payment.token is not null. Call it only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes. Request the token with payment.token's handler config.business_profile and usageLimits, and pass it with the order's total; a token pays one order. Pay one way only: success closes payment.url, a failure leaves it open, and each error says how to recover. Then poll get_order.",
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

@@ -121,7 +121,8 @@ export function confirmationText(c: Confirmation): Ours {
   return ours`confirmation ${code(c.mode, ours`mode unknown`)}`;
 }
 
-function roomTypeText(r: RoomType): Ours {
+/** A room type's name and facts, for an offer's line and an order's room. */
+export function roomTypeText(r: RoomType): Ours {
   return joined([r.name ? ours`${r.name.text}` : ours`room name not listed`, ...roomFacts(r)], ", ");
 }
 
