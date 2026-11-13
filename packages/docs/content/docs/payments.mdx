@@ -19,7 +19,7 @@ Send the `offerId`, the contact (who the hotel and the confirmation email reach)
 
 - Before it creates the order, Fortrip checks the offer with the hotel. If the price or any term changed, the answer is `409 offer_changed` instead (below). No order is made at a price the user hasn't seen.
 - A call that timed out is [safe to send again](/api#retries) with the same details.
-- Another order of the same stay (another party, or a corrected guest name) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid, or can be [closed](#cancel) now once the user says they no longer want it.
+- Another order of the same stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid, or can be [closed](#cancel) now once the user says they no longer want it.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
 
 ### When the offer changed [#offer-changed]

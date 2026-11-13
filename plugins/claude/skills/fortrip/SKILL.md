@@ -122,7 +122,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 - `payment.url` works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. With `requiresSignIn: true` (an order started on the Fortrip website), the user signs in to pay.
 - The link expires at `payment.expiresAt`; the order is then `expired`. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
-- Another order of the stay (another party, or a corrected guest name) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` once the user says they no longer want it.
+- Another order of the stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` once the user says they no longer want it.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is null has a payment being processed: read it again shortly with `fortrip:get_order`, and don't give an earlier link.
 - Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`. A card number in a guest name, the contact or the special requests is rejected.
 
@@ -130,7 +130,7 @@ An offer expires at `expiresAt`, about 30 minutes after it was made; after that,
 
 An order whose `payment.methods` has the `stripe_shared_payment_token` entry (in a result's text, the line "Pay without the link") can also be paid through `fortrip:pay_order` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so only a USD order up to that has such an entry. Otherwise give `payment.url`, and never ask the user to create, type or paste a token.
 
-1. Confirm the order with the user as before giving the payment link: its total and currency, the stay and every term, and a clear yes. The token comes from the user's wallet, never from card details.
+1. Confirm the order with the user as before giving the payment link: its total and currency, the stay with each room's guests, the contact, any special requests and every term, and a clear yes. The token comes from the user's wallet, never from card details.
 2. Request the token from the user's Link wallet with that entry's `handler.config.business_profile` and its `limits`: `maxAmount` (in cents), `currency` and `expiresAt`.
 3. Call `fortrip:pay_order` with the token and the order's `price.total`, the token as `sharedPaymentToken` or in UCP's `payment.instruments`. The order is then `confirming`, its payment `authorized`: check it as after payment.
 
@@ -140,7 +140,7 @@ The charge is in USD: a card in another currency may add a foreign transaction f
 
 An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token. Call `fortrip:pay_order` with `method` `stripe_alipay_wechat_pay` and the order's `price.total`, only after the user has confirmed.
 
-1. Confirm the order with the user as before giving the payment link: its total and currency, the stay and every term, and a clear yes.
+1. Confirm the order with the user as before giving the payment link: its total and currency, the stay with each room's guests, the contact, any special requests and every term, and a clear yes.
 2. Then show the `stripe_alipay_wechat_pay` entry of `payment.methods`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in the order's currency, and the wallets show it in yuan at their rate.
 3. Check the order with `fortrip:get_order` until it isn't `awaiting_payment`.
 

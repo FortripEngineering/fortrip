@@ -22,7 +22,7 @@ An order shows who it is for, so the user can check the guests and the contact b
 
 ### Changed
 
-- The step before the payment link, and before paying with a token or with Alipay or WeChat Pay, asks the agent to show each room's guests by name, the contact (name, email, phone) and any special requests too, as the order holds them. The Claude plugin's skill and the CLI skill say the same.
+- The step before the payment link, and before paying with a token or with Alipay or WeChat Pay (`pay_order`), asks the agent to show each room's guests by name, the contact (name, email, phone) and any special requests too, as the order holds them. A wrong contact, like a wrong guest name, is corrected with a new order of a new offer. The Claude plugin's skill and the CLI skill say the same.
 
 ### Migration
 
