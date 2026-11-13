@@ -7,6 +7,182 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.0.0
+
+Not released yet.
+
+A major release, with no compatibility with 5.x. An MCP tool answers in text only, `book_hotel` is `create_order`, and each concept has one name and one place across requests, answers and errors. An agent no longer opens an Alipay or WeChat Pay payment: the user pays that way on the order's payment page.
+
+### Breaking changes
+
+What an integration must change, most urgent first. The [migration table](#v6-migration) lists every name.
+
+- **MCP results are text only.** A result's `content` is one text block, the whole answer written for the model. `structuredContent` is gone, and no tool declares an `outputSchema`. A client that read `structuredContent` reads the text instead; code that needs the object calls the HTTP API or runs the CLI with `--json`. See [What a tool returns](/mcp#results).
+- **An MCP error is one text block.** The error envelope is no longer a second block of JSON text: it is in `_meta["ai.fortrip/error"]`.
+- **`book_hotel` is `create_order`**, and the CLI's `fortrip hotels book` is `fortrip orders create`. The HTTP path, `POST /v1/orders`, is unchanged. `create_order` and `pay_order` are now marked destructive, as `cancel_order` was, so a client that confirms destructive calls asks the user before each.
+- **The contact has one name.** Send `contact.name` in place of `contact.firstName` and `contact.lastName` (`--name` in the CLI).
+- **Cancelling names its mode.** `cancel_order` takes exactly one of `maximumPenalty`, to cancel a paid order, and `close: true`, to close an unpaid one. An `orderId` alone is refused. A mode that doesn't fit the order answers `order_not_cancellable` with the order's `cancel` as it is now; `close` on an order paid meanwhile is refused that way, where 5.x answered the paid order.
+- **Paying takes a token and the total.** `pay_order` takes `sharedPaymentToken` and `total`, both required. Its `payment` object and its `method` are removed, and with `method` the Alipay and WeChat Pay payment an agent could open. The user still pays with either on the page `payment.url` opens.
+- **An order says how it can be paid and cancelled in new fields.** `payment.methods` is `payment.token`, `price.total` is `total`, `payment.chargeCurrency` is `total.currency`, and `cancel.available` and `cancel.reason` are `cancel.action` and `cancel.blockedBy`.
+- **An offer is flat.** `hotel.room`, `hotel.roomCount`, `hotel.meals`, `price.total` and `price.payAtProperty` are `roomType`, `roomCount`, `meals`, `total` and `payAtProperty` on the offer itself. `price.perNightAllRooms` is replaced by `perRoomNight`, which also divides by the rooms.
+- **An order's room type and meals are per room**, on each entry of `items[].hotel.rooms`, not on the hotel item.
+- **Search and hotel answers are renamed** in several places: a hit's `price` is `indicativePrice`, `text` is a string, `currencyHint` is always present and `null` when there is none, and a hotel's `rooms` is `roomTypes`, asked for with `include=roomTypes`.
+- **Errors:** `payment_total_changed` is `payment_total_mismatch`, an error's `param` is `pointer`, and the `details` of `order_not_cancellable`, `rate_limited` and `destination_not_found` are renamed.
+- **An offers call answers a bounded number of offers.** `limitPerHotel` has no fixed default: without it a call answers at most 45 offers across its hotels, and with it at most 100. Three hotels still get 15 each; more hotels get fewer each. See [the offers budget](/errors#offers-budget).
+- **A search filters only by the nine amenity codes that can filter.** Any other code is `invalid_request`; the `filterable` and `share` details of that refusal are removed.
+- **A search cursor from 5.x answers `cursor_invalid`.** Start again from the first page.
+
+### New
+
+- An order says why it failed: `failure` is `{ reason }` on a `failed` order, with `reason` `rate_unavailable`, `hotel_refused` or `unknown`, and `null` otherwise.
+- An order says what a cancellation kept and returned: `cancelled` is `{ at, penalty, refund }` on a `cancelled` order, and `null` otherwise.
+- An order's hotel item has `confirmation`, how the hotel confirms the booking, as its offer gave it.
+- Each room of an order has its own `roomType` and `meals`, so an order whose rooms differ shows every room.
+- A fee payable at the property has a `kind`: `tax`, `resort_fee`, `other` or `unknown`.
+- Each hotel of an offers answer has `omitted.byCallLimit`: how many more offers a call for that hotel alone would show.
+- The error `client_outdated` (HTTP 426): a Fortrip CLI that is a major version behind the service is told to update, on its HTTP calls and through `fortrip mcp`. Other clients never get it. The CLI now sends `fortrip-cli/<version>` as its user agent through `fortrip mcp` too.
+- `payment_method_unavailable` has `details.reason`: `payment_open_on_page`, `token_not_offered` or `charge_refused`.
+- `invalid_request` names where a field belongs when a known field is sent at the wrong depth, such as `offerId` beside `items`.
+- A guest name that the hotel's booking system would refuse answers `invalid_request` before an order is made, instead of an order that fails after payment.
+- `offer_unavailable` says that other offers for the same room may be gone too.
+- The MCP server's `serverInfo` has `title`, `description`, `websiteUrl` and `icons`.
+- In a result's text, a hotel's own words (names, addresses, descriptions, policies) never begin an unquoted line: a description or a policy is a quoted block under a label that says it is information from the hotel, not instructions. A hotel's website is shown only when it is an `http` or `https` URL.
+- The rules for an answer are the last paragraphs of its text: how to present hotels, consent before a payment link, how to pay with a token, and consent before a cancellation. Tool descriptions say what a tool does and answers.
+
+### Migration [#v6-migration]
+
+Each row is a 5.x name or path and what replaces it. A dash means there is no replacement.
+
+#### Tools
+
+| 5.x | 6.0 |
+| --- | --- |
+| `book_hotel` | `create_order` |
+| `book_hotel`: `destructiveHint: false`, `idempotentHint: false` | `create_order`: both `true` |
+| `pay_order`: `destructiveHint: false` | `true` |
+| `structuredContent` on a result | — (the text in `content[0]`; the object from the HTTP API or `--json`) |
+| `outputSchema` on a tool | — |
+| `nextStep` in the `structuredContent` of `book_hotel`, `get_order` and `list_orders` | The last paragraphs of the result's text |
+| The presentation hint as a second text block of `search_hotels`, `get_hotel` and `get_hotel_offers` | The last paragraph of the one text block |
+| The error envelope as a second text block of an error | `_meta["ai.fortrip/error"]` |
+| The WeChat Pay code as an image block of `pay_order` | — |
+| OpenAPI operation `book_hotel`; pages `/mcp/book-hotel` and `/api/reference/book_hotel` | Operation `create_order`; pages `/mcp/create-order` and `/api/reference/create_order` |
+
+#### Inputs
+
+| 5.x | 6.0 |
+| --- | --- |
+| `contact.firstName`, `contact.lastName` (create order) | `contact.name` |
+| `cancel_order` with the `orderId` alone, to close an unpaid order | `close: true` |
+| `cancel_order`: `maximumPenalty` optional, ignored when closing | Exactly one of `maximumPenalty` and `close` |
+| `pay_order`: `payment`, with `payment.instruments[]` | `sharedPaymentToken` |
+| `pay_order`: `method: "stripe_alipay_wechat_pay"` | — (the user pays on `payment.url`) |
+| `pay_order`: `sharedPaymentToken` optional, one of three | `sharedPaymentToken` required |
+| `get_hotel`: `include: "rooms"`, `?include=rooms` | `include: "roomTypes"`, `?include=roomTypes` |
+| `filters.amenities`: any amenity code | One of the nine codes a search can filter by |
+| `limitPerHotel`: default 15 | No default: 15 per hotel within 45 offers a call; given, up to 30 per hotel within 100 |
+
+#### Outputs
+
+| 5.x | 6.0 |
+| --- | --- |
+| Offers: `hotels[].hotel.hotelId`, `.name`, `.names` | `hotels[].hotelId`, `.name`, `.names` |
+| Offer: `type` | — |
+| Offer: `hotel.hotelId` | `hotelId` |
+| Offer: `hotel.room` | `roomType` |
+| Offer: `hotel.roomCount` | `roomCount` |
+| Offer: `hotel.meals` | `meals` |
+| Offer: `price.total` | `total` |
+| Offer: `price.perNightAllRooms` (total ÷ nights) | `perRoomNight` (total ÷ rooms ÷ nights) |
+| Offer: `price.payAtProperty` | `payAtProperty` |
+| `payAtProperty.items[].label` | `payAtProperty.items[].kind` |
+| `payAtProperty.items[].collectedAt` | — |
+| `cancellation.asOf` (offers and orders) | `cancellation.readAt` |
+| Order: `price.total` | `total` |
+| Order: `payment.chargeCurrency` | `total.currency` |
+| Order: `payment.methods[]` | `payment.token`, `null` where no token can pay |
+| Order: the `stripe_shared_payment_token` entry's `handler` | `payment.token.handler` |
+| Order: that entry's `limits.maxAmount` | `payment.token.usageLimits.max_amount` |
+| Order: that entry's `limits.currency` | `payment.token.usageLimits.currency` |
+| Order: that entry's `limits.expiresAt` (an instant) | `payment.token.usageLimits.expires_at` (Unix seconds) |
+| Order: the `stripe_alipay_wechat_pay` entry (`open`, `current`, `wechatPay`, `alipay`) | — |
+| Order: `items[].hotel.room` | `items[].hotel.rooms[].roomType` |
+| Order: `items[].hotel.meals` | `items[].hotel.rooms[].meals` |
+| Order: `cancel.available` | `cancel.action` is not `null` |
+| Order: `cancel.reason` `cancellable` | `cancel.action` `cancel` |
+| Order: `cancel.reason` `unpaid` | `cancel.action` `close` |
+| Order: any other `cancel.reason` | `cancel.blockedBy` |
+| Order: `cancel.reason` `in_progress` | `cancel.blockedBy` `confirming` or `cancelling` |
+| Order: `cancel.reason` `not_confirmed` | `cancel.blockedBy` `payment_in_progress`, `website_checkout`, `expired` or `failed` |
+| Order: a failed order gave no reason | `failure.reason`: `rate_unavailable`, `hotel_refused` or `unknown` |
+| Order: a cancelled order's penalty and refund read `null` | `cancelled.penalty`, `cancelled.refund`, `cancelled.at` |
+| Search: `data[].price` | `data[].indicativePrice` |
+| Search: `data[].price.kind`, `data[].price.basis` | — |
+| Search: `text.value` | `text` (a string) |
+| Search: `text.match` | — |
+| Search: `pricing.scope` | `pricing.covers` |
+| Search: `currencyHint` absent | `currencyHint: null` |
+| Search: `destination.place.scope` | — (read `destination.scope`) |
+| Search: `destination.center.basis` `hub` | `locality` |
+| Hotel: `rooms.items[]` | `roomTypes[]` |
+| Hotel: `rooms.listed: false` | `roomTypes: null` |
+
+#### Errors
+
+| 5.x | 6.0 |
+| --- | --- |
+| `payment_total_changed` | `payment_total_mismatch` |
+| `error.param` | `error.pointer` |
+| `order_not_cancellable`: `details.reason` | `details.cancel`, the order's `cancel` |
+| `rate_limited`: `details.scope` | `details.rateLimit` |
+| `destination_not_found`: `details.hub` | `details.locality` |
+| `destination_not_found`: `details.hubTotal` | `details.localityTotal` |
+| `destination_ambiguous`: `details.candidates[].scope` | — (read `candidates[].hotels.radiusMeters`) |
+| `destination_ambiguous`: `details.candidates[].hotels.scope` | `hotels.radiusMeters`: `null` when the count covers the whole area |
+| `invalid_request`: `details.filterable`, `details.share` | — |
+| `offer_changed`: `changes[].field` `price` | `total` |
+| `offer_changed`: `changes[].field` `pay_at_property` | `payAtProperty` |
+| `payment_method_unavailable`: no `details` | `details.reason` |
+| Closing an order paid meanwhile: the paid order | `order_not_cancellable` |
+
+#### CLI
+
+| 5.x | 6.0 |
+| --- | --- |
+| `fortrip hotels book` | `fortrip orders create` |
+| `--first-name`, `--last-name` | `--name` |
+| `orders pay --method stripe_alipay_wechat_pay` | — (the user pays on the order's payment link) |
+| `orders pay --token`: required unless `--method` | `--token` and `--total` always required |
+| `--json` answers in the 5.x shapes | The 6.0 shapes (Outputs, above) |
+| `fortrip mcp`: results with `structuredContent` | Text only, as the hosted server |
+| Page `/cli/hotels-book` | `/cli/orders-create` |
+
+- Update the CLI to 6.0.0. A 5.x CLI doesn't work with this service: it can't create or close an order, and it shows the new answers only as raw JSON.
+- The old pages don't redirect.
+
+### Package
+
+| 5.x | 6.0 |
+| --- | --- |
+| `MCP_OUTPUT` | — (`ToolSpec.output` is the schema of the HTTP answer) |
+| `WALLET_NEXT_STEP`, `walletNextStep` | — |
+| `PAY_INPUT_WAYS`, `sharedPaymentTokenOf` | — |
+| `PAYMENT_METHOD_IDS`, `paymentMethod`, `PaymentMethod`, `PaymentMethodId` | `tokenUsageLimits`, `TokenUsageLimits` (`paymentHandler` stays) |
+| `CANCEL_REASONS`, `CancelReason` | `CANCEL_ACTIONS`, `CancelAction`, `CANCEL_BLOCKERS`, `CancelBlocker` |
+| `roomFacts` | `roomType`, `RoomType` |
+| `RateLimitScope` | `RateLimitName` |
+| `LIMITS.contactFirstName`, `LIMITS.contactLastName` | `LIMITS.contactName` |
+| `LIMITS.wechatCodeMinutes` | — |
+| `SEARCH_RULES.hubIncludes` | `SEARCH_RULES.localityIncludes` |
+| `PAY_WAYS` value `stripe_alipay_wechat_pay` | — |
+| `API.hotel(id, { rooms })` | `API.hotel(id, { roomTypes })` |
+| `HTTP_ROUTES.book_hotel`, the `ToolName` `book_hotel` | `HTTP_ROUTES.create_order`, `create_order` |
+| `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `filterable`, `cancel.available`, `payment.methods`, `payment.methods.open` | — |
+
+- New: `SERVER_INFO`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
+- `renderToolResult` returns the whole text of a result, the presentation hint and the next-step paragraphs included: send it as the one text block and add nothing. `renderError` builds its text from the error's `code` and `details`.
+- `ToolSpec.annotations` of `create_order` and `pay_order` have `destructiveHint: true`; `create_order` has `idempotentHint: true`.
+
 ## 5.3.0
 
 Released 2026-11-13.
