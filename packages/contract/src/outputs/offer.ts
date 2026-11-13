@@ -37,8 +37,6 @@ export const meals = openObject({
 export const FEE_KINDS = [
   "tax",
   "resort_fee",
-  "cleaning_fee",
-  "deposit",
   "other",
   "unknown",
 ] as const;
@@ -50,7 +48,7 @@ export const payAtProperty = openObject({
   items: z.array(
     openObject({
       kind: openEnum(FEE_KINDS).describe(
-        "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated).",
+        "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated).",
       ),
       amount: money.nullable(),
       mandatory: z.boolean(),

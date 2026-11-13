@@ -239,9 +239,9 @@ describe("search results", () => {
     }
   });
 
-  it("heads a locality search as 'Phuket (locality) · 2,752 hotels'", () => {
+  it("heads a locality search as 'Place: Phuket (locality) · 2,752 hotels'", () => {
     const text = render(load("search-locality-phuket"));
-    assert.ok(text.split("\n")[0]!.startsWith("Phuket (locality) · 2,752 hotels"), text);
+    assert.ok(text.split("\n")[0]!.startsWith("Place: Phuket (locality) · 2,752 hotels"), text);
     assert.match(text, /2026-12-20 → 2026-12-27/);
     assert.match(text, /2 rooms, each 2 adults and 1 child \(age 7\)/);
   });
@@ -639,9 +639,9 @@ describe("hotel detail", () => {
   it("lists the room types only when they were asked for", () => {
     const fixture = copy(load("hotel-long-description")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
-    assert.ok(render(fixture).includes("\nRoom types:\n- Deluxe King Room · beds: 1 king bed · 35–40 m² · max 2 guests · window\n"));
+    assert.ok(render(fixture).includes("\nRoom types:\n- Room type: Deluxe King Room · beds: 1 king bed · 35–40 m² · max 2 guests · window\n"));
     data.roomTypes[1].name = null;
-    assert.ok(render(fixture).includes("\n- room name not listed · beds not listed · size not stated · max occupancy not listed · window not listed\n"));
+    assert.ok(render(fixture).includes("\n- Room type: name not listed · beds not listed · size not stated · max occupancy not listed · window not listed\n"));
     delete data.roomTypes;
     assert.doesNotMatch(render(fixture), /Room types/);
   });
@@ -700,7 +700,7 @@ describe("offers", () => {
 describe("unknowns carry their own negation inline", () => {
   const MEALS_UNKNOWN =
     "meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking";
-  const offerLines = (text: string) => text.split("\n").filter((l) => /^\d+\. off_/.test(l));
+  const offerLines = (text: string) => text.split("\n").filter((l) => /^\d+\. Offer off_/.test(l));
 
   it("meals.known false on an offer line and on an order item", () => {
     const offers = render(load("offers-two-hotels-one-unavailable"));
@@ -730,13 +730,13 @@ describe("unknowns carry their own negation inline", () => {
     const fee = (kind: string) => ({ kind, amount: { amount: "50.00", currency: "CNY" }, mandatory: true, basis: "per_stay" });
     offer.payAtProperty = {
       disclosure: "complete",
-      items: ["tax", "resort_fee", "cleaning_fee", "deposit", "other", "unknown", "parking_fee"].map(fee),
+      items: ["tax", "resort_fee", "other", "unknown", "parking_fee"].map(fee),
     };
     const line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
     assert.ok(
       line.includes(
         "fees not in the total: " +
-          ["tax", "resort fee", "cleaning fee", "deposit", "other fee", "fee of a kind not stated", "parking_fee"]
+          ["tax", "resort fee", "other fee", "fee of a kind not stated", "parking_fee"]
             .map((kind) => `${kind} CNY 50.00, per stay, mandatory`)
             .join("; ") +
           " · offer expires",
@@ -765,7 +765,7 @@ describe("unknowns carry their own negation inline", () => {
       const at = lines.indexOf("A call for this hotel alone would show 6 more offers: this call's offers are shared among its hotels.");
       assert.ok(at > 0, surface);
       // Then the offers a higher limit or a filter may show.
-      assert.match(lines[at + 1]!, /^2 more offers not shown \(/, surface);
+      assert.match(lines[at + 1]!, /^Limit: 2 more offers not shown \(/, surface);
     }
     omitted.byCallLimit = 1;
     omitted.byLimit = 0;

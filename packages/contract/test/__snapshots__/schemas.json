@@ -1080,8 +1080,6 @@
                                             "enum": [
                                               "tax",
                                               "resort_fee",
-                                              "cleaning_fee",
-                                              "deposit",
                                               "other",
                                               "unknown"
                                             ]
@@ -1090,7 +1088,7 @@
                                             "type": "string"
                                           }
                                         ],
-                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                                       },
                                       "amount": {
                                         "anyOf": [
@@ -1184,8 +1182,6 @@
                                             "enum": [
                                               "tax",
                                               "resort_fee",
-                                              "cleaning_fee",
-                                              "deposit",
                                               "other",
                                               "unknown"
                                             ]
@@ -1194,7 +1190,7 @@
                                             "type": "string"
                                           }
                                         ],
-                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                                       },
                                       "amount": {
                                         "anyOf": [
@@ -1746,8 +1742,6 @@
                                       "enum": [
                                         "tax",
                                         "resort_fee",
-                                        "cleaning_fee",
-                                        "deposit",
                                         "other",
                                         "unknown"
                                       ]
@@ -1756,7 +1750,7 @@
                                       "type": "string"
                                     }
                                   ],
-                                  "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                  "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                                 },
                                 "amount": {
                                   "anyOf": [
@@ -5050,8 +5044,6 @@
                                   "enum": [
                                     "tax",
                                     "resort_fee",
-                                    "cleaning_fee",
-                                    "deposit",
                                     "other",
                                     "unknown"
                                   ]
@@ -5060,7 +5052,7 @@
                                   "type": "string"
                                 }
                               ],
-                              "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                              "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                             },
                             "amount": {
                               "anyOf": [
@@ -5912,8 +5904,6 @@
                                     "enum": [
                                       "tax",
                                       "resort_fee",
-                                      "cleaning_fee",
-                                      "deposit",
                                       "other",
                                       "unknown"
                                     ]
@@ -5922,7 +5912,7 @@
                                     "type": "string"
                                   }
                                 ],
-                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -7093,8 +7083,6 @@
                                     "enum": [
                                       "tax",
                                       "resort_fee",
-                                      "cleaning_fee",
-                                      "deposit",
                                       "other",
                                       "unknown"
                                     ]
@@ -7103,7 +7091,7 @@
                                     "type": "string"
                                   }
                                 ],
-                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -8270,8 +8258,6 @@
                                     "enum": [
                                       "tax",
                                       "resort_fee",
-                                      "cleaning_fee",
-                                      "deposit",
                                       "other",
                                       "unknown"
                                     ]
@@ -8280,7 +8266,7 @@
                                     "type": "string"
                                   }
                                 ],
-                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -9456,8 +9442,6 @@
                                           "enum": [
                                             "tax",
                                             "resort_fee",
-                                            "cleaning_fee",
-                                            "deposit",
                                             "other",
                                             "unknown"
                                           ]
@@ -9466,7 +9450,7 @@
                                           "type": "string"
                                         }
                                       ],
-                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                                     },
                                     "amount": {
                                       "anyOf": [
@@ -10656,8 +10640,6 @@
                                     "enum": [
                                       "tax",
                                       "resort_fee",
-                                      "cleaning_fee",
-                                      "deposit",
                                       "other",
                                       "unknown"
                                     ]
@@ -10666,7 +10648,7 @@
                                     "type": "string"
                                   }
                                 ],
-                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -11868,8 +11850,6 @@
                                     "enum": [
                                       "tax",
                                       "resort_fee",
-                                      "cleaning_fee",
-                                      "deposit",
                                       "other",
                                       "unknown"
                                     ]
@@ -11878,7 +11858,7 @@
                                     "type": "string"
                                   }
                                 ],
-                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -13050,8 +13030,6 @@
                                           "enum": [
                                             "tax",
                                             "resort_fee",
-                                            "cleaning_fee",
-                                            "deposit",
                                             "other",
                                             "unknown"
                                           ]
@@ -13060,7 +13038,7 @@
                                           "type": "string"
                                         }
                                       ],
-                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated)."
                                     },
                                     "amount": {
                                       "anyOf": [

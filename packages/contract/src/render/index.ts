@@ -32,8 +32,9 @@ export type RenderedTool = ToolName;
 
 /**
  * Renders `data`, the answer of `tool`, after parsing it with the tool's
- * open output schema: unknown fields are ignored and unknown values shown
- * as they came. A result that does not parse is shown as JSON, never thrown.
+ * open output schema: unknown fields are ignored, and an unknown value is
+ * shown as it came only when it reads as a code. A result that does not
+ * parse is shown as JSON, never thrown.
  * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
  * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
  * follows it when a result holds an order whose `payment.methods` has the

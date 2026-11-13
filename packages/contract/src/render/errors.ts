@@ -30,6 +30,7 @@ const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
   other_seller: "was granted to another seller",
 };
 import { localitiesLines } from "./search.ts";
+import { oneLine } from "./third-party.ts";
 
 /*
  * The error envelope (spec §11) as text. An error that leads to a next call
@@ -76,7 +77,7 @@ function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): strin
   const top = d.localities.items[0];
   if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
+      `Or: ${oneLine(top.place.name)}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${oneLine(top.place.name)}).`,
     );
   }
   return lines;
@@ -88,11 +89,11 @@ function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface):
       ? `${d.candidates.length} of ${d.candidatesTotal} shown`
       : `${d.candidatesTotal}`;
   const lines = [
-    `Places named "${d.name}" in ${d.countryCode} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
+    `Places named "${oneLine(d.name)}" in ${oneLine(d.countryCode)} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
   ];
   for (const c of d.candidates) {
     const other = [c.names.en, c.names.zh].find((n) => n && n !== c.name);
-    const where = [c.region && `${c.region.name} ${c.region.placeId}`, c.countryCode]
+    const where = [c.region && `${oneLine(c.region.name)} ${c.region.placeId}`, oneLine(c.countryCode)]
       .filter(Boolean)
       .join(", ");
     const hotels =
@@ -101,15 +102,15 @@ function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface):
         : `${plural(c.hotels.count, "hotel")} within ${km(c.hotels.radiusMeters)}`;
     lines.push(
       [
-        `- ${c.name}${other ? ` (${other})` : ""} ${c.placeId}`,
-        `${c.kind} in ${where}`,
+        `- ${oneLine(c.name)}${other ? ` (${oneLine(other)})` : ""} ${c.placeId}`,
+        `${oneLine(c.kind)} in ${where}`,
         c.population === null ? "population not recorded" : `population ${num(c.population)}`,
         hotels,
       ].join(" · "),
     );
   }
   if (d.nameAsText !== null) {
-    lines.push(`${plural(d.nameAsText, "hotel")} have "${d.name}" in their name or address: it can also be searched as text.`);
+    lines.push(`${plural(d.nameAsText, "hotel")} have "${oneLine(d.name)}" in their name or address: it can also be searched as text.`);
   }
   return lines;
 }
@@ -121,8 +122,8 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
       const text =
         m.nameAsText === null
           ? ""
-          : ` ${plural(m.nameAsText, "hotel")} have "${m.name}" in their name or address: it can be searched as text.`;
-      return [`No place named "${m.name}" in ${m.countryCode}.${text}`];
+          : ` ${plural(m.nameAsText, "hotel")} have "${oneLine(m.name)}" in their name or address: it can be searched as text.`;
+      return [`No place named "${oneLine(m.name)}" in ${oneLine(m.countryCode)}.${text}`];
     }
     case "unknown_id":
       return [`Unknown placeId ${(d as { placeId: string }).placeId}.`];
@@ -135,7 +136,7 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
       }
       const total = n.localityTotal === null ? "" : ` (${plural(n.localityTotal, "matching hotel")})`;
       return [
-        `${n.placeId} is not a locality. Its hotels belong to the locality ${n.locality.name} ${n.locality.placeId}${total}.`,
+        `${n.placeId} is not a locality. Its hotels belong to the locality ${oneLine(n.locality.name)} ${n.locality.placeId}${total}.`,
         `Search ${surface === "cli" ? `--locality ${n.locality.placeId}` : `{ kind: "locality", placeId: "${n.locality.placeId}" }`} for those, or ${town} for an 8 km circle around the town itself.`,
       ];
     }
