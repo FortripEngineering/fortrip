@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { renderToolResult } from "@fortrip/agent-contract";
+import { renderError, renderToolResult } from "@fortrip/agent-contract";
 
 import type { Session } from "../../src/credentials.ts";
 
@@ -14,6 +14,7 @@ export interface McpRequest {
   token: string;
   sessionId?: string;
   protocolVersion?: string;
+  userAgent?: string;
   /** The JSON-RPC message the POST carried. */
   message: Record<string, unknown>;
 }
@@ -37,15 +38,36 @@ const fixture = (name: string) =>
   ).data;
 
 /** What the fake answers a `tools/call` with, as the hosted server shapes a
- *  success: the compact text, the full object and the request id. */
-export const MCP_CALL_RESULT = (() => {
-  const data = fixture("search-shanghai-area");
+ *  success: one text block, the contract's whole text of the result, and the
+ *  request id. No `structuredContent`. */
+export const MCP_CALL_RESULT = {
+  content: [{ type: "text", text: renderToolResult("search_hotels", fixture("search-shanghai-area")) }],
+  _meta: { "ai.fortrip/requestId": "req_fakecall" },
+};
+
+/** The hosted server's answer to a tool call that failed with `envelope`:
+ *  one text block, the contract's rendering, and the envelope in `_meta`. */
+export function mcpToolError(envelope: unknown) {
   return {
-    content: [{ type: "text", text: renderToolResult("search_hotels", data) }],
-    structuredContent: data,
-    _meta: { "ai.fortrip/requestId": "req_fakecall" },
+    isError: true,
+    content: [{ type: "text", text: renderError(envelope) }],
+    _meta: { "ai.fortrip/error": envelope },
   };
-})();
+}
+
+/** What Fortrip answers a CLI whose major is behind its own, on every path. */
+export const CLIENT_OUTDATED = {
+  status: 426,
+  body: {
+    error: {
+      code: "client_outdated",
+      message:
+        "This fortrip CLI (5.3.0) is too old for the service. Update it with `npm install -g fortrip@latest`, then run the command again.",
+      retryable: false,
+      requestId: "req_fakeoutdated",
+    },
+  },
+};
 
 /**
  * A fake of what the CLI signs in with and calls, for tests: the Fortrip
@@ -53,6 +75,9 @@ export const MCP_CALL_RESULT = (() => {
  * resource itself or the v1 error envelope, and the OAuth server the config
  * names (RFC 8628 device authorization, the token endpoint for device codes
  * and refresh tokens, RFC 7009 revocation).
+ *
+ * Every HTTP request the fake receives, on any path, is listed in `requests`
+ * with its user agent.
  *
  * `POST /api/public/mcp` (`mcpUrl`) is the hosted MCP server (Streamable
  * HTTP): it takes the OAuth access tokens the fake issued (any other token
@@ -135,6 +160,8 @@ export interface FakeApi {
   revoked: string[];
   /** The access token of every `/me` request. */
   meTokens: string[];
+  /** Every HTTP request the fake received, in order. */
+  requests: { method: string; path: string; userAgent?: string }[];
   /** Every POST to the MCP server, in order. */
   mcpRequests: McpRequest[];
   /** What a `tools/call` of the tool answers with, instead of
@@ -194,6 +221,7 @@ export async function startFakeApi(): Promise<FakeApi> {
     refreshedWith: [],
     revoked: [],
     meTokens: [],
+    requests: [],
     mcpRequests: [],
     toolResults: {},
     issued: [],
@@ -231,6 +259,7 @@ export async function startFakeApi(): Promise<FakeApi> {
       api.refreshedWith = [];
       api.revoked = [];
       api.meTokens = [];
+      api.requests = [];
       api.mcpRequests = [];
       api.toolResults = {};
       api.issued = [];
@@ -379,6 +408,7 @@ export async function startFakeApi(): Promise<FakeApi> {
       token,
       sessionId: header("mcp-session-id"),
       protocolVersion: header("mcp-protocol-version"),
+      userAgent: header("user-agent"),
       message,
     });
     const json = (status: number, body: unknown, headers: Record<string, string> = {}) => {
@@ -459,6 +489,11 @@ export async function startFakeApi(): Promise<FakeApi> {
       raw += chunk;
     });
     req.on("end", () => {
+      api.requests.push({
+        method: req.method ?? "",
+        path: req.url ?? "",
+        userAgent: req.headers["user-agent"],
+      });
       if (req.url === MCP_FAKE_PATH) {
         // It offers no event stream apart from a POST's.
         if (req.method !== "POST") {
