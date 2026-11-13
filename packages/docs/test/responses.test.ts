@@ -54,7 +54,7 @@ describe("example responses", () => {
     const first = offers.hotels[0]?.offers[0];
     assert.equal(body("order").items[0].offerId, EXAMPLE_IDS.offerId);
     assert.equal(first?.offerId, EXAMPLE_IDS.offerId);
-    assert.deepEqual(created.price.total, first?.price.total);
+    assert.deepEqual(created.price.total, first?.total);
     assert.equal(created.items[0]?.hotel.hotelId, EXAMPLE_IDS.hotelId);
     // Every answer about the order is about the same order, at the total the pay requests send.
     for (const answer of [RESPONSES.get_order, RESPONSES.cancel_order, ...Object.values(PAY_RESPONSES)]) {
@@ -66,10 +66,10 @@ describe("example responses", () => {
     assert.ok(created.payment.url?.includes(EXAMPLE_IDS.orderId));
     // The changed offer is a new offer of the same hotel.
     const changed = ERRORS.offer_changed.envelope.error.details;
-    assert.equal(changed.offer.hotel.hotelId, EXAMPLE_IDS.hotelId);
+    assert.equal(changed.offer.hotelId, EXAMPLE_IDS.hotelId);
     assert.notEqual(changed.offer.offerId, EXAMPLE_IDS.offerId);
-    assert.deepEqual(changed.changes[0]?.previous, first?.price.total);
-    assert.deepEqual(changed.changes[0]?.current, changed.offer.price.total);
+    assert.deepEqual(changed.changes[0]?.previous, first?.total);
+    assert.deepEqual(changed.changes[0]?.current, changed.offer.total);
   });
 
   it("state the contract's numbers where they are its", () => {

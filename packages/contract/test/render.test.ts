@@ -206,6 +206,8 @@ describe("one currency", () => {
 describe("search results", () => {
   it("ends with the currency hint only when the search carries one", () => {
     const fixture = copy(load("search-locality-phuket")) as ToolFixture;
+    // No hint (null) says nothing: no line at all.
+    assert.equal(fixture.data.currencyHint, null);
     assert.doesNotMatch(render(fixture), /^Currency:/m);
     const data = fixture.data as Record<string, unknown>;
     data.currencyHint = { currency: "CNY", reason: "request_location" };
@@ -275,7 +277,7 @@ describe("search results", () => {
     assert.match(text, /351 hotels .*no locality/);
   });
 
-  it("labels a hub named like the searched area as not the whole area", () => {
+  it("labels a locality named like the searched area as not the whole area", () => {
     const text = render(load("search-shanghai-area"));
     const line = text.split("\n").find((l) => l.includes("plc_9100002 6,953"));
     assert.ok(line, text);
@@ -329,11 +331,11 @@ describe("search results", () => {
     const data = fixture.data as Record<string, any>;
     data.somethingNew = { deep: [1, 2] };
     data.sort = "vibes_desc";
-    data.pricing.scope = "galaxy";
+    data.pricing.covers = "galaxy";
     data.destination.scope = "orbit";
     data.destination.place.kind = "archipelago";
     data.coverage.localities.items[0].somethingNew = true;
-    data.data[0].price.basis = "lowest_bed";
+    data.data[0].indicativePrice.basis = "lowest_bed";
     const text = render(fixture);
     assert.match(text, /vibes_desc/);
     assert.match(text, /orbit/);
@@ -374,7 +376,7 @@ describe("search results", () => {
     const data = fixture.data as Record<string, any>;
     data.pricing.status = "unavailable";
     data.coverage.withPrice = null;
-    for (const h of data.data) h.price = null;
+    for (const h of data.data) h.indicativePrice = null;
     const text = render(fixture);
     assert.match(text, /indicative prices unavailable/);
     const lines = text.split("\n").filter((l) => /^\d+\. /.test(l));
@@ -457,7 +459,7 @@ describe("errors that lead to a next call", () => {
     }
   });
 
-  it("not_a_locality names the hub and says to use place for the town", () => {
+  it("not_a_locality names the locality and says to use place for the town", () => {
     const text = render(load("error-not-a-locality-patong"));
     for (const part of [
       "Phuket plc_9200002",
@@ -469,11 +471,11 @@ describe("errors that lead to a next call", () => {
     }
   });
 
-  it("not_a_locality without a hub says so", () => {
+  it("not_a_locality without a locality says so", () => {
     const fixture = copy(load("error-not-a-locality-patong")) as ErrorFixture;
     const details = fixture.envelope.error.details as Record<string, unknown>;
-    details.hub = null;
-    details.hubTotal = null;
+    details.locality = null;
+    details.localityTotal = null;
     const text = render(fixture);
     assert.match(text, /belongs to no locality/);
     assertClean(text);
@@ -593,7 +595,7 @@ describe("other errors", () => {
   it("offer_changed lists every change and the new offer", () => {
     const offers = load("offers-two-hotels-one-unavailable") as ToolFixture;
     const offer = (offers.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers[1]!;
-    const before = copy(offer.hotel.meals);
+    const before = copy(offer.meals);
     const after = { ...copy(before), included: [], label: null, guestsCoveredPerRoom: null };
     const text = renderError(
       envelope({
@@ -630,6 +632,16 @@ describe("hotel detail", () => {
     for (const policy of data.policies.items) assert.ok(text.includes(policy.text));
   });
 
+  it("lists the room types only when they were asked for", () => {
+    const fixture = copy(load("hotel-long-description")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    assert.ok(render(fixture).includes("\nRoom types:\n- Deluxe King Room · beds: 1 king bed · 35–40 m² · max 2 guests · window\n"));
+    data.roomTypes[1].name = null;
+    assert.ok(render(fixture).includes("\n- room name not listed · beds not listed · size not stated · max occupancy not listed · window not listed\n"));
+    delete data.roomTypes;
+    assert.doesNotMatch(render(fixture), /Room types/);
+  });
+
   it("shows the first 4 photo URLs and counts the rest", () => {
     const fixture = copy(load("hotel-long-description")) as ToolFixture;
     const url = (i: number) => `https://fortrip.ai/hotel-photos/hotels/imgs/1/${i}.webp`;
@@ -646,7 +658,7 @@ describe("hotel detail", () => {
     data.description = null;
     data.policies = { listed: false, items: [] };
     data.amenities = { listed: false, items: [] };
-    data.rooms = { listed: false, items: [] };
+    data.roomTypes = null;
     data.deposit = { required: null, amount: null };
     data.stars = null;
     data.bookable = false;
@@ -655,7 +667,7 @@ describe("hotel detail", () => {
       "Description: not listed",
       "Policies: not listed",
       "Amenities: not listed",
-      "Rooms: not listed",
+      "Room types: not listed",
       "Deposit: not stated",
       "Breakfast served: not stated",
       "no longer bookable",
@@ -671,7 +683,7 @@ describe("offers", () => {
     const text = render(load("offers-two-hotels-one-unavailable"));
     for (const part of [
       "cancellation terms unknown",
-      "fees not fully disclosed (amounts or how they are collected may be missing)",
+      "fees not fully disclosed (fees or amounts may be missing)",
       "confirmation mode unknown",
       "room name not listed",
       "sold out",
@@ -696,20 +708,64 @@ describe("unknowns carry their own negation inline", () => {
     assert.ok(terms?.includes(MEALS_UNKNOWN), orders);
   });
 
-  it("a fee's collection: 'at the property' only when stated, never assumed", () => {
+  it("a fee is named by its kind; a kind, an amount or a basis not stated says so", () => {
     const text = render(load("offers-two-hotels-one-unavailable"));
     const line = offerLines(text).find((l) => l.includes("off_BundNonRefundable000"))!;
-    assert.ok(line.includes("City tax CNY 15.00, basis unknown, mandatory, at the property"), line);
     assert.ok(
       line.includes(
-        "unnamed fee amount not stated, basis unknown, optional, collection not stated (could be prepaid or at the property)",
+        "fees not in the total: tax CNY 15.00, basis unknown, mandatory; fee of a kind not stated, amount not stated, basis unknown, optional; fees not fully disclosed (fees or amounts may be missing) · offer expires 2026-11-01 09:30 UTC",
       ),
       line,
     );
-    assert.doesNotMatch(line, /pay at the property:/);
-    // Incomplete disclosure names no collection place either.
-    assert.ok(line.endsWith("; fees not fully disclosed (amounts or how they are collected may be missing) · offer expires 2026-11-01 09:30 UTC"), line);
-    assert.doesNotMatch(render(load("list-orders")), /fees at the property/);
+    assert.match(render(load("order-confirmed")), /fees not in the total: resort fee CNY 80\.00, per night, mandatory/);
+  });
+
+  it("words every fee kind, and shows one it does not know as it came", () => {
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const offer = (fixture.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers[0]!;
+    const fee = (kind: string) => ({ kind, amount: { amount: "50.00", currency: "CNY" }, mandatory: true, basis: "per_stay" });
+    offer.payAtProperty = {
+      disclosure: "complete",
+      items: ["tax", "resort_fee", "cleaning_fee", "deposit", "other", "unknown", "parking_fee"].map(fee),
+    };
+    const line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
+    assert.ok(
+      line.includes(
+        "fees not in the total: " +
+          ["tax", "resort fee", "cleaning fee", "deposit", "other fee", "fee of a kind not stated", "parking_fee"]
+            .map((kind) => `${kind} CNY 50.00, per stay, mandatory`)
+            .join("; ") +
+          " · offer expires",
+      ),
+      line,
+    );
+  });
+
+  it("labels an offer's per-room-night figure an average, its total the amount charged", () => {
+    const text = render(load("offers-two-hotels-one-unavailable"));
+    assert.match(
+      text.split("\n")[1]!,
+      /^total = the whole stay and every room, the amount charged; the average per room-night is that total divided by rooms and nights, for comparison only\. /,
+    );
+    const line = offerLines(text).find((l) => l.includes("off_BundKingBreakfast000"))!;
+    assert.ok(line.includes(" · USD 365.00 total (average USD 182.50 per room-night) · "), line);
+  });
+
+  it("says how many more offers a call for the hotel alone would show", () => {
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const omitted = (fixture.data.hotels as { omitted: Record<string, number> }[])[0]!.omitted;
+    assert.doesNotMatch(render(fixture), /alone/);
+    omitted.byCallLimit = 6;
+    for (const surface of ["mcp", "cli"] as const) {
+      const lines = renderToolResult("get_hotel_offers", fixture.data, surface).split("\n");
+      const at = lines.indexOf("A call for this hotel alone would show 6 more offers: this call's offers are shared among its hotels.");
+      assert.ok(at > 0, surface);
+      // Then the offers a higher limit or a filter may show.
+      assert.match(lines[at + 1]!, /^2 more offers not shown \(/, surface);
+    }
+    omitted.byCallLimit = 1;
+    omitted.byLimit = 0;
+    assert.ok(render(fixture).includes("\nA call for this hotel alone would show 1 more offer: this call's offers are shared among its hotels.\n"));
   });
 
   it("offers cut by limitPerHotel are said to exist", () => {
@@ -737,11 +793,11 @@ describe("meals", () => {
   it("does not read unnamed main meals that are not stated as room only", () => {
     const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
     const offer = (fixture.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers[1]!;
-    offer.hotel.meals = { ...offer.hotel.meals, included: [], unspecifiedMainMeals: null, label: null };
+    offer.meals = { ...offer.meals, included: [], unspecifiedMainMeals: null, label: null };
     let line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
     assert.doesNotMatch(line, /room only/);
     assert.match(line, /no meals named; other main meals not stated/);
-    offer.hotel.meals.included = ["breakfast"];
+    offer.meals.included = ["breakfast"];
     line = render(fixture).split("\n").find((l) => l.includes(offer.offerId))!;
     assert.match(line, /breakfast; other main meals not stated for 2 guests per room/);
   });

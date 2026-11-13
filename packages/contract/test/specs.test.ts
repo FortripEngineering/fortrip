@@ -180,7 +180,7 @@ const orderFixture = {
         },
         cancellation: {
           status: "unknown",
-          asOf: "2026-10-24T08:00:00Z",
+          readAt: "2026-10-24T08:00:00Z",
           freeCancellationEndsAt: null,
           penalties: [],
           timeZone: "Asia/Shanghai",

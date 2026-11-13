@@ -1,14 +1,14 @@
+import type { RoomType } from "../outputs/hotel.ts";
 import type { HotelOffersResult, Offer } from "../outputs/offer.ts";
 import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, plural, roomFacts, stayLine, when } from "./format.ts";
 
 /* `get_hotel_offers` (spec §9), and the terms orders and errors share. */
 
-type Meals = Offer["hotel"]["meals"];
+type Meals = Offer["meals"];
 type Cancellation = Offer["cancellation"];
-type PayAtProperty = Offer["price"]["payAtProperty"];
+type PayAtProperty = Offer["payAtProperty"];
 type Confirmation = Offer["confirmation"];
-type Room = Offer["hotel"]["room"];
 
 /*
  * Each unknown carries its own negation in place: the v1 output eval found
@@ -72,20 +72,22 @@ const BASES: Record<string, string> = {
   unknown: "basis unknown",
 };
 
+const FEE_KINDS: Record<string, string> = {
+  tax: "tax",
+  resort_fee: "resort fee",
+  cleaning_fee: "cleaning fee",
+  deposit: "deposit",
+  other: "other fee",
+  unknown: "fee of a kind not stated",
+};
+
 export function feesText(p: PayAtProperty): string {
   const items = p.items.map((i) =>
     [
-      `${i.label ? i.label.text : "unnamed fee"} ${i.amount ? money(i.amount) : "amount not stated"}`,
+      `${label(FEE_KINDS, i.kind)}${i.amount ? ` ${money(i.amount)}` : ", amount not stated"}`,
       label(BASES, i.basis),
       i.mandatory ? "mandatory" : "optional",
-      i.collectedAt === "property"
-        ? "at the property"
-        : i.collectedAt === "unknown"
-          ? "collection not stated (could be prepaid or at the property)"
-          : `collected: ${i.collectedAt}`,
-    ]
-      .filter(Boolean)
-      .join(", "),
+    ].join(", "),
   );
   const listed = `fees not in the total: ${items.join("; ")}`;
   if (p.disclosure === "complete") {
@@ -93,7 +95,7 @@ export function feesText(p: PayAtProperty): string {
   }
   const caveat =
     p.disclosure === "incomplete"
-      ? "fees not fully disclosed (amounts or how they are collected may be missing)"
+      ? "fees not fully disclosed (fees or amounts may be missing)"
       : `fees not in the total: disclosure ${p.disclosure}`;
   return items.length ? `${listed}; ${caveat}` : caveat;
 }
@@ -109,22 +111,20 @@ export function confirmationText(c: Confirmation): string {
   return `confirmation ${c.mode}`;
 }
 
-function roomText(r: Room): string {
+function roomTypeText(r: RoomType): string {
   return [r.name ? r.name.text : "room name not listed", ...roomFacts(r)].join(", ");
 }
 
 /** One offer on one line, its id first. */
 export function offerLine(o: Offer): string {
-  const p = o.price;
-  const price = `${money(p.total)} total (${money(p.perNightAllRooms)} per night, all rooms)`;
   return [
-    `${o.offerId}${o.type === "hotel" ? "" : ` (${o.type})`}`,
-    `${plural(o.hotel.roomCount, "room")}: ${roomText(o.hotel.room)}`,
-    price,
-    mealsWithLabel(o.hotel.meals),
+    o.offerId,
+    `${plural(o.roomCount, "room")}: ${roomTypeText(o.roomType)}`,
+    `${money(o.total)} total (average ${money(o.perRoomNight)} per room-night)`,
+    mealsWithLabel(o.meals),
     cancellationText(o.cancellation),
     confirmationText(o.confirmation),
-    feesText(p.payAtProperty),
+    feesText(o.payAtProperty),
     `offer expires ${when(o.expiresAt, null)}`,
   ].join(" · ");
 }
@@ -135,6 +135,15 @@ const OMITTED: Record<string, string> = {
   dominated: "beaten by or the same as another offer for the same room",
   unreadable: "unreadable",
 };
+
+/** Offers left out because the call's hotels share its offers: a call for
+ *  the hotel alone shows them. */
+function callLimitText(o: Record<string, unknown>): string {
+  const n = o.byCallLimit;
+  return typeof n === "number" && n > 0
+    ? `A call for this hotel alone would show ${plural(n, "more offer")}: this call's offers are shared among its hotels`
+    : "";
+}
 
 /** Offers cut by `limitPerHotel` exist: say so where they are missing. */
 function limitText(o: Record<string, unknown>, surface: RenderSurface): string {
@@ -168,16 +177,17 @@ const UNAVAILABLE: Record<string, string> = {
 export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp"): string {
   const lines = [
     `Live offers · ${stayLine(r.stay.checkIn, r.stay.checkOut)} · ${party(r.stay.rooms)}`,
-    "total = the whole stay and every room, the amount charged. Fees not in the total are in the property's currency, not converted. Times are UTC, then the hotel's time zone.",
+    "total = the whole stay and every room, the amount charged; the average per room-night is that total divided by rooms and nights, for comparison only. Fees not in the total are in the property's currency, not converted. Times are UTC, then the hotel's time zone.",
   ];
   if (r.hotels.length === 0) lines.push("", "No hotel has offers for this stay.");
   for (const h of r.hotels) {
-    lines.push("", `${named(h.hotel.name, h.hotel.names)} · ${h.hotel.hotelId} · ${plural(h.offers.length, "offer")}`);
+    lines.push("", `${named(h.name, h.names)} · ${h.hotelId} · ${plural(h.offers.length, "offer")}`);
     h.offers.forEach((o, i) => lines.push(`${i + 1}. ${offerLine(o)}`));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(`Not shown: ${omitted}.`);
-    const limited = limitText(h.omitted, surface);
-    if (limited) lines.push(`${limited}.`);
+    for (const more of [callLimitText(h.omitted), limitText(h.omitted, surface)]) {
+      if (more) lines.push(`${more}.`);
+    }
   }
   if (r.unavailable.length > 0) {
     lines.push("", "Unavailable:");

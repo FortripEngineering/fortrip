@@ -29,13 +29,13 @@ export const SEARCH_NOTE_CODES = [
 
 export type SearchNoteCode = (typeof SEARCH_NOTE_CODES)[number];
 
-/** An indicative (not bookable) price for one unit; only offers can be booked. */
+/** An estimate from a price floor; only offers can be booked. */
 export const indicativePrice = openObject({
-  kind: openEnum(["indicative"]),
-  basis: openEnum(["lowest_unit"]),
-  fromPerRoomNight: money,
-  fromPerRoomStay: money,
-});
+  fromPerRoomNight: money.describe("fromPerRoomStay divided by the nights."),
+  fromPerRoomStay: money.describe("The floor of each night of the stay, added up."),
+}).describe(
+  "An estimate from a price floor in the catalogue's price feed, not a price for this party: the floor may be a bed in a shared room, and may be days old. Not bookable, and not what is charged: an offer's total is.",
+);
 
 export type IndicativePrice = z.infer<typeof indicativePrice>;
 
@@ -52,14 +52,14 @@ export const hotelSummary = openObject({
   location: latLng.nullable(),
   timeZone: z.string().nullable(),
   distanceMeters: z.number().nullable(),
-  price: indicativePrice.nullable(),
+  indicativePrice: indicativePrice.nullable(),
   /** The cover photo; `null` without one. */
   photo: photo.nullable().describe("The cover photo; null when there is none."),
 });
 
 export type HotelSummary = z.infer<typeof hotelSummary>;
 
-/** The top locality hubs of a scope (§7.6); also `search_too_broad` details. */
+/** The top localities of a scope (§7.6); also `search_too_broad` details. */
 export const localities = openObject({
   items: z.array(
     openObject({
@@ -89,7 +89,9 @@ const destination = openUnion("kind", [
       "by_locality",
     ]),
     otherMatches: z.number().int(),
-    scope: openEnum(["area", "radius", "locality"]),
+    scope: openEnum(["area", "radius", "locality"]).describe(
+      "What the search covers: area, the place's whole area; radius, a circle of radiusMeters around center; locality, the hotels that belong to the locality.",
+    ),
     center,
     radiusMeters: z.number().nullable(),
     radiusSource: radiusSource.nullable(),
@@ -110,14 +112,18 @@ const hotels = (what: string) => count.nullable().describe(what);
 
 export const searchResult = openObject({
   destination: destination.nullable(),
-  text: openObject({
-    value: z.string(),
-    match: openEnum(["exact"]),
-  }).nullable(),
+  text: z
+    .string()
+    .nullable()
+    .describe("The text searched for, matched as exact words; null when none was given."),
   stay: stayEcho.nullable(),
   pricing: openObject({
     mode: openEnum(["indicative", "none"]),
-    scope: openEnum(["page", "pool"]).nullable(),
+    covers: openEnum(["page", "pool"])
+      .nullable()
+      .describe(
+        `Which hotels the prices cover: page, the hotels on this page; pool, every matching hotel, as a price sort or price filter needs (the nearest ${LIMITS.poolLimit.toLocaleString("en-US")} when more match); null without prices.`,
+      ),
     status: openEnum(["ok", "unavailable"]).nullable(),
   }),
   sort: openEnum([
@@ -132,7 +138,7 @@ export const searchResult = openObject({
       "Hotels that match the destination, the text and every filter but the price filter.",
     ),
     priced: hotels(
-      "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.scope); null without prices.",
+      "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.covers); null without prices.",
     ),
     withPrice: hotels("Of those priced, how many have an indicative price; null when prices weren't asked for or are unavailable."),
     poolRadiusMeters: z
@@ -162,9 +168,9 @@ export const searchResult = openObject({
     currency: openEnum(["CNY"]),
     reason: openEnum(["request_location", "sign_in_location"]),
   })
-    .optional()
+    .nullable()
     .describe(
-      "Present only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
+      "Set only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement. null when there is none, which says nothing about where the user is.",
     ),
   data: z.array(hotelSummary),
   nextCursor: z

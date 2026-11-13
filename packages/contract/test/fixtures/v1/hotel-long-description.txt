@@ -11,7 +11,7 @@ Guests under 18 must check in with an adult.
 - pets: Pets are not allowed.
 - extra_bed: 加床每晚收费 150 元，需提前预约。
 - other: Quiet hours run from 22:00 to 07:00 in the garden wings.
-Rooms:
+Room types:
 - Deluxe King Room · beds: 1 king bed · 35–40 m² · max 2 guests · window
 - Garden Twin Room · beds not listed · size not stated · max occupancy not listed · window not listed
 Description (en):

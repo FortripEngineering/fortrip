@@ -9,7 +9,7 @@ import { LIMITS } from "../src/limits.ts";
 import { authConfig, meResult } from "../src/outputs/account.ts";
 import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { hotel, POLICY_TOPICS } from "../src/outputs/hotel.ts";
-import { hotelOffersResult, offer, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
+import { FEE_KINDS, hotelOffersResult, offer, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
 import { offerChange, order, orderList, PAYMENT_METHOD_IDS } from "../src/outputs/order.ts";
 import { place } from "../src/outputs/place.ts";
 import { SEARCH_NOTE_CODES, searchResult } from "../src/outputs/search.ts";
@@ -24,7 +24,6 @@ const shanghaiRef = { placeId: "plc_1796236", name: "Shanghai", names };
 const shanghai = {
   ...shanghaiRef,
   kind: "region",
-  scope: "area",
   cityLike: true,
   population: 24_874_500,
   region: null,
@@ -51,9 +50,9 @@ const searchFixture = {
     radiusMeters: null,
     radiusSource: null,
   },
-  text: { value: "Hilton", match: "exact" },
+  text: "Hilton",
   stay,
-  pricing: { mode: "indicative", scope: "page", status: "ok" },
+  pricing: { mode: "indicative", covers: "page", status: "ok" },
   sort: "distance",
   coverage: {
     matched: 2634,
@@ -80,6 +79,7 @@ const searchFixture = {
     },
     nameAsText: null,
   },
+  currencyHint: null,
   data: [
     {
       hotelId: HTL,
@@ -90,9 +90,7 @@ const searchFixture = {
       location: { lat: 31.2, lng: 121.4 },
       timeZone: "Asia/Shanghai",
       distanceMeters: 812,
-      price: {
-        kind: "indicative",
-        basis: "lowest_unit",
+      indicativePrice: {
         fromPerRoomNight: usd("66.20"),
         fromPerRoomStay: usd("132.40"),
       },
@@ -114,7 +112,7 @@ const pointSearchFixture = {
   },
   text: null,
   stay: null,
-  pricing: { mode: "none", scope: null, status: null },
+  pricing: { mode: "none", covers: null, status: null },
   coverage: { ...searchFixture.coverage, localities: null },
   nextCursor: null,
 };
@@ -137,18 +135,15 @@ const hotelFixture = {
   breakfastServed: null,
   deposit: { required: true, amount: { amount: "500.00", currency: "CNY" } },
   contact: { phone: "+86 21 0000 0000", website: null },
-  rooms: {
-    listed: true,
-    items: [
-      {
-        name: { text: "Deluxe King", locale: "en" },
-        beds: { text: "1 king bed", locale: null },
-        areaSqm: { min: 30, max: 35 },
-        maxOccupancy: 2,
-        window: "yes",
-      },
-    ],
-  },
+  roomTypes: [
+    {
+      name: { text: "Deluxe King", locale: "en" },
+      beds: { text: "1 king bed", locale: null },
+      areaSqm: { min: 30, max: 35 },
+      maxOccupancy: 2,
+      window: "yes",
+    },
+  ],
 };
 
 const meals = {
@@ -161,7 +156,7 @@ const meals = {
 };
 const cancellation = {
   status: "partial_penalty",
-  asOf: "2026-10-24T08:00:00Z",
+  readAt: "2026-10-24T08:00:00Z",
   freeCancellationEndsAt: "2026-11-08T16:00:00Z",
   penalties: [{ startsAt: "2026-11-08T16:00:00Z", amount: usd("66.20") }],
   timeZone: "Asia/Shanghai",
@@ -171,44 +166,38 @@ const payAtProperty = {
   disclosure: "complete",
   items: [
     {
-      label: { text: "City tax", locale: "en" },
+      kind: "tax",
       amount: { amount: "10.00", currency: "CNY" },
       mandatory: true,
       basis: "unknown",
-      collectedAt: "property",
     },
   ],
 };
 
 const offerFixture = {
   offerId: OFF,
-  type: "hotel",
+  hotelId: HTL,
   expiresAt: "2026-10-24T09:00:00Z",
-  hotel: {
-    hotelId: HTL,
-    room: {
-      name: { text: "Deluxe King", locale: "en" },
-      beds: null,
-      areaSqm: null,
-      maxOccupancy: 2,
-      window: null,
-    },
-    roomCount: 1,
-    meals,
+  roomType: {
+    name: { text: "Deluxe King", locale: "en" },
+    beds: null,
+    areaSqm: null,
+    maxOccupancy: 2,
+    window: null,
   },
-  price: {
-    total: usd("132.40"),
-    perNightAllRooms: usd("66.20"),
-    payAtProperty,
-  },
+  roomCount: 1,
+  meals,
   cancellation,
   confirmation,
+  payAtProperty,
+  total: usd("132.40"),
+  perRoomNight: usd("66.20"),
 };
 
-const omitted = { byNationality: 0, byFilters: 1, dominated: 2, unreadable: 0, byLimit: 3 };
+const omitted = { byNationality: 0, byFilters: 1, dominated: 2, unreadable: 0, byLimit: 3, byCallLimit: 4 };
 const offersFixture = {
   stay,
-  hotels: [{ hotel: { hotelId: HTL, name: "Hotel A", names: { en: "Hotel A", zh: null } }, offers: [offerFixture], omitted }],
+  hotels: [{ hotelId: HTL, name: "Hotel A", names: { en: "Hotel A", zh: null }, offers: [offerFixture], omitted }],
   unavailable: [
     { hotelId: "htl_ZYXWVUTSRQponmlkjihg", reason: "sold_out", omitted },
     { hotelId: "htl_ZYXWVUTSRQponmlkji00", reason: "supplier_unavailable", omitted: null },
@@ -294,15 +283,15 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   destination_ambiguous: {
     name: "Suzhou",
     countryCode: "CN",
-    candidates: [{ ...shanghai, hotels: { scope: "area", radiusMeters: null, count: 1200 } }],
+    candidates: [{ ...shanghai, hotels: { radiusMeters: null, count: 1200 } }],
     candidatesTotal: 2,
     nameAsText: 14,
   },
   destination_not_found: {
     reason: "not_a_locality",
     placeId: "plc_1151254",
-    hub: { placeId: "plc_1151253", name: "Phuket", names: { en: "Phuket", zh: "普吉" } },
-    hubTotal: 2752,
+    locality: { placeId: "plc_1151253", name: "Phuket", names: { en: "Phuket", zh: "普吉" } },
+    localityTotal: 2752,
   },
   search_too_broad: {
     matched: 3044,
@@ -356,16 +345,29 @@ describe("v1 response fixtures parse, open and strict", () => {
   });
 
   it("search, with and without a currency hint", () => {
-    // Absent unless the server sees a sign; when present, one currency and its reason.
+    // Always there: null unless the server sees a sign; then one currency and its reason.
+    parsesBoth(searchResult, { ...searchFixture, currencyHint: null });
     parsesBoth(searchResult, { ...searchFixture, currencyHint: { currency: "CNY", reason: "request_location" } });
     parsesBoth(searchResult, { ...searchFixture, currencyHint: { currency: "CNY", reason: "sign_in_location" } });
-    assert.equal(strictOutput(searchResult).safeParse({ ...searchFixture, currencyHint: null }).success, false);
+    const { currencyHint: _hint, ...noHint } = searchFixture;
+    assert.equal(searchResult.safeParse(noHint).success, false);
     assert.equal(strictOutput(searchResult).safeParse({ ...searchFixture, currencyHint: { currency: "CNY" } }).success, false);
   });
-  it("hotel, with and without rooms", () => {
+  it("search text is the string searched for, or null", () => {
+    parsesBoth(searchResult, { ...searchFixture, text: null });
+    assert.equal(searchResult.safeParse({ ...searchFixture, text: { value: "Hilton", match: "exact" } }).success, false);
+  });
+  it("hotel, with and without room types", () => {
     parsesBoth(hotel, hotelFixture);
-    const { rooms: _rooms, ...noRooms } = hotelFixture;
-    parsesBoth(hotel, noRooms);
+    // Absent unless asked for; asked for, null when the catalogue lists none.
+    const { roomTypes: _roomTypes, ...notAsked } = hotelFixture;
+    parsesBoth(hotel, notAsked);
+    parsesBoth(hotel, { ...hotelFixture, roomTypes: null });
+    // A room type's facts not on record are null, its name included.
+    parsesBoth(hotel, {
+      ...hotelFixture,
+      roomTypes: [{ name: null, beds: null, areaSqm: null, maxOccupancy: null, window: null }],
+    });
     // Photos aren't asked for: always there, null when none are listed.
     parsesBoth(hotel, { ...hotelFixture, photos: null });
     const { photos: _photos, ...noPhotos } = hotelFixture;
@@ -569,8 +571,10 @@ describe("open where the spec says, strict in server tests", () => {
     };
     assert.ok(order.safeParse(later).success);
     assert.equal(strictOutput(order).safeParse(later).success, false);
-    assert.ok(offer.safeParse({ ...offerFixture, type: "car" }).success);
-    assert.equal(strictOutput(offer).safeParse({ ...offerFixture, type: "car" }).success, false);
+    const fee = { ...payAtProperty.items[0], kind: "parking_fee" };
+    const withFee = { ...offerFixture, payAtProperty: { ...payAtProperty, items: [fee] } };
+    assert.ok(offer.safeParse(withFee).success);
+    assert.equal(strictOutput(offer).safeParse(withFee).success, false);
     assert.ok(offerChange.safeParse({ field: "room", previous: 1, current: 2 }).success);
     assert.ok(errorEnvelope.safeParse(envelope("teapot", { x: 1 })).success);
   });
@@ -666,29 +670,29 @@ describe("shape rules", () => {
 /** Every key an output schema declares. A new key fails the test below until it
  *  is listed here, so a name from outside the public vocabulary can't slip in. */
 const PUBLIC_KEYS = new Set([
-  "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "areaSqm", "asOf",
-  "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byFilters", "byLimit", "byNationality",
+  "address", "adults", "available_instruments", "allInclusive", "amenities", "amount", "areaSqm",
+  "basis", "beds", "business_profile", "available", "bookable", "breakfastServed", "byCallLimit", "byFilters", "byLimit", "byNationality",
   "cancel", "cancellation", "candidates", "candidatesTotal", "caption", "center", "changes", "chargeCurrency",
   "checkIn", "checkInTimes", "checkOut", "checkOutTimes", "childrenAges", "cityLike", "clientId",
-  "code", "collectedAt", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
-  "coverage", "alipay", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
+  "code", "config", "confirmation", "confirmationNumber", "contact", "count", "countryCode",
+  "coverage", "covers", "alipay", "createdAt", "currency", "currencyHint", "current", "data", "declineCode", "deposit", "description", "destination",
   "details", "deviceAuthorizationEndpoint", "disclosure", "distanceMeters", "dominated", "email",
   "en", "environment", "error", "excludedNoFacilityData", "excludedNoPrice", "expiredAt", "expiresAt", "field",
   "filterable", "firstName", "freeCancellationEndsAt", "from", "fromPerRoomNight", "fromPerRoomStay",
-  "guests", "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "hub", "hubTotal", "included", "includes",
+  "guests", "guestsCoveredPerRoom", "handler", "hotel", "hotelId", "hotels", "id", "included", "includes", "indicativePrice",
   "issuer", "issues", "items", "kind", "known", "label", "lastName", "lat", "line", "listed", "listedShare",
-  "limits", "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "location",
-  "manageUrl", "mandatory", "match", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
+  "limits", "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "locality", "localityTotal", "location",
+  "manageUrl", "mandatory", "matched", "max", "maxAmount", "maxOccupancy", "meals", "members",
   "message", "methods", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome", "param",
-  "payAtProperty", "payment", "penalties", "penalty", "perNightAllRooms", "phone", "photo", "photos", "place", "placeId",
+  "payAtProperty", "payment", "penalties", "penalty", "perRoomNight", "phone", "photo", "photos", "place", "placeId",
   "open", "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous", "price",
-  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "reason", "reference", "refund",
+  "priced", "pricing", "qrData", "qrImageUrl", "radiusMeters", "radiusSource", "readAt", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
-  "retryable", "revocationEndpoint", "room", "roomCount", "rooms", "schema", "scope", "scopes", "share",
+  "retryable", "revocationEndpoint", "room", "roomCount", "roomType", "roomTypes", "rooms", "schema", "scope", "scopes", "share",
   "sort", "spec", "specialRequests", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
-  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "value", "version", "website", "wechatPay", "window",
+  "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "version", "website", "wechatPay", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
 ]);
 
@@ -762,19 +766,23 @@ describe("field descriptions", () => {
         "hotels.offers.confirmation",
         "hotels.offers.confirmation.mode",
         "hotels.offers.confirmation.withinMinutes",
-        "hotels.offers.price.perNightAllRooms",
+        "hotels.offers.total",
+        "hotels.offers.perRoomNight",
+        "hotels.offers.roomType",
         "hotels.offers.cancellation",
-        "hotels.offers.cancellation.asOf",
-        "hotels.offers.hotel.meals",
-        "hotels.offers.hotel.meals.unspecifiedMainMeals",
-        "hotels.offers.hotel.meals.guestsCoveredPerRoom",
-        "hotels.offers.price.payAtProperty",
+        "hotels.offers.cancellation.readAt",
+        "hotels.offers.meals",
+        "hotels.offers.meals.unspecifiedMainMeals",
+        "hotels.offers.meals.guestsCoveredPerRoom",
+        "hotels.offers.payAtProperty",
+        "hotels.offers.payAtProperty.items.kind",
         "hotels.omitted",
         "hotels.omitted.byNationality",
         "hotels.omitted.byFilters",
         "hotels.omitted.dominated",
         "hotels.omitted.unreadable",
         "hotels.omitted.byLimit",
+        "hotels.omitted.byCallLimit",
         "unavailable.reason",
       ],
     ],
@@ -796,6 +804,13 @@ describe("field descriptions", () => {
       "search",
       searchResult,
       [
+        "text",
+        "destination.scope",
+        "pricing.covers",
+        "currencyHint",
+        "data.indicativePrice",
+        "data.indicativePrice.fromPerRoomNight",
+        "data.indicativePrice.fromPerRoomStay",
         "coverage",
         "coverage.matched",
         "coverage.priced",
@@ -809,6 +824,7 @@ describe("field descriptions", () => {
         "coverage.nameAsText",
       ],
     ],
+    ["hotel", hotel, ["roomTypes"]],
   ];
   for (const [name, schema, paths] of described) {
     it(`${name}: the fields a caller acts on say what they mean`, () => {
@@ -820,6 +836,53 @@ describe("field descriptions", () => {
     const text = descriptionAt(hotelOffersResult, "unavailable.reason") ?? "";
     for (const reason of UNAVAILABLE_REASONS) assert.ok(text.includes(reason), reason);
     assert.match(text, /nationality_restricted \([^)]*nationalities[^)]*Fortrip can't book/);
+  });
+
+  it("an offer's perRoomNight is the total divided by rooms and nights, for comparison only", () => {
+    const text = descriptionAt(hotelOffersResult, "hotels.offers.perRoomNight") ?? "";
+    assert.match(text, /^total divided by the rooms and the nights, rounded to cents: for comparison only\./);
+    assert.match(text, /need not multiply back to total, which is what is charged\.$/);
+    assert.match(descriptionAt(hotelOffersResult, "hotels.offers.total") ?? "", /what is charged/);
+  });
+
+  it("a search price says it is an estimate from a price floor, and what that leaves out", () => {
+    const text = descriptionAt(searchResult, "data.indicativePrice") ?? "";
+    for (const part of [/estimate/, /price floor/, /not a price for this party/, /bed in a shared room/, /days old/, /Not bookable/]) {
+      assert.match(text, part);
+    }
+  });
+
+  it("a null currencyHint says nothing about where the user is", () => {
+    assert.match(
+      descriptionAt(searchResult, "currencyHint") ?? "",
+      /null when there is none, which says nothing about where the user is\.$/,
+    );
+  });
+
+  it("says of each fee kind what it is, and of the offers a call's hotels share that a call for the hotel alone shows them", () => {
+    const kind = descriptionAt(hotelOffersResult, "hotels.offers.payAtProperty.items.kind") ?? "";
+    for (const value of FEE_KINDS) assert.ok(kind.includes(value), value);
+    const shared = descriptionAt(hotelOffersResult, "hotels.omitted.byCallLimit") ?? "";
+    assert.ok(shared.includes(`share ${LIMITS.offersPerCallDefault} offers in all (${LIMITS.offersPerCallMax} when limitPerHotel is given)`), shared);
+    assert.match(shared, /a call for this hotel alone shows this many more\.$/);
+  });
+
+  it("scope is a search's destination scope and nothing else of a search", () => {
+    const found: string[] = [];
+    const walk = (node: unknown, path: string): void => {
+      if (!node || typeof node !== "object") return;
+      for (const [key, value] of Object.entries(node)) {
+        if (key === "properties" && value && typeof value === "object") {
+          for (const name of Object.keys(value)) if (name === "scope") found.push(path);
+          for (const [name, child] of Object.entries(value)) walk(child, `${path}.${name}`);
+        } else {
+          walk(value, path);
+        }
+      }
+    };
+    walk(jsonSchemaOf(searchResult), "search");
+    walk(jsonSchemaOf(ERROR_DETAILS.destination_ambiguous), "destination_ambiguous");
+    assert.deepEqual([...new Set(found)], ["search.destination"]);
   });
 
   it("calls a locality a locality, never a hub", () => {

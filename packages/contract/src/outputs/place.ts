@@ -29,7 +29,6 @@ export const place = openObject({
   name: z.string(),
   names,
   kind: openEnum(PLACE_KINDS),
-  scope: openEnum(["area", "radius"]),
   cityLike: z.boolean().nullable(),
   population: z.number().int().nullable(),
   region: placeRef.nullable(),
@@ -43,7 +42,7 @@ export const CENTER_BASES = [
   "seat",
   "capital",
   "busiest_settlement",
-  "hub",
+  "locality",
   "point",
 ] as const;
 

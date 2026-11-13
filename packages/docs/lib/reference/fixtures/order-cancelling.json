@@ -62,7 +62,7 @@
         },
         "cancellation": {
           "status": "free",
-          "asOf": "2027-02-20T08:04:12Z",
+          "readAt": "2027-02-20T08:04:12Z",
           "freeCancellationEndsAt": "2027-03-08T15:00:00Z",
           "penalties": [
             {
@@ -79,17 +79,13 @@
           "disclosure": "complete",
           "items": [
             {
-              "label": {
-                "text": "Accommodation tax",
-                "locale": "en"
-              },
+              "kind": "tax",
               "amount": {
                 "amount": "200",
                 "currency": "JPY"
               },
               "mandatory": true,
-              "basis": "per_person_per_night",
-              "collectedAt": "property"
+              "basis": "per_person_per_night"
             }
           ]
         },

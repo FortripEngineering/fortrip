@@ -83,8 +83,8 @@ test("a union input lists each branch with its own fields", () => {
 test("output rows show nulls, open enums and object arrays with []", () => {
   const rows = new Map(outputRows(searchResult).map((row) => [row.key, row]));
   assert.equal(rows.get("data")?.type, "object[]");
-  assert.equal(rows.get("data[].price")?.type, "object | null");
-  assert.equal(rows.get("data[].price.fromPerRoomNight.amount")?.depth, 3);
+  assert.equal(rows.get("data[].indicativePrice")?.type, "object | null");
+  assert.equal(rows.get("data[].indicativePrice.fromPerRoomNight.amount")?.depth, 3);
   assert.equal(rows.get("nextCursor")?.type, "string | null");
   const sort = rows.get("sort");
   assert.equal(

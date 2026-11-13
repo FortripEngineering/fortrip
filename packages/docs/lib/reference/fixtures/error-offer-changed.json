@@ -20,70 +20,39 @@
       ],
       "offer": {
         "offerId": "off_Hn7cV2xL9pRt4Kq8Ws3Y",
-        "type": "hotel",
+        "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
         "expiresAt": "2027-02-20T08:34:12Z",
-        "hotel": {
-          "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
-          "room": {
-            "name": {
-              "text": "Standard Double Room",
-              "locale": "en"
-            },
-            "beds": {
-              "text": "1 double bed",
-              "locale": "en"
-            },
-            "areaSqm": {
-              "min": 18,
-              "max": 18
-            },
-            "maxOccupancy": 2,
-            "window": "yes"
+        "roomType": {
+          "name": {
+            "text": "Standard Double Room",
+            "locale": "en"
           },
-          "roomCount": 1,
-          "meals": {
-            "known": true,
-            "included": [],
-            "unspecifiedMainMeals": 0,
-            "allInclusive": false,
-            "guestsCoveredPerRoom": null,
-            "label": {
-              "text": "Room only",
-              "locale": "en"
-            }
-          }
+          "beds": {
+            "text": "1 double bed",
+            "locale": "en"
+          },
+          "areaSqm": {
+            "min": 18,
+            "max": 18
+          },
+          "maxOccupancy": 2,
+          "window": "yes"
         },
-        "price": {
-          "total": {
-            "amount": "138.60",
-            "currency": "USD"
-          },
-          "perNightAllRooms": {
-            "amount": "69.30",
-            "currency": "USD"
-          },
-          "payAtProperty": {
-            "disclosure": "complete",
-            "items": [
-              {
-                "label": {
-                  "text": "Accommodation tax",
-                  "locale": "en"
-                },
-                "amount": {
-                  "amount": "200",
-                  "currency": "JPY"
-                },
-                "mandatory": true,
-                "basis": "per_person_per_night",
-                "collectedAt": "property"
-              }
-            ]
+        "roomCount": 1,
+        "meals": {
+          "known": true,
+          "included": [],
+          "unspecifiedMainMeals": 0,
+          "allInclusive": false,
+          "guestsCoveredPerRoom": null,
+          "label": {
+            "text": "Room only",
+            "locale": "en"
           }
         },
         "cancellation": {
           "status": "free",
-          "asOf": "2027-02-20T08:04:12Z",
+          "readAt": "2027-02-20T08:04:12Z",
           "freeCancellationEndsAt": "2027-03-08T15:00:00Z",
           "penalties": [
             {
@@ -99,6 +68,28 @@
         "confirmation": {
           "mode": "instant",
           "withinMinutes": null
+        },
+        "payAtProperty": {
+          "disclosure": "complete",
+          "items": [
+            {
+              "kind": "tax",
+              "amount": {
+                "amount": "200",
+                "currency": "JPY"
+              },
+              "mandatory": true,
+              "basis": "per_person_per_night"
+            }
+          ]
+        },
+        "total": {
+          "amount": "138.60",
+          "currency": "USD"
+        },
+        "perRoomNight": {
+          "amount": "69.30",
+          "currency": "USD"
         }
       }
     },

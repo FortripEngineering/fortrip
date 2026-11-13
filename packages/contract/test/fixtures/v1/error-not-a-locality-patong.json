@@ -9,7 +9,7 @@
       "details": {
         "reason": "not_a_locality",
         "placeId": "plc_9200010",
-        "hub": {
+        "locality": {
           "placeId": "plc_9200002",
           "name": "Phuket",
           "names": {
@@ -17,7 +17,7 @@
             "zh": "普吉"
           }
         },
-        "hubTotal": 2752
+        "localityTotal": 2752
       },
       "requestId": "req_patong_0001"
     }

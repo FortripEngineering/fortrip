@@ -22,7 +22,7 @@ const CENTER_BASES: Record<string, string> = {
   seat: "the seat",
   capital: "the capital",
   busiest_settlement: "the settlement with the most hotels",
-  hub: "the locality",
+  locality: "the locality",
   point: "its location",
 };
 
@@ -65,7 +65,7 @@ function header(r: SearchResult): string {
   const matched = r.coverage.matched;
   let head: string;
   if (d === null) {
-    head = `${r.text ? `Text "${r.text.value}"` : "All hotels"} · ${plural(matched, "hotel")}`;
+    head = `${r.text ? `Text "${r.text}"` : "All hotels"} · ${plural(matched, "hotel")}`;
   } else if (d.kind === "place") {
     head = placeHeader(d as PlaceDestination, matched);
   } else if (d.kind === "point") {
@@ -75,7 +75,7 @@ function header(r: SearchResult): string {
   } else {
     head = `Destination of kind ${d.kind} · ${plural(matched, "hotel")}`;
   }
-  if (d !== null && r.text) head += ` · text "${r.text.value}" (exact words)`;
+  if (d !== null && r.text) head += ` · text "${r.text}" (exact words)`;
   return head;
 }
 
@@ -89,15 +89,15 @@ function centerLine(d: Destination | null): string | null {
 }
 
 function pricingWords(r: SearchResult): string {
-  const { mode, scope, status } = r.pricing;
+  const { mode, covers, status } = r.pricing;
   if (mode === "none") return "no prices (no stay given)";
   if (mode === "indicative" && status === "unavailable") {
     return "indicative prices unavailable this time";
   }
   if (mode === "indicative") {
-    return "indicative prices per room-night: estimates, not bookable (only offers are)";
+    return "indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are)";
   }
-  return `prices ${[mode, scope, status].filter(Boolean).join(", ")}`;
+  return `prices ${[mode, covers, status].filter(Boolean).join(", ")}`;
 }
 
 function countsLine(r: SearchResult): string {
@@ -126,7 +126,7 @@ function countsLine(r: SearchResult): string {
 
 /**
  * The localities block (§12), for a search and for `search_too_broad`.
- * `areaName` labels a hub named like the searched area.
+ * `areaName` labels a locality named like the searched area.
  */
 export function localitiesLines(
   loc: Localities,
@@ -167,15 +167,11 @@ export function localitiesLines(
 }
 
 function priceWords(h: HotelSummary, status: string | null): string {
-  const p = h.price;
+  const p = h.indicativePrice;
   if (p === null) {
     return status === "ok" ? "no indicative price" : "price unavailable this time";
   }
-  let text = `from ${money(p.fromPerRoomNight)}/room-night (${money(p.fromPerRoomStay)} per room for the stay)`;
-  if (p.kind !== "indicative" || p.basis !== "lowest_unit") {
-    text += ` [${p.kind}, ${p.basis}]`;
-  }
-  return text;
+  return `estimate from ${money(p.fromPerRoomNight)}/room-night (${money(p.fromPerRoomStay)} per room for the stay)`;
 }
 
 function hotelLine(h: HotelSummary, i: number, r: SearchResult): string {

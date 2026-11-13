@@ -96,11 +96,9 @@ function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface):
       .filter(Boolean)
       .join(", ");
     const hotels =
-      c.hotels.scope === "area"
+      c.hotels.radiusMeters === null
         ? `${plural(c.hotels.count, "hotel")} in the area`
-        : c.hotels.radiusMeters === null
-          ? plural(c.hotels.count, "hotel")
-          : `${plural(c.hotels.count, "hotel")} within ${km(c.hotels.radiusMeters)}`;
+        : `${plural(c.hotels.count, "hotel")} within ${km(c.hotels.radiusMeters)}`;
     lines.push(
       [
         `- ${c.name}${other ? ` (${other})` : ""} ${c.placeId}`,
@@ -132,13 +130,13 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
       const n = d as Extract<typeof d, { reason: "not_a_locality" }>;
       const town =
         surface === "cli" ? `--place ${n.placeId}` : `{ kind: "place", placeId: "${n.placeId}" }`;
-      if (n.hub === null) {
+      if (n.locality === null) {
         return [`${n.placeId} belongs to no locality: search ${town} for an 8 km circle around it.`];
       }
-      const total = n.hubTotal === null ? "" : ` (${plural(n.hubTotal, "matching hotel")})`;
+      const total = n.localityTotal === null ? "" : ` (${plural(n.localityTotal, "matching hotel")})`;
       return [
-        `${n.placeId} is not a locality. Its hotels belong to the locality ${n.hub.name} ${n.hub.placeId}${total}.`,
-        `Search ${surface === "cli" ? `--locality ${n.hub.placeId}` : `{ kind: "locality", placeId: "${n.hub.placeId}" }`} for those, or ${town} for an 8 km circle around the town itself.`,
+        `${n.placeId} is not a locality. Its hotels belong to the locality ${n.locality.name} ${n.locality.placeId}${total}.`,
+        `Search ${surface === "cli" ? `--locality ${n.locality.placeId}` : `{ kind: "locality", placeId: "${n.locality.placeId}" }`} for those, or ${town} for an 8 km circle around the town itself.`,
       ];
     }
     default:

@@ -1,10 +1,9 @@
-import type { Hotel } from "../outputs/hotel.ts";
+import type { Hotel, RoomType } from "../outputs/hotel.ts";
 import { money, named, roomFacts } from "./format.ts";
 
 /* `get_hotel` (spec §8): the full description and every policy (C8). */
 
 type Times = Hotel["checkInTimes"];
-type RoomType = NonNullable<Hotel["rooms"]>["items"][number];
 
 function times(what: string, t: Times): string {
   if (t.from === null && t.until === null) return `${what}: not listed`;
@@ -17,8 +16,8 @@ function deposit(d: Hotel["deposit"]): string {
   return `Deposit: required, ${d.amount ? money(d.amount) : "amount not stated"}`;
 }
 
-function roomLine(r: RoomType): string {
-  return [`- ${r.name.text}`, ...roomFacts(r)].join(" · ");
+function roomTypeLine(r: RoomType): string {
+  return [`- ${r.name ? r.name.text : "room name not listed"}`, ...roomFacts(r)].join(" · ");
 }
 
 /** Photo URLs a hotel's text shows; the object holds them all. */
@@ -72,10 +71,10 @@ export function renderHotel(h: Hotel): string {
     lines.push("Policies:", ...h.policies.items.map((p) => `- ${p.topic}: ${p.text}`));
   }
 
-  if (h.rooms) {
-    if (!h.rooms.listed) lines.push("Rooms: not listed");
-    else if (h.rooms.items.length === 0) lines.push("Rooms: none listed");
-    else lines.push("Rooms:", ...h.rooms.items.map(roomLine));
+  // Absent unless asked for; null when the catalogue lists none.
+  if (h.roomTypes !== undefined) {
+    if (h.roomTypes?.length) lines.push("Room types:", ...h.roomTypes.map(roomTypeLine));
+    else lines.push("Room types: not listed");
   }
 
   if (h.description === null) {

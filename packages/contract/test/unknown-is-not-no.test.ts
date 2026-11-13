@@ -79,10 +79,10 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
   ],
   retryable: ["errorEnvelope.error.retryable"],
   mandatory: [
-    "hotelOffersResult.hotels.offers.price.payAtProperty.items.mandatory",
+    "hotelOffersResult.hotels.offers.payAtProperty.items.mandatory",
     "order.items.hotel.payAtProperty.items.mandatory",
     "orderList.data.items.hotel.payAtProperty.items.mandatory",
-    "errorEnvelope.error.details.offer.price.payAtProperty.items.mandatory",
+    "errorEnvelope.error.details.offer.payAtProperty.items.mandatory",
     "errorEnvelope.error.details.changes.previous.items.mandatory",
     "errorEnvelope.error.details.changes.current.items.mandatory",
     "MCP_OUTPUT.book_hotel.items.hotel.payAtProperty.items.mandatory",
@@ -350,10 +350,10 @@ describe("the unknown-is-not-no walk itself", () => {
     ]);
     assert.deepEqual(
       violations(
-        withoutField("hotelOffersResult", "hotels.offers.price.payAtProperty", "disclosure"),
+        withoutField("hotelOffersResult", "hotels.offers.payAtProperty", "disclosure"),
         "hotelOffersResult",
       ),
-      ["hotelOffersResult.hotels.offers.price.payAtProperty.items: array that is neither nullable nor flagged"],
+      ["hotelOffersResult.hotels.offers.payAtProperty.items: array that is neither nullable nor flagged"],
     );
     assert.deepEqual(
       violations(withoutField("hotelOffersResult", "hotels.offers.cancellation", "status"), "hotelOffersResult"),

@@ -35,7 +35,7 @@ test("details are listed field by field, as the contract's shapes", () => {
   // A union lists each of its branches whole.
   assert.deepEqual(details("stay_unsupported"), ['`{ reason: "mixed_occupancy" }`', '`{ reason: "max_nights"; max: number }`']);
   assert.equal(details("destination_not_found")?.length, 3);
-  assert.match(details("destination_not_found")?.[2] ?? "", /^`\{ reason: "not_a_locality"; placeId: string; hub: \{ placeId; name; names \} \| null; hubTotal: number \| null \}`$/);
+  assert.match(details("destination_not_found")?.[2] ?? "", /^`\{ reason: "not_a_locality"; placeId: string; locality: \{ placeId; name; names \} \| null; localityTotal: number \| null \}`$/);
   // offer_changed: each change's fields, and the new offer linked to its schema.
   assert.deepEqual(details("offer_changed"), [
     '`changes[]`: `{ field: "price" | "meals" | "cancellation" | "confirmation" | "pay_at_property"; previous; current; worse: boolean }`',

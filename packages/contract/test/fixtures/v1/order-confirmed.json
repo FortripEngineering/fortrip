@@ -61,7 +61,7 @@
           },
           "cancellation": {
             "status": "partial_penalty",
-            "asOf": "2026-10-24T08:00:00Z",
+            "readAt": "2026-10-24T08:00:00Z",
             "freeCancellationEndsAt": null,
             "penalties": [
               {
@@ -85,17 +85,13 @@
             "disclosure": "complete",
             "items": [
               {
-                "label": {
-                  "text": "Resort fee",
-                  "locale": "en"
-                },
+                "kind": "resort_fee",
                 "amount": {
                   "amount": "80.00",
                   "currency": "CNY"
                 },
                 "mandatory": true,
-                "basis": "per_night",
-                "collectedAt": "property"
+                "basis": "per_night"
               }
             ]
           },

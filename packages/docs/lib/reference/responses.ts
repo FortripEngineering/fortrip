@@ -78,7 +78,7 @@ export function errorExampleFor(id: OperationId): keyof typeof ERRORS {
   return id === "auth_config" ? "service_unavailable" : "unauthenticated";
 }
 
-/** A path's steps: `data[0].price` is `data`, `[0]`, `price`; `[]` is every item. */
+/** A path's steps: `data[0].name` is `data`, `[0]`, `name`; `[]` is every item. */
 const steps = (path: string): string[] =>
   path.split(".").flatMap((part) => part.match(/[^[\]]+|\[\d*\]/g) ?? []);
 
@@ -94,7 +94,7 @@ function resolves(node: unknown, [step, ...rest]: string[]): boolean {
 }
 
 /** `value` with only the listed paths kept (`data[0].hotelId`,
- *  `hotels[].offers[0].price`), in its own key order: an abridged answer that
+ *  `hotels[].offers[0].total`), in its own key order: an abridged answer that
  *  is still the real one. A path that leads nowhere throws. */
 export function abridge(value: unknown, paths: readonly string[]): unknown {
   for (const path of paths) if (!resolves(value, steps(path))) throw new Error(`abridge: no ${path}`);
@@ -122,15 +122,15 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
   "device-login": { answer: authConfig, paths: ["clientId", "scopes", "deviceAuthorizationEndpoint", "tokenEndpoint"] },
   search: {
     answer: search,
-    paths: ["destination.place.placeId", "destination.place.name", "data[0].hotelId", "data[0].name", "data[0].price.fromPerRoomStay", "nextCursor"],
+    paths: ["destination.place.placeId", "destination.place.name", "data[0].hotelId", "data[0].name", "data[0].indicativePrice.fromPerRoomStay", "nextCursor"],
   },
   offers: {
     answer: offers,
     paths: [
-      "hotels[0].hotel.hotelId",
+      "hotels[0].hotelId",
       "hotels[0].offers[0].offerId",
       "hotels[0].offers[0].expiresAt",
-      "hotels[0].offers[0].price.total",
+      "hotels[0].offers[0].total",
       "hotels[0].offers[0].cancellation.status",
       "hotels[0].offers[0].cancellation.freeCancellationEndsAt",
       "hotels[0].offers[0].confirmation.mode",

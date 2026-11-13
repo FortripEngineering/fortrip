@@ -183,7 +183,7 @@ const hotelItem = openObject({
     }),
     meals,
     cancellation: cancellation.describe(
-      "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now.",
+      "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now.",
     ),
     payAtProperty,
     confirmationNumber: z.string().nullable(),

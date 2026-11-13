@@ -75,8 +75,12 @@ export const ERROR_DETAILS = {
       openObject({
         ...place.shape,
         hotels: openObject({
-          scope: openEnum(["area", "radius"]),
-          radiusMeters: z.number().nullable(),
+          radiusMeters: z
+            .number()
+            .nullable()
+            .describe(
+              "The radius of the circle around the place that count covers, in meters; null when count covers the place's whole area.",
+            ),
           count,
         }),
       }),
@@ -95,8 +99,8 @@ export const ERROR_DETAILS = {
     openObject({
       reason: z.literal("not_a_locality"),
       placeId,
-      hub: placeRef.nullable(),
-      hubTotal: count.nullable(),
+      locality: placeRef.nullable(),
+      localityTotal: count.nullable(),
     }),
   ]),
   search_too_broad: openObject({

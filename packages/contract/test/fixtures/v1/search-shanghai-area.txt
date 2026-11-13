@@ -1,5 +1,5 @@
 Shanghai (region) · 31,205 hotels · plc_9100001 · CN · also named 上海
-Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates, not bookable (only offers are) · sort: nearest first
+Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are) · sort: nearest first
 Distances from Shanghai plc_9100002 (the seat).
 Counts: 31,205 matched, 4 priced, 3 with a price.
 
@@ -11,10 +11,10 @@ Localities: pass one back as destination { kind: "locality", placeId }, never th
 351 hotels in this search belong to no locality.
 112 more localities; name one with place_name.
 
-1. The Bund Riverside Hotel (外滩江畔酒店) · 5★ · 0.6 km · from USD 182.50/room-night (USD 365.00 per room for the stay) · 88 Zhongshan East 1st Road, Huangpu · Shanghai, CN · htl_BundRiverside0000000
-2. Jing'an Court Hotel (静安阁酒店) · 4.5★ · 1.8 km · from USD 96.10/room-night (USD 192.20 per room for the stay) · 1200 Nanjing West Road, Jing'an · Shanghai, CN · htl_JinganCourt000000000
+1. The Bund Riverside Hotel (外滩江畔酒店) · 5★ · 0.6 km · estimate from USD 182.50/room-night (USD 365.00 per room for the stay) · 88 Zhongshan East 1st Road, Huangpu · Shanghai, CN · htl_BundRiverside0000000
+2. Jing'an Court Hotel (静安阁酒店) · 4.5★ · 1.8 km · estimate from USD 96.10/room-night (USD 192.20 per room for the stay) · 1200 Nanjing West Road, Jing'an · Shanghai, CN · htl_JinganCourt000000000
 3. Riverside Inn · stars not listed · distance unknown · no indicative price · address not listed · Shanghai, CN · htl_NoAddress00000000000
-4. 静安小筑 · 2★ · 2.4 km · from USD 41.00/room-night (USD 82.00 per room for the stay) · 上海市静安区愚园路 168 号 · Shanghai, CN · htl_ZhOnlyName0000000000
+4. 静安小筑 · 2★ · 2.4 km · estimate from USD 41.00/room-night (USD 82.00 per room for the stay) · 上海市静安区愚园路 168 号 · Shanghai, CN · htl_ZhOnlyName0000000000
 
 Notes:
 - indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.

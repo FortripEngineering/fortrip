@@ -91,19 +91,22 @@ export {
 export {
   hotel,
   POLICY_TOPICS,
-  roomFacts,
+  roomType,
   type Hotel,
   type PolicyTopic,
+  type RoomType,
 } from "./outputs/hotel.ts";
 export {
   cancellation,
   confirmation,
+  FEE_KINDS,
   hotelOffersResult,
   meals,
   offer,
   omitted,
   payAtProperty,
   UNAVAILABLE_REASONS,
+  type FeeKind,
   type HotelOffersResult,
   type Offer,
   type Omitted,

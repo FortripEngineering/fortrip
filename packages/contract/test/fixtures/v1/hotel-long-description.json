@@ -112,36 +112,33 @@
       "phone": "+86 571 5550 1234",
       "website": null
     },
-    "rooms": {
-      "listed": true,
-      "items": [
-        {
-          "name": {
-            "text": "Deluxe King Room",
-            "locale": "en"
-          },
-          "beds": {
-            "text": "1 king bed",
-            "locale": "en"
-          },
-          "areaSqm": {
-            "min": 35,
-            "max": 40
-          },
-          "maxOccupancy": 2,
-          "window": "yes"
+    "roomTypes": [
+      {
+        "name": {
+          "text": "Deluxe King Room",
+          "locale": "en"
         },
-        {
-          "name": {
-            "text": "Garden Twin Room",
-            "locale": "en"
-          },
-          "beds": null,
-          "areaSqm": null,
-          "maxOccupancy": null,
-          "window": null
-        }
-      ]
-    }
+        "beds": {
+          "text": "1 king bed",
+          "locale": "en"
+        },
+        "areaSqm": {
+          "min": 35,
+          "max": 40
+        },
+        "maxOccupancy": 2,
+        "window": "yes"
+      },
+      {
+        "name": {
+          "text": "Garden Twin Room",
+          "locale": "en"
+        },
+        "beds": null,
+        "areaSqm": null,
+        "maxOccupancy": null,
+        "window": null
+      }
+    ]
   }
 }

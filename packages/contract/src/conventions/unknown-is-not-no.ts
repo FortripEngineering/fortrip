@@ -39,5 +39,5 @@ export const UNKNOWN_IS_NOT_NO_EXEMPTIONS: Readonly<Record<string, string>> = {
   bookable: `${API_DECIDES} (whether the hotel is still in the index).`,
   cityLike: `${API_DECIDES} (frozen per gazetteer release; null where not computed).`,
   known: `${THE_FLAG} (meals).`,
-  listed: `${THE_FLAG} (policies, amenities, rooms).`,
+  listed: `${THE_FLAG} (policies, amenities).`,
 };

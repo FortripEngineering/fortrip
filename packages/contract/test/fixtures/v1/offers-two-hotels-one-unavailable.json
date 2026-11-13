@@ -13,76 +13,36 @@
     },
     "hotels": [
       {
-        "hotel": {
-          "hotelId": "htl_BundRiverside0000000",
-          "name": "The Bund Riverside Hotel",
-          "names": {
-            "en": "The Bund Riverside Hotel",
-            "zh": "外滩江畔酒店"
-          }
+        "hotelId": "htl_BundRiverside0000000",
+        "name": "The Bund Riverside Hotel",
+        "names": {
+          "en": "The Bund Riverside Hotel",
+          "zh": "外滩江畔酒店"
         },
         "offers": [
           {
             "offerId": "off_BundNonRefundable000",
-            "type": "hotel",
+            "hotelId": "htl_BundRiverside0000000",
             "expiresAt": "2026-11-01T09:30:00Z",
-            "hotel": {
-              "hotelId": "htl_BundRiverside0000000",
-              "room": {
-                "name": null,
-                "beds": null,
-                "areaSqm": null,
-                "maxOccupancy": null,
-                "window": null
-              },
-              "roomCount": 1,
-              "meals": {
-                "known": false,
-                "included": null,
-                "unspecifiedMainMeals": null,
-                "allInclusive": null,
-                "guestsCoveredPerRoom": null,
-                "label": null
-              }
+            "roomType": {
+              "name": null,
+              "beds": null,
+              "areaSqm": null,
+              "maxOccupancy": null,
+              "window": null
             },
-            "price": {
-              "total": {
-                "amount": "320.00",
-                "currency": "USD"
-              },
-              "perNightAllRooms": {
-                "amount": "160.00",
-                "currency": "USD"
-              },
-              "payAtProperty": {
-                "disclosure": "incomplete",
-                "items": [
-                  {
-                    "label": {
-                      "text": "City tax",
-                      "locale": "en"
-                    },
-                    "amount": {
-                      "amount": "15.00",
-                      "currency": "CNY"
-                    },
-                    "mandatory": true,
-                    "basis": "unknown",
-                    "collectedAt": "property"
-                  },
-                  {
-                    "label": null,
-                    "amount": null,
-                    "mandatory": false,
-                    "basis": "unknown",
-                    "collectedAt": "unknown"
-                  }
-                ]
-              }
+            "roomCount": 1,
+            "meals": {
+              "known": false,
+              "included": null,
+              "unspecifiedMainMeals": null,
+              "allInclusive": null,
+              "guestsCoveredPerRoom": null,
+              "label": null
             },
             "cancellation": {
               "status": "non_refundable",
-              "asOf": "2026-11-01T09:00:00Z",
+              "readAt": "2026-11-01T09:00:00Z",
               "freeCancellationEndsAt": null,
               "penalties": [
                 {
@@ -98,62 +58,73 @@
             "confirmation": {
               "mode": "on_request",
               "withinMinutes": 30
+            },
+            "payAtProperty": {
+              "disclosure": "incomplete",
+              "items": [
+                {
+                  "kind": "tax",
+                  "amount": {
+                    "amount": "15.00",
+                    "currency": "CNY"
+                  },
+                  "mandatory": true,
+                  "basis": "unknown"
+                },
+                {
+                  "kind": "unknown",
+                  "amount": null,
+                  "mandatory": false,
+                  "basis": "unknown"
+                }
+              ]
+            },
+            "total": {
+              "amount": "320.00",
+              "currency": "USD"
+            },
+            "perRoomNight": {
+              "amount": "160.00",
+              "currency": "USD"
             }
           },
           {
             "offerId": "off_BundKingBreakfast000",
-            "type": "hotel",
+            "hotelId": "htl_BundRiverside0000000",
             "expiresAt": "2026-11-01T09:30:00Z",
-            "hotel": {
-              "hotelId": "htl_BundRiverside0000000",
-              "room": {
-                "name": {
-                  "text": "Deluxe King Room",
-                  "locale": "en"
-                },
-                "beds": {
-                  "text": "1 king bed",
-                  "locale": "en"
-                },
-                "areaSqm": {
-                  "min": 35,
-                  "max": 35
-                },
-                "maxOccupancy": 2,
-                "window": "yes"
+            "roomType": {
+              "name": {
+                "text": "Deluxe King Room",
+                "locale": "en"
               },
-              "roomCount": 1,
-              "meals": {
-                "known": true,
-                "included": [
-                  "breakfast"
-                ],
-                "unspecifiedMainMeals": 0,
-                "allInclusive": false,
-                "guestsCoveredPerRoom": 2,
-                "label": {
-                  "text": "Breakfast for 2",
-                  "locale": "en"
-                }
-              }
+              "beds": {
+                "text": "1 king bed",
+                "locale": "en"
+              },
+              "areaSqm": {
+                "min": 35,
+                "max": 35
+              },
+              "maxOccupancy": 2,
+              "window": "yes"
             },
-            "price": {
-              "total": {
-                "amount": "365.00",
-                "currency": "USD"
-              },
-              "perNightAllRooms": {
-                "amount": "182.50",
-                "currency": "USD"
-              },
-              "payAtProperty": {
-                "disclosure": "complete",
-                "items": []
+            "roomCount": 1,
+            "meals": {
+              "known": true,
+              "included": [
+                "breakfast"
+              ],
+              "unspecifiedMainMeals": 0,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": 2,
+              "label": {
+                "text": "Breakfast for 2",
+                "locale": "en"
               }
             },
             "cancellation": {
               "status": "free",
-              "asOf": "2026-11-01T09:00:00Z",
+              "readAt": "2026-11-01T09:00:00Z",
               "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
               "penalties": [
                 {
@@ -169,62 +140,57 @@
             "confirmation": {
               "mode": "instant",
               "withinMinutes": null
+            },
+            "payAtProperty": {
+              "disclosure": "complete",
+              "items": []
+            },
+            "total": {
+              "amount": "365.00",
+              "currency": "USD"
+            },
+            "perRoomNight": {
+              "amount": "182.50",
+              "currency": "USD"
             }
           },
           {
             "offerId": "off_BundHalfBoard0000000",
-            "type": "hotel",
+            "hotelId": "htl_BundRiverside0000000",
             "expiresAt": "2026-11-01T09:30:00Z",
-            "hotel": {
-              "hotelId": "htl_BundRiverside0000000",
-              "room": {
-                "name": {
-                  "text": "江景双床房",
-                  "locale": "zh"
-                },
-                "beds": {
-                  "text": "2 张单人床",
-                  "locale": "zh"
-                },
-                "areaSqm": {
-                  "min": 30,
-                  "max": 38
-                },
-                "maxOccupancy": 3,
-                "window": "partial"
+            "roomType": {
+              "name": {
+                "text": "江景双床房",
+                "locale": "zh"
               },
-              "roomCount": 1,
-              "meals": {
-                "known": true,
-                "included": [
-                  "breakfast"
-                ],
-                "unspecifiedMainMeals": 1,
-                "allInclusive": false,
-                "guestsCoveredPerRoom": null,
-                "label": {
-                  "text": "Half board",
-                  "locale": "en"
-                }
-              }
+              "beds": {
+                "text": "2 张单人床",
+                "locale": "zh"
+              },
+              "areaSqm": {
+                "min": 30,
+                "max": 38
+              },
+              "maxOccupancy": 3,
+              "window": "partial"
             },
-            "price": {
-              "total": {
-                "amount": "410.00",
-                "currency": "USD"
-              },
-              "perNightAllRooms": {
-                "amount": "205.00",
-                "currency": "USD"
-              },
-              "payAtProperty": {
-                "disclosure": "complete",
-                "items": []
+            "roomCount": 1,
+            "meals": {
+              "known": true,
+              "included": [
+                "breakfast"
+              ],
+              "unspecifiedMainMeals": 1,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": null,
+              "label": {
+                "text": "Half board",
+                "locale": "en"
               }
             },
             "cancellation": {
               "status": "unknown",
-              "asOf": "2026-11-01T09:00:00Z",
+              "readAt": "2026-11-01T09:00:00Z",
               "freeCancellationEndsAt": null,
               "penalties": [],
               "timeZone": null
@@ -232,6 +198,18 @@
             "confirmation": {
               "mode": "unknown",
               "withinMinutes": null
+            },
+            "payAtProperty": {
+              "disclosure": "complete",
+              "items": []
+            },
+            "total": {
+              "amount": "410.00",
+              "currency": "USD"
+            },
+            "perRoomNight": {
+              "amount": "205.00",
+              "currency": "USD"
             }
           }
         ],
@@ -240,7 +218,8 @@
           "byFilters": 0,
           "dominated": 4,
           "unreadable": 1,
-          "byLimit": 2
+          "byLimit": 2,
+          "byCallLimit": 0
         }
       }
     ],
@@ -253,7 +232,8 @@
           "byFilters": 0,
           "dominated": 0,
           "unreadable": 0,
-          "byLimit": 0
+          "byLimit": 0,
+          "byCallLimit": 0
         }
       }
     ]

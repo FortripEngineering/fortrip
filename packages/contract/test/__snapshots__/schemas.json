@@ -756,7 +756,7 @@
                                     }
                                   ]
                                 },
-                                "asOf": {
+                                "readAt": {
                                   "type": "string",
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                                   "description": "When these terms were read: status and penalties are as of this time."
@@ -827,13 +827,13 @@
                               },
                               "required": [
                                 "status",
-                                "asOf",
+                                "readAt",
                                 "freeCancellationEndsAt",
                                 "penalties",
                                 "timeZone"
                               ],
                               "additionalProperties": {},
-                              "description": "The cancellation terms, read at asOf."
+                              "description": "The cancellation terms, read at readAt."
                             },
                             "current": {
                               "type": "object",
@@ -854,7 +854,7 @@
                                     }
                                   ]
                                 },
-                                "asOf": {
+                                "readAt": {
                                   "type": "string",
                                   "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                                   "description": "When these terms were read: status and penalties are as of this time."
@@ -925,13 +925,13 @@
                               },
                               "required": [
                                 "status",
-                                "asOf",
+                                "readAt",
                                 "freeCancellationEndsAt",
                                 "penalties",
                                 "timeZone"
                               ],
                               "additionalProperties": {},
-                              "description": "The cancellation terms, read at asOf."
+                              "description": "The cancellation terms, read at readAt."
                             },
                             "worse": {
                               "type": "boolean"
@@ -1073,46 +1073,24 @@
                                   "items": {
                                     "type": "object",
                                     "properties": {
-                                      "label": {
+                                      "kind": {
                                         "anyOf": [
                                           {
-                                            "type": "object",
-                                            "properties": {
-                                              "text": {
-                                                "type": "string"
-                                              },
-                                              "locale": {
-                                                "anyOf": [
-                                                  {
-                                                    "anyOf": [
-                                                      {
-                                                        "type": "string",
-                                                        "enum": [
-                                                          "en",
-                                                          "zh"
-                                                        ]
-                                                      },
-                                                      {
-                                                        "type": "string"
-                                                      }
-                                                    ]
-                                                  },
-                                                  {
-                                                    "type": "null"
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            "required": [
-                                              "text",
-                                              "locale"
-                                            ],
-                                            "additionalProperties": {}
+                                            "type": "string",
+                                            "enum": [
+                                              "tax",
+                                              "resort_fee",
+                                              "cleaning_fee",
+                                              "deposit",
+                                              "other",
+                                              "unknown"
+                                            ]
                                           },
                                           {
-                                            "type": "null"
+                                            "type": "string"
                                           }
-                                        ]
+                                        ],
+                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                                       },
                                       "amount": {
                                         "anyOf": [
@@ -1158,28 +1136,13 @@
                                             "type": "string"
                                           }
                                         ]
-                                      },
-                                      "collectedAt": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "enum": [
-                                              "property",
-                                              "unknown"
-                                            ]
-                                          },
-                                          {
-                                            "type": "string"
-                                          }
-                                        ]
                                       }
                                     },
                                     "required": [
-                                      "label",
+                                      "kind",
                                       "amount",
                                       "mandatory",
-                                      "basis",
-                                      "collectedAt"
+                                      "basis"
                                     ],
                                     "additionalProperties": {}
                                   }
@@ -1190,7 +1153,7 @@
                                 "items"
                               ],
                               "additionalProperties": {},
-                              "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                              "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                             },
                             "current": {
                               "type": "object",
@@ -1214,46 +1177,24 @@
                                   "items": {
                                     "type": "object",
                                     "properties": {
-                                      "label": {
+                                      "kind": {
                                         "anyOf": [
                                           {
-                                            "type": "object",
-                                            "properties": {
-                                              "text": {
-                                                "type": "string"
-                                              },
-                                              "locale": {
-                                                "anyOf": [
-                                                  {
-                                                    "anyOf": [
-                                                      {
-                                                        "type": "string",
-                                                        "enum": [
-                                                          "en",
-                                                          "zh"
-                                                        ]
-                                                      },
-                                                      {
-                                                        "type": "string"
-                                                      }
-                                                    ]
-                                                  },
-                                                  {
-                                                    "type": "null"
-                                                  }
-                                                ]
-                                              }
-                                            },
-                                            "required": [
-                                              "text",
-                                              "locale"
-                                            ],
-                                            "additionalProperties": {}
+                                            "type": "string",
+                                            "enum": [
+                                              "tax",
+                                              "resort_fee",
+                                              "cleaning_fee",
+                                              "deposit",
+                                              "other",
+                                              "unknown"
+                                            ]
                                           },
                                           {
-                                            "type": "null"
+                                            "type": "string"
                                           }
-                                        ]
+                                        ],
+                                        "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                                       },
                                       "amount": {
                                         "anyOf": [
@@ -1299,28 +1240,13 @@
                                             "type": "string"
                                           }
                                         ]
-                                      },
-                                      "collectedAt": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "enum": [
-                                              "property",
-                                              "unknown"
-                                            ]
-                                          },
-                                          {
-                                            "type": "string"
-                                          }
-                                        ]
                                       }
                                     },
                                     "required": [
-                                      "label",
+                                      "kind",
                                       "amount",
                                       "mandatory",
-                                      "basis",
-                                      "collectedAt"
+                                      "basis"
                                     ],
                                     "additionalProperties": {}
                                   }
@@ -1331,7 +1257,7 @@
                                 "items"
                               ],
                               "additionalProperties": {},
-                              "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                              "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                             },
                             "worse": {
                               "type": "boolean"
@@ -1367,366 +1293,144 @@
                         "type": "string",
                         "pattern": "^off_[0-9A-Za-z]{20}$"
                       },
-                      "type": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "hotel"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
+                      "hotelId": {
+                        "type": "string",
+                        "pattern": "^htl_[0-9A-Za-z]{20}$"
                       },
                       "expiresAt": {
                         "type": "string",
                         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
                       },
-                      "hotel": {
+                      "roomType": {
                         "type": "object",
                         "properties": {
-                          "hotelId": {
-                            "type": "string",
-                            "pattern": "^htl_[0-9A-Za-z]{20}$"
-                          },
-                          "room": {
-                            "type": "object",
-                            "properties": {
-                              "name": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
                                   },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "beds": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "areaSqm": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "min": {
-                                        "type": "number"
-                                      },
-                                      "max": {
-                                        "type": "number"
-                                      }
-                                    },
-                                    "required": [
-                                      "min",
-                                      "max"
-                                    ],
-                                    "additionalProperties": {}
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "maxOccupancy": {
-                                "anyOf": [
-                                  {
-                                    "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "window": {
-                                "anyOf": [
-                                  {
+                                  "locale": {
                                     "anyOf": [
                                       {
-                                        "type": "string",
-                                        "enum": [
-                                          "yes",
-                                          "no",
-                                          "partial"
-                                        ]
-                                      },
-                                      {
-                                        "type": "string"
-                                      }
-                                    ]
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "name",
-                              "beds",
-                              "areaSqm",
-                              "maxOccupancy",
-                              "window"
-                            ],
-                            "additionalProperties": {}
-                          },
-                          "roomCount": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          },
-                          "meals": {
-                            "type": "object",
-                            "properties": {
-                              "known": {
-                                "type": "boolean"
-                              },
-                              "included": {
-                                "anyOf": [
-                                  {
-                                    "type": "array",
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "breakfast",
-                                            "lunch",
-                                            "dinner"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "unspecifiedMainMeals": {
-                                "anyOf": [
-                                  {
-                                    "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
-                              },
-                              "allInclusive": {
-                                "anyOf": [
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "guestsCoveredPerRoom": {
-                                "anyOf": [
-                                  {
-                                    "type": "integer",
-                                    "minimum": -9007199254740991,
-                                    "maximum": 9007199254740991
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ],
-                                "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
-                              },
-                              "label": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
                                         "anyOf": [
                                           {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
+                                            "type": "string",
+                                            "enum": [
+                                              "en",
+                                              "zh"
                                             ]
                                           },
                                           {
-                                            "type": "null"
+                                            "type": "string"
                                           }
                                         ]
+                                      },
+                                      {
+                                        "type": "null"
                                       }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
-                                  },
-                                  {
-                                    "type": "null"
+                                    ]
                                   }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "known",
-                              "included",
-                              "unspecifiedMainMeals",
-                              "allInclusive",
-                              "guestsCoveredPerRoom",
-                              "label"
-                            ],
-                            "additionalProperties": {},
-                            "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
-                          }
-                        },
-                        "required": [
-                          "hotelId",
-                          "room",
-                          "roomCount",
-                          "meals"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      "price": {
-                        "type": "object",
-                        "properties": {
-                          "total": {
-                            "type": "object",
-                            "properties": {
-                              "amount": {
-                                "type": "string",
-                                "pattern": "^\\d+(\\.\\d+)?$"
+                                },
+                                "required": [
+                                  "text",
+                                  "locale"
+                                ],
+                                "additionalProperties": {}
                               },
-                              "currency": {
-                                "type": "string",
-                                "pattern": "^[A-Z]{3}$"
+                              {
+                                "type": "null"
                               }
-                            },
-                            "required": [
-                              "amount",
-                              "currency"
-                            ],
-                            "additionalProperties": {}
+                            ]
                           },
-                          "perNightAllRooms": {
-                            "type": "object",
-                            "properties": {
-                              "amount": {
-                                "type": "string",
-                                "pattern": "^\\d+(\\.\\d+)?$"
+                          "beds": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "locale": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "enum": [
+                                              "en",
+                                              "zh"
+                                            ]
+                                          },
+                                          {
+                                            "type": "string"
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "text",
+                                  "locale"
+                                ],
+                                "additionalProperties": {}
                               },
-                              "currency": {
-                                "type": "string",
-                                "pattern": "^[A-Z]{3}$"
+                              {
+                                "type": "null"
                               }
-                            },
-                            "required": [
-                              "amount",
-                              "currency"
-                            ],
-                            "additionalProperties": {},
-                            "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
+                            ]
                           },
-                          "payAtProperty": {
-                            "type": "object",
-                            "properties": {
-                              "disclosure": {
+                          "areaSqm": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "min": {
+                                    "type": "number"
+                                  },
+                                  "max": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "min",
+                                  "max"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "maxOccupancy": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "window": {
+                            "anyOf": [
+                              {
                                 "anyOf": [
                                   {
                                     "type": "string",
                                     "enum": [
-                                      "complete",
-                                      "incomplete"
+                                      "yes",
+                                      "no",
+                                      "partial"
                                     ]
                                   },
                                   {
@@ -1734,137 +1438,146 @@
                                   }
                                 ]
                               },
-                              "items": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "label": {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "text": {
-                                              "type": "string"
-                                            },
-                                            "locale": {
-                                              "anyOf": [
-                                                {
-                                                  "anyOf": [
-                                                    {
-                                                      "type": "string",
-                                                      "enum": [
-                                                        "en",
-                                                        "zh"
-                                                      ]
-                                                    },
-                                                    {
-                                                      "type": "string"
-                                                    }
-                                                  ]
-                                                },
-                                                {
-                                                  "type": "null"
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          "required": [
-                                            "text",
-                                            "locale"
-                                          ],
-                                          "additionalProperties": {}
-                                        },
-                                        {
-                                          "type": "null"
-                                        }
-                                      ]
-                                    },
-                                    "amount": {
-                                      "anyOf": [
-                                        {
-                                          "type": "object",
-                                          "properties": {
-                                            "amount": {
-                                              "type": "string",
-                                              "pattern": "^\\d+(\\.\\d+)?$"
-                                            },
-                                            "currency": {
-                                              "type": "string",
-                                              "pattern": "^[A-Z]{3}$"
-                                            }
-                                          },
-                                          "required": [
-                                            "amount",
-                                            "currency"
-                                          ],
-                                          "additionalProperties": {}
-                                        },
-                                        {
-                                          "type": "null"
-                                        }
-                                      ]
-                                    },
-                                    "mandatory": {
-                                      "type": "boolean"
-                                    },
-                                    "basis": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "per_stay",
-                                            "per_night",
-                                            "per_person",
-                                            "per_person_per_night",
-                                            "unknown"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string"
-                                        }
-                                      ]
-                                    },
-                                    "collectedAt": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "property",
-                                            "unknown"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string"
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "label",
-                                    "amount",
-                                    "mandatory",
-                                    "basis",
-                                    "collectedAt"
-                                  ],
-                                  "additionalProperties": {}
-                                }
+                              {
+                                "type": "null"
                               }
-                            },
-                            "required": [
-                              "disclosure",
-                              "items"
-                            ],
-                            "additionalProperties": {},
-                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                            ]
                           }
                         },
                         "required": [
-                          "total",
-                          "perNightAllRooms",
-                          "payAtProperty"
+                          "name",
+                          "beds",
+                          "areaSqm",
+                          "maxOccupancy",
+                          "window"
                         ],
-                        "additionalProperties": {}
+                        "additionalProperties": {},
+                        "description": "A room type: its name and facts, each null when not on record."
+                      },
+                      "roomCount": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "meals": {
+                        "type": "object",
+                        "properties": {
+                          "known": {
+                            "type": "boolean"
+                          },
+                          "included": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "breakfast",
+                                        "lunch",
+                                        "dinner"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "unspecifiedMainMeals": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
+                          },
+                          "allInclusive": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "guestsCoveredPerRoom": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
+                          },
+                          "label": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "locale": {
+                                    "anyOf": [
+                                      {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "enum": [
+                                              "en",
+                                              "zh"
+                                            ]
+                                          },
+                                          {
+                                            "type": "string"
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "text",
+                                  "locale"
+                                ],
+                                "additionalProperties": {}
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "known",
+                          "included",
+                          "unspecifiedMainMeals",
+                          "allInclusive",
+                          "guestsCoveredPerRoom",
+                          "label"
+                        ],
+                        "additionalProperties": {},
+                        "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                       },
                       "cancellation": {
                         "type": "object",
@@ -1885,7 +1598,7 @@
                               }
                             ]
                           },
-                          "asOf": {
+                          "readAt": {
                             "type": "string",
                             "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                             "description": "When these terms were read: status and penalties are as of this time."
@@ -1956,13 +1669,13 @@
                         },
                         "required": [
                           "status",
-                          "asOf",
+                          "readAt",
                           "freeCancellationEndsAt",
                           "penalties",
                           "timeZone"
                         ],
                         "additionalProperties": {},
-                        "description": "The cancellation terms, read at asOf."
+                        "description": "The cancellation terms, read at readAt."
                       },
                       "confirmation": {
                         "type": "object",
@@ -2003,16 +1716,162 @@
                         ],
                         "additionalProperties": {},
                         "description": "How the hotel confirms a booking of this offer."
+                      },
+                      "payAtProperty": {
+                        "type": "object",
+                        "properties": {
+                          "disclosure": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "complete",
+                                  "incomplete"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "tax",
+                                        "resort_fee",
+                                        "cleaning_fee",
+                                        "deposit",
+                                        "other",
+                                        "unknown"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                                },
+                                "amount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "amount": {
+                                          "type": "string",
+                                          "pattern": "^\\d+(\\.\\d+)?$"
+                                        },
+                                        "currency": {
+                                          "type": "string",
+                                          "pattern": "^[A-Z]{3}$"
+                                        }
+                                      },
+                                      "required": [
+                                        "amount",
+                                        "currency"
+                                      ],
+                                      "additionalProperties": {}
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "mandatory": {
+                                  "type": "boolean"
+                                },
+                                "basis": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "per_stay",
+                                        "per_night",
+                                        "per_person",
+                                        "per_person_per_night",
+                                        "unknown"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "amount",
+                                "mandatory",
+                                "basis"
+                              ],
+                              "additionalProperties": {}
+                            }
+                          }
+                        },
+                        "required": [
+                          "disclosure",
+                          "items"
+                        ],
+                        "additionalProperties": {},
+                        "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      },
+                      "total": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "string",
+                            "pattern": "^\\d+(\\.\\d+)?$"
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "currency"
+                        ],
+                        "additionalProperties": {},
+                        "description": "The whole stay for all rooms: what is charged. Fees payable at the property are not in it."
+                      },
+                      "perRoomNight": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "type": "string",
+                            "pattern": "^\\d+(\\.\\d+)?$"
+                          },
+                          "currency": {
+                            "type": "string",
+                            "pattern": "^[A-Z]{3}$"
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "currency"
+                        ],
+                        "additionalProperties": {},
+                        "description": "total divided by the rooms and the nights, rounded to cents: for comparison only. It need not multiply back to total, which is what is charged."
                       }
                     },
                     "required": [
                       "offerId",
-                      "type",
+                      "hotelId",
                       "expiresAt",
-                      "hotel",
-                      "price",
+                      "roomType",
+                      "roomCount",
+                      "meals",
                       "cancellation",
-                      "confirmation"
+                      "confirmation",
+                      "payAtProperty",
+                      "total",
+                      "perRoomNight"
                     ],
                     "additionalProperties": {}
                   }
@@ -2680,20 +2539,6 @@
                             }
                           ]
                         },
-                        "scope": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "enum": [
-                                "area",
-                                "radius"
-                              ]
-                            },
-                            {
-                              "type": "string"
-                            }
-                          ]
-                        },
                         "cityLike": {
                           "anyOf": [
                             {
@@ -2793,20 +2638,6 @@
                         "hotels": {
                           "type": "object",
                           "properties": {
-                            "scope": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "enum": [
-                                    "area",
-                                    "radius"
-                                  ]
-                                },
-                                {
-                                  "type": "string"
-                                }
-                              ]
-                            },
                             "radiusMeters": {
                               "anyOf": [
                                 {
@@ -2815,7 +2646,8 @@
                                 {
                                   "type": "null"
                                 }
-                              ]
+                              ],
+                              "description": "The radius of the circle around the place that count covers, in meters; null when count covers the place's whole area."
                             },
                             "count": {
                               "type": "integer",
@@ -2824,7 +2656,6 @@
                             }
                           },
                           "required": [
-                            "scope",
                             "radiusMeters",
                             "count"
                           ],
@@ -2836,7 +2667,6 @@
                         "name",
                         "names",
                         "kind",
-                        "scope",
                         "cityLike",
                         "population",
                         "region",
@@ -2973,7 +2803,7 @@
                         "type": "string",
                         "pattern": "^plc_\\d{1,12}$"
                       },
-                      "hub": {
+                      "locality": {
                         "anyOf": [
                           {
                             "type": "object",
@@ -3028,7 +2858,7 @@
                           }
                         ]
                       },
-                      "hubTotal": {
+                      "localityTotal": {
                         "anyOf": [
                           {
                             "type": "integer",
@@ -3044,8 +2874,8 @@
                     "required": [
                       "reason",
                       "placeId",
-                      "hub",
-                      "hubTotal"
+                      "locality",
+                      "localityTotal"
                     ],
                     "additionalProperties": {}
                   },
@@ -3354,7 +3184,7 @@
                                   "seat",
                                   "capital",
                                   "busiest_settlement",
-                                  "hub",
+                                  "locality",
                                   "point"
                                 ]
                               },
@@ -4482,50 +4312,54 @@
         ],
         "additionalProperties": {}
       },
-      "rooms": {
-        "type": "object",
-        "properties": {
-          "listed": {
-            "type": "boolean"
-          },
-          "items": {
+      "roomTypes": {
+        "description": "The hotel's room types, present only when asked for with include=roomTypes; null when the catalogue lists none. Nothing joins an offer's roomType to an entry here: the names can differ.",
+        "anyOf": [
+          {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
                 "name": {
-                  "type": "object",
-                  "properties": {
-                    "text": {
-                      "type": "string"
-                    },
-                    "locale": {
-                      "anyOf": [
-                        {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "locale": {
                           "anyOf": [
                             {
-                              "type": "string",
-                              "enum": [
-                                "en",
-                                "zh"
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "en",
+                                    "zh"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
                               ]
                             },
                             {
-                              "type": "string"
+                              "type": "null"
                             }
                           ]
-                        },
-                        {
-                          "type": "null"
                         }
-                      ]
+                      },
+                      "required": [
+                        "text",
+                        "locale"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "text",
-                    "locale"
-                  ],
-                  "additionalProperties": {}
+                  ]
                 },
                 "beds": {
                   "anyOf": [
@@ -4633,15 +4467,14 @@
                 "maxOccupancy",
                 "window"
               ],
-              "additionalProperties": {}
+              "additionalProperties": {},
+              "description": "A room type: its name and facts, each null when not on record."
             }
+          },
+          {
+            "type": "null"
           }
-        },
-        "required": [
-          "listed",
-          "items"
-        ],
-        "additionalProperties": {}
+        ]
       }
     },
     "required": [
@@ -4718,51 +4551,40 @@
         "items": {
           "type": "object",
           "properties": {
-            "hotel": {
+            "hotelId": {
+              "type": "string",
+              "pattern": "^htl_[0-9A-Za-z]{20}$"
+            },
+            "name": {
+              "type": "string"
+            },
+            "names": {
               "type": "object",
               "properties": {
-                "hotelId": {
-                  "type": "string",
-                  "pattern": "^htl_[0-9A-Za-z]{20}$"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "names": {
-                  "type": "object",
-                  "properties": {
-                    "en": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                "en": {
+                  "anyOf": [
+                    {
+                      "type": "string"
                     },
-                    "zh": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
+                    {
+                      "type": "null"
                     }
-                  },
-                  "required": [
-                    "en",
-                    "zh"
-                  ],
-                  "additionalProperties": {}
+                  ]
+                },
+                "zh": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
-                "hotelId",
-                "name",
-                "names"
+                "en",
+                "zh"
               ],
               "additionalProperties": {}
             },
@@ -4775,366 +4597,144 @@
                     "type": "string",
                     "pattern": "^off_[0-9A-Za-z]{20}$"
                   },
-                  "type": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "enum": [
-                          "hotel"
-                        ]
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
+                  "hotelId": {
+                    "type": "string",
+                    "pattern": "^htl_[0-9A-Za-z]{20}$"
                   },
                   "expiresAt": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"
                   },
-                  "hotel": {
+                  "roomType": {
                     "type": "object",
                     "properties": {
-                      "hotelId": {
-                        "type": "string",
-                        "pattern": "^htl_[0-9A-Za-z]{20}$"
-                      },
-                      "room": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "text": {
-                                    "type": "string"
-                                  },
-                                  "locale": {
-                                    "anyOf": [
-                                      {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "enum": [
-                                              "en",
-                                              "zh"
-                                            ]
-                                          },
-                                          {
-                                            "type": "string"
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "text",
-                                  "locale"
-                                ],
-                                "additionalProperties": {}
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
                               },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "beds": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "text": {
-                                    "type": "string"
-                                  },
-                                  "locale": {
-                                    "anyOf": [
-                                      {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "enum": [
-                                              "en",
-                                              "zh"
-                                            ]
-                                          },
-                                          {
-                                            "type": "string"
-                                          }
-                                        ]
-                                      },
-                                      {
-                                        "type": "null"
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": [
-                                  "text",
-                                  "locale"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "areaSqm": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "min": {
-                                    "type": "number"
-                                  },
-                                  "max": {
-                                    "type": "number"
-                                  }
-                                },
-                                "required": [
-                                  "min",
-                                  "max"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "maxOccupancy": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "window": {
-                            "anyOf": [
-                              {
+                              "locale": {
                                 "anyOf": [
                                   {
-                                    "type": "string",
-                                    "enum": [
-                                      "yes",
-                                      "no",
-                                      "partial"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "name",
-                          "beds",
-                          "areaSqm",
-                          "maxOccupancy",
-                          "window"
-                        ],
-                        "additionalProperties": {}
-                      },
-                      "roomCount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "meals": {
-                        "type": "object",
-                        "properties": {
-                          "known": {
-                            "type": "boolean"
-                          },
-                          "included": {
-                            "anyOf": [
-                              {
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "breakfast",
-                                        "lunch",
-                                        "dinner"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string"
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "unspecifiedMainMeals": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
-                          },
-                          "allInclusive": {
-                            "anyOf": [
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "guestsCoveredPerRoom": {
-                            "anyOf": [
-                              {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ],
-                            "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
-                          },
-                          "label": {
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "text": {
-                                    "type": "string"
-                                  },
-                                  "locale": {
                                     "anyOf": [
                                       {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "enum": [
-                                              "en",
-                                              "zh"
-                                            ]
-                                          },
-                                          {
-                                            "type": "string"
-                                          }
+                                        "type": "string",
+                                        "enum": [
+                                          "en",
+                                          "zh"
                                         ]
                                       },
                                       {
-                                        "type": "null"
+                                        "type": "string"
                                       }
                                     ]
+                                  },
+                                  {
+                                    "type": "null"
                                   }
-                                },
-                                "required": [
-                                  "text",
-                                  "locale"
-                                ],
-                                "additionalProperties": {}
-                              },
-                              {
-                                "type": "null"
+                                ]
                               }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "known",
-                          "included",
-                          "unspecifiedMainMeals",
-                          "allInclusive",
-                          "guestsCoveredPerRoom",
-                          "label"
-                        ],
-                        "additionalProperties": {},
-                        "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
-                      }
-                    },
-                    "required": [
-                      "hotelId",
-                      "room",
-                      "roomCount",
-                      "meals"
-                    ],
-                    "additionalProperties": {}
-                  },
-                  "price": {
-                    "type": "object",
-                    "properties": {
-                      "total": {
-                        "type": "object",
-                        "properties": {
-                          "amount": {
-                            "type": "string",
-                            "pattern": "^\\d+(\\.\\d+)?$"
+                            },
+                            "required": [
+                              "text",
+                              "locale"
+                            ],
+                            "additionalProperties": {}
                           },
-                          "currency": {
-                            "type": "string",
-                            "pattern": "^[A-Z]{3}$"
+                          {
+                            "type": "null"
                           }
-                        },
-                        "required": [
-                          "amount",
-                          "currency"
-                        ],
-                        "additionalProperties": {}
+                        ]
                       },
-                      "perNightAllRooms": {
-                        "type": "object",
-                        "properties": {
-                          "amount": {
-                            "type": "string",
-                            "pattern": "^\\d+(\\.\\d+)?$"
+                      "beds": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "locale": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "en",
+                                          "zh"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "locale"
+                            ],
+                            "additionalProperties": {}
                           },
-                          "currency": {
-                            "type": "string",
-                            "pattern": "^[A-Z]{3}$"
+                          {
+                            "type": "null"
                           }
-                        },
-                        "required": [
-                          "amount",
-                          "currency"
-                        ],
-                        "additionalProperties": {},
-                        "description": "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare."
+                        ]
                       },
-                      "payAtProperty": {
-                        "type": "object",
-                        "properties": {
-                          "disclosure": {
+                      "areaSqm": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "min": {
+                                "type": "number"
+                              },
+                              "max": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "min",
+                              "max"
+                            ],
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "maxOccupancy": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "window": {
+                        "anyOf": [
+                          {
                             "anyOf": [
                               {
                                 "type": "string",
                                 "enum": [
-                                  "complete",
-                                  "incomplete"
+                                  "yes",
+                                  "no",
+                                  "partial"
                                 ]
                               },
                               {
@@ -5142,137 +4742,146 @@
                               }
                             ]
                           },
-                          "items": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "label": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "text": {
-                                          "type": "string"
-                                        },
-                                        "locale": {
-                                          "anyOf": [
-                                            {
-                                              "anyOf": [
-                                                {
-                                                  "type": "string",
-                                                  "enum": [
-                                                    "en",
-                                                    "zh"
-                                                  ]
-                                                },
-                                                {
-                                                  "type": "string"
-                                                }
-                                              ]
-                                            },
-                                            {
-                                              "type": "null"
-                                            }
-                                          ]
-                                        }
-                                      },
-                                      "required": [
-                                        "text",
-                                        "locale"
-                                      ],
-                                      "additionalProperties": {}
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
-                                "amount": {
-                                  "anyOf": [
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "amount": {
-                                          "type": "string",
-                                          "pattern": "^\\d+(\\.\\d+)?$"
-                                        },
-                                        "currency": {
-                                          "type": "string",
-                                          "pattern": "^[A-Z]{3}$"
-                                        }
-                                      },
-                                      "required": [
-                                        "amount",
-                                        "currency"
-                                      ],
-                                      "additionalProperties": {}
-                                    },
-                                    {
-                                      "type": "null"
-                                    }
-                                  ]
-                                },
-                                "mandatory": {
-                                  "type": "boolean"
-                                },
-                                "basis": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "per_stay",
-                                        "per_night",
-                                        "per_person",
-                                        "per_person_per_night",
-                                        "unknown"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string"
-                                    }
-                                  ]
-                                },
-                                "collectedAt": {
-                                  "anyOf": [
-                                    {
-                                      "type": "string",
-                                      "enum": [
-                                        "property",
-                                        "unknown"
-                                      ]
-                                    },
-                                    {
-                                      "type": "string"
-                                    }
-                                  ]
-                                }
-                              },
-                              "required": [
-                                "label",
-                                "amount",
-                                "mandatory",
-                                "basis",
-                                "collectedAt"
-                              ],
-                              "additionalProperties": {}
-                            }
+                          {
+                            "type": "null"
                           }
-                        },
-                        "required": [
-                          "disclosure",
-                          "items"
-                        ],
-                        "additionalProperties": {},
-                        "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                        ]
                       }
                     },
                     "required": [
-                      "total",
-                      "perNightAllRooms",
-                      "payAtProperty"
+                      "name",
+                      "beds",
+                      "areaSqm",
+                      "maxOccupancy",
+                      "window"
                     ],
-                    "additionalProperties": {}
+                    "additionalProperties": {},
+                    "description": "A room type: its name and facts, each null when not on record."
+                  },
+                  "roomCount": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "meals": {
+                    "type": "object",
+                    "properties": {
+                      "known": {
+                        "type": "boolean"
+                      },
+                      "included": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "breakfast",
+                                    "lunch",
+                                    "dinner"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "unspecifiedMainMeals": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Main meals a day beyond included that the rate doesn't name (e.g. 1 when a half-board rate doesn't say lunch or dinner); null when known is false."
+                      },
+                      "allInclusive": {
+                        "anyOf": [
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "guestsCoveredPerRoom": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "How many guests in each room the meals are for; fewer than the guests in the room means not everyone gets them. null when not stated."
+                      },
+                      "label": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "locale": {
+                                "anyOf": [
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "en",
+                                          "zh"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "locale"
+                            ],
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "known",
+                      "included",
+                      "unspecifiedMainMeals",
+                      "allInclusive",
+                      "guestsCoveredPerRoom",
+                      "label"
+                    ],
+                    "additionalProperties": {},
+                    "description": "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null."
                   },
                   "cancellation": {
                     "type": "object",
@@ -5293,7 +4902,7 @@
                           }
                         ]
                       },
-                      "asOf": {
+                      "readAt": {
                         "type": "string",
                         "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                         "description": "When these terms were read: status and penalties are as of this time."
@@ -5364,13 +4973,13 @@
                     },
                     "required": [
                       "status",
-                      "asOf",
+                      "readAt",
                       "freeCancellationEndsAt",
                       "penalties",
                       "timeZone"
                     ],
                     "additionalProperties": {},
-                    "description": "The cancellation terms, read at asOf."
+                    "description": "The cancellation terms, read at readAt."
                   },
                   "confirmation": {
                     "type": "object",
@@ -5411,16 +5020,162 @@
                     ],
                     "additionalProperties": {},
                     "description": "How the hotel confirms a booking of this offer."
+                  },
+                  "payAtProperty": {
+                    "type": "object",
+                    "properties": {
+                      "disclosure": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "incomplete"
+                            ]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "tax",
+                                    "resort_fee",
+                                    "cleaning_fee",
+                                    "deposit",
+                                    "other",
+                                    "unknown"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ],
+                              "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
+                            },
+                            "amount": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^\\d+(\\.\\d+)?$"
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "pattern": "^[A-Z]{3}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "amount",
+                                    "currency"
+                                  ],
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "mandatory": {
+                              "type": "boolean"
+                            },
+                            "basis": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "per_stay",
+                                    "per_night",
+                                    "per_person",
+                                    "per_person_per_night",
+                                    "unknown"
+                                  ]
+                                },
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "amount",
+                            "mandatory",
+                            "basis"
+                          ],
+                          "additionalProperties": {}
+                        }
+                      }
+                    },
+                    "required": [
+                      "disclosure",
+                      "items"
+                    ],
+                    "additionalProperties": {},
+                    "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                  },
+                  "total": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\d+(\\.\\d+)?$"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      }
+                    },
+                    "required": [
+                      "amount",
+                      "currency"
+                    ],
+                    "additionalProperties": {},
+                    "description": "The whole stay for all rooms: what is charged. Fees payable at the property are not in it."
+                  },
+                  "perRoomNight": {
+                    "type": "object",
+                    "properties": {
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\d+(\\.\\d+)?$"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      }
+                    },
+                    "required": [
+                      "amount",
+                      "currency"
+                    ],
+                    "additionalProperties": {},
+                    "description": "total divided by the rooms and the nights, rounded to cents: for comparison only. It need not multiply back to total, which is what is charged."
                   }
                 },
                 "required": [
                   "offerId",
-                  "type",
+                  "hotelId",
                   "expiresAt",
-                  "hotel",
-                  "price",
+                  "roomType",
+                  "roomCount",
+                  "meals",
                   "cancellation",
-                  "confirmation"
+                  "confirmation",
+                  "payAtProperty",
+                  "total",
+                  "perRoomNight"
                 ],
                 "additionalProperties": {}
               }
@@ -5456,7 +5211,13 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
-                  "description": "Offers left out by limitPerHotel."
+                  "description": "Offers left out by limitPerHotel, or by the 15 a hotel gets when none is given; a higher limitPerHotel or a filter may show them."
+                },
+                "byCallLimit": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Offers left out because the call's hotels share 45 offers in all (100 when limitPerHotel is given): a call for this hotel alone shows this many more."
                 }
               },
               "required": [
@@ -5464,14 +5225,17 @@
                 "byFilters",
                 "dominated",
                 "unreadable",
-                "byLimit"
+                "byLimit",
+                "byCallLimit"
               ],
               "additionalProperties": {},
               "description": "How many offers each selection step left out."
             }
           },
           "required": [
-            "hotel",
+            "hotelId",
+            "name",
+            "names",
             "offers",
             "omitted"
           ],
@@ -5540,7 +5304,13 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Offers left out by limitPerHotel."
+                      "description": "Offers left out by limitPerHotel, or by the 15 a hotel gets when none is given; a higher limitPerHotel or a filter may show them."
+                    },
+                    "byCallLimit": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Offers left out because the call's hotels share 45 offers in all (100 when limitPerHotel is given): a call for this hotel alone shows this many more."
                     }
                   },
                   "required": [
@@ -5548,7 +5318,8 @@
                     "byFilters",
                     "dominated",
                     "unreadable",
-                    "byLimit"
+                    "byLimit",
+                    "byCallLimit"
                   ],
                   "additionalProperties": {},
                   "description": "How many offers each selection step left out."
@@ -6033,7 +5804,7 @@
                             }
                           ]
                         },
-                        "asOf": {
+                        "readAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                           "description": "When these terms were read: status and penalties are as of this time."
@@ -6104,13 +5875,13 @@
                       },
                       "required": [
                         "status",
-                        "asOf",
+                        "readAt",
                         "freeCancellationEndsAt",
                         "penalties",
                         "timeZone"
                       ],
                       "additionalProperties": {},
-                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                      "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -6134,46 +5905,24 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "label": {
+                              "kind": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                                    "type": "string",
+                                    "enum": [
+                                      "tax",
+                                      "resort_fee",
+                                      "cleaning_fee",
+                                      "deposit",
+                                      "other",
+                                      "unknown"
+                                    ]
                                   },
                                   {
-                                    "type": "null"
+                                    "type": "string"
                                   }
-                                ]
+                                ],
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -6219,28 +5968,13 @@
                                     "type": "string"
                                   }
                                 ]
-                              },
-                              "collectedAt": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "property",
-                                      "unknown"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
                               }
                             },
                             "required": [
-                              "label",
+                              "kind",
                               "amount",
                               "mandatory",
-                              "basis",
-                              "collectedAt"
+                              "basis"
                             ],
                             "additionalProperties": {}
                           }
@@ -6251,7 +5985,7 @@
                         "items"
                       ],
                       "additionalProperties": {},
-                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -7251,7 +6985,7 @@
                             }
                           ]
                         },
-                        "asOf": {
+                        "readAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                           "description": "When these terms were read: status and penalties are as of this time."
@@ -7322,13 +7056,13 @@
                       },
                       "required": [
                         "status",
-                        "asOf",
+                        "readAt",
                         "freeCancellationEndsAt",
                         "penalties",
                         "timeZone"
                       ],
                       "additionalProperties": {},
-                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                      "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -7352,46 +7086,24 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "label": {
+                              "kind": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                                    "type": "string",
+                                    "enum": [
+                                      "tax",
+                                      "resort_fee",
+                                      "cleaning_fee",
+                                      "deposit",
+                                      "other",
+                                      "unknown"
+                                    ]
                                   },
                                   {
-                                    "type": "null"
+                                    "type": "string"
                                   }
-                                ]
+                                ],
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -7437,28 +7149,13 @@
                                     "type": "string"
                                   }
                                 ]
-                              },
-                              "collectedAt": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "property",
-                                      "unknown"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
                               }
                             },
                             "required": [
-                              "label",
+                              "kind",
                               "amount",
                               "mandatory",
-                              "basis",
-                              "collectedAt"
+                              "basis"
                             ],
                             "additionalProperties": {}
                           }
@@ -7469,7 +7166,7 @@
                         "items"
                       ],
                       "additionalProperties": {},
-                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -8465,7 +8162,7 @@
                             }
                           ]
                         },
-                        "asOf": {
+                        "readAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                           "description": "When these terms were read: status and penalties are as of this time."
@@ -8536,13 +8233,13 @@
                       },
                       "required": [
                         "status",
-                        "asOf",
+                        "readAt",
                         "freeCancellationEndsAt",
                         "penalties",
                         "timeZone"
                       ],
                       "additionalProperties": {},
-                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                      "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -8566,46 +8263,24 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "label": {
+                              "kind": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                                    "type": "string",
+                                    "enum": [
+                                      "tax",
+                                      "resort_fee",
+                                      "cleaning_fee",
+                                      "deposit",
+                                      "other",
+                                      "unknown"
+                                    ]
                                   },
                                   {
-                                    "type": "null"
+                                    "type": "string"
                                   }
-                                ]
+                                ],
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -8651,28 +8326,13 @@
                                     "type": "string"
                                   }
                                 ]
-                              },
-                              "collectedAt": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "property",
-                                      "unknown"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
                               }
                             },
                             "required": [
-                              "label",
+                              "kind",
                               "amount",
                               "mandatory",
-                              "basis",
-                              "collectedAt"
+                              "basis"
                             ],
                             "additionalProperties": {}
                           }
@@ -8683,7 +8343,7 @@
                         "items"
                       ],
                       "additionalProperties": {},
-                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -9688,7 +9348,7 @@
                                   }
                                 ]
                               },
-                              "asOf": {
+                              "readAt": {
                                 "type": "string",
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                                 "description": "When these terms were read: status and penalties are as of this time."
@@ -9759,13 +9419,13 @@
                             },
                             "required": [
                               "status",
-                              "asOf",
+                              "readAt",
                               "freeCancellationEndsAt",
                               "penalties",
                               "timeZone"
                             ],
                             "additionalProperties": {},
-                            "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                            "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                           },
                           "payAtProperty": {
                             "type": "object",
@@ -9789,46 +9449,24 @@
                                 "items": {
                                   "type": "object",
                                   "properties": {
-                                    "label": {
+                                    "kind": {
                                       "anyOf": [
                                         {
-                                          "type": "object",
-                                          "properties": {
-                                            "text": {
-                                              "type": "string"
-                                            },
-                                            "locale": {
-                                              "anyOf": [
-                                                {
-                                                  "anyOf": [
-                                                    {
-                                                      "type": "string",
-                                                      "enum": [
-                                                        "en",
-                                                        "zh"
-                                                      ]
-                                                    },
-                                                    {
-                                                      "type": "string"
-                                                    }
-                                                  ]
-                                                },
-                                                {
-                                                  "type": "null"
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          "required": [
-                                            "text",
-                                            "locale"
-                                          ],
-                                          "additionalProperties": {}
+                                          "type": "string",
+                                          "enum": [
+                                            "tax",
+                                            "resort_fee",
+                                            "cleaning_fee",
+                                            "deposit",
+                                            "other",
+                                            "unknown"
+                                          ]
                                         },
                                         {
-                                          "type": "null"
+                                          "type": "string"
                                         }
-                                      ]
+                                      ],
+                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                                     },
                                     "amount": {
                                       "anyOf": [
@@ -9874,28 +9512,13 @@
                                           "type": "string"
                                         }
                                       ]
-                                    },
-                                    "collectedAt": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "property",
-                                            "unknown"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string"
-                                        }
-                                      ]
                                     }
                                   },
                                   "required": [
-                                    "label",
+                                    "kind",
                                     "amount",
                                     "mandatory",
-                                    "basis",
-                                    "collectedAt"
+                                    "basis"
                                   ],
                                   "additionalProperties": {}
                                 }
@@ -9906,7 +9529,7 @@
                               "items"
                             ],
                             "additionalProperties": {},
-                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                            "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                           },
                           "confirmationNumber": {
                             "anyOf": [
@@ -10925,7 +10548,7 @@
                             }
                           ]
                         },
-                        "asOf": {
+                        "readAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                           "description": "When these terms were read: status and penalties are as of this time."
@@ -10996,13 +10619,13 @@
                       },
                       "required": [
                         "status",
-                        "asOf",
+                        "readAt",
                         "freeCancellationEndsAt",
                         "penalties",
                         "timeZone"
                       ],
                       "additionalProperties": {},
-                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                      "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -11026,46 +10649,24 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "label": {
+                              "kind": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                                    "type": "string",
+                                    "enum": [
+                                      "tax",
+                                      "resort_fee",
+                                      "cleaning_fee",
+                                      "deposit",
+                                      "other",
+                                      "unknown"
+                                    ]
                                   },
                                   {
-                                    "type": "null"
+                                    "type": "string"
                                   }
-                                ]
+                                ],
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -11111,28 +10712,13 @@
                                     "type": "string"
                                   }
                                 ]
-                              },
-                              "collectedAt": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "property",
-                                      "unknown"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
                               }
                             },
                             "required": [
-                              "label",
+                              "kind",
                               "amount",
                               "mandatory",
-                              "basis",
-                              "collectedAt"
+                              "basis"
                             ],
                             "additionalProperties": {}
                           }
@@ -11143,7 +10729,7 @@
                         "items"
                       ],
                       "additionalProperties": {},
-                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -12174,7 +11760,7 @@
                             }
                           ]
                         },
-                        "asOf": {
+                        "readAt": {
                           "type": "string",
                           "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                           "description": "When these terms were read: status and penalties are as of this time."
@@ -12245,13 +11831,13 @@
                       },
                       "required": [
                         "status",
-                        "asOf",
+                        "readAt",
                         "freeCancellationEndsAt",
                         "penalties",
                         "timeZone"
                       ],
                       "additionalProperties": {},
-                      "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                      "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                     },
                     "payAtProperty": {
                       "type": "object",
@@ -12275,46 +11861,24 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "label": {
+                              "kind": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "text": {
-                                        "type": "string"
-                                      },
-                                      "locale": {
-                                        "anyOf": [
-                                          {
-                                            "anyOf": [
-                                              {
-                                                "type": "string",
-                                                "enum": [
-                                                  "en",
-                                                  "zh"
-                                                ]
-                                              },
-                                              {
-                                                "type": "string"
-                                              }
-                                            ]
-                                          },
-                                          {
-                                            "type": "null"
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    "required": [
-                                      "text",
-                                      "locale"
-                                    ],
-                                    "additionalProperties": {}
+                                    "type": "string",
+                                    "enum": [
+                                      "tax",
+                                      "resort_fee",
+                                      "cleaning_fee",
+                                      "deposit",
+                                      "other",
+                                      "unknown"
+                                    ]
                                   },
                                   {
-                                    "type": "null"
+                                    "type": "string"
                                   }
-                                ]
+                                ],
+                                "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                               },
                               "amount": {
                                 "anyOf": [
@@ -12360,28 +11924,13 @@
                                     "type": "string"
                                   }
                                 ]
-                              },
-                              "collectedAt": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "property",
-                                      "unknown"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string"
-                                  }
-                                ]
                               }
                             },
                             "required": [
-                              "label",
+                              "kind",
                               "amount",
                               "mandatory",
-                              "basis",
-                              "collectedAt"
+                              "basis"
                             ],
                             "additionalProperties": {}
                           }
@@ -12392,7 +11941,7 @@
                         "items"
                       ],
                       "additionalProperties": {},
-                      "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                      "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                     },
                     "confirmationNumber": {
                       "anyOf": [
@@ -13393,7 +12942,7 @@
                                   }
                                 ]
                               },
-                              "asOf": {
+                              "readAt": {
                                 "type": "string",
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
                                 "description": "When these terms were read: status and penalties are as of this time."
@@ -13464,13 +13013,13 @@
                             },
                             "required": [
                               "status",
-                              "asOf",
+                              "readAt",
                               "freeCancellationEndsAt",
                               "penalties",
                               "timeZone"
                             ],
                             "additionalProperties": {},
-                            "description": "The terms the order was made on, read at asOf; cancel says whether it can be cancelled now."
+                            "description": "The terms the order was made on, read at readAt; cancel says whether it can be cancelled now."
                           },
                           "payAtProperty": {
                             "type": "object",
@@ -13494,46 +13043,24 @@
                                 "items": {
                                   "type": "object",
                                   "properties": {
-                                    "label": {
+                                    "kind": {
                                       "anyOf": [
                                         {
-                                          "type": "object",
-                                          "properties": {
-                                            "text": {
-                                              "type": "string"
-                                            },
-                                            "locale": {
-                                              "anyOf": [
-                                                {
-                                                  "anyOf": [
-                                                    {
-                                                      "type": "string",
-                                                      "enum": [
-                                                        "en",
-                                                        "zh"
-                                                      ]
-                                                    },
-                                                    {
-                                                      "type": "string"
-                                                    }
-                                                  ]
-                                                },
-                                                {
-                                                  "type": "null"
-                                                }
-                                              ]
-                                            }
-                                          },
-                                          "required": [
-                                            "text",
-                                            "locale"
-                                          ],
-                                          "additionalProperties": {}
+                                          "type": "string",
+                                          "enum": [
+                                            "tax",
+                                            "resort_fee",
+                                            "cleaning_fee",
+                                            "deposit",
+                                            "other",
+                                            "unknown"
+                                          ]
                                         },
                                         {
-                                          "type": "null"
+                                          "type": "string"
                                         }
-                                      ]
+                                      ],
+                                      "description": "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), cleaning_fee, deposit (a sum the property holds during the stay), other (a kind not in this list), unknown (the kind is not stated)."
                                     },
                                     "amount": {
                                       "anyOf": [
@@ -13579,28 +13106,13 @@
                                           "type": "string"
                                         }
                                       ]
-                                    },
-                                    "collectedAt": {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "enum": [
-                                            "property",
-                                            "unknown"
-                                          ]
-                                        },
-                                        {
-                                          "type": "string"
-                                        }
-                                      ]
                                     }
                                   },
                                   "required": [
-                                    "label",
+                                    "kind",
                                     "amount",
                                     "mandatory",
-                                    "basis",
-                                    "collectedAt"
+                                    "basis"
                                   ],
                                   "additionalProperties": {}
                                 }
@@ -13611,7 +13123,7 @@
                               "items"
                             ],
                             "additionalProperties": {},
-                            "description": "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
+                            "description": "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed."
                           },
                           "confirmationNumber": {
                             "anyOf": [
@@ -14241,20 +13753,6 @@
                           }
                         ]
                       },
-                      "scope": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "enum": [
-                              "area",
-                              "radius"
-                            ]
-                          },
-                          {
-                            "type": "string"
-                          }
-                        ]
-                      },
                       "cityLike": {
                         "anyOf": [
                           {
@@ -14357,7 +13855,6 @@
                       "name",
                       "names",
                       "kind",
-                      "scope",
                       "cityLike",
                       "population",
                       "region",
@@ -14401,7 +13898,8 @@
                       {
                         "type": "string"
                       }
-                    ]
+                    ],
+                    "description": "What the search covers: area, the place's whole area; radius, a circle of radiusMeters around center; locality, the hotels that belong to the locality."
                   },
                   "center": {
                     "type": "object",
@@ -14485,7 +13983,7 @@
                               "seat",
                               "capital",
                               "busiest_settlement",
-                              "hub",
+                              "locality",
                               "point"
                             ]
                           },
@@ -14635,7 +14133,7 @@
                               "seat",
                               "capital",
                               "busiest_settlement",
-                              "hub",
+                              "locality",
                               "point"
                             ]
                           },
@@ -14714,35 +14212,13 @@
       "text": {
         "anyOf": [
           {
-            "type": "object",
-            "properties": {
-              "value": {
-                "type": "string"
-              },
-              "match": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "exact"
-                    ]
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "value",
-              "match"
-            ],
-            "additionalProperties": {}
+            "type": "string"
           },
           {
             "type": "null"
           }
-        ]
+        ],
+        "description": "The text searched for, matched as exact words; null when none was given."
       },
       "stay": {
         "anyOf": [
@@ -14812,7 +14288,7 @@
               }
             ]
           },
-          "scope": {
+          "covers": {
             "anyOf": [
               {
                 "anyOf": [
@@ -14831,7 +14307,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Which hotels the prices cover: page, the hotels on this page; pool, every matching hotel, as a price sort or price filter needs (the nearest 3,000 when more match); null without prices."
           },
           "status": {
             "anyOf": [
@@ -14857,7 +14334,7 @@
         },
         "required": [
           "mode",
-          "scope",
+          "covers",
           "status"
         ],
         "additionalProperties": {}
@@ -14899,7 +14376,7 @@
                 "type": "null"
               }
             ],
-            "description": "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.scope); null without prices."
+            "description": "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.covers); null without prices."
           },
           "withPrice": {
             "anyOf": [
@@ -15175,42 +14652,49 @@
         "description": "What the search covered: counts of hotels, each null when it doesn't apply."
       },
       "currencyHint": {
-        "description": "Present only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
-        "type": "object",
-        "properties": {
-          "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "CNY"
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "currency": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "CNY"
+                    ]
+                  },
+                  {
+                    "type": "string"
+                  }
                 ]
               },
-              {
-                "type": "string"
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "request_location",
+                      "sign_in_location"
+                    ]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
               }
-            ]
+            },
+            "required": [
+              "currency",
+              "reason"
+            ],
+            "additionalProperties": {}
           },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "request_location",
-                  "sign_in_location"
-                ]
-              },
-              {
-                "type": "string"
-              }
-            ]
+          {
+            "type": "null"
           }
-        },
-        "required": [
-          "currency",
-          "reason"
         ],
-        "additionalProperties": {}
+        "description": "Set only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement. null when there is none, which says nothing about where the user is."
       },
       "data": {
         "type": "array",
@@ -15417,37 +14901,11 @@
                 }
               ]
             },
-            "price": {
+            "indicativePrice": {
               "anyOf": [
                 {
                   "type": "object",
                   "properties": {
-                    "kind": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "indicative"
-                          ]
-                        },
-                        {
-                          "type": "string"
-                        }
-                      ]
-                    },
-                    "basis": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "lowest_unit"
-                          ]
-                        },
-                        {
-                          "type": "string"
-                        }
-                      ]
-                    },
                     "fromPerRoomNight": {
                       "type": "object",
                       "properties": {
@@ -15464,7 +14922,8 @@
                         "amount",
                         "currency"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "fromPerRoomStay divided by the nights."
                     },
                     "fromPerRoomStay": {
                       "type": "object",
@@ -15482,16 +14941,16 @@
                         "amount",
                         "currency"
                       ],
-                      "additionalProperties": {}
+                      "additionalProperties": {},
+                      "description": "The floor of each night of the stay, added up."
                     }
                   },
                   "required": [
-                    "kind",
-                    "basis",
                     "fromPerRoomNight",
                     "fromPerRoomStay"
                   ],
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "description": "An estimate from a price floor in the catalogue's price feed, not a price for this party: the floor may be a bed in a shared room, and may be days old. Not bookable, and not what is charged: an offer's total is."
                 },
                 {
                   "type": "null"
@@ -15563,7 +15022,7 @@
             "location",
             "timeZone",
             "distanceMeters",
-            "price",
+            "indicativePrice",
             "photo"
           ],
           "additionalProperties": {}
@@ -15631,6 +15090,7 @@
       "pricing",
       "sort",
       "coverage",
+      "currencyHint",
       "data",
       "nextCursor",
       "notes"

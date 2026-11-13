@@ -11,7 +11,6 @@
           "zh": "上海"
         },
         "kind": "region",
-        "scope": "area",
         "cityLike": true,
         "population": 24874500,
         "region": null,
@@ -55,7 +54,7 @@
     },
     "pricing": {
       "mode": "indicative",
-      "scope": "page",
+      "covers": "page",
       "status": "ok"
     },
     "sort": "distance",
@@ -186,6 +185,7 @@
       },
       "nameAsText": null
     },
+    "currencyHint": null,
     "data": [
       {
         "hotelId": "htl_BundRiverside0000000",
@@ -216,9 +216,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 640,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "182.50",
             "currency": "USD"
@@ -259,9 +257,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 1830,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "96.10",
             "currency": "USD"
@@ -296,7 +292,7 @@
         "location": null,
         "timeZone": "Asia/Shanghai",
         "distanceMeters": null,
-        "price": null,
+        "indicativePrice": null,
         "photo": null
       },
       {
@@ -328,9 +324,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 2410,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "41.00",
             "currency": "USD"

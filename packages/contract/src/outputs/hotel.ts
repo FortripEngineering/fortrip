@@ -31,13 +31,19 @@ export const POLICY_TOPICS = [
 
 export type PolicyTopic = (typeof POLICY_TOPICS)[number];
 
-/** A room type's facts; shared with the offer's room. */
-export const roomFacts = {
+/**
+ * A room type: its name and facts. The same object on an offer, in a hotel's
+ * list and on an order's room; a fact not on record is null.
+ */
+export const roomType = openObject({
+  name: localizedText.nullable(),
   beds: localizedText.nullable(),
   areaSqm: openObject({ min: z.number(), max: z.number() }).nullable(),
   maxOccupancy: z.number().int().nullable(),
   window: openEnum(["yes", "no", "partial"]).nullable(),
-};
+}).describe("A room type: its name and facts, each null when not on record.");
+
+export type RoomType = z.infer<typeof roomType>;
 
 const timeRange = openObject({
   from: localTime.nullable(),
@@ -87,10 +93,13 @@ export const hotel = openObject({
     phone: z.string().nullable(),
     website: z.string().nullable(),
   }),
-  rooms: openObject({
-    listed: z.boolean(),
-    items: z.array(openObject({ name: localizedText, ...roomFacts })),
-  }).optional(),
+  roomTypes: z
+    .array(roomType)
+    .nullable()
+    .optional()
+    .describe(
+      "The hotel's room types, present only when asked for with include=roomTypes; null when the catalogue lists none. Nothing joins an offer's roomType to an entry here: the names can differ.",
+    ),
 });
 
 export type Hotel = z.infer<typeof hotel>;

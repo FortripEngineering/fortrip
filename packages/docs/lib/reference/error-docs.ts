@@ -61,7 +61,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   destination_ambiguous:
     `Several places carry the name. \`candidates\` lists up to ${LIMITS.candidatesShown} with their hotel counts, \`candidatesTotal\` how many there are, and \`nameAsText\` how many hotels match the name as text. Ask the user which one is meant, then search it by \`placeId\`.`,
   destination_not_found:
-    "`no_match`: no place in the country carries the name. `unknown_id`: the `placeId` isn't known. `not_a_locality`: the place isn't a locality; `hub` is the locality it belongs to, and searching the town itself with `place` gives a radius around it.",
+    "`no_match`: no place in the country carries the name. `unknown_id`: the `placeId` isn't known. `not_a_locality`: the place isn't a locality; `locality` is the one it belongs to, and searching the town itself with `place` gives a radius around it.",
   search_too_broad:
     'A price sort or price filter over an area or text with more matches than can be priced (`poolLimit`). Search one of the listed `localities` as `{ kind: "locality", placeId }`.',
   stay_unsupported:

@@ -47,7 +47,7 @@
               },
               "cancellation": {
                 "status": "unknown",
-                "asOf": "2026-11-02T10:00:00Z",
+                "readAt": "2026-11-02T10:00:00Z",
                 "freeCancellationEndsAt": null,
                 "penalties": [],
                 "timeZone": "Europe/Lisbon"
@@ -164,7 +164,7 @@
               },
               "cancellation": {
                 "status": "free",
-                "asOf": "2026-11-01T09:00:00Z",
+                "readAt": "2026-11-01T09:00:00Z",
                 "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
                 "penalties": [
                   {
@@ -275,7 +275,7 @@
               },
               "cancellation": {
                 "status": "free",
-                "asOf": "2026-11-01T09:00:00Z",
+                "readAt": "2026-11-01T09:00:00Z",
                 "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
                 "penalties": [
                   {
@@ -381,7 +381,7 @@
               },
               "cancellation": {
                 "status": "partial_penalty",
-                "asOf": "2026-10-24T08:00:00Z",
+                "readAt": "2026-10-24T08:00:00Z",
                 "freeCancellationEndsAt": null,
                 "penalties": [
                   {
@@ -405,17 +405,13 @@
                 "disclosure": "complete",
                 "items": [
                   {
-                    "label": {
-                      "text": "Resort fee",
-                      "locale": "en"
-                    },
+                    "kind": "resort_fee",
                     "amount": {
                       "amount": "80.00",
                       "currency": "CNY"
                     },
                     "mandatory": true,
-                    "basis": "per_night",
-                    "collectedAt": "property"
+                    "basis": "per_night"
                   }
                 ]
               },

@@ -122,7 +122,7 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
       {
         field: "price",
         previous: { amount: "300.00", currency: "USD" },
-        current: OFFER.price.total,
+        current: OFFER.total,
         worse: true,
       },
     ],
