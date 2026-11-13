@@ -42,9 +42,9 @@ const PAYMENT_WORDS: Record<string, string> = {
 
 const SUPPORT = `for help, the user emails ${SUPPORT_EMAIL} with the order's reference`;
 
-/** What keeps an order from being cancelled or closed now, in words; the
- *  error `order_not_cancellable` words it the same way. */
-export const CANCEL_BLOCKER_WORDS: Record<string, string> = {
+/** What keeps an order from being cancelled or closed now, in words;
+ *  `blockerText` says it, for an order and for `order_not_cancellable`. */
+const CANCEL_BLOCKER_WORDS: Record<string, string> = {
   payment_in_progress: "a payment is under way; read the order again shortly",
   website_checkout:
     "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there",
