@@ -77,4 +77,4 @@ Every search answer has `currencyHint`. On a search that isn't in CNY it is `{ c
 
 ## Counts and notes [#coverage]
 
-Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Field by field, see the [search result](/schemas#search-result).
+Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Each has a `code` and a `message`; `area_absorbed` and `locality_available` can also carry `details`, the facts their words need. Field by field, see the [search result](/schemas#search-result).

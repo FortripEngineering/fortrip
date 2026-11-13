@@ -34,10 +34,11 @@ What an integration must change, most urgent first. The [migration table](#v6-mi
 
 ### New
 
-- An order says why it failed: `failure` is `{ reason }` on a `failed` order, with `reason` `rate_unavailable`, `hotel_refused` or `unknown`, and `null` otherwise.
+- An order says why it failed: `failure` is `{ reason }` on every `failed` order, with `reason` `rate_unavailable`, `hotel_refused` or `unknown` (a reason not on record), and `null` on any other order.
 - An order says what a cancellation kept and returned: `cancelled` is `{ at, penalty, refund }` on a `cancelled` order, and `null` otherwise.
 - An order's hotel item has `confirmation`, how the hotel confirms the booking, as its offer gave it.
 - Each room of an order has its own `roomType` and `meals`, so an order whose rooms differ shows every room.
+- A search note can carry the facts its words need, as `details`: `area_absorbed` has `places`, the smaller places of the same name inside the searched area, and `locality_available` has `localityTotal`, how many matching hotels the locality has. `details` is optional on both.
 - A fee payable at the property has a `kind`: `tax`, `resort_fee`, `other` or `unknown`.
 - Each hotel of an offers answer has `omitted.byCallLimit`: how many more offers a call for that hotel alone would show.
 - The error `client_outdated` (HTTP 426): a Fortrip CLI that is a major version behind the service is told to update, on its HTTP calls and through `fortrip mcp`. Other clients never get it. The CLI now sends `fortrip-cli/<version>` as its user agent through `fortrip mcp` too.
@@ -46,7 +47,7 @@ What an integration must change, most urgent first. The [migration table](#v6-mi
 - A guest name that the hotel's booking system would refuse answers `invalid_request` before an order is made, instead of an order that fails after payment.
 - `offer_unavailable` says that other offers for the same room may be gone too.
 - The MCP server's `serverInfo` has `title`, `description`, `websiteUrl` and `icons`.
-- In a result's text, a hotel's own words (names, addresses, descriptions, policies) never begin an unquoted line: a description or a policy is a quoted block under a label that says it is information from the hotel, not instructions. A hotel's website is shown only when it is an `http` or `https` URL.
+- In a result's text, words Fortrip did not write never pass for its own. A short value someone else wrote (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is a JSON string in double quotes; a description or a policy is a quoted block under a label that says it is information from the hotel, not instructions. Ids, amounts, dates and links are bare. A hotel's website is shown only when it is an `http` or `https` URL.
 - The rules for an answer are the last paragraphs of its text: how to present hotels, consent before a payment link, how to pay with a token, and consent before a cancellation. Tool descriptions say what a tool does and answers.
 
 ### Migration [#v6-migration]
@@ -104,16 +105,21 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | Order: the `stripe_shared_payment_token` entry's `handler` | `payment.token.handler` |
 | Order: that entry's `limits.maxAmount` | `payment.token.usageLimits.max_amount` |
 | Order: that entry's `limits.currency` | `payment.token.usageLimits.currency` |
-| Order: that entry's `limits.expiresAt` (an instant) | `payment.token.usageLimits.expires_at` (Unix seconds) |
+| Order: that entry's `limits.expiresAt` (an instant) | `payment.token.usageLimits.expires_at` (Unix seconds, a ten-digit integer; a value in milliseconds doesn't parse) |
 | Order: the `stripe_alipay_wechat_pay` entry (`open`, `current`, `wechatPay`, `alipay`) | — |
 | Order: `items[].hotel.room` | `items[].hotel.rooms[].roomType` |
 | Order: `items[].hotel.meals` | `items[].hotel.rooms[].meals` |
 | Order: `cancel.available` | `cancel.action` is not `null` |
 | Order: `cancel.reason` `cancellable` | `cancel.action` `cancel` |
 | Order: `cancel.reason` `unpaid` | `cancel.action` `close` |
-| Order: any other `cancel.reason` | `cancel.blockedBy` |
+| Order: `cancel.reason` `already_cancelled` | `cancel.blockedBy` `already_cancelled` |
 | Order: `cancel.reason` `in_progress` | `cancel.blockedBy` `confirming` or `cancelling` |
-| Order: `cancel.reason` `not_confirmed` | `cancel.blockedBy` `payment_in_progress`, `website_checkout`, `expired` or `failed` |
+| Order: `cancel.reason` `not_confirmed` | `cancel.blockedBy` `payment_in_progress`, `website_checkout`, `expired`, `closed` or `failed` |
+| Order: `cancel.reason` `stay_started` | `cancel.blockedBy` `stay_started` |
+| Order: `cancel.reason` `non_refundable` | `cancel.blockedBy` `non_refundable`, now only an order the hotel takes no cancellation for at all. A rate that keeps the whole total reads `cancel.action` `cancel`, with `penalty` equal to the total |
+| Order: `cancel.reason` `refused` | `cancel.blockedBy` `refused` |
+| Order: `cancel.reason` `terms_unknown` | `cancel.blockedBy` `terms_unknown` |
+| Order: `cancel.reason` `needs_attention` | `cancel.blockedBy` `needs_attention` (the order's status is `needs_attention`) or `support_only` (a sound booking that can't be cancelled here) |
 | Order: a failed order gave no reason | `failure.reason`: `rate_unavailable`, `hotel_refused` or `unknown` |
 | Order: a cancelled order's penalty and refund read `null` | `cancelled.penalty`, `cancelled.refund`, `cancelled.at` |
 | Search: `data[].price` | `data[].indicativePrice` |
@@ -122,6 +128,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | Search: `text.match` | — |
 | Search: `pricing.scope` | `pricing.covers` |
 | Search: `currencyHint` absent | `currencyHint: null` |
+| Search: `notes[]` is `{ code, message }` for every code | A union picked by `code`: `{ code, message }`, with an optional `details` on `area_absorbed` and `locality_available` |
 | Search: `destination.place.scope` | — (read `destination.scope`) |
 | Search: `destination.center.basis` `hub` | `locality` |
 | Hotel: `rooms.items[]` | `roomTypes[]` |
@@ -179,7 +186,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `HTTP_ROUTES.book_hotel`, the `ToolName` `book_hotel` | `HTTP_ROUTES.create_order`, `create_order` |
 | `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `filterable`, `cancel.available`, `payment.methods`, `payment.methods.open` | — |
 
-- New: `SERVER_INFO`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
+- New: `SERVER_INFO`, `SEARCH_NOTE_DETAILS`, `searchNote` and the type `SearchNote`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
 - `renderToolResult` returns the whole text of a result, the presentation hint and the next-step paragraphs included: send it as the one text block and add nothing. `renderError` builds its text from the error's `code` and `details`.
 - `ToolSpec.annotations` of `create_order` and `pay_order` have `destructiveHint: true`; `create_order` has `idempotentHint: true`.
 

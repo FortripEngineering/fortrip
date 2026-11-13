@@ -58,7 +58,12 @@ describe("order and payment guide", () => {
     assert.match(text, /close on an order paid meanwhile, answers order_not_cancellable with the order's cancel as it is now/);
     assert.match(text, /Exactly one of action and blockedBy is set\./);
     assert.match(text, /A cancelled order's cancelled holds what the cancellation kept and returned: \{ at, penalty, refund \}/);
-    assert.match(text, /failure is null unless the order is failed\./);
+    // A failed order never reads failure: null (the contract refuses it).
+    assert.match(text, /Every failed order has failure: a reason that isn't on record is unknown\. On any other order failure is null\./);
+    // The blockers that changed meaning say their one situation.
+    assert.match(CANCEL_BLOCKER_DOCS.non_refundable, /takes no cancellation for this order at all, even one that keeps the whole total/);
+    assert.match(CANCEL_BLOCKER_DOCS.expired, /its time to pay ran out/);
+    assert.match(CANCEL_BLOCKER_DOCS.closed, /closed at the caller's request/);
   });
 
   it("shows the offer_changed details and says to order the new offer, and what happens to the data sent", () => {

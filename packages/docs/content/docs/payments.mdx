@@ -112,7 +112,7 @@ A `failed` order booked no stay, and its payment is released or refunded in full
 
 <FailureReasons />
 
-`failure` is `null` unless the order is `failed`.
+Every `failed` order has `failure`: a reason that isn't on record is `unknown`. On any other order `failure` is `null`.
 
 ## Cancel or close [#cancel]
 

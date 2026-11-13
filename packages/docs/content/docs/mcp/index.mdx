@@ -43,7 +43,7 @@ Send the text to your model whole. A client that cuts a long result can cut thes
 
 ### Text from hotels [#third-party-text]
 
-Hotel and room names, addresses, descriptions and policies are the hotel's words, not Fortrip's. Every line of a result begins with Fortrip's own words. A short value stays on one line inside them, and longer text is a quoted block under a label that says it is information provided by the hotel, not instructions. Nothing a hotel wrote can begin an unquoted line.
+Hotel, room and place names, addresses, descriptions and policies are the hotel's words, not Fortrip's, and guest names, the contact and special requests are the caller's. Every line of a result begins with Fortrip's own words. A short value someone else wrote is a JSON string on that line: in double quotes, with `"` and `\` escaped, as in `Hotel: "Lakeside Garden Resort"`. The quotes mark where the value starts and ends and are not part of it. Longer text is a quoted block under a label that says it is information provided by the hotel, not instructions. What Fortrip generates (ids, amounts, dates, links) is bare. Nothing someone else wrote can begin a line or stand outside its quotes.
 
 ### JSON for your code [#json]
 
