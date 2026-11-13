@@ -4,8 +4,9 @@ import { z } from "zod";
  * Where a key sent at the wrong depth belongs. A strict input names a key it
  * doesn't know; when the same input has that key higher or lower on the same
  * line (`offerId` beside `items` instead of inside its item), the answer can
- * also say where. Read from the input's own JSON Schema, so it follows the
- * schema.
+ * also say where, or that the key is there already and this copy is the one
+ * to remove (a model that nests `offerId` correctly and also sends it beside
+ * `items`). Read from the input's own JSON Schema, so it follows the schema.
  */
 
 /** A path into an input, as a zod issue has it: keys, and indexes into lists. */
@@ -18,6 +19,10 @@ export interface MisplacedKey {
   /** Each place it belongs at, in the schema's order. A list on the way is
    *  entered at the index the key was sent under, else at its first item. */
   belongsAt: Path[];
+  /** The places among `belongsAt` where what was sent has the key already,
+   *  with the same value: it was sent twice, and this copy is the extra one.
+   *  Empty when `misplacedKeys` was not given what was sent. */
+  alreadyAt: Path[];
 }
 
 type JsonSchema = {
@@ -87,6 +92,16 @@ function sentAt(sent: unknown, place: Place, sentIn: Path): unknown {
   return at;
 }
 
+/** The value at `path` in what was sent; undefined when it has none. */
+function valueAt(sent: unknown, path: Path): unknown {
+  let at: unknown = sent;
+  for (const step of path) {
+    if (typeof at !== "object" || at === null) return undefined;
+    at = (at as Record<string | number, unknown>)[step];
+  }
+  return at;
+}
+
 /** Whether a variant's selectors rule it out: what was sent has the key it is
  *  told by, with another value. Says no when there is no such key to read. */
 function ruledOut(selectors: Selector[], sent: unknown, sentIn: Path): boolean {
@@ -106,7 +121,8 @@ function ruledOut(selectors: Selector[], sent: unknown, sentIn: Path): boolean {
  * (a guest's `firstName` sent in `contact` is not a depth), or has at that
  * very place in another variant of a union. Given `sent` (the value that was
  * parsed), a key inside a union is looked for only in the variant the sent
- * discriminator selects.
+ * discriminator selects, and a key that what was sent also has where it
+ * belongs, with the same value, is reported as already there (`alreadyAt`).
  */
 export function misplacedKeys(
   schema: z.ZodType,
@@ -132,7 +148,27 @@ export function misplacedKeys(
         const path = [...place.map((step, at) => (step === ITEM ? (sentIn[at] ?? 0) : step)), key];
         belongsAt.set(JSON.stringify(path), path);
       }
-      return belongsAt.size ? [{ path: [...sentIn, key], belongsAt: [...belongsAt.values()] }] : [];
+      if (belongsAt.size === 0) return [];
+      const path = [...sentIn, key];
+      const value = JSON.stringify(valueAt(sent, path));
+      const alreadyAt = [...belongsAt.values()].filter(
+        (home) => value !== undefined && JSON.stringify(valueAt(sent, home)) === value,
+      );
+      return [{ path, belongsAt: [...belongsAt.values()], alreadyAt }];
     });
   });
+}
+
+const pointerOf = (path: Path) => path.map((step) => `/${step}`).join("");
+
+/**
+ * What to tell the caller about a misplaced key, after its own pointer:
+ * "belongs at /items/0/offerId", or, when what was sent has it there already,
+ * "already given at /items/0/offerId: remove this one". Paths are JSON
+ * Pointers into the caller's own request.
+ */
+export function misplacedKeyHint(key: MisplacedKey): string {
+  return key.alreadyAt.length > 0
+    ? `already given at ${key.alreadyAt.map(pointerOf).join(" and ")}: remove this one`
+    : `belongs at ${key.belongsAt.map(pointerOf).join(" or ")}`;
 }

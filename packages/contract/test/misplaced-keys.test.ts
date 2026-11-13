@@ -11,7 +11,7 @@ import {
   payOrderInput,
   searchHotelsInput,
 } from "../src/inputs.ts";
-import { misplacedKeys } from "../src/misplaced-keys.ts";
+import { misplacedKeyHint, misplacedKeys } from "../src/misplaced-keys.ts";
 
 z.config({ localeError: undefined });
 
@@ -105,8 +105,73 @@ describe("misplacedKeys: create order", () => {
   it("answers paths as a zod issue has them", () => {
     const result = createOrderInput.safeParse({ ...order, offerId });
     assert.deepEqual(misplacedKeys(createOrderInput, result.error?.issues ?? []), [
-      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]] },
+      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [] },
     ]);
+  });
+});
+
+/** What is said of each misplaced key of a refused `value`, by its pointer. */
+function said(schema: z.ZodType, value: unknown): Record<string, string> {
+  const result = schema.safeParse(value);
+  assert.equal(result.success, false, JSON.stringify(value));
+  return Object.fromEntries(
+    misplacedKeys(schema, result.error?.issues ?? [], value).map((key) => [pointer(key.path), misplacedKeyHint(key)]),
+  );
+}
+
+/*
+ * The first order call of a weaker model nested everything correctly and
+ * also sent `offerId` beside `items` (39 of 39 runs), which a strict input
+ * refuses. "Belongs at /items/0/offerId" reads as an order to move it there,
+ * where it already is; the answer is to remove the copy.
+ */
+describe("misplacedKeys: a key that is already where it belongs", () => {
+  it("says the copy is to be removed when the home has the same value", () => {
+    assert.deepEqual(said(createOrderInput, { ...order, offerId }), {
+      "/offerId": "already given at /items/0/offerId: remove this one",
+    });
+    assert.deepEqual(misplacedKeys(createOrderInput, createOrderInput.safeParse({ ...order, offerId }).error?.issues ?? [], { ...order, offerId }), [
+      { path: ["offerId"], belongsAt: [["items", 0, "offerId"]], alreadyAt: [["items", 0, "offerId"]] },
+    ]);
+  });
+
+  it("says where it belongs when the home has none, or another value", () => {
+    assert.deepEqual(said(createOrderInput, { contact, offerId, items: [{ hotel: order.items[0]?.hotel }] }), {
+      "/offerId": "belongs at /items/0/offerId",
+    });
+    assert.deepEqual(said(createOrderInput, { ...order, offerId: "off_bbbbbbbbbbbbbbbbbbbb" }), {
+      "/offerId": "belongs at /items/0/offerId",
+    });
+  });
+
+  it("compares whole values, a list or an object as well as a string", () => {
+    const rooms = order.items[0]!.hotel.rooms;
+    assert.deepEqual(said(createOrderInput, { contact, items: [{ ...order.items[0], rooms }] }), {
+      "/items/0/rooms": "already given at /items/0/hotel/rooms: remove this one",
+    });
+    assert.deepEqual(said(createOrderInput, { contact, items: [{ ...order.items[0], rooms: [{ guests: [{ ...guest, firstName: "Li" }] }] }] }), {
+      "/items/0/rooms": "belongs at /items/0/hotel/rooms",
+    });
+    assert.deepEqual(said(createOrderInput, { ...order, contact: undefined, items: [{ ...order.items[0], contact }] }), {
+      "/items/0/contact": "belongs at /contact",
+    });
+  });
+
+  it("names every home that has it, and every place it could go when none has", () => {
+    const price = { maxPerRoomNight: { amount: "150.00", currency: "CNY" } };
+    assert.deepEqual(
+      said(searchHotelsInput, { text: "x", currency: "CNY", stay: goodStay, filters: { currency: "CNY", price } }),
+      { "/filters/currency": "already given at /filters/price/maxPerRoomNight/currency and /currency: remove this one" },
+    );
+    assert.deepEqual(said(searchHotelsInput, { text: "x", filters: { currency: "CNY" } }), {
+      "/filters/currency": "belongs at /filters/price/maxPerRoomNight/currency or /currency",
+    });
+  });
+
+  it("says where it belongs when it was not given what was sent", () => {
+    const result = createOrderInput.safeParse({ ...order, offerId });
+    const [key] = misplacedKeys(createOrderInput, result.error?.issues ?? []);
+    assert.equal(misplacedKeyHint(key!), "belongs at /items/0/offerId");
   });
 });
 
