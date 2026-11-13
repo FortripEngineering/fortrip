@@ -61,6 +61,8 @@ const STALE: readonly RegExp[] = [
   /Pay with Alipay or WeChat Pay/,
   /wechatPay/,
   /payment_total_changed/,
+  // A failed order's reason is one the server can tell apart.
+  /details_refused/,
 ];
 
 /** Only the token is USD-only: "in USD" is said of it alone. */
@@ -138,7 +140,7 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
   stay_in_past: { checkIn: "2026-01-01", timeZone: "Asia/Shanghai" },
   offer_unavailable: { offerId: OFFER.offerId, reason: "sold_out" },
   currency_unavailable: { currency: "CNY" },
-  rate_limited: { scope: "search" },
+  rate_limited: { rateLimit: "search" },
   supplier_unavailable: { outcome: "not_started" },
 };
 

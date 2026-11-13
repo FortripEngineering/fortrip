@@ -1039,7 +1039,7 @@ describe("orders and the consent rule", () => {
     const data = fixture.data as Record<string, any>;
     const lines = render(fixture).split("\n");
     assert.match(lines[0]!, / · failed · /);
-    assert.equal(lines[1], "Why it failed: the room sold out before it was booked; get offers again for another room or hotel");
+    assert.equal(lines[1], "Why it failed: the rate could no longer be booked when the hotel was asked; get offers again");
     assert.ok(lines.includes("Cancel: not available: no stay was booked, so there is nothing to cancel"));
     const worded = new Set<string>();
     for (const reason of FAILURE_REASONS) {

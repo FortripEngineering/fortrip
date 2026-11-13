@@ -128,7 +128,7 @@ export const ERROR_DETAILS = {
   }),
   currency_unavailable: openObject({ currency: z.string() }),
   rate_limited: openObject({
-    scope: openEnum([
+    rateLimit: openEnum([
       "search",
       "offers",
       "hotel",
@@ -136,7 +136,7 @@ export const ERROR_DETAILS = {
       "orders_create",
       "orders_cancel",
       "orders_pay",
-    ]),
+    ]).describe("Which rate limit was hit, by the kind of call it counts."),
   }),
   ordering_paused: null,
   service_unavailable: null,

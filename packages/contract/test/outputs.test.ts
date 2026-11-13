@@ -319,7 +319,7 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   stay_in_past: { checkIn: "2026-10-23", timeZone: null },
   offer_unavailable: { offerId: OFF, reason: "sold_out" },
   currency_unavailable: { currency: "CNY" },
-  rate_limited: { scope: "search" },
+  rate_limited: { rateLimit: "search" },
   ordering_paused: undefined,
   service_unavailable: undefined,
   supplier_unavailable: { outcome: "not_started" },
@@ -582,7 +582,8 @@ describe("v1 response fixtures parse, open and strict", () => {
     for (const reason of FAILURE_REASONS) {
       parsesBoth(order, { ...orderFixture, status: "failed", cancel: blockedBy("failed"), failure: { reason } });
     }
-    assert.deepEqual([...FAILURE_REASONS], ["sold_out", "hotel_refused", "details_refused", "unknown"]);
+    // What the server can tell apart: not a sold-out room from a rate gone, nor a refusal for the details.
+    assert.deepEqual([...FAILURE_REASONS], ["rate_unavailable", "hotel_refused", "unknown"]);
     const later = { ...orderFixture, status: "failed", cancel: blockedBy("failed"), failure: { reason: "later" } };
     assert.ok(order.safeParse(later).success);
     assert.equal(strictOutput(order).safeParse(later).success, false);
@@ -783,7 +784,7 @@ const PUBLIC_KEYS = new Set([
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome",
   "payAtProperty", "payment", "penalties", "penalty", "perRoomNight", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous",
-  "priced", "pricing", "radiusMeters", "radiusSource", "readAt", "reason", "reference", "refund",
+  "priced", "pricing", "radiusMeters", "radiusSource", "rateLimit", "readAt", "reason", "reference", "refund",
   "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "roomCount", "roomType", "roomTypes", "rooms", "schema", "scope", "scopes",
   "sort", "spec", "specialRequests", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",

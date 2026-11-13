@@ -688,7 +688,7 @@ describe("a value of an open enum the package does not know", () => {
       ["token reason", (v) => sample("payment_credential_invalid", { reason: v }), "\nThe token was refused for a reason not recognized: "],
       ["no-token reason", (v) => sample("payment_method_unavailable", { reason: v }), "\nThis order takes no token now (reason not recognized): "],
       ["offer reason", (v) => sample("offer_unavailable", { offerId: "off_BundDeluxeKing000000", reason: v }), ": unavailable, for a reason not recognized. "],
-      ["limit", (v) => sample("rate_limited", { scope: v }), "\nLimit reached for: a limit not recognized.\n"],
+      ["limit", (v) => sample("rate_limited", { rateLimit: v }), "\nLimit reached for: a limit not recognized.\n"],
       ["outcome", (v) => sample("supplier_unavailable", { outcome: v }), "\nOutcome: not recognized.\n"],
       ["cancel action", (v) => sample("order_not_cancellable", { cancel: { action: v, blockedBy: null, penalty: null, refund: null } }), "\nWhat applies to this order now: an action not recognized.\n"],
       ["cancel blocker", (v) => sample("order_not_cancellable", { cancel: { action: null, blockedBy: v, penalty: null, refund: null } }), " now: reason not recognized.\n"],
@@ -1097,7 +1097,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     sample("stay_unsupported", { reason: "mixed_occupancy" }),
     sample("stay_in_past", { checkIn: "2026-10-31", timeZone: "Asia/Shanghai" }),
     sample("currency_unavailable", { currency: "CNY" }),
-    sample("rate_limited", { scope: "search" }),
+    sample("rate_limited", { rateLimit: "search" }),
     sample("supplier_unavailable", { outcome: "unknown" }),
     // No details: the head, with the server's message, is all there is.
     sample("client_outdated"),

@@ -114,7 +114,7 @@
     },
     "cancelled": null,
     "failure": {
-      "reason": "sold_out"
+      "reason": "rate_unavailable"
     },
     "manageUrl": "https://fortrip.ai/orders/ord_BundFailed0000000000"
   }

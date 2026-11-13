@@ -274,7 +274,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
         ours`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`,
       ];
     case "rate_limited":
-      return [ours`Limit reached for: ${code(e.details.scope, ours`a limit not recognized`)}.`];
+      return [ours`Limit reached for: ${code(e.details.rateLimit, ours`a limit not recognized`)}.`];
     case "supplier_unavailable":
       return [
         Object.hasOwn(SUPPLIER_OUTCOME_WORDS, e.details.outcome)

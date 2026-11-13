@@ -67,8 +67,10 @@ export const CANCEL_BLOCKERS = [
 
 export type CancelBlocker = (typeof CANCEL_BLOCKERS)[number];
 
-/** Why a failed order booked no stay. */
-export const FAILURE_REASONS = ["sold_out", "hotel_refused", "details_refused", "unknown"] as const;
+/** Why a failed order booked no stay. `rate_unavailable`: the rate could no
+ *  longer be booked when the hotel was asked. `hotel_refused`: the hotel's
+ *  booking system refused this order, as it would the same order again. */
+export const FAILURE_REASONS = ["rate_unavailable", "hotel_refused", "unknown"] as const;
 
 export type FailureReason = (typeof FAILURE_REASONS)[number];
 
@@ -292,7 +294,7 @@ export const order = openObject({
     ),
   failure: openObject({
     reason: openEnum(FAILURE_REASONS).describe(
-      "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record.",
+      "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record.",
     ),
   })
     .nullable()

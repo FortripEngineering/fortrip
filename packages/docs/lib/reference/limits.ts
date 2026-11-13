@@ -1,4 +1,4 @@
-import { type LIMITS, RATE_LIMITS, type RateLimitScope, type ToolName } from "@fortrip/agent-contract";
+import { type LIMITS, RATE_LIMITS, type RateLimitName, type ToolName } from "@fortrip/agent-contract";
 
 type Limits = typeof LIMITS;
 
@@ -140,7 +140,7 @@ export const OPERATION_NAMES: Record<ToolName, string> = {
 };
 
 /** The scopes the contract names (its type also admits any other string). */
-type Scope = RateLimitScope extends infer S ? (S extends string ? (string extends S ? never : S) : never) : never;
+type Scope = RateLimitName extends infer S ? (S extends string ? (string extends S ? never : S) : never) : never;
 
 /** What the contract doesn't say about a rate limit: the tools whose calls
  *  count against it, and whether they are refused (in production) while the

@@ -14,7 +14,7 @@ Every failure answers the same envelope:
     "message": "Too many requests; retry later.",
     "retryable": true,
     "retryAfterSeconds": 42,
-    "details": { "scope": "search" },
+    "details": { "rateLimit": "search" },
     "requestId": "req_…"
   }
 }
@@ -36,7 +36,7 @@ Every failure answers the same envelope:
 
 ## Rate limits [#rate-limits]
 
-Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. Over a limit, the answer is `429 rate_limited` with the limit's `scope`.
+Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. Over a limit, the answer is `429 rate_limited`, and `details.rateLimit` names the limit.
 
 <RateLimitsTable />
 

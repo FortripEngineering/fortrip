@@ -73,7 +73,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   currency_unavailable:
     "Prices in the currency asked for (`currency`) aren't available yet. Tell the user, and ask whether to see USD prices.",
   rate_limited:
-    "Too many calls of one kind (`scope`) in a minute. Retry after `retryAfterSeconds`.",
+    "Too many calls of one kind (`rateLimit`) in a minute. Retry after `retryAfterSeconds`.",
   ordering_paused:
     "Ordering is paused for now. Search and offers still work, and an order already made can still be read. Retry after `retryAfterSeconds`.",
   service_unavailable:

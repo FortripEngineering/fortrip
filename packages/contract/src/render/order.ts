@@ -56,10 +56,9 @@ export const CANCEL_BLOCKER_WORDS: Record<string, string> = {
 };
 
 const FAILURE_WORDS: Record<string, string> = {
-  sold_out: "the room sold out before it was booked; get offers again for another room or hotel",
-  hotel_refused: "the hotel refused the booking; get offers again for another room or hotel",
-  details_refused:
-    "the booking was refused for the names given; check the guest and contact names with the user before ordering again",
+  rate_unavailable: "the rate could no longer be booked when the hotel was asked; get offers again",
+  hotel_refused:
+    "the hotel's booking system refused this order; ordering the same again will be refused too",
   unknown: "the reason is not on record",
 };
 

@@ -3564,7 +3564,7 @@
               "details": {
                 "type": "object",
                 "properties": {
-                  "scope": {
+                  "rateLimit": {
                     "anyOf": [
                       {
                         "type": "string",
@@ -3581,11 +3581,12 @@
                       {
                         "type": "string"
                       }
-                    ]
+                    ],
+                    "description": "Which rate limit was hit, by the kind of call it counts."
                   }
                 },
                 "required": [
-                  "scope"
+                  "rateLimit"
                 ],
                 "additionalProperties": {}
               },
@@ -6671,9 +6672,8 @@
                   {
                     "type": "string",
                     "enum": [
-                      "sold_out",
+                      "rate_unavailable",
                       "hotel_refused",
-                      "details_refused",
                       "unknown"
                     ]
                   },
@@ -6681,7 +6681,7 @@
                     "type": "string"
                   }
                 ],
-                "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
               }
             },
             "required": [
@@ -7944,9 +7944,8 @@
                   {
                     "type": "string",
                     "enum": [
-                      "sold_out",
+                      "rate_unavailable",
                       "hotel_refused",
-                      "details_refused",
                       "unknown"
                     ]
                   },
@@ -7954,7 +7953,7 @@
                     "type": "string"
                   }
                 ],
-                "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
               }
             },
             "required": [
@@ -9213,9 +9212,8 @@
                   {
                     "type": "string",
                     "enum": [
-                      "sold_out",
+                      "rate_unavailable",
                       "hotel_refused",
-                      "details_refused",
                       "unknown"
                     ]
                   },
@@ -9223,7 +9221,7 @@
                     "type": "string"
                   }
                 ],
-                "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
               }
             },
             "required": [
@@ -10491,9 +10489,8 @@
                         {
                           "type": "string",
                           "enum": [
-                            "sold_out",
+                            "rate_unavailable",
                             "hotel_refused",
-                            "details_refused",
                             "unknown"
                           ]
                         },
@@ -10501,7 +10498,7 @@
                           "type": "string"
                         }
                       ],
-                      "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                      "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
                     }
                   },
                   "required": [
@@ -11783,9 +11780,8 @@
                   {
                     "type": "string",
                     "enum": [
-                      "sold_out",
+                      "rate_unavailable",
                       "hotel_refused",
-                      "details_refused",
                       "unknown"
                     ]
                   },
@@ -11793,7 +11789,7 @@
                     "type": "string"
                   }
                 ],
-                "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
               }
             },
             "required": [
@@ -13087,9 +13083,8 @@
                   {
                     "type": "string",
                     "enum": [
-                      "sold_out",
+                      "rate_unavailable",
                       "hotel_refused",
-                      "details_refused",
                       "unknown"
                     ]
                   },
@@ -13097,7 +13092,7 @@
                     "type": "string"
                   }
                 ],
-                "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
               }
             },
             "required": [
@@ -14361,9 +14356,8 @@
                         {
                           "type": "string",
                           "enum": [
-                            "sold_out",
+                            "rate_unavailable",
                             "hotel_refused",
-                            "details_refused",
                             "unknown"
                           ]
                         },
@@ -14371,7 +14365,7 @@
                           "type": "string"
                         }
                       ],
-                      "description": "sold_out: the room sold out before it was booked. hotel_refused: the hotel refused the booking. details_refused: the booking was refused for the guest or contact details given. unknown: not on record."
+                      "description": "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record."
                     }
                   },
                   "required": [

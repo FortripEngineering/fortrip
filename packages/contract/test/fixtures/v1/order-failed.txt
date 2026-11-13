@@ -1,5 +1,5 @@
 Order ord_BundFailed0000000000 · reference FT-F2M8QD · failed · created 2026-10-28 07:10 UTC · updated 2026-10-28 07:14 UTC
-Why it failed: the room sold out before it was booked; get offers again for another room or hotel
+Why it failed: the rate could no longer be booked when the hotel was asked; get offers again
 Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
 Room: Deluxe King Room, beds: 1 king bed, 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
 Guests: Priya Nair

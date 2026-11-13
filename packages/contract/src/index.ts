@@ -177,7 +177,7 @@ export {
   type HttpRoute,
   type HttpToolName,
 } from "./routes.ts";
-export { RATE_LIMITS, type RateLimitScope } from "./rate-limits.ts";
+export { RATE_LIMITS, type RateLimitName } from "./rate-limits.ts";
 export {
   renderError,
   renderToolResult,
