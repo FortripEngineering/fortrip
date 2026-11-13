@@ -205,7 +205,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `HTTP_ROUTES.book_hotel`, the `ToolName` `book_hotel` | `HTTP_ROUTES.create_order`, `create_order` |
 | `UNKNOWN_IS_NOT_NO_EXEMPTIONS` keys `filterable`, `cancel.available`, `payment.methods`, `payment.methods.open` | — |
 
-- New: `SERVER_INFO`, `META_KEYS` (the `_meta` keys of an MCP result), `unknownFieldsMessage`, `SEARCH_NOTE_DETAILS`, `searchNote` and the type `SearchNote`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
+- New: `SERVER_INFO`, `META_KEYS` (the `_meta` keys of an MCP result), `unknownFieldsMessage`, `FlagSpec.required`, `SEARCH_NOTE_DETAILS`, `searchNote` and the type `SearchNote`, `offersPerHotel`, `misplacedKeys`, `misplacedKeyHint` and the type `MisplacedKey`, `orderCancel` and the type `OrderCancel`, `FEE_KINDS`, `FAILURE_REASONS`, `PAYMENT_METHOD_UNAVAILABLE_REASONS` and their types `FeeKind`, `FailureReason` and `PaymentMethodUnavailableReason`, `LIMITS.offersPerCallDefault` and `LIMITS.offersPerCallMax`.
 - `renderToolResult` returns the whole text of a result, the presentation hint and the next-step paragraphs included: send it as the one text block and add nothing. `renderError` builds its text from the error's `code` and `details`.
 - `ToolSpec.annotations` of `create_order` and `pay_order` have `destructiveHint: true`; `create_order` has `idempotentHint: true`.
 

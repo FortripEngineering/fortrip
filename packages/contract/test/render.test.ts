@@ -2290,6 +2290,16 @@ describe("the cancel rule names the order's own penalty, never an example", () =
       }
     });
 
+    // The figures in a call are the order's own, whatever they are: never a constant of ours.
+    it("the pay call's total is the order's Total, amount and currency as the order holds them", () => {
+      const data = copy((load("order-payable-by-token") as ToolFixture).data) as Record<string, any>;
+      data.total = { amount: "410.00", currency: "EUR" };
+      const text = renderToolResult("get_order", data);
+      assert.match(text, /^Total: EUR 410\.00 · /m);
+      const [pay] = calls(text);
+      assert.deepEqual(pay?.input.total, { amount: "410.00", currency: "EUR" });
+    });
+
     it("two cancellable orders on one page: each call names its own order", () => {
       const first = copy((load("order-confirmed") as ToolFixture).data) as Record<string, any>;
       const second = copy((load("order-free-to-cancel") as ToolFixture).data) as Record<string, any>;
