@@ -43,12 +43,15 @@ export function toolMarkdown(name: ToolName): string {
   if (!tool) throw new Error(`${name} has no docs page`);
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
   const output = [
-    code("structuredContent"),
-    text(" is the "),
-    link(tool.returns.href, text(tool.returns.title)),
-    text(" object. "),
     ...inline(contentSentence(tool.name)),
-    text(" Errors are described in the "),
+    text(" There is no "),
+    code("structuredContent"),
+    text(": the same answer as JSON is the "),
+    link(tool.returns.href, text(tool.returns.title)),
+    text(" object, from the "),
+    link(`/api/reference/${tool.name}`, text("HTTP API")),
+    ...(cli ? [text(" or "), code(`${tool.cli} --json`)] : []),
+    text(". Errors are described in the "),
     link("/mcp#errors", text("overview")),
     text("."),
   ];

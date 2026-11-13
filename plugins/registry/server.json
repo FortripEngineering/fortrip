@@ -3,7 +3,7 @@
   "name": "io.github.FortripEngineering/fortrip",
   "title": "Fortrip",
   "description": "Search hotels worldwide, compare live room rates, book and pay securely, and cancel bookings.",
-  "version": "1.4.21",
+  "version": "1.4.22",
   "websiteUrl": "https://fortrip.ai",
   "icons": [
     {
@@ -23,7 +23,7 @@
     {
       "registryType": "npm",
       "identifier": "fortrip",
-      "version": "5.3.0",
+      "version": "6.0.0-rc.0",
       "transport": {
         "type": "stdio"
       },

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
@@ -58,19 +58,19 @@
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY.",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room, meals, free-cancellation deadline and price.total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so. If the answer is currency_unavailable, it says CNY prices aren't available yet and offers USD prices."
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room type, meals, free-cancellation deadline and total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so. If the answer is currency_unavailable, it says CNY prices aren't available yet and offers USD prices."
             },
             {
               "description": "Compare two check-in dates within a budget",
               "prompt": "I need 3 nights in Shanghai for 2 adults in 1 room, checking in either 30 or 37 days from today, for under 150 USD per night. Which dates and hotels give the best value?",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with filters.price.maxPerRoomNight of 150 USD, then get_hotel_offers for a shortlist of the results on each date. It compares each offer's price.total per night (price.total divided by 3 nights, for 1 room) with the 150 USD budget and recommends options within it, each with its dates, price.total in USD, meals and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned an offer for it."
+              "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with filters.price.maxPerRoomNight of 150 USD, then get_hotel_offers for a shortlist of the results on each date. It compares each offer's average per room-night with the 150 USD budget and recommends options within it, each with its dates, total in USD, meals and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned an offer for it."
             },
             {
               "description": "Create a booking payment link after confirmation",
               "prompt": "Book the cheapest free-cancellation room at Anantara Riverside Bangkok Resort for 1 adult in 1 room, 2 nights starting 60 days from today. Guest: John Smith, email john.smith@example.com, phone +1 415 555 0100.",
               "tools_triggered": "search_hotels, get_hotel_offers, create_order",
-              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay, the price.total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the payment.url link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there. If no free-cancellation offer is available, it says so and asks how to proceed instead of ordering another offer."
+              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay with the guest's name, the contact, the total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the order's payment link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there. If no free-cancellation offer is available, it says so and asks how to proceed instead of ordering another offer."
             }
           ],
           "negative": [
@@ -92,10 +92,10 @@
           ]
         },
         "commerce": true,
-        "commerce_description": "Users can book hotel stays. create_order creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there, with the ways to pay of the order's currency: a USD order through Stripe Checkout or a wallet such as Alipay or WeChat Pay, a CNY order through payment channels in mainland China. For a USD order, pay_order can also open an Alipay or WeChat Pay payment, or pay with a single-use Stripe shared payment token the user approves in their Link wallet (US and Canadian accounts, orders up to $500), held until the hotel confirms. Before giving the link or paying, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the payment page or in their wallet."
+        "commerce_description": "Users can book hotel stays. create_order creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there, with the ways to pay of the order's currency: a USD order through Stripe Checkout or a wallet such as Alipay or WeChat Pay, a CNY order through payment channels in mainland China. For a USD order, pay_order can instead pay with a single-use Stripe shared payment token the user approves in their Link wallet (US and Canadian accounts, orders up to $500), held until the hotel confirms; the assistant never opens or chooses a wallet payment itself. Before giving the link or paying, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the payment page or in their wallet."
       },
       "publication": {
-        "release_notes": "Choose USD or CNY for prices and payment; each currency has its own ways to pay. You can also close an unpaid booking you no longer want.",
+        "release_notes": "See why a booking didn't go through and what a cancellation refunded. Alipay and WeChat Pay are on the payment page, where you choose how to pay.",
         "translations": {
           "zh-CN": {
             "subtitle": "搜索并预订酒店",

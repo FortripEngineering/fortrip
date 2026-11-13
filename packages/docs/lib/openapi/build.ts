@@ -91,7 +91,7 @@ const ACCOUNT_OPERATIONS: Record<keyof typeof ACCOUNT_ROUTES, { id: string; outp
 export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
   if (endpoint.tool) {
     const tool = TOOLS.find((t) => t.name === endpoint.tool);
-    // The HTTP answer: the MCP tool's, less the `nextStep` only MCP carries.
+    // The HTTP answer: the object the MCP tool's text is written from.
     const output = responseDocFor(endpoint.tool)?.schema;
     if (!tool || !output) throw new Error(`no tool or response for ${endpoint.tool}`);
     const route = HTTP_ROUTES[endpoint.tool];

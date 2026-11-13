@@ -2,10 +2,21 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ORDER_STATUSES, PAYMENT_STATUSES, SUPPORT_EMAIL } from "@fortrip/agent-contract";
+import {
+  CANCEL_BLOCKERS,
+  FAILURE_REASONS,
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  SUPPORT_EMAIL,
+} from "@fortrip/agent-contract";
 
 import { fact } from "../components/fact.tsx";
-import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../lib/prose/order-statuses.ts";
+import {
+  CANCEL_BLOCKER_DOCS,
+  FAILURE_REASON_DOCS,
+  ORDER_STATUS_DOCS,
+  PAYMENT_STATUS_DOCS,
+} from "../lib/prose/order-statuses.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
 describe("order and payment guide", () => {
@@ -21,11 +32,33 @@ describe("order and payment guide", () => {
     }
   });
 
-  it("has no WeChat Pay code section, and leaves the token's conditions to its payment.methods entry", () => {
+  it("has no WeChat Pay code section, and leaves the token's conditions to payment.token", () => {
     const text = pageText("/payments");
     assert.doesNotMatch(text, /The WeChat Pay code|qrData/);
     assert.ok(!text.includes(`$${fact("LIMITS.tokenPaymentMaxUsd")}`));
-    assert.match(text, /payment\.methods has the stripe_shared_payment_token entry; that entry says why it can be absent/);
+    assert.match(text, /A token can pay only while the order's payment\.token is set; that field says when it is null/);
+  });
+
+  it("says the payment page, not the agent, offers Alipay and WeChat Pay", () => {
+    const text = pageText("/payments");
+    assert.match(text, /A USD order: a card, through Stripe Checkout, or Alipay or WeChat Pay\./);
+    assert.match(text, /An agent doesn't open or choose any of these: it gives the link, and the user pays\./);
+    assert.match(text, /answers payment_method_unavailable with reason payment_open_on_page/);
+  });
+
+  it("tells cancel from close, and describes exactly the contract's cancel blockers and failure reasons", () => {
+    assert.deepEqual(Object.keys(CANCEL_BLOCKER_DOCS), [...CANCEL_BLOCKERS]);
+    assert.deepEqual(Object.keys(FAILURE_REASON_DOCS), [...FAILURE_REASONS]);
+    const html = pageHtml("/payments");
+    for (const value of [...CANCEL_BLOCKERS, ...FAILURE_REASONS]) {
+      assert.ok(html.includes(`<td><code>${value}</code></td>`), value);
+    }
+    const text = pageText("/payments");
+    assert.match(text, /Send exactly one of maximumPenalty and close\. Nothing is ever cancelled or closed by the other mode/);
+    assert.match(text, /close on an order paid meanwhile, answers order_not_cancellable with the order's cancel as it is now/);
+    assert.match(text, /Exactly one of action and blockedBy is set\./);
+    assert.match(text, /A cancelled order's cancelled holds what the cancellation kept and returned: \{ at, penalty, refund \}/);
+    assert.match(text, /failure is null unless the order is failed\./);
   });
 
   it("shows the offer_changed details and says to order the new offer, and what happens to the data sent", () => {

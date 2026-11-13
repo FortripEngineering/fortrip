@@ -32,3 +32,7 @@ Options of the CLI itself:
 <EnvironmentTable />
 
 Exit codes are listed in [Errors & limits](/errors#exit-codes).
+
+## Updates [#updates]
+
+Keep the CLI on the service's major version: `npm install -g fortrip@latest`, or run it as `npx -y fortrip@latest`. A CLI that is a major version behind is refused with [`client_outdated`](/errors#code-client_outdated) on every command, and the message gives the command that updates it.

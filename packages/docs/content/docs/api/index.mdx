@@ -7,7 +7,7 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`. There is no CORS: call the API from a server, a script or the CLI, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`; when the field is a known one sent at the wrong depth, the answer names the path it belongs at. There is no CORS: call the API from a server, a script or the CLI, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
 
 ## Authentication [#authentication]
 
@@ -52,8 +52,8 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 
 - Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float. Money in a request is USD or CNY: a search's price bound in the search's `currency`, a payment's `total` in the order's. A cancellation's `maximumPenalty` is the order's `cancel.penalty` exactly as returned, in whatever currency it is.
 - Prices are in the request's `currency` (USD, the default, or <OtherCurrencies />).
-- An order is charged in its `payment.chargeCurrency`. Orders made through the API are charged in the currency of their offers; orders made on the Fortrip website, which the order list includes, may be in another currency.
-- The amount to show the user before they pay is the order's `price.total`, in its charge currency. Fees paid at the property, `payAtProperty`, come on top, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
+- An order is charged its `total`, in the currency that `total` names. Orders made through the API are charged in the currency of their offers; orders made on the Fortrip website, which the order list includes, may be in another currency.
+- The amount to show the user before they pay is the order's `total`. Fees paid at the property, `payAtProperty`, come on top, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
 
 ## Headers [#headers]
 
@@ -68,7 +68,7 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 
 Search results and the order list are pages: `{ data, nextCursor }` for orders, and `data` with `nextCursor` alongside the rest of a search result. Pass `nextCursor` back as `cursor`; a next page of a search takes only `cursor` and, optionally, `limit`. `nextCursor` is `null` on the last page. A cursor belongs to its request and user; an expired, edited or foreign one answers `400 cursor_invalid`.
 
-Live offers are not a page: they are grouped by hotel, under `hotels`, with the hotels that have nothing to offer under `unavailable` and the reason.
+Live offers are not a page: they are grouped by hotel, under `hotels`, with the hotels that have nothing to offer under `unavailable` and the reason. One call answers a bounded number of offers across its hotels; [the offers budget](/errors#offers-budget) says how many and how to see more.
 
 ## Retries and idempotency [#retries]
 
@@ -86,10 +86,11 @@ There are no webhooks. After you give the user the payment link, read the order 
 
 - <code><Fact path="ROUTES.create_order" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
 - It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; and `409 offer_already_ordered` when the offer was ordered with other details. An offer is ordered once, even when its order failed or expired: another order of the stay takes a new offer.
-- <code><Fact path="ROUTES.pay_order" /></code> takes `sharedPaymentToken`, the token the user approved for the order, and `total`, the order's `price.total` exactly as returned.
+- <code><Fact path="ROUTES.pay_order" /></code> takes `sharedPaymentToken`, the token the user approved for the order, and `total`, the order's `total` exactly as returned. Both are required.
+- <code><Fact path="ROUTES.cancel_order" /></code> takes exactly one of `maximumPenalty`, which cancels a paid order, and `close: true`, which closes an unpaid one. The order's `cancel.action` says which applies.
 - Orders can't be changed through the API.
 
-The whole flow, the ways to pay, the order statuses and cancelling are in [Orders and payment](/payments).
+The whole flow, the ways to pay, the order statuses, and cancelling and closing are in [Orders and payment](/payments).
 
 ## TypeScript types [#typescript]
 

@@ -12,7 +12,7 @@ export interface RetryDoc {
 /** What to do after a pay call timed out. The one statement of it: the retry
  *  table and the MCP page's timeouts both render it. */
 export const PAY_AFTER_TIMEOUT =
-  "read the order (`get_order`). If it is still `awaiting_payment`, pay again with the same token, never a new one, or with `method` again.";
+  "read the order (`get_order`). If it is still `awaiting_payment`, pay again with the same token, never a new one.";
 
 /**
  * How to retry each code a retry can help: once with the same details, again
@@ -33,8 +33,8 @@ export const RETRY_WAYS = {
  * (names with spacing and apostrophes normalized, the email lowercased, the
  * phone as its digits and a leading `+`); an offer is ordered once, and its
  * order answers it whatever its status; a token pays once and its replay answers
- * the first call's outcome; an open Alipay or WeChat Pay payment is resumed;
- * a cancellation under way or done is answered as the order reads.
+ * the first call's outcome; the same cancel mode repeated on an order it
+ * already cancelled or closed answers that order.
  */
 export const RETRY_DOCS: readonly RetryDoc[] = [
   {
@@ -43,11 +43,11 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
   },
   {
     tools: ["pay_order"],
-    again: `Safe with the same token: it answers what the first call answered, and the order is never charged twice. With \`method\`, a call while the Alipay or WeChat Pay payment is open answers the same payment, with the same WeChat Pay code while it is live. After a timeout, ${PAY_AFTER_TIMEOUT} While another payment of the order is under way, the answer is \`payment_in_progress\`: read the order after \`retryAfterSeconds\`.`,
+    again: `Safe with the same token: it answers what the first call answered, and the order is never charged twice. After a timeout, ${PAY_AFTER_TIMEOUT} While another payment of the order is under way, the answer is \`payment_in_progress\`: read the order after \`retryAfterSeconds\`.`,
   },
   {
     tools: ["cancel_order"],
-    again: "Safe. It answers the order as it is now: `cancelling`, then `cancelled`; a repeated close answers `expired`.",
+    again: "Safe with the same mode. A repeated cancellation answers the order as it is now: `cancelling`, then `cancelled`. A repeated close answers the order, `expired`. The other mode is never applied: `close` on an order paid meanwhile answers `order_not_cancellable`.",
   },
   {
     tools: ["search_hotels", "get_hotel", "get_hotel_offers", "get_order", "list_orders"],

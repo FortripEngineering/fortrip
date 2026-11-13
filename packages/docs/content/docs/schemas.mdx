@@ -1,15 +1,26 @@
 ---
 title: Response schemas
-description: Each object below is what the HTTP API answers, what an MCP tool returns as structuredContent, and what the CLI prints with --json.
+description: Each object below is what the HTTP API answers and what the CLI prints with --json. An MCP tool returns the same answer as text.
 ---
 
-The fields come from the zod schemas in the [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract) npm package.
+The fields come from the zod schemas in the [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract) npm package. An MCP result has no JSON of its own: its text is written from these objects ([what a tool returns](/mcp#results)).
 
 ## Reading the tables [#reading]
 
-- Every field is present unless marked optional; `| null` means the field can be `null`. On catalogue facts `null` means not known, never no. Elsewhere it has its own meaning: `nextCursor` is `null` on the last page, and `payment.url` when there is no link to pay now.
-- `[]` marks the items of a list, and "when `kind`", "when `type`" or "when `id`" a branch of a union, with that branch's fields below it.
+- Every field is present unless marked optional; `| null` means the field can be `null`. On catalogue facts `null` means not known, never no. Elsewhere it has its own meaning: `nextCursor` is `null` on the last page, `payment.url` when there is no link to pay now, and `payment.token` when no token can pay the order.
+- `[]` marks the items of a list, and "when `kind`" or "when `type`" a branch of a union, with that branch's fields below it.
 - The schemas are open: [read responses tolerantly](/api#conventions).
 - Field rules shared by every response (ids, [money](/api#money), dates, names) are in [Conventions](/api#conventions).
+
+## One name for one thing [#names]
+
+The same concept has the same name and shape wherever it appears:
+
+- **`total`** is what is charged for the whole stay and every room, on an offer and on an order. An offer's `perRoomNight` is its total divided by the rooms and the nights, rounded to cents, for comparison only: it need not multiply back to `total`. A search's `indicativePrice` is an estimate, not a price for this party.
+- **`roomType`** is one object (name, beds, size, occupancy, window) on an offer, on each room of an order, and in a hotel's `roomTypes`. A fact not on record is `null`. Nothing joins an offer's `roomType` to an entry of a hotel's `roomTypes`: the names can differ, so don't match them.
+- **`rooms`** always means the rooms of a stay, each with its party. A hotel's list of room types is `roomTypes`.
+- **`cancellation`**, **`confirmation`** and **`payAtProperty`** hold for the whole stay, and are named the same on an offer and on an order's hotel item. `meals` and `roomType` hold per room: an offer has one of each for all its rooms, and an order has them on each entry of `rooms`.
+- **`contact`** is `{ name, email, phone }` in the order request and on the order.
+- **`pointer`** is the one name for a JSON Pointer to a request field, on an error and on each of its issues.
 
 <SchemaTables />

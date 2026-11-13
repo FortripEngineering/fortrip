@@ -78,9 +78,16 @@ export function ToolPage({ name }: { name: ToolName }) {
         Output
       </Heading>
       <p>
-        <code>structuredContent</code> is the{" "}
-        <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}{" "}
-        Errors are described in the <Link href="/mcp#errors">overview</Link>.
+        {inline(contentSentence(tool.name))} There is no <code>structuredContent</code>: the same answer as JSON is the{" "}
+        <Link href={tool.returns.href}>{tool.returns.title}</Link> object, from the{" "}
+        <Link href={`/api/reference/${tool.name}`}>HTTP API</Link>
+        {cli && (
+          <>
+            {" "}
+            or <code>{tool.cli} --json</code>
+          </>
+        )}
+        . Errors are described in the <Link href="/mcp#errors">overview</Link>.
       </p>
     </>
   );
