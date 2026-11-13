@@ -6,6 +6,11 @@
     "status": "awaiting_payment",
     "createdAt": "2026-11-01T09:05:00Z",
     "updatedAt": "2026-11-01T09:05:00Z",
+    "contact": {
+      "name": "Kenji Sato",
+      "email": "kenji.sato@example.com",
+      "phone": "+81 90 1234 5678"
+    },
     "items": [
       {
         "type": "hotel",
@@ -22,9 +27,20 @@
           "rooms": [
             {
               "adults": 2,
-              "childrenAges": []
+              "childrenAges": [],
+              "guests": [
+                {
+                  "firstName": "Kenji",
+                  "lastName": "Sato"
+                },
+                {
+                  "firstName": "Tom",
+                  "lastName": "Sato"
+                }
+              ]
             }
           ],
+          "specialRequests": null,
           "room": {
             "name": {
               "text": "Deluxe King Room",

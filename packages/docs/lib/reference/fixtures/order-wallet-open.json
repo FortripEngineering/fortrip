@@ -4,6 +4,11 @@
   "status": "awaiting_payment",
   "createdAt": "2027-02-20T08:04:12Z",
   "updatedAt": "2027-02-20T08:09:51Z",
+  "contact": {
+    "name": "Kenji Sato",
+    "email": "kenji.sato@example.com",
+    "phone": "+81 90 1234 5678"
+  },
   "items": [
     {
       "type": "hotel",
@@ -20,9 +25,20 @@
         "rooms": [
           {
             "adults": 2,
-            "childrenAges": []
+            "childrenAges": [],
+            "guests": [
+              {
+                "firstName": "Kenji",
+                "lastName": "Sato"
+              },
+              {
+                "firstName": "Tom",
+                "lastName": "Sato"
+              }
+            ]
           }
         ],
+        "specialRequests": null,
         "room": {
           "name": {
             "text": "Standard Double Room",

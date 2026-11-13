@@ -3,8 +3,11 @@ Orders, newest first: 4 on this page.
 Order ord_OtherStore0000000000 · reference FT-R8ZK4C · awaiting payment · created 2026-11-02 10:00 UTC · updated 2026-11-02 10:00 UTC
 Hotel: Canal House Lisbon · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 1 adult · time zone Europe/Lisbon
 Room: Classic Double · beds not listed
+Guests: none named yet
+Special requests: none
 Terms: meals not stated by the supplier — not known to be room only, may include breakfast; ask or check at booking · cancellation terms unknown · fees not fully disclosed (amounts or how they are collected may be missing)
 Hotel confirmation number: none yet
+Contact: none on record yet
 Total: EUR 410.00 · payment unpaid · charged in EUR
 Payment link (expires 2026-11-02 10:30 UTC; the user signs in to Fortrip to pay): https://fortrip.ai/stays/book/sb_9f3k2Lx
 Cancel: not needed: an unpaid order expires unpaid at 2026-11-02 10:30 UTC
@@ -13,8 +16,11 @@ Manage: https://fortrip.ai/stays/book/sb_9f3k2Lx
 Order ord_KataNoLink0000000000 · reference FT-N4V6TB · awaiting payment · created 2026-11-01 11:00 UTC · updated 2026-11-01 11:00 UTC
 Hotel: Kata Beach Resort (卡塔海滩度假村) · htl_KataBeach00000000000 · 2026-12-20 → 2026-12-27 (7 nights) · 2 rooms, each 2 adults and 1 child (age 7) · time zone Asia/Bangkok
 Room: Deluxe King Room · beds: 1 king bed
+Guests: room 1 Mary Smith, Tom Smith; room 2 Li Na
+Special requests: none
 Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free cancellation until 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok) · nothing to pay at the property
 Hotel confirmation number: none yet
+Contact: Mary Smith · mary.smith@example.com · +1 415 555 0134
 Total: USD 1235.50 · payment authorized (held, not yet charged) · charged in USD (the user's card may pay in its local currency at checkout)
 Cancel: not now: a payment is under way; read the order again shortly
 Manage: https://fortrip.ai/orders/ord_KataNoLink0000000000
@@ -22,8 +28,11 @@ Manage: https://fortrip.ai/orders/ord_KataNoLink0000000000
 Order ord_BundAwaiting00000000 · reference FT-7KQ2MX · awaiting payment · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:05 UTC
 Hotel: The Bund Riverside Hotel (外滩江畔酒店) · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
 Room: Deluxe King Room · beds: 1 king bed
+Guests: Kenji Sato, Tom Sato
+Special requests: none
 Terms: breakfast for 2 guests per room (labelled "Breakfast for 2") · free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · nothing to pay at the property
 Hotel confirmation number: none yet
+Contact: Kenji Sato · kenji.sato@example.com · +81 90 1234 5678
 Total: USD 365.00 · payment unpaid · charged in USD (the user's card may pay in its local currency at checkout)
 Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4
 Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order)
@@ -32,14 +41,17 @@ Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
 Order ord_LakeConfirmed0000000 · reference FT-H3W9PA · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
 Hotel: Lakeside Garden Resort (湖畔花园度假酒店) · htl_LakesideGarden000000 · 2026-11-20 → 2026-11-23 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
 Room: Deluxe King Room · beds not listed
+Guests: Ana Costa, Tom Costa
+Special requests: none
 Terms: room only · partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · fees not in the total: Resort fee CNY 80.00, per night, mandatory, at the property
 Hotel confirmation number: LGR-449120
+Contact: Ana Costa · ana.costa@example.com · +351 912 345 678
 Total: USD 366.00 · payment paid · charged in USD (the user's card may pay in its local currency at checkout) · card charged EUR 339.80
 Cancel: can cancel now: penalty USD 120.00, refund USD 246.00
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000
 
 Next page: call again with { cursor: "c_orders_page_2" }.
 
-Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, rooms and guests per room) and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.
+Before you give the user an order's payment.url, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them payment.url exactly as returned.
 
 Before you call cancel_order, show the user the order's stay (hotel, dates), cancel.penalty and cancel.refund (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Pass maximumPenalty as cancel.penalty, exactly as returned. Never state a refund the order did not return.

@@ -153,6 +153,16 @@ export type PaymentMethod = z.infer<typeof paymentMethod>;
 /** `FT-` and six characters with no 0, 1, I or O. */
 export const orderReference = z.string().regex(/^FT-[2-9A-HJ-NP-Z]{6}$/);
 
+/** A room of the order: its party and the guests named for it. */
+const orderRoom = stayEcho.shape.rooms.element.extend({
+  guests: z
+    .array(openObject({ firstName: z.string(), lastName: z.string() }))
+    .nullable()
+    .describe(
+      "The guests the order names for this room, as given when ordering. null when none are on record yet: an order started on the Fortrip website names them at checkout.",
+    ),
+});
+
 const hotelItem = openObject({
   type: z.literal("hotel"),
   hotel: openObject({
@@ -162,7 +172,11 @@ const hotelItem = openObject({
     checkIn: localDate,
     checkOut: localDate,
     timeZone: z.string().nullable(),
-    rooms: stayEcho.shape.rooms,
+    rooms: z.array(orderRoom).min(1),
+    specialRequests: z
+      .string()
+      .nullable()
+      .describe("The requests for the hotel, as given when ordering; null when none were given. Not guaranteed."),
     room: openObject({
       name: localizedText.nullable(),
       beds: localizedText.nullable(),
@@ -184,6 +198,18 @@ export const order = openObject({
   ),
   createdAt: instant,
   updatedAt: instant,
+  contact: openObject({
+    name: z.string().describe("The contact's full name, as given when ordering."),
+    email: z
+      .string()
+      .nullable()
+      .describe("Where the confirmation is sent; null when none is on record."),
+    phone: z.string().nullable().describe("The contact's phone number; null when none is on record."),
+  })
+    .nullable()
+    .describe(
+      "Who the hotel and the confirmation reach, as given when ordering. null when none is on record yet: an order started on the Fortrip website gives it at checkout.",
+    ),
   items: z.array(openUnion("type", [hotelItem])).min(1),
   price: openObject({
     total: money.describe(

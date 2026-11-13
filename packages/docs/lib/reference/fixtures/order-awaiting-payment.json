@@ -4,6 +4,11 @@
   "status": "awaiting_payment",
   "createdAt": "2027-02-20T08:04:12Z",
   "updatedAt": "2027-02-20T08:04:12Z",
+  "contact": {
+    "name": "Wei Wang",
+    "email": "wei.wang@example.com",
+    "phone": "+86 138 0013 8000"
+  },
   "items": [
     {
       "type": "hotel",
@@ -20,9 +25,20 @@
         "rooms": [
           {
             "adults": 2,
-            "childrenAges": []
+            "childrenAges": [],
+            "guests": [
+              {
+                "firstName": "Wei",
+                "lastName": "Wang"
+              },
+              {
+                "firstName": "Jun",
+                "lastName": "Wang"
+              }
+            ]
           }
         ],
+        "specialRequests": null,
         "room": {
           "name": {
             "text": "Standard Double Room",

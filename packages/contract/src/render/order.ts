@@ -69,9 +69,24 @@ function itemLines(item: Item): string[] {
       `time zone ${h.timeZone ?? "not listed"}`,
     ].join(" · "),
     `Room: ${h.room.name ? h.room.name.text : "room name not listed"} · ${h.room.beds ? `beds: ${h.room.beds.text}` : "beds not listed"}`,
+    guestsLine(h.rooms),
+    `Special requests: ${h.specialRequests === null ? "none" : h.specialRequests.replace(/\s+/g, " ").trim()}`,
     `Terms: ${mealsWithLabel(h.meals)} · ${cancellationText(h.cancellation)} · ${feesText(h.payAtProperty)}`,
     `Hotel confirmation number: ${h.confirmationNumber ?? "none yet"}`,
   ];
+}
+
+/** "Guests: Wei Wang, Mary Smith", or room by room for several rooms. */
+function guestsLine(rooms: HotelItem["hotel"]["rooms"]): string {
+  const names = rooms.map((r) => (r.guests ?? []).map((g) => `${g.firstName} ${g.lastName}`).join(", "));
+  if (names.every((n) => n === "")) return "Guests: none named yet";
+  if (names.length === 1) return `Guests: ${names[0]}`;
+  return `Guests: ${names.map((n, i) => `room ${i + 1} ${n || "none named yet"}`).join("; ")}`;
+}
+
+function contactLine(c: Order["contact"]): string {
+  if (c === null) return "Contact: none on record yet";
+  return `Contact: ${c.name} · ${c.email ?? "no email on record"} · ${c.phone ?? "no phone on record"}`;
 }
 
 function paymentLines(o: Order, surface: RenderSurface): string[] {
@@ -179,6 +194,7 @@ export function orderLines(o: Order, surface: RenderSurface = "mcp"): string[] {
   return [
     `Order ${o.orderId} · reference ${o.reference} · ${label(ORDER_STATUS_WORDS, o.status)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
     ...o.items.flatMap(itemLines),
+    contactLine(o.contact),
     ...paymentLines(o, surface),
   ];
 }

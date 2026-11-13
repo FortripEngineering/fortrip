@@ -13,9 +13,9 @@ from a conversation with Claude.
   orders, and cancel an order under its cancellation terms.
 - **The `fortrip` skill**, which tells Claude the order to use the tools in,
   how to read prices, meal plans and cancellation terms, how to plan trips
-  with flexible dates, budgets or several stops, and to show you the price
-  and terms and wait for your confirmation before giving you a payment link
-  or cancelling an order.
+  with flexible dates, budgets or several stops, and to show you the price,
+  terms, guests and contact details and wait for your confirmation before
+  giving you a payment link or cancelling an order.
 
 ## Install
 
@@ -47,7 +47,8 @@ token into the chat.
    available, and that is the currency you're charged.
 3. When you pick an offer and give the guest names and a contact name, email
    and phone, Claude creates an unpaid order and shows you the stay, the
-   amount and currency you'll be charged, the meals, cancellation
+   guest names, contact details and any special requests as the order holds
+   them, the amount and currency you'll be charged, the meals, cancellation
    rules, confirmation time and any fees payable at the hotel.
 4. After you confirm, Claude gives you a payment link. It opens a Fortrip page
    that recaps the order and continues to payment; for a USD order, Stripe

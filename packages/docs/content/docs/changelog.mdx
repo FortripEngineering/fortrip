@@ -7,6 +7,27 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 5.3.0
+
+Not released yet.
+
+An order shows who it is for, so the user can check the guests and the contact before paying.
+
+### Added
+
+- `contact` on an order (`book_hotel`, `get_order`, `list_orders`, `cancel_order`, `pay_order`, and `/v1/orders`): the contact's `name`, `email` and `phone` as given when ordering. It is null until an order started on the Fortrip website reaches checkout; `email` and `phone` are null when none is on record.
+- `guests` on each of an order's `items[].hotel.rooms`: the guests named for that room, `firstName` and `lastName`; null when none are on record yet.
+- `specialRequests` on an order's `items[].hotel`: the requests as given; null when none were given.
+- The order text shows them as `Guests:`, `Special requests:` and `Contact:` lines.
+
+### Changed
+
+- The step before the payment link, and before paying with a token or with Alipay or WeChat Pay (`pay_order`), asks the agent to show each room's guests by name, the contact (name, email, phone) and any special requests too, as the order holds them. A wrong contact, like a wrong guest name, is corrected with a new order of a new offer. The Claude plugin's skill and the CLI skill say the same.
+
+### Migration
+
+- Nothing is required: a client that doesn't know the new fields ignores them.
+
 ## 5.2.0
 
 Released 2026-11-10.

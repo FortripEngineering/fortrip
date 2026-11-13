@@ -148,6 +148,7 @@ const orderFixture = {
   status: "awaiting_payment",
   createdAt: "2026-10-24T08:00:00Z",
   updatedAt: "2026-10-24T08:01:00Z",
+  contact: { name: "Mary Smith", email: "mary.smith@example.com", phone: "+1 415 555 0134" },
   items: [
     {
       type: "hotel",
@@ -158,7 +159,17 @@ const orderFixture = {
         checkIn: "2026-11-10",
         checkOut: "2026-11-12",
         timeZone: "Asia/Shanghai",
-        rooms: [{ adults: 2, childrenAges: [] }],
+        rooms: [
+          {
+            adults: 2,
+            childrenAges: [],
+            guests: [
+              { firstName: "Mary", lastName: "Smith" },
+              { firstName: "Tom", lastName: "Smith" },
+            ],
+          },
+        ],
+        specialRequests: null,
         room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
         meals: {
           known: false,
@@ -257,7 +268,7 @@ describe("TOOLS", () => {
     assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
     assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
     assert.match(pay?.description ?? "", /then show the entry it returns: the WeChat code as an image if you can, and both links/);
-    assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay and every term with a clear yes/);
+    assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes/);
     assert.match(pay?.description ?? "", /A code lasts 120 minutes/);
     assert.match(pay?.description ?? "", /^Pay a USD order without its link/);
     assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);

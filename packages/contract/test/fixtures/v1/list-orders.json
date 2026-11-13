@@ -8,6 +8,7 @@
         "status": "awaiting_payment",
         "createdAt": "2026-11-02T10:00:00Z",
         "updatedAt": "2026-11-02T10:00:00Z",
+        "contact": null,
         "items": [
           {
             "type": "hotel",
@@ -24,9 +25,11 @@
               "rooms": [
                 {
                   "adults": 1,
-                  "childrenAges": []
+                  "childrenAges": [],
+                  "guests": null
                 }
               ],
+              "specialRequests": null,
               "room": {
                 "name": {
                   "text": "Classic Double",
@@ -87,6 +90,11 @@
         "status": "awaiting_payment",
         "createdAt": "2026-11-01T11:00:00Z",
         "updatedAt": "2026-11-01T11:00:00Z",
+        "contact": {
+          "name": "Mary Smith",
+          "email": "mary.smith@example.com",
+          "phone": "+1 415 555 0134"
+        },
         "items": [
           {
             "type": "hotel",
@@ -105,15 +113,32 @@
                   "adults": 2,
                   "childrenAges": [
                     7
+                  ],
+                  "guests": [
+                    {
+                      "firstName": "Mary",
+                      "lastName": "Smith"
+                    },
+                    {
+                      "firstName": "Tom",
+                      "lastName": "Smith"
+                    }
                   ]
                 },
                 {
                   "adults": 2,
                   "childrenAges": [
                     7
+                  ],
+                  "guests": [
+                    {
+                      "firstName": "Li",
+                      "lastName": "Na"
+                    }
                   ]
                 }
               ],
+              "specialRequests": null,
               "room": {
                 "name": {
                   "text": "Deluxe King Room",
@@ -190,6 +215,11 @@
         "status": "awaiting_payment",
         "createdAt": "2026-11-01T09:05:00Z",
         "updatedAt": "2026-11-01T09:05:00Z",
+        "contact": {
+          "name": "Kenji Sato",
+          "email": "kenji.sato@example.com",
+          "phone": "+81 90 1234 5678"
+        },
         "items": [
           {
             "type": "hotel",
@@ -206,9 +236,20 @@
               "rooms": [
                 {
                   "adults": 2,
-                  "childrenAges": []
+                  "childrenAges": [],
+                  "guests": [
+                    {
+                      "firstName": "Kenji",
+                      "lastName": "Sato"
+                    },
+                    {
+                      "firstName": "Tom",
+                      "lastName": "Sato"
+                    }
+                  ]
                 }
               ],
+              "specialRequests": null,
               "room": {
                 "name": {
                   "text": "Deluxe King Room",
@@ -285,6 +326,11 @@
         "status": "confirmed",
         "createdAt": "2026-10-20T03:12:00Z",
         "updatedAt": "2026-10-20T03:40:00Z",
+        "contact": {
+          "name": "Ana Costa",
+          "email": "ana.costa@example.com",
+          "phone": "+351 912 345 678"
+        },
         "items": [
           {
             "type": "hotel",
@@ -304,9 +350,20 @@
                   "childrenAges": [
                     5,
                     9
+                  ],
+                  "guests": [
+                    {
+                      "firstName": "Ana",
+                      "lastName": "Costa"
+                    },
+                    {
+                      "firstName": "Tom",
+                      "lastName": "Costa"
+                    }
                   ]
                 }
               ],
+              "specialRequests": null,
               "room": {
                 "name": {
                   "text": "Deluxe King Room",
