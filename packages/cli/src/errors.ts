@@ -69,11 +69,11 @@ function localCode(failure: CliError): string {
   }
 }
 
-/** `- /pointer: message` for each issue, as the contract renders the API's. */
+/** `- Field /pointer: message` for each issue, as the contract renders the API's. */
 function issueLines(details: unknown): string[] | null {
   const issues = (details as { issues?: unknown } | null)?.issues;
   if (!Array.isArray(issues)) return null;
-  return issues.map((issue: { pointer?: unknown; message?: unknown }) => `- ${issue.pointer}: ${issue.message}`);
+  return issues.map((issue: { pointer?: unknown; message?: unknown }) => `- Field ${issue.pointer}: ${issue.message}`);
 }
 
 /**

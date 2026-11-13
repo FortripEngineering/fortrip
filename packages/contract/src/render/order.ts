@@ -3,9 +3,13 @@ import type { Order, OrderCancel, OrderList } from "../outputs/order.ts";
 import { CALLS, type RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeText } from "./offers.ts";
-import { oneLine } from "./third-party.ts";
+import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
 
-/* `book_hotel`, `get_order` and `list_orders` (spec §10.2). */
+/*
+ * `book_hotel`, `get_order` and `list_orders` (spec §10.2). Every line begins
+ * with Fortrip's words, and every value of the order (names, the contact,
+ * special requests, ids, links) is one line inside them.
+ */
 
 type Item = Order["items"][number];
 type HotelItem = Extract<Item, { type: "hotel" }>;
@@ -60,90 +64,103 @@ const FAILURE_WORDS: Record<string, string> = {
 };
 
 /** "Mary Smith, Tom Smith", or "none named yet". */
-function guestsText(room: Room): string {
+function guestsText(room: Room): Ours {
   const names = (room.guests ?? []).map((g) => oneLine(`${g.firstName} ${g.lastName}`));
-  return names.length ? names.join(", ") : "none named yet";
+  return names.length ? joined(names, ", ") : ours`none named yet`;
 }
 
 /** The rooms' type, meals and guests. Rooms booked alike share one "Room"
  *  line, their guests on the next; rooms that differ get a line each. */
-function roomLines(rooms: Room[]): string[] {
-  const booked = rooms.map((r) => `${roomTypeText(r.roomType)} · ${mealsWithLabel(r.meals)}`);
+function roomLines(rooms: Room[]): Ours[] {
+  const booked = rooms.map((r) => ours`${roomTypeText(r.roomType)} · ${mealsWithLabel(r.meals)}`);
   if (!booked.every((b) => b === booked[0])) {
-    return rooms.map((r, i) => `Room ${i + 1}: ${booked[i]} · guests: ${guestsText(r)}`);
+    return rooms.map((r, i) => ours`Room ${i + 1}: ${booked[i]!} · guests: ${guestsText(r)}`);
   }
   const guests =
     rooms.length === 1 || rooms.every((r) => !r.guests?.length)
       ? guestsText(rooms[0]!)
-      : rooms.map((r, i) => `room ${i + 1} ${guestsText(r)}`).join("; ");
-  return [`${rooms.length === 1 ? "Room" : "Each room"}: ${booked[0]}`, `Guests: ${guests}`];
-}
-
-function itemLines(item: Item): string[] {
-  if (item.type !== "hotel") {
-    return [`Item of type ${item.type}: not shown in this text. ${raw(item)}`];
-  }
-  const h = (item as HotelItem).hotel;
+      : joined(rooms.map((r, i) => ours`room ${i + 1} ${guestsText(r)}`), "; ");
   return [
-    [
-      `Hotel: ${oneLine(named(h.name, h.names))}`,
-      h.hotelId ?? "not in the hotel catalogue",
-      stayLine(h.checkIn, h.checkOut),
-      party(h.rooms),
-      `time zone ${h.timeZone ?? "not listed"}`,
-    ].join(" · "),
-    ...roomLines(h.rooms),
-    `Special requests: ${h.specialRequests === null ? "none" : oneLine(h.specialRequests)}`,
-    `Terms: ${cancellationText(h.cancellation)} · ${h.confirmation ? confirmationText(h.confirmation) : "confirmation mode not on record"} · ${feesText(h.payAtProperty)}`,
-    `Hotel confirmation number: ${h.confirmationNumber === null ? "none yet" : oneLine(h.confirmationNumber)}`,
+    rooms.length === 1 ? ours`Room: ${booked[0]!}` : ours`Each room: ${booked[0]!}`,
+    ours`Guests: ${guests}`,
   ];
 }
 
-function contactLine(c: Order["contact"]): string {
-  if (c === null) return "Contact: none on record yet";
-  return `Contact: ${oneLine(c.name)} · ${c.email === null ? "no email on record" : oneLine(c.email)} · ${c.phone === null ? "no phone on record" : oneLine(c.phone)}`;
+function itemLines(item: Item): Ours[] {
+  if (item.type !== "hotel") {
+    return [ours`Item of type ${code(item.type, ours`not recognized`)}: not shown in this text. ${raw(item)}`];
+  }
+  const h = (item as HotelItem).hotel;
+  return [
+    joined(
+      [
+        ours`Hotel: ${named(h.name, h.names)}`,
+        h.hotelId === null ? ours`not in the hotel catalogue` : oneLine(h.hotelId),
+        stayLine(h.checkIn, h.checkOut),
+        party(h.rooms),
+        ours`time zone ${h.timeZone ?? "not listed"}`,
+      ],
+      " · ",
+    ),
+    ...roomLines(h.rooms),
+    ours`Special requests: ${h.specialRequests ?? "none"}`,
+    ours`Terms: ${cancellationText(h.cancellation)} · ${h.confirmation ? confirmationText(h.confirmation) : "confirmation mode not on record"} · ${feesText(h.payAtProperty)}`,
+    ours`Hotel confirmation number: ${h.confirmationNumber ?? "none yet"}`,
+  ];
+}
+
+function contactLine(c: Order["contact"]): Ours {
+  if (c === null) return ours`Contact: none on record yet`;
+  return ours`Contact: ${c.name} · ${c.email ?? "no email on record"} · ${c.phone ?? "no phone on record"}`;
 }
 
 /** What became of an order that is over: why a failed one booked nothing,
  *  what a cancelled one kept and returned. */
-function outcomeLines(o: Order): string[] {
-  const lines: string[] = [];
-  if (o.failure) lines.push(`Why it failed: ${label(FAILURE_WORDS, o.failure.reason)}`);
-  else if (o.status === "failed") lines.push("Why it failed: the reason is not on record");
+function outcomeLines(o: Order): Ours[] {
+  const lines: Ours[] = [];
+  if (o.failure) {
+    lines.push(ours`Why it failed: ${label(FAILURE_WORDS, o.failure.reason, ours`the reason is not recognized`)}`);
+  } else if (o.status === "failed") {
+    lines.push(ours`Why it failed: the reason is not on record`);
+  }
   if (o.cancelled) {
     lines.push(
-      `Cancelled ${when(o.cancelled.at, null)}: penalty kept ${money(o.cancelled.penalty)}, refund ${money(o.cancelled.refund)}`,
+      ours`Cancelled ${when(o.cancelled.at, null)}: penalty kept ${money(o.cancelled.penalty)}, refund ${money(o.cancelled.refund)}`,
     );
   } else if (o.status === "cancelled") {
-    lines.push("Cancelled: the penalty kept and the refund are not on record");
+    lines.push(ours`Cancelled: the penalty kept and the refund are not on record`);
   }
   return lines;
 }
 
-function paymentLines(o: Order, surface: RenderSurface): string[] {
+function paymentLines(o: Order, surface: RenderSurface): Ours[] {
   const p = o.payment;
   const lines = [
-    [
-      `Total: ${money(o.total)}`,
-      `payment ${label(PAYMENT_WORDS, p.status)}`,
-      p.localCurrencyAtCheckout ? "the user's card may pay in its local currency at checkout" : "",
-      p.localCharge ? `card charged ${money(p.localCharge)}` : "",
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    joined(
+      [
+        ours`Total: ${money(o.total)}`,
+        ours`payment ${label(PAYMENT_WORDS, p.status, ours`status not recognized`)}`,
+        p.localCurrencyAtCheckout && ours`the user's card may pay in its local currency at checkout`,
+        p.localCharge && ours`card charged ${money(p.localCharge)}`,
+      ],
+      " · ",
+    ),
   ];
   if (p.url !== null) {
-    const about = [
-      p.expiresAt === null ? "" : `expires ${when(p.expiresAt, null)}`,
-      p.requiresSignIn ? "the user signs in to Fortrip to pay" : "no sign-in needed",
-    ].filter(Boolean);
-    lines.push(`Payment link (${about.join("; ")}): ${p.url}`);
+    const about = joined(
+      [
+        p.expiresAt !== null && ours`expires ${when(p.expiresAt, null)}`,
+        p.requiresSignIn ? ours`the user signs in to Fortrip to pay` : ours`no sign-in needed`,
+      ],
+      "; ",
+    );
+    lines.push(ours`Payment link (${about}): ${p.url}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
-    lines.push("Payment link: none while a payment is being processed; read this order again shortly.");
+    lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.token) lines.push(tokenLine(o, p.token, surface));
-  lines.push(`Cancel: ${cancelText(o.cancel, surface)}`);
-  lines.push(`Manage: ${o.manageUrl}`);
+  lines.push(ours`Cancel: ${cancelText(o.cancel, surface)}`);
+  lines.push(ours`Manage: ${o.manageUrl}`);
   return lines;
 }
 
@@ -154,38 +171,39 @@ function tokenLine(
   o: Order,
   token: NonNullable<Order["payment"]["token"]>,
   surface: RenderSurface,
-): string {
+): Ours {
   const { handler: h, usageLimits: u } = token;
   const pay =
     surface === "cli"
-      ? `\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.total.amount}\``
-      : "pay_order";
+      ? ours`\`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.total.amount}\``
+      : ours`pay_order`;
   const expires = new Date(u.expires_at * 1000);
-  const at = Number.isNaN(expires.getTime()) ? "" : ` (${when(expires.toISOString(), null)})`;
-  return `Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); usage limits for the token request: max_amount ${u.max_amount}, currency ${u.currency}, expires_at ${u.expires_at}${at}.`;
+  const limits = ours`max_amount ${u.max_amount}, currency ${u.currency}, expires_at ${u.expires_at}`;
+  const until = Number.isNaN(expires.getTime()) ? limits : ours`${limits} (${when(expires.toISOString(), null)})`;
+  return ours`Pay without the link: ${pay} with a shared payment token via ${h.type} (handler ${h.id}, business_profile ${h.config.business_profile}); usage limits for the token request: ${until}.`;
 }
 
 /** "penalty USD 120.00, refund USD 246.00": what cancelling now keeps and
  *  returns. Figures are only ever the order's own. */
-export function cancelFigures(c: OrderCancel): string {
-  const figure = (name: string, m: OrderCancel["penalty"]) => `${name} ${m ? money(m) : "not stated"}`;
-  return `${figure("penalty", c.penalty)}, ${figure("refund", c.refund)}`;
+export function cancelFigures(c: OrderCancel): Ours {
+  const figure = (m: OrderCancel["penalty"]) => (m ? money(m) : ours`not stated`);
+  return ours`penalty ${figure(c.penalty)}, refund ${figure(c.refund)}`;
 }
 
 /** What `cancel_order` can do to the order now: cancel it, with the penalty
  *  and the refund; close it, on the user's word; or what blocks both. */
-function cancelText(c: OrderCancel, surface: RenderSurface): string {
+function cancelText(c: OrderCancel, surface: RenderSurface): Ours {
   if (c.action === "close") {
-    return `can be closed now, nothing is charged; close it only if the user says they no longer want it (${CALLS[surface].close})`;
+    return ours`can be closed now, nothing is charged; close it only if the user says they no longer want it (${CALLS[surface].close})`;
   }
-  if (c.action === "cancel") return `can cancel now: ${cancelFigures(c)}`;
-  if (c.action !== null) return c.action;
-  return `not available: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy)}`;
+  if (c.action === "cancel") return ours`can cancel now: ${cancelFigures(c)}`;
+  if (c.action !== null) return code(c.action, ours`an action not recognized`);
+  return ours`not available: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy, ours`reason not recognized`)}`;
 }
 
-export function orderLines(o: Order, surface: RenderSurface = "mcp"): string[] {
+export function orderLines(o: Order, surface: RenderSurface = "mcp"): Ours[] {
   return [
-    `Order ${o.orderId} · reference ${o.reference} · ${label(ORDER_STATUS_WORDS, o.status)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
+    ours`Order ${o.orderId} · reference ${o.reference} · ${label(ORDER_STATUS_WORDS, o.status, ours`status not recognized`)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
     ...outcomeLines(o),
     ...o.items.flatMap(itemLines),
     contactLine(o.contact),
@@ -200,17 +218,17 @@ export function renderOrder(o: Order, surface: RenderSurface = "mcp"): string {
 export function renderOrderList(list: OrderList, surface: RenderSurface = "mcp"): string {
   const lines = [
     list.data.length === 0
-      ? "No orders on this page."
-      : `Orders, newest first: ${list.data.length} on this page.`,
+      ? ours`No orders on this page.`
+      : ours`Orders, newest first: ${list.data.length} on this page.`,
   ];
-  for (const o of list.data) lines.push("", ...orderLines(o, surface));
+  for (const o of list.data) lines.push(ours``, ...orderLines(o, surface));
   lines.push(
-    "",
+    ours``,
     list.nextCursor === null
-      ? "Last page."
+      ? ours`Last page.`
       : surface === "cli"
-        ? `Next page: run again with --cursor ${list.nextCursor}.`
-        : `Next page: call again with { cursor: "${list.nextCursor}" }.`,
+        ? ours`Next page: run again with --cursor ${list.nextCursor}.`
+        : ours`Next page: call again with { cursor: "${list.nextCursor}" }.`,
   );
   return lines.join("\n");
 }

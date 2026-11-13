@@ -587,6 +587,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   /** How a line of a search, a hotel or offers begins: words Fortrip wrote. */
   const OWN = [
     /^$/,
+    /^This [a-z_]+ result is not in the expected shape; as JSON: /,
     // search_hotels
     /^Place: /,
     /^Text "/,
@@ -674,20 +675,15 @@ describe("every string of a result, replaced by a hostile one", () => {
   };
   type Attacked = keyof typeof DIRECT;
 
-  const NOT_IN_SHAPE = / result is not in the expected shape; as JSON:\n/;
+  const NOT_IN_SHAPE = /^This [a-z_]+ result is not in the expected shape; as JSON: [[{]/;
 
   /** Renders through the parse step; a result the schema refuses is checked
    *  as JSON, then rendered with the parse step bypassed. True when refused. */
   function attack(tool: Attacked, data: unknown, where: string): boolean {
     const text = renderToolResult(tool, data);
     const refused = NOT_IN_SHAPE.test(text);
-    if (refused) {
-      assert.doesNotMatch(text, NOT_PRINTABLE, where);
-      assert.equal(text.split("\n").length, 2, where);
-      assertOurs(DIRECT[tool](data), `${where} (parse bypassed)`);
-    } else {
-      assertOurs(text, where);
-    }
+    assertOurs(text, where);
+    if (refused) assertOurs(DIRECT[tool](data), `${where} (parse bypassed)`);
     return refused;
   }
 
@@ -733,18 +729,13 @@ describe("every string of a result, replaced by a hostile one", () => {
 
   /*
    * The errors that carry place names: every string of `details`. A string
-   * the schema refuses shows `details` as JSON. One gap is left to the
-   * errors' own task: a candidate of `destination_ambiguous` is a list
-   * marker and then the place's name, with no label of ours before it.
+   * the schema refuses shows `details` as JSON.
    */
   const PLACE_ERRORS = ["destination_ambiguous", "destination_not_found", "search_too_broad"];
 
-  function assertErrorLines(text: string, code: string, where: string) {
+  function assertErrorLines(text: string, where: string) {
     assert.doesNotMatch(text, NOT_PRINTABLE, where);
-    for (const line of text.split("\n")) {
-      if (code === "destination_ambiguous" && line.startsWith("- ")) continue;
-      assert.doesNotMatch(line, STARTS_HOSTILE, where);
-    }
+    for (const line of text.split("\n")) assert.doesNotMatch(line, STARTS_HOSTILE, where);
   }
 
   for (const [name, fixture] of fixtures) {
@@ -761,7 +752,7 @@ describe("every string of a result, replaced by a hostile one", () => {
           const before = put(details, path, hostile);
           try {
             const text = renderError(envelope, status);
-            assertErrorLines(text, envelope.error.code, `${path.join(".")} = ${JSON.stringify(hostile)}`);
+            assertErrorLines(text, `${path.join(".")} = ${JSON.stringify(hostile)}`);
             if (/^Details: /m.test(text)) refusedPaths.add(path);
           } finally {
             put(details, path, before);
@@ -775,7 +766,7 @@ describe("every string of a result, replaced by a hostile one", () => {
         }
         const text = renderError(all, status);
         assert.doesNotMatch(text, /^Details: /m, text);
-        assertErrorLines(text, envelope.error.code, `every string = ${JSON.stringify(hostile)}`);
+        assertErrorLines(text, `every string = ${JSON.stringify(hostile)}`);
       }
     });
   }

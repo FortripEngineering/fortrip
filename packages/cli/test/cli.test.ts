@@ -437,7 +437,7 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip hotels offers was given an invalid request.",
-        "- /hotelIds/0: hotelId must be htl_ followed by 20 letters or digits",
+        "- Field /hotelIds/0: hotelId must be htl_ followed by 20 letters or digits",
         "",
       ].join("\n"),
     );
@@ -456,7 +456,7 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip orders pay was given an invalid request.",
-        "- /sharedPaymentToken: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+        "- Field /sharedPaymentToken: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
         "",
       ].join("\n"),
     );

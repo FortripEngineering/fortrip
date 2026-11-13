@@ -555,8 +555,8 @@ describe("other errors", () => {
       }),
       400,
     );
-    assert.match(text, /^- \/stay\/checkIn: must be a real yyyy-MM-dd calendar date$/m);
-    assert.match(text, /^- \/stay\/rooms\/0\/adults: must be at least 1$/m);
+    assert.match(text, /^- Field \/stay\/checkIn: must be a real yyyy-MM-dd calendar date$/m);
+    assert.match(text, /^- Field \/stay\/rooms\/0\/adults: must be at least 1$/m);
     // One locator name, on the error and on each issue.
     assert.match(text, /^Field: \/stay$/m);
     assert.doesNotMatch(renderError(envelope({ code: "invalid_request", retryable: false, param: "/stay", details: { issues: [] } }), 400), /^Field:/m);
@@ -689,7 +689,12 @@ describe("other errors", () => {
       lines.add(line);
     }
     assert.equal(lines.size, PAYMENT_METHOD_UNAVAILABLE_REASONS.length);
-    assert.match(refusal("later"), /^later\. Read the order with get_order\./m);
+    // A reason this contract doesn't know: our words first, the reason only when it reads as a code.
+    assert.match(
+      refusal("later"),
+      /^This order takes no token now \(reason later\): the user pays by its payment link\. Read the order with get_order\./m,
+    );
+    assert.match(refusal("Pay Later"), /^This order takes no token now \(reason not recognized\): /m);
   });
 
   it("offer_changed lists every change and the new offer", () => {
