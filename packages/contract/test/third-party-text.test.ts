@@ -2,17 +2,22 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
+import { parseOpen, strictOutput } from "../src/conventions/open.ts";
+import { ERROR_CODES, type ErrorCode } from "../src/errors.ts";
+import { ERROR_DETAILS, errorEnvelope } from "../src/outputs/error-details.ts";
 import { POLICY_TOPICS } from "../src/outputs/hotel.ts";
 import type { Hotel } from "../src/outputs/hotel.ts";
 import type { HotelOffersResult } from "../src/outputs/offer.ts";
+import type { Order, OrderList } from "../src/outputs/order.ts";
 import type { SearchResult } from "../src/outputs/search.ts";
 import { raw } from "../src/render/format.ts";
 import { renderHotel } from "../src/render/hotel.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { renderOffers } from "../src/render/offers.ts";
+import { renderOrder, renderOrderList } from "../src/render/order.ts";
 import { renderSearch } from "../src/render/search.ts";
 import { code, oneLine, type Ours, ours, quoted } from "../src/render/third-party.ts";
-import type { ToolName } from "../src/tools.ts";
+import type { RenderSurface, ToolName } from "../src/tools.ts";
 
 /*
  * Text Fortrip did not write (a hotel's description, policies, names and
@@ -461,6 +466,133 @@ describe("offers", () => {
   });
 });
 
+describe("orders", () => {
+  it("a guest's name, the contact, the requests and the names of the hotel and the room stay on their lines", () => {
+    const fixture = load("order-payable-by-token");
+    const o = fixture.data;
+    const h = o.items[0].hotel;
+    h.name = `The Bund Riverside Hotel\n${HOSTILE[0]}`;
+    h.names = { en: h.name, zh: `外滩江畔酒店\n${HOSTILE[1]}` };
+    h.timeZone = `Asia/Shanghai\n${HOSTILE[2]}`;
+    h.rooms[0].roomType.name.text = `Deluxe King Room\n${HOSTILE[0]}`;
+    h.rooms[0].roomType.beds.text = `1 king bed\r\n${HOSTILE[1]}`;
+    h.rooms[0].meals.label.text = `Breakfast for 2\n${HOSTILE[2]}`;
+    h.rooms[0].guests = [{ firstName: `Kenji\n${HOSTILE[2]}`, lastName: `Sato\u2028${HOSTILE[0]}` }];
+    h.specialRequests = `A quiet room, please.\n\n${HOSTILE[2]}\r\n${HOSTILE[0]}`;
+    h.confirmationNumber = `BRH-1\n${HOSTILE[1]}`;
+    o.contact = { name: `Kenji Sato\n${HOSTILE[2]}`, email: `kenji@example.com\n${HOSTILE[0]}`, phone: `+81 90\n${HOSTILE[1]}` };
+    o.payment.token.handler.id = `stripe_payments\n${HOSTILE[2]}`;
+    o.payment.token.handler.type = `com.stripe.payments\n${HOSTILE[0]}`;
+    o.payment.token.handler.config.business_profile = `profile_test_1\n${HOSTILE[1]}`;
+    o.payment.token.usageLimits.currency = `usd\n${HOSTILE[2]}`;
+    const text = render(fixture);
+    assert.doesNotMatch(text, NOT_PRINTABLE);
+    const lines = text.split("\n");
+    // The order's own lines are all there, each begun by its label and nothing else by a hostile one.
+    assert.deepEqual(
+      lines.slice(0, 12).map((line) => line.match(/^[A-Za-z ]+/)?.[0]),
+      ["Order ord", "Hotel", "Room", "Guests", "Special requests", "Terms", "Hotel confirmation number", "Contact", "Total", "Payment link ", "Pay without the link", "Cancel"],
+    );
+    assert.equal(lines.filter((line) => STARTS_HOSTILE.test(line)).length, 1, text);
+    assert.ok(lines[1]!.startsWith(`Hotel: The Bund Riverside Hotel ${HOSTILE[0]} (外滩江畔酒店 ${HOSTILE[1]}) · htl_`), text);
+    assert.ok(lines[1]!.endsWith(` · time zone Asia/Shanghai ${HOSTILE[2]}`), text);
+    assert.ok(lines[2]!.startsWith(`Room: Deluxe King Room ${HOSTILE[0]}, beds: 1 king bed ${HOSTILE[1]}, 32 m²`), text);
+    assert.ok(lines[2]!.endsWith(`(labelled "Breakfast for 2 ${HOSTILE[2]}")`), text);
+    assert.equal(lines[3], `Guests: Kenji ${HOSTILE[2]} Sato ${HOSTILE[0]}`);
+    assert.equal(lines[4], `Special requests: A quiet room, please. ${HOSTILE[2]} ${HOSTILE[0]}`);
+    assert.equal(lines[6], `Hotel confirmation number: BRH-1 ${HOSTILE[1]}`);
+    assert.equal(lines[7], `Contact: Kenji Sato ${HOSTILE[2]} · kenji@example.com ${HOSTILE[0]} · +81 90 ${HOSTILE[1]}`);
+    assert.ok(
+      lines[10]!.includes(
+        `via com.stripe.payments ${HOSTILE[0]} (handler stripe_payments ${HOSTILE[2]}, business_profile profile_test_1 ${HOSTILE[1]}); usage limits for the token request: max_amount 36500, currency usd ${HOSTILE[2]}, expires_at`,
+      ),
+      text,
+    );
+  });
+
+  it("each room's guests stay on the room's line when the rooms differ", () => {
+    const fixture = load("order-rooms-differ");
+    fixture.data.items[0].hotel.rooms[1].guests = [{ firstName: `Rui\n${HOSTILE[2]}`, lastName: "Duarte" }];
+    const lines = render(fixture).split("\n");
+    assert.ok(lines[3]!.startsWith("Room 2: Attic Twin, "), lines[3]);
+    assert.ok(lines[3]!.endsWith(` · guests: Rui ${HOSTILE[2]} Duarte`), lines[3]);
+    assert.equal(lines.filter((line) => STARTS_HOSTILE.test(line)).length, 1);
+  });
+});
+
+describe("errors", () => {
+  const error = (name: string) => (load(name) as unknown as ErrorFixture).envelope.error;
+  const text = (name: string, change: (e: Record<string, any>) => void) => {
+    const e = error(name);
+    change(e);
+    return renderError({ error: e }, 409);
+  };
+
+  it("the server's message, the pointer and the request id are one line each, after our words", () => {
+    const lines = text("error-payment-total-mismatch", (e) => {
+      e.message = `The total sent is not the order's.\n${HOSTILE[0]}\r\n${HOSTILE[2]}`;
+      e.pointer = `/total\n${HOSTILE[1]}`;
+      e.requestId = `req_1\u2028${HOSTILE[2]}`;
+    }).split("\n");
+    assert.deepEqual(
+      [lines[0], lines[2], lines.at(-1)],
+      [
+        `Error payment_total_mismatch (HTTP 409): The total sent is not the order's. ${HOSTILE[0]} ${HOSTILE[2]}`,
+        `Field: /total ${HOSTILE[1]}`,
+        `Request id: req_1 ${HOSTILE[2]}`,
+      ],
+    );
+    assert.equal(lines.length, 5);
+  });
+
+  it("a code that does not read as one is not shown, and its details are JSON on one line", () => {
+    const lines = text("error-payment-total-mismatch", (e) => {
+      e.code = `payment_total_mismatch\n${HOSTILE[0]}`;
+      e.details.orderId = `ord_1\n${HOSTILE[2]}`;
+    }).split("\n");
+    assert.equal(lines.length, 5);
+    assert.ok(lines[0]!.startsWith("Error unknown (HTTP 409): "), lines[0]);
+    assert.ok(lines[3]!.startsWith(`Details: {"orderId":"ord_1\\n${HOSTILE[2]}",`), lines[3]);
+  });
+
+  it("a candidate place is a labelled line, its names and region on it", () => {
+    const lines = text("error-destination-ambiguous-suzhou", (e) => {
+      e.details.name = `Suzhou\n${HOSTILE[0]}`;
+      const c = e.details.candidates[0];
+      c.name = `Suzhou\n${HOSTILE[2]}`;
+      c.names = { en: c.name, zh: `苏州\n${HOSTILE[1]}` };
+      c.region.name = `Jiangsu\n${HOSTILE[0]}`;
+      c.countryCode = `CN\n${HOSTILE[2]}`;
+    }).split("\n");
+    assert.ok(lines[3]!.startsWith(`Places named "Suzhou ${HOSTILE[0]}" in CN (2). `), lines[3]);
+    assert.ok(
+      lines[4]!.startsWith(`- Place: Suzhou ${HOSTILE[2]} (苏州 ${HOSTILE[1]}) plc_9500001 · district in Jiangsu ${HOSTILE[0]} plc_9500100, CN ${HOSTILE[2]} · `),
+      lines[4],
+    );
+    assert.ok(lines[5]!.startsWith("- Place: Suzhou (宿州) plc_9500002 · "), lines[5]);
+    assert.ok(lines[6]!.startsWith(`Also: 57 hotels have "Suzhou ${HOSTILE[0]}" in their name or address`), lines[6]);
+    assert.equal(lines.filter((line) => STARTS_HOSTILE.test(line)).length, 0);
+  });
+
+  it("an issue's pointer and message, a decline code, a currency and a time zone stay on their lines", () => {
+    const sample = (code: string, details: unknown) =>
+      renderError({ error: { code, message: "Something happened.", retryable: false, details, requestId: "req_1" } }, 400).split("\n");
+    assert.equal(
+      sample("invalid_request", { issues: [{ pointer: `/stay\n${HOSTILE[0]}`, message: `must be a date\n${HOSTILE[2]}` }] })[2],
+      `- Field /stay ${HOSTILE[0]}: must be a date ${HOSTILE[2]}`,
+    );
+    assert.ok(sample("payment_declined", { declineCode: `card_declined\n${HOSTILE[0]}` })[2]!.startsWith(`Declined (card_declined ${HOSTILE[0]}): the user picks `));
+    assert.ok(sample("currency_unavailable", { currency: `CNY\n${HOSTILE[1]}` })[2]!.startsWith(`Prices in CNY ${HOSTILE[1]} aren't available yet. `));
+    assert.equal(
+      sample("stay_in_past", { checkIn: "2026-10-31", timeZone: `Asia/Shanghai\n${HOSTILE[2]}` })[2],
+      `Check-in 2026-10-31 is already past in Asia/Shanghai ${HOSTILE[2]}.`,
+    );
+    for (const details of [{ issues: [] }, { declineCode: null }]) {
+      assert.equal(sample("no_such_code", details).length, 4);
+    }
+  });
+});
+
 describe("a value of an open enum the package does not know", () => {
   /** A value no schema's known list holds: `shown` reads as a code, `HOSTILE[1]` does not. */
   const shown = "something_new_2";
@@ -525,6 +657,54 @@ describe("a value of an open enum the package does not know", () => {
     assertEnum(name, "window", (d, v) => (d.roomTypes[0].window = v), " · window not listed");
   });
 
+  it("is shown in an order only when it reads as a code", () => {
+    const name = "order-confirmed";
+    const hotel = (d: Record<string, any>) => d.items[0].hotel;
+    assertEnum(name, "status", (d, v) => (d.status = v), " · status not recognized · created ");
+    assertEnum(name, "payment status", (d, v) => (d.payment.status = v), " · payment status not recognized");
+    assertEnum(name, "cancel action", (d, v) => (d.cancel = { action: v, blockedBy: null, penalty: null, refund: null }), "\nCancel: an action not recognized\n");
+    assertEnum(name, "cancel blocker", (d, v) => (d.cancel = { action: null, blockedBy: v, penalty: null, refund: null }), "\nCancel: not available: reason not recognized\n");
+    assertEnum(name, "failure reason", (d, v) => (d.failure = { reason: v }), "\nWhy it failed: the reason is not recognized\n");
+    assertEnum(name, "window", (d, v) => (hotel(d).rooms[0].roomType.window = v), ", window not listed · ");
+    assertEnum(name, "fee kind", (d, v) => (hotel(d).payAtProperty.items[0].kind = v), "fees not in the total: fee of a kind not stated CNY 80.00");
+    assertEnum(name, "confirmation mode", (d, v) => (hotel(d).confirmation.mode = v), " · confirmation mode unknown · ");
+    // An item of a type the package does not know is its JSON, on one line after our words.
+    const item = (type: string) => {
+      const fixture = load(name);
+      fixture.data.items[0] = { type, note: `x\n${HOSTILE[0]}` };
+      return render(fixture).split("\n")[1];
+    };
+    assert.equal(item(shown), `Item of type ${shown}: not shown in this text. {"type":"${shown}","note":"x\\n${HOSTILE[0]}"}`);
+    assert.ok(item(`flight\n${HOSTILE[1]}`)!.startsWith('Item of type not recognized: not shown in this text. {"type":"flight\\n'));
+  });
+
+  it("is shown in an error only when it reads as a code", () => {
+    const sample = (code: string, details?: unknown) =>
+      renderError({ error: { code, message: "Something happened.", retryable: false, ...(details ? { details } : {}), requestId: "req_1" } }, 400);
+    const cases: [string, (v: string) => string, string][] = [
+      ["code", (v) => sample(v), "Error unknown (HTTP 400): Something happened."],
+      ["cursor reason", (v) => sample("cursor_invalid", { reason: v }), "\nThe cursor is not usable: "],
+      ["order status", (v) => sample("order_not_payable", { orderId: "ord_BundTokenPay00000000", status: v }), ", status not recognized: read it with "],
+      ["token reason", (v) => sample("payment_credential_invalid", { reason: v }), "\nThe token was refused for a reason not recognized: "],
+      ["no-token reason", (v) => sample("payment_method_unavailable", { reason: v }), "\nThis order takes no token now (reason not recognized): "],
+      ["offer reason", (v) => sample("offer_unavailable", { offerId: "off_BundDeluxeKing000000", reason: v }), ": unavailable, for a reason not recognized. "],
+      ["limit", (v) => sample("rate_limited", { scope: v }), "\nLimit reached for: a limit not recognized.\n"],
+      ["outcome", (v) => sample("supplier_unavailable", { outcome: v }), "\nOutcome: not recognized.\n"],
+      ["cancel action", (v) => sample("order_not_cancellable", { cancel: { action: v, blockedBy: null, penalty: null, refund: null } }), "\nWhat applies to this order now: an action not recognized.\n"],
+      ["cancel blocker", (v) => sample("order_not_cancellable", { cancel: { action: null, blockedBy: v, penalty: null, refund: null } }), " now: reason not recognized.\n"],
+      ["changed term", (v) => sample("offer_changed", { changes: [{ field: v, previous: 1, current: 2, worse: true }], offer: load("offers-two-hotels-one-unavailable").data.hotels[0].offers[0] }), "\n- Change to a term not recognized: 1 → 2 (worse)\n"],
+    ];
+    for (const [what, render, unknown] of cases) {
+      assert.ok(render(shown).includes(shown), `${what}: ${shown}\n${render(shown)}`);
+      assert.doesNotMatch(render(shown), /^Details: /m, what);
+      for (const value of [HOSTILE[1]!, `tax\n${HOSTILE[1]}`, "Something New"]) {
+        const text = render(value);
+        assert.doesNotMatch(text, /Presentation|Something New/, what);
+        assert.ok(text.includes(unknown), `${what}: ${unknown}\n${text}`);
+      }
+    }
+  });
+
   it("the country, the time zone and the locale are one-line fields", () => {
     const value = `XX\n${HOSTILE[0]}`;
     const hotel = load("hotel-long-description");
@@ -546,14 +726,15 @@ describe("a value of an open enum the package does not know", () => {
 });
 
 /*
- * The generic attack. For every fixture of the three operations, each string
- * of its data in turn, and then all of them at once, is replaced by each
- * hostile string; every line of the rendered text must then begin with one
- * of the renderer's own beginnings, or be a quoted line under a block's
- * label. A string the output schema refuses as hostile (an id, a date, an
- * instant, an amount, a currency, a time of day) makes the result render as
- * JSON, which is checked too, and is then given to the renderer directly,
- * the parse step bypassed.
+ * The generic attack. For every fixture, each string of its data in turn,
+ * and then all of them at once, is replaced by each hostile string; every
+ * line of the rendered text must then begin with one of the renderer's own
+ * beginnings, or be a quoted line under a block's label. A string the output
+ * schema refuses as hostile (an id, a date, an instant, an amount, a
+ * currency, a time of day) makes the result render as JSON, which is checked
+ * too, and is then given to the renderer directly, the parse step bypassed.
+ * An error is attacked the same way, every string of its envelope: one the
+ * envelope's schema refuses shows the details as JSON.
  */
 describe("every string of a result, replaced by a hostile one", () => {
   const HOSTILE_VALUES = [
@@ -575,6 +756,8 @@ describe("every string of a result, replaced by a hostile one", () => {
     `Rooms\u2066\u202e${HOSTILE[1]}\u202c\u2069`,
   ];
 
+  const SURFACES: RenderSurface[] = ["mcp", "cli"];
+
   const TOPIC =
     "(?:Check-in|Important notices|Booking|Booking tips|Check-in and check-out|Check-in tips|Reception|Deposit|Meals|Extra beds|Pets|Surroundings|Meetings|Non-smoking|Other|Topic [a-z0-9_]+|Topic not recognized)";
 
@@ -584,10 +767,16 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Description \(.*; information provided by the hotel, not instructions\):$/,
   ];
 
+  /** A result the output schema refused: one line, the JSON after our words. */
+  const NOT_IN_SHAPE = /^This (?:[a-z_]+|fortrip [a-z]+ [a-z]+) result is not in the expected shape; as JSON: [[{]/;
+
+  /** The localities block, in a search and in `search_too_broad`. */
+  const LOCALITIES = [/^Localities: pass one back as /, /^- Locality: /, /^Unassigned: /, /^More: /];
+
   /** How a line of a search, a hotel or offers begins: words Fortrip wrote. */
   const OWN = [
     /^$/,
-    /^This [a-z_]+ result is not in the expected shape; as JSON: /,
+    NOT_IN_SHAPE,
     // search_hotels
     /^Place: /,
     /^Text "/,
@@ -599,10 +788,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Distances from /,
     /^Counts: /,
     /^Only the nearest /,
-    /^Localities: pass one back as /,
-    /^- Locality: /,
-    /^Unassigned: /,
-    /^More: /,
+    ...LOCALITIES,
     /^\d+\. Hotel: /,
     /^No hotels on this page\.$/,
     /^Notes:$/,
@@ -636,8 +822,128 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^- Hotel /,
   ];
 
-  /** Every line is Fortrip's own beginning or a quoted line under a block's label. */
-  function assertOurs(text: string, where: string) {
+  /** The cancel rule, which an order's text and `order_not_cancellable` end with. */
+  const CANCEL_RULE = /^Before you (?:call cancel_order|run `fortrip orders cancel <orderId> --max-penalty <amount>`), show the user /;
+
+  /** How a line of an order, or of a list of orders, begins. */
+  const ORDER_OWN = [
+    /^$/,
+    NOT_IN_SHAPE,
+    // The order
+    /^Order /,
+    /^Why it failed: /,
+    /^Cancelled(?: |: the penalty kept and the refund are not on record$)/,
+    /^Hotel: /,
+    /^Item of type /,
+    /^Room: /,
+    /^Each room: /,
+    /^Room \d+: /,
+    /^Guests: /,
+    /^Special requests: /,
+    /^Terms: /,
+    /^Hotel confirmation number: /,
+    /^Contact: /,
+    /^Total: /,
+    /^Payment link(?: \(|: none while a payment is being processed; read this order again shortly\.$)/,
+    /^Pay without the link: /,
+    /^Cancel: /,
+    /^Manage: /,
+    // list_orders
+    /^No orders on this page\.$/,
+    /^Orders, newest first: /,
+    /^Last page\.$/,
+    /^Next page: /,
+    // The rules after the data
+    /^Before you give the user an order's payment\.url, show them /,
+    /^To pay without the link: only if you have a tool /,
+    CANCEL_RULE,
+  ];
+
+  /*
+   * An order has lines of its own that begin as two of the hostile lines do.
+   * Such a line must be ours whole, not only at its beginning: every "Cancel:"
+   * line the renderer writes, and its one "Payment link:" line.
+   */
+  const ORDER_LOOKALIKES = [
+    /^Payment link: none while a payment is being processed; read this order again shortly\.$/,
+    /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order with close: true|run `fortrip orders cancel <orderId> --close`)\)$/,
+    /^Cancel: can cancel now: penalty .+, refund .+$/,
+    /^Cancel: not available: \S.*$/,
+    /^Cancel: (?:[a-z0-9_]+|an action not recognized)$/,
+  ];
+
+  /** How a line of an error begins. */
+  const ERROR_OWN = [
+    // Every error
+    /^Error [a-z0-9_]+(?: \(HTTP \d+\))?(?:: |$)/,
+    /^Error(?: \(HTTP \d+\))?: the answer carried no readable error\.$/,
+    /^Retryable(?:\.$|: )/,
+    /^Not retryable\.$/,
+    /^Field: /,
+    /^Details: /,
+    /^Request id: /,
+    // invalid_request
+    /^- Field /,
+    // cursor_invalid
+    /^The cursor is /,
+    // offer_expired, offer_unavailable, and the new offer of offer_changed
+    /^Offer /,
+    // offer_changed
+    /^Changes:$/,
+    /^- (?:total|meals|cancellation|confirmation|fees not in the total): /,
+    /^- Change to /,
+    /^New offer, held for ordering:$/,
+    /^Show the user these changes and ask again before ordering the new offer\.$/,
+    // offer_already_ordered, order_in_progress, order_not_payable, payment_in_progress
+    /^Order /,
+    // order_not_cancellable
+    /^This order isn't paid, so it is closed, not cancelled, /,
+    /^This order is paid, so it is cancelled under its terms, not closed: /,
+    CANCEL_RULE,
+    /^What applies to this order now: /,
+    /^This order can be neither cancelled nor closed now: /,
+    // payment_total_mismatch
+    /^The total sent is not the order's: /,
+    // payment_credential_invalid
+    /^The token /,
+    // payment_method_unavailable
+    /^The user has a payment open on the order's payment page, /,
+    /^This order takes no token now/,
+    /^The charge was refused for a reason a new token wouldn't fix: /,
+    // payment_declined
+    /^Declined(?: \(|: )/,
+    // destination_ambiguous
+    /^Places named "/,
+    /^- Place: /,
+    /^Also: /,
+    // destination_not_found
+    /^No place named "/,
+    /^Unknown placeId /,
+    /^Place plc_\d+ (?:belongs to no locality: |is not a locality\. )/,
+    /^Search /,
+    // search_too_broad
+    /^Next: show the user these localities /,
+    ...LOCALITIES,
+    /^Or: /,
+    // stay_unsupported
+    /^Every room must have the same party: /,
+    /^At most /,
+    // stay_in_past
+    /^Check-in \d{4}-\d{2}-\d{2} is already past/,
+    // currency_unavailable
+    /^Prices in /,
+    // rate_limited
+    /^Limit reached for: /,
+    // supplier_unavailable
+    /^Nothing was sent to the hotel's supplier\.$/,
+    /^The request was sent and timed out: its outcome is unknown\.$/,
+    /^Outcome: /,
+  ];
+
+  /** Every line is Fortrip's own beginning or a quoted line under a block's
+   *  label. A line that begins as a hostile one does is one of `lookalikes`,
+   *  whole. */
+  function assertOurs(text: string, where: string, own: RegExp[] = OWN, lookalikes: RegExp[] = []) {
     assert.doesNotMatch(text, NOT_PRINTABLE, where);
     const lines = text.split("\n");
     lines.forEach((line, i) => {
@@ -645,8 +951,10 @@ describe("every string of a result, replaced by a hostile one", () => {
         const before = lines[i - 1] ?? "";
         assert.ok(before.startsWith(">") || BLOCK_LABELS.some((label) => label.test(before)), `${where}: a quoted line under ${JSON.stringify(before)}`);
       } else {
-        assert.ok(OWN.some((own) => own.test(line)), `${where}: ${JSON.stringify(line.slice(0, 120))}`);
-        assert.doesNotMatch(line, STARTS_HOSTILE, where);
+        assert.ok(own.some((start) => start.test(line)), `${where}: ${JSON.stringify(line.slice(0, 120))}`);
+        if (STARTS_HOSTILE.test(line)) {
+          assert.ok(lookalikes.some((whole) => whole.test(line)), `${where}: ${JSON.stringify(line.slice(0, 120))}`);
+        }
       }
     });
   }
@@ -668,22 +976,30 @@ describe("every string of a result, replaced by a hostile one", () => {
     return before;
   }
 
-  const DIRECT = {
-    search_hotels: (data: unknown) => renderSearch(data as SearchResult),
-    get_hotel: (data: unknown) => renderHotel(data as Hotel),
-    get_hotel_offers: (data: unknown) => renderOffers(data as HotelOffersResult),
-  };
-  type Attacked = keyof typeof DIRECT;
+  const order = (data: unknown, surface: RenderSurface) => renderOrder(data as Order, surface);
 
-  const NOT_IN_SHAPE = /^This [a-z_]+ result is not in the expected shape; as JSON: [[{]/;
+  /** Each tool's renderer, the parse step bypassed. */
+  const DIRECT: Record<ToolName, (data: unknown, surface: RenderSurface) => string> = {
+    search_hotels: (data, surface) => renderSearch(data as SearchResult, surface),
+    get_hotel: (data) => renderHotel(data as Hotel),
+    get_hotel_offers: (data, surface) => renderOffers(data as HotelOffersResult, surface),
+    book_hotel: order,
+    get_order: order,
+    cancel_order: order,
+    pay_order: order,
+    list_orders: (data, surface) => renderOrderList(data as OrderList, surface),
+  };
+
+  const ORDER_TOOLS = new Set<ToolName>(["book_hotel", "get_order", "cancel_order", "pay_order", "list_orders"]);
 
   /** Renders through the parse step; a result the schema refuses is checked
    *  as JSON, then rendered with the parse step bypassed. True when refused. */
-  function attack(tool: Attacked, data: unknown, where: string): boolean {
-    const text = renderToolResult(tool, data);
+  function attack(tool: ToolName, data: unknown, surface: RenderSurface, where: string): boolean {
+    const [own, lookalikes] = ORDER_TOOLS.has(tool) ? [ORDER_OWN, ORDER_LOOKALIKES] : [OWN, []];
+    const text = renderToolResult(tool, data, surface);
     const refused = NOT_IN_SHAPE.test(text);
-    assertOurs(text, where);
-    if (refused) assertOurs(DIRECT[tool](data), `${where} (parse bypassed)`);
+    assertOurs(text, where, own, lookalikes);
+    if (refused) assertOurs(DIRECT[tool](data, surface), `${where} (parse bypassed)`, own, lookalikes);
     return refused;
   }
 
@@ -691,82 +1007,169 @@ describe("every string of a result, replaced by a hostile one", () => {
   const fixtures = files.map((name) => [name, load(name) as Fixture | ErrorFixture] as const);
 
   for (const [name, fixture] of fixtures) {
-    if (!("tool" in fixture) || !Object.hasOwn(DIRECT, fixture.tool)) continue;
-    const tool = fixture.tool as Attacked;
+    if (!("tool" in fixture)) continue;
+    const { tool, data } = fixture;
 
     it(`${name}: each string in turn, then all at once`, () => {
-      const data = fixture.data;
-      assertOurs(renderToolResult(tool, data), "as it is");
       const paths = stringsIn(data);
       assert.ok(paths.length > 10, name);
-      const refusedPaths = new Set<(string | number)[]>();
-      for (const path of paths) {
-        for (const hostile of HOSTILE_VALUES) {
-          const before = put(data, path, hostile);
-          try {
-            if (attack(tool, data, `${path.join(".")} = ${JSON.stringify(hostile)}`)) refusedPaths.add(path);
-          } finally {
-            put(data, path, before);
+      for (const surface of SURFACES) {
+        assert.equal(attack(tool, data, surface, "as it is"), false);
+        const refusedPaths = new Set<(string | number)[]>();
+        for (const path of paths) {
+          for (const hostile of HOSTILE_VALUES) {
+            const before = put(data, path, hostile);
+            try {
+              if (attack(tool, data, surface, `${path.join(".")} = ${JSON.stringify(hostile)}`)) refusedPaths.add(path);
+            } finally {
+              put(data, path, before);
+            }
           }
         }
-      }
-      // Both ways were taken: through the schema, and around it.
-      assert.ok(refusedPaths.size > 0 && refusedPaths.size < paths.length, name);
+        // Both ways were taken: through the schema, and around it.
+        assert.ok(refusedPaths.size > 0 && refusedPaths.size < paths.length, name);
 
-      for (const hostile of HOSTILE_VALUES) {
-        const where = `every string = ${JSON.stringify(hostile)}`;
-        // Every string the schema lets be hostile, through the parse step.
-        const allowed = structuredClone(data);
-        for (const path of paths) if (!refusedPaths.has(path)) put(allowed, path, hostile);
-        assert.equal(attack(tool, allowed, where), false, where);
-        // Every string there is, the parse step bypassed.
-        const all = structuredClone(data);
-        for (const path of paths) put(all, path, hostile);
-        assert.equal(attack(tool, all, where), true, where);
+        for (const hostile of HOSTILE_VALUES) {
+          const where = `every string = ${JSON.stringify(hostile)}`;
+          // Every string the schema lets be hostile, through the parse step.
+          const allowed = structuredClone(data);
+          for (const path of paths) if (!refusedPaths.has(path)) put(allowed, path, hostile);
+          assert.equal(attack(tool, allowed, surface, where), false, where);
+          // Every string there is, the parse step bypassed.
+          const all = structuredClone(data);
+          for (const path of paths) put(all, path, hostile);
+          assert.equal(attack(tool, all, surface, where), true, where);
+        }
       }
     });
   }
 
   /*
-   * The errors that carry place names: every string of `details`. A string
-   * the schema refuses shows `details` as JSON.
+   * Errors: every fixture, and a sample of every other code that carries
+   * details, so no detail's text goes unattacked.
    */
-  const PLACE_ERRORS = ["destination_ambiguous", "destination_not_found", "search_too_broad"];
+  type Envelope = ErrorFixture["envelope"];
 
-  function assertErrorLines(text: string, where: string) {
-    assert.doesNotMatch(text, NOT_PRINTABLE, where);
-    for (const line of text.split("\n")) assert.doesNotMatch(line, STARTS_HOSTILE, where);
+  function sample(code: ErrorCode, details?: Record<string, unknown>, which = details?.reason): readonly [string, ErrorFixture] {
+    const error = {
+      code,
+      message: "Something happened.",
+      pointer: "/stay/checkIn",
+      retryable: ERROR_CODES[code].retryable,
+      ...(details ? { details } : {}),
+      requestId: "req_sample_0001",
+    };
+    return [which ? `${code} (${which})` : code, { status: ERROR_CODES[code].status[0]!, envelope: { error } }];
   }
 
-  for (const [name, fixture] of fixtures) {
-    if ("tool" in fixture || !PLACE_ERRORS.includes(fixture.envelope.error.code)) continue;
+  const usd = (amount: string) => ({ amount, currency: "USD" });
+  const heldOffer = load("offers-two-hotels-one-unavailable").data.hotels[0].offers[0];
+  const otherOffer = load("offers-two-hotels-one-unavailable").data.hotels[0].offers[1];
+  const changed = (field: string) => ({ field, previous: heldOffer[field], current: otherOffer[field], worse: true });
+  const ORDER_ID = "ord_BundTokenPay00000000";
 
-    it(`${name}: each string of its details in turn, then all at once`, () => {
-      const { envelope, status } = fixture;
-      const details = envelope.error.details as Record<string, unknown>;
-      const paths = stringsIn(details);
-      assert.ok(paths.length > 0, name);
-      const refusedPaths = new Set<(string | number)[]>();
-      for (const path of paths) {
-        for (const hostile of HOSTILE_VALUES) {
-          const before = put(details, path, hostile);
-          try {
-            const text = renderError(envelope, status);
-            assertErrorLines(text, `${path.join(".")} = ${JSON.stringify(hostile)}`);
-            if (/^Details: /m.test(text)) refusedPaths.add(path);
-          } finally {
-            put(details, path, before);
+  const SAMPLES = [
+    sample("invalid_request", {
+      issues: [
+        { pointer: "/stay/checkIn", message: "must be a real yyyy-MM-dd calendar date" },
+        { pointer: "/items/0/hotel/rooms/0/guests/0/firstName", message: 'must not be "Guest"' },
+      ],
+    }),
+    sample("cursor_invalid", { reason: "expired" }),
+    sample("offer_expired", { offerId: heldOffer.offerId, expiredAt: "2026-11-01T12:30:00Z" }),
+    sample("offer_changed", {
+      changes: ["total", "meals", "cancellation", "confirmation", "payAtProperty"].map(changed),
+      offer: otherOffer,
+    }),
+    sample("offer_already_ordered", { orderId: ORDER_ID }),
+    sample("order_in_progress", { orderId: ORDER_ID }),
+    sample("order_not_cancellable", { cancel: { action: null, blockedBy: "stay_started", penalty: null, refund: null } }, "blocked"),
+    sample("order_not_cancellable", { cancel: { action: "cancel", blockedBy: null, penalty: usd("120.00"), refund: usd("245.00") } }, "cancel applies"),
+    sample("order_not_cancellable", { cancel: { action: "close", blockedBy: null, penalty: null, refund: null } }, "close applies"),
+    sample("order_not_payable", { orderId: ORDER_ID, status: "confirmed" }),
+    sample("payment_in_progress", { orderId: ORDER_ID }),
+    sample("payment_credential_invalid", { reason: "expired" }),
+    sample("payment_declined", { declineCode: "insufficient_funds" }),
+    sample("payment_method_unavailable", { reason: "payment_open_on_page" }),
+    sample("destination_not_found", { reason: "no_match", name: "Atlantis", countryCode: "GR", nameAsText: 3 }),
+    sample("destination_not_found", { reason: "unknown_id", placeId: "plc_9200010" }),
+    sample("stay_unsupported", { reason: "max_nights", max: 30 }),
+    sample("stay_unsupported", { reason: "mixed_occupancy" }),
+    sample("stay_in_past", { checkIn: "2026-10-31", timeZone: "Asia/Shanghai" }),
+    sample("currency_unavailable", { currency: "CNY" }),
+    sample("rate_limited", { scope: "search" }),
+    sample("supplier_unavailable", { outcome: "unknown" }),
+    // No details: the head, with the server's message, is all there is.
+    sample("client_outdated"),
+  ];
+
+  const errors = [
+    ...fixtures.flatMap(([name, fixture]) => ("tool" in fixture ? [] : [[name, fixture] as const])),
+    ...SAMPLES,
+  ];
+
+  it("every code that carries details has a fixture or a sample, valid under the strict schema", () => {
+    const attacked = new Set(errors.map(([, e]) => e.envelope.error.code));
+    for (const [code, details] of Object.entries(ERROR_DETAILS)) {
+      if (details !== null) assert.ok(attacked.has(code), code);
+    }
+    for (const [name, e] of SAMPLES) assert.ok(strictOutput(errorEnvelope).safeParse(e.envelope).success, name);
+  });
+
+  /** Whether the envelope still reads as an error of `code`. */
+  function reads(envelope: Envelope, code: string): boolean {
+    try {
+      return parseOpen(errorEnvelope, envelope).error.code === code;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Whether `text` words the error of `code`: it reads as one, and its
+   *  details are not shown as JSON (a reason the renderer has no words for is). */
+  const worded = (envelope: Envelope, code: string, text: string) => reads(envelope, code) && !/^Details: /m.test(text);
+
+  for (const [name, { envelope, status }] of errors) {
+    it(`${name}: each string of the envelope in turn, then all at once`, () => {
+      const code = envelope.error.code as string;
+      const paths = stringsIn(envelope);
+      assert.ok(paths.length >= 3, name);
+      for (const surface of SURFACES) {
+        const asItIs = renderError(envelope, status, surface);
+        assertOurs(asItIs, "as it is", ERROR_OWN);
+        assert.ok(worded(envelope, code, asItIs), name);
+        const refusedPaths = new Set<(string | number)[]>();
+        for (const path of paths) {
+          for (const hostile of HOSTILE_VALUES) {
+            const before = put(envelope, path, hostile);
+            try {
+              const text = renderError(envelope, status, surface);
+              assertOurs(text, `${path.join(".")} = ${JSON.stringify(hostile)}`, ERROR_OWN);
+              if (!worded(envelope, code, text)) refusedPaths.add(path);
+            } finally {
+              put(envelope, path, before);
+            }
           }
         }
-      }
-      for (const hostile of HOSTILE_VALUES) {
-        const all = structuredClone(envelope);
-        for (const path of paths) {
-          if (!refusedPaths.has(path)) put(all.error.details, path, hostile);
+        // The code itself is refused; the message and the request id never are.
+        assert.ok(refusedPaths.size > 0 && refusedPaths.size <= paths.length - 2, name);
+
+        for (const hostile of HOSTILE_VALUES) {
+          const where = `every string = ${JSON.stringify(hostile)}`;
+          // Every string the envelope's schema lets be hostile: still this error, in words.
+          const allowed = structuredClone(envelope);
+          for (const path of paths) if (!refusedPaths.has(path)) put(allowed, path, hostile);
+          const text = renderError(allowed, status, surface);
+          assertOurs(text, where, ERROR_OWN);
+          assert.ok(worded(allowed, code, text), where);
+          assert.ok(text.includes(`: ${oneLine(hostile)}\n`), where);
+          // Every string there is: an error of no known code, its details as JSON.
+          const all = structuredClone(envelope);
+          for (const path of paths) put(all, path, hostile);
+          assertOurs(renderError(all, status, surface), where, ERROR_OWN);
+          // And an envelope that is no envelope at all.
+          assertOurs(renderError(hostile, status, surface), where, ERROR_OWN);
         }
-        const text = renderError(all, status);
-        assert.doesNotMatch(text, /^Details: /m, text);
-        assertErrorLines(text, `every string = ${JSON.stringify(hostile)}`);
       }
     });
   }
