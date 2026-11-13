@@ -196,62 +196,81 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  // C7: never a cancellation without the penalty the user agreed to.
-  it("orders cancel without --max-penalty reads the order, prints its stay and Cancel lines, the consent step, and exits 2", async () => {
-    const { data } = await fixture("order-confirmed");
-    reply = { status: 200, body: data };
-    const lines = renderToolResult("get_order", data, "cli").split("\n");
-    const hotelLine = lines.find((line) => line.startsWith("Hotel: "));
-    // The contract's Cancel line: the penalty, the refund and the call that cancels.
-    const cancelLine = lines.find((line) => line.startsWith("Cancel: can cancel now: penalty USD 120.00, refund USD 246.00 ("));
-    assert.ok(hotelLine && cancelLine);
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      [
-        "Error: Not cancelled: nothing was sent.",
-        hotelLine,
-        cancelLine,
-        `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`fortrip orders cancel ${ORDER} --max-penalty 120.00\`.`,
-        "",
-      ].join("\n"),
-    );
-    assert.deepEqual(
-      requests.map((r) => `${r.method} ${r.url}`),
-      [`GET ${API.order(ORDER)}`],
-    );
-    const json = JSON.parse((await cli(["orders", "cancel", ORDER, "--json"])).stderr);
-    assert.equal(json.error.code, "invalid_request");
-    assert.match(json.error.message, /Only after a clear yes, run `fortrip orders cancel ord_\w+ --max-penalty 120\.00`\.$/);
-    assert.ok(requests.every((r) => r.method === "GET"));
+  /*
+   * Without a mode flag the command line is incomplete, and that is all it is: exit 2, nothing
+   * read and nothing sent, the same sentence as text and in --json. What the order allows is
+   * on its Cancel line, which `orders get` prints with the command to run.
+   */
+  it("orders cancel without --max-penalty or --close is refused as it stands: exit 2, nothing read or sent, text and --json alike", async () => {
+    const message = `fortrip orders cancel needs exactly one of --max-penalty <amount>, to cancel a paid order for the penalty the user agreed to, and --close, to close an unpaid one. Nothing was sent. \`fortrip orders get ${ORDER}\` shows which applies, on the order's Cancel line, with the command to run.`;
+    for (const name of ["order-confirmed", "order-awaiting-payment", "order-stay-started"]) {
+      requests = [];
+      reply = { status: 200, body: (await fixture(name)).data };
+      const text = await cli(["orders", "cancel", ORDER]);
+      assert.equal(text.code, 2, name);
+      assert.equal(text.stdout, "");
+      assert.equal(text.stderr, `Error: ${message}\n`);
+      const json = await cli(["orders", "cancel", ORDER, "--json"]);
+      assert.equal(json.code, 2, name);
+      assert.equal(json.stdout, "");
+      const { error, ...beside } = JSON.parse(json.stderr);
+      assert.deepEqual(beside, {});
+      assert.deepEqual({ ...error, requestId: "" }, { code: "invalid_request", message, retryable: false, requestId: "", details: { issues: [] } });
+      // One line, and nothing of the order in it.
+      assert.doesNotMatch(error.message, /\n|Hotel|Cancel: /);
+      assert.equal(requests.length, 0, name);
+    }
   });
 
-  it("orders cancel without --max-penalty on an unpaid order says it can be closed, and the --close command", async () => {
-    const { data } = await fixture("order-awaiting-payment");
-    reply = { status: 200, body: data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.equal(
-      stderr,
-      [
-        "Error: Not cancelled: nothing was sent.",
-        renderToolResult("get_order", data, "cli").split("\n").find((line) => line.startsWith("Hotel: ")),
-        // The contract's Cancel line names the order it read, as the cancel call does.
-        `Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run \`fortrip orders cancel ${(data as { orderId: string }).orderId} --close\`)`,
-        `Only once the user says they no longer want this order, run \`fortrip orders cancel ${ORDER} --close\`.`,
-        "",
-      ].join("\n"),
-    );
-    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`]);
+  /** What the service answers a mode that does not fit the order, made from the order read. */
+  const notCancellable = (cancel: unknown) => ({
+    error: {
+      code: "order_not_cancellable",
+      message: "The order can't be cancelled or closed the way that was asked, and nothing was sent.",
+      retryable: false,
+      requestId: "local_0",
+      details: { orderId: ORDER, cancel },
+    },
   });
 
-  it("orders cancel --max-penalty on an unpaid order exits 2 naming --close, and posts nothing", async () => {
-    reply = { status: 200, body: (await fixture("order-awaiting-payment")).data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "0.00"]);
-    assert.equal(code, 2);
-    assert.match(stderr, new RegExp(`run \`fortrip orders cancel ${ORDER} --close\``));
+  /*
+   * A mode that does not fit the order read is refused as the service refuses it
+   * (order_not_cancellable, exit 1), from the order's own cancel state and without sending:
+   * the same error as text and in --json, with the command for the mode that applies.
+   */
+  it("a mode that does not fit the order is refused as order_not_cancellable: exit 1, nothing posted, text and --json alike", async () => {
+    const cases: [string, string[], RegExp][] = [
+      ["order-awaiting-payment", ["--max-penalty", "0.00"], new RegExp(`^Cancel: can be closed now, .* \\(run \`fortrip orders cancel ${ORDER} --close\`\\)$`, "m")],
+      ["order-confirmed", ["--close"], new RegExp(`^Cancel: can cancel now: penalty USD 120\\.00, refund USD 246\\.00 \\(only after the user's yes: run \`fortrip orders cancel ${ORDER} --max-penalty 120\\.00\`\\)$`, "m")],
+      ["order-stay-started", ["--close"], /^This order can be neither cancelled nor closed now: the stay has started; /m],
+    ];
+    for (const [name, mode, says] of cases) {
+      requests = [];
+      const { data } = await fixture(name);
+      reply = { status: 200, body: data };
+      const envelope = notCancellable((data as { cancel: unknown }).cancel);
+      strictOutput(errorEnvelope).parse(envelope);
+      const text = await cli(["orders", "cancel", ORDER, ...mode]);
+      assert.equal(text.code, 1, name);
+      assert.equal(text.stdout, "");
+      assert.equal(text.stderr.replace(/local_[0-9a-f]+/, "local_0"), `${renderError(envelope, undefined, "cli")}\n`, name);
+      assert.match(text.stderr, says, name);
+      assert.doesNotMatch(text.stderr, /<orderId>|cancel\.penalty/, name);
+      const json = await cli(["orders", "cancel", ORDER, ...mode, "--json"]);
+      assert.equal(json.code, 1, name);
+      const sent = JSON.parse(json.stderr);
+      assert.match(sent.error.requestId, /^local_[0-9a-f]+$/);
+      assert.deepEqual({ error: { ...sent.error, requestId: "local_0" } }, envelope, name);
+      assert.deepEqual(requests.map((r) => r.method), ["GET", "GET"], name);
+    }
+  });
+
+  it("a mode on an order that does not say what can be done to it is not sent: exit 1", async () => {
+    const { cancel: _gone, ...order } = (await fixture("order-awaiting-payment")).data as Record<string, unknown>;
+    reply = { status: 200, body: order };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 1);
+    assert.equal(stderr, `Error: Not sent: order ${ORDER} doesn't show what can be done to it now. Read it with \`fortrip orders get ${ORDER}\`.\n`);
     assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });
 
@@ -308,42 +327,25 @@ describe("requests", () => {
     }
   });
 
-  it("orders cancel --close on an unpaid order it can't close prints its Cancel line and exits 1", async () => {
+  it("orders cancel --close on an unpaid order it can't close says what blocks it and exits 1", async () => {
     const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    for (const [blockedBy, line] of [
-      [
-        "website_checkout",
-        "Cancel: not available: it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there",
-      ],
-      ["payment_in_progress", "Cancel: not available: a payment is under way; read the order again shortly"],
+    for (const [blockedBy, why] of [
+      ["website_checkout", "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there"],
+      ["payment_in_progress", "a payment is under way; read the order again shortly"],
+      ["cancellation_not_allowed", "the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands"],
     ] as const) {
       requests = [];
       order.cancel = { action: null, blockedBy, penalty: null, refund: null };
       order.payment.requiresSignIn = blockedBy === "website_checkout";
       reply = { status: 200, body: order };
       const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-      assert.equal(code, 1, line);
+      assert.equal(code, 1, blockedBy);
       assert.equal(stdout, "");
-      assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
-      assert.ok(stderr.includes(`\n${line}\n`), stderr);
+      assert.match(stderr, /^Error order_not_cancellable: /);
+      assert.ok(stderr.includes(`\nThis order can be neither cancelled nor closed now: ${why}.\n`), stderr);
+      assert.doesNotMatch(stderr, /--max-penalty/);
       assert.deepEqual(requests.map((r) => r.method), ["GET"]);
     }
-  });
-
-  it("orders cancel --close on a paid order that can't be cancelled prints its Cancel line, exits 1, and offers no --max-penalty", async () => {
-    const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
-    order.cancel = { action: null, blockedBy: "cancellation_not_allowed", penalty: null, refund: null };
-    reply = { status: 200, body: order };
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 1);
-    assert.equal(stdout, "");
-    assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
-    assert.ok(
-      stderr.includes("\nCancel: not available: the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands\n"),
-      stderr,
-    );
-    assert.doesNotMatch(stderr, /--max-penalty/);
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });
 
   // 6.0: a mode that doesn't fit the order's state is refused with the
@@ -358,7 +360,7 @@ describe("requests", () => {
         message: "This order is paid: cancel it under its terms with maximumPenalty.",
         retryable: false,
         requestId: "req_1",
-        details: { cancel },
+        details: { orderId: ORDER, cancel },
       },
     };
     strictOutput(errorEnvelope).parse(envelope);
@@ -371,45 +373,25 @@ describe("requests", () => {
     assert.match(stderr, /^This order is paid, so it is cancelled under its terms, not closed\. Its Cancel line now:$/m);
     assert.match(
       stderr,
-      /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 \(only after the user's yes: run `fortrip orders cancel <orderId> --max-penalty 120\.00`\)$/m,
+      new RegExp(`^Cancel: can cancel now: penalty USD 120\\.00, refund USD 246\\.00 \\(only after the user's yes: run \`fortrip orders cancel ${ORDER} --max-penalty 120\\.00\`\\)$`, "m"),
     );
+    assert.doesNotMatch(stderr, /<orderId>/);
     assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
     assert.deepEqual(requests[1]?.body, { close: true });
   });
 
-  it("orders cancel --close on a paid order exits 2 naming --max-penalty, and posts nothing", async () => {
-    reply = { status: 200, body: (await fixture("order-confirmed")).data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 2);
-    assert.equal(
-      stderr,
-      `Error: Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`fortrip orders cancel ${ORDER} --max-penalty <amount>\`.\n`,
-    );
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
-  });
-
-  it("orders cancel without --max-penalty on an order not in the contract's shape still refuses, and offers no flag", async () => {
-    const { data } = await fixture("order-confirmed");
-    const { cancel: _, ...noCancel } = data as Record<string, unknown>;
-    reply = { status: 200, body: noCancel };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.match(stderr, /^Error: Not cancelled: nothing was sent\.\n/);
-    assert.match(stderr, /fortrip orders cancel needs --max-penalty, the penalty the user agreed to\./);
-    assert.doesNotMatch(stderr, /Only after a clear yes/);
-    assert.ok(requests.every((r) => r.method === "GET"));
-  });
-
-  it("orders cancel without --max-penalty sends nothing for a bad order id, and passes on the read's error", async () => {
-    const bad = await cli(["orders", "cancel", "ao_1"]);
-    assert.equal(bad.code, 2);
-    assert.match(bad.stderr, /\/path\/orderId/);
-    assert.equal(requests.length, 0);
+  it("orders cancel sends nothing for a bad order id, and passes on the read's error", async () => {
+    for (const mode of [[], ["--close"], ["--max-penalty", "1.00"]]) {
+      const bad = await cli(["orders", "cancel", "ao_1", ...mode]);
+      assert.equal(bad.code, 2, mode.join(" "));
+      assert.match(bad.stderr, /^- <orderId>: orderId must be ord_ followed by 20 letters or digits$/m, mode.join(" "));
+      assert.equal(requests.length, 0);
+    }
     reply = {
       status: 404,
       body: { error: { code: "not_found", message: "No such order.", retryable: false, requestId: "req_1" } },
     };
-    const missing = await cli(["orders", "cancel", ORDER]);
+    const missing = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(missing.code, 1);
     assert.match(missing.stderr, /^Error not_found/);
   });
@@ -449,14 +431,32 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip hotels offers was given an invalid request.",
-        "- Field /hotelIds/0: hotelId must be htl_ followed by 20 letters or digits",
+        "- --hotel: hotelId must be htl_ followed by 20 letters or digits",
         "",
       ].join("\n"),
     );
+    // With --json the issue is the API's, pointer and message, and the message names the flag.
     const json = JSON.parse((await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"])).stderr);
     assert.deepEqual(json.error.details.issues, [
-      { pointer: "/hotelIds/0", message: "hotelId must be htl_ followed by 20 letters or digits" },
+      { pointer: "/hotelIds/0", message: "--hotel: hotelId must be htl_ followed by 20 letters or digits" },
     ]);
+    assert.equal(requests.length, 0);
+  });
+
+  // A value sent in --body is told by its pointer, as the API tells it, with the contract's hint.
+  it("a --body the contract refuses names pointers, and where a misplaced key belongs", async () => {
+    const body = JSON.stringify({ offerId: OFFER, items: [{ hotel: { rooms: [{ guests: [{ firstName: "A", lastName: "B" }] }] } }] });
+    const { code, stderr } = await cli(["orders", "create", "--body", body, "--name", "A B", "--email", "a@b.co", "--phone", "+8613800000000"]);
+    assert.equal(code, 2);
+    assert.equal(
+      stderr,
+      [
+        "Error: Not sent: fortrip orders create was given an invalid request.",
+        "- Field /items/0/offerId: offerId must be off_ followed by 20 letters or digits",
+        "- Field /offerId: Unknown field: offerId (belongs at /items/0/offerId)",
+        "",
+      ].join("\n"),
+    );
     assert.equal(requests.length, 0);
   });
 
@@ -468,7 +468,7 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip orders pay was given an invalid request.",
-        "- Field /sharedPaymentToken: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+        "- --token is required",
         "",
       ].join("\n"),
     );
@@ -587,6 +587,9 @@ describe("output", () => {
       assert.match(stderr, new RegExp(flag));
       assert.equal(requests.length, 0, flag);
     }
+    // --method was one in 5.x: the answer is what to do in 6.0, in one line.
+    const { stderr } = await cli(["orders", "pay", ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "365.00"]);
+    assert.equal(stderr, "Error: --method is no flag of fortrip orders pay since 6.0: an order is paid here with --token and --total only; any other way, the user pays on the order's payment link\n");
   });
 
   // 6.0: the contact is one name.
@@ -602,9 +605,12 @@ describe("output", () => {
       requests = [];
       const refused = await cli([...BOOK, flag, "John"]);
       assert.equal(refused.code, 2, flag);
-      assert.match(refused.stderr, new RegExp(flag));
+      assert.equal(refused.stderr, `Error: ${flag} is no flag of fortrip orders create since 6.0: give the contact's full name as --name\n`);
       assert.equal(requests.length, 0, flag);
     }
+    const rooms = await cli(["hotels", "get", HOTEL, "--rooms"]);
+    assert.equal(rooms.code, 2);
+    assert.equal(rooms.stderr, "Error: --rooms is no flag of fortrip hotels get since 6.0: use --room-types\n");
   });
 
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {

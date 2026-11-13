@@ -14,10 +14,12 @@ const byStatus = [
 const MEANINGS: Record<ExitName, string> = {
   ok: "Success.",
   error: `Any other error. An error code the CLI doesn't know exits by its HTTP status: ${byStatus}.`,
-  usage: "Invalid arguments, found by the CLI or answered as `invalid_request`.",
+  usage:
+    "Invalid arguments, found by the CLI or answered as `invalid_request`. Found by the CLI, nothing is sent, and each issue names the flag it was typed as (`--total is required`), or its JSON Pointer when the value came from `--body`. `orders cancel` without `--max-penalty` or `--close` is one of these.",
   unauthenticated:
     'Not signed in, or the saved sign-in is no longer accepted (`unauthenticated`). stderr normally includes `loginUrl` and `userCode`: show them to the user and rerun the command once they have approved. When `FORTRIP_TOKEN` is set and Fortrip rejects it, stderr has `tokenSource: "FORTRIP_TOKEN"` and no link: replace or unset the token.',
-  rateLimited: "Rate limited (`rate_limited`). stderr includes `retryAfterSeconds`.",
+  rateLimited:
+    "Rate limited (`rate_limited`). stderr says after how many seconds to retry: `Retryable: retry after 7 s.` as text, `retryAfterSeconds` in the error with `--json`.",
   clientOutdated:
     "This version of the CLI is too old for Fortrip (`client_outdated`). stderr is Fortrip's message, with the command that updates the CLI: update it, then run the command again.",
 };

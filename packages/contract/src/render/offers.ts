@@ -1,5 +1,6 @@
 import type { RoomType } from "../outputs/hotel.ts";
 import type { HotelOffersResult, Offer } from "../outputs/offer.ts";
+import { LIMITS } from "../limits.ts";
 import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, plural, roomFacts, stayLine, when } from "./format.ts";
 import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
@@ -150,25 +151,41 @@ const OMITTED: Record<string, string> = {
   unreadable: "unreadable",
 };
 
-/** Offers left out because the call's hotels share its offers: a call for
- *  the hotel alone shows them. */
-function callLimitText(o: Record<string, unknown>): Ours | null {
-  const n = o.byCallLimit;
-  return typeof n === "number" && n > 0
-    ? ours`A call for this hotel alone would show ${plural(n, "more offer")}: this call's offers are shared among its hotels`
-    : null;
+/** How `surface` names the per-hotel limit and the two filters. */
+function limitWords(surface: RenderSurface) {
+  return surface === "cli"
+    ? ({ limit: "--limit-per-hotel", filters: "--require-breakfast / --require-free-cancellation", sent: "given" } as const)
+    : ({ limit: "limitPerHotel", filters: "requireBreakfast / requireFreeCancellation", sent: "sent" } as const);
 }
 
-/** Offers cut by `limitPerHotel` exist: say so where they are missing. */
-function limitText(o: Record<string, unknown>, surface: RenderSurface): Ours | null {
+/** Offers left out because the call's hotels share its offers: a call for
+ *  the hotel alone shows them, with the limit the call gave when it gave
+ *  one (`sent`): without it such a call takes the default again. */
+function callLimitText(o: Record<string, unknown>, sent: number | null, surface: RenderSurface): Ours | null {
+  const n = o.byCallLimit;
+  if (typeof n !== "number" || n <= 0) return null;
+  const alone = sent === null ? ours`A call for this hotel alone` : ours`A call for this hotel alone with the same ${limitWords(surface).limit}`;
+  return ours`${alone} would show ${plural(n, "more offer")}: this call's offers are shared among its hotels`;
+}
+
+/**
+ * Offers cut by the per-hotel limit exist: say so where they are missing,
+ * by the limit that cut them. `sent` is the limit the call gave, or null:
+ * then the default cut them, and no parameter is named as the caller's.
+ * A limit already at the most there is leaves only a filter to show more.
+ */
+function limitText(o: Record<string, unknown>, sent: number | null, surface: RenderSurface): Ours | null {
   const n = o.byLimit;
-  const [limit, filters] =
-    surface === "cli"
-      ? (["--limit-per-hotel", "--require-breakfast / --require-free-cancellation"] as const)
-      : (["limitPerHotel", "requireBreakfast / requireFreeCancellation"] as const);
-  return typeof n === "number" && n > 0
-    ? ours`${plural(n, "more offer")} not shown (${limit}); a filtered request (${filters}) or a higher ${limit} may show them — don't conclude they don't exist`
-    : null;
+  if (typeof n !== "number" || n <= 0) return null;
+  const { limit, filters, sent: was } = limitWords(surface);
+  const cut = ours`${plural(n, "more offer")} not shown`;
+  const exist = ours`may show them — don't conclude they don't exist`;
+  if (sent === null) {
+    return ours`${cut}: no ${limit} was ${was}, so a hotel gets at most ${LIMITS.offersPerHotelDefault}; ${limit} up to ${LIMITS.offersPerHotelMax} in a call for this hotel alone, or a filtered request (${filters}), ${exist}`;
+  }
+  return sent >= LIMITS.offersPerHotelMax
+    ? ours`${cut}: over your ${limit} (${sent}), the most a hotel gets; a filtered request (${filters}) ${exist}`
+    : ours`${cut}: over your ${limit} (${sent}); a higher ${limit}, up to ${LIMITS.offersPerHotelMax}, or a filtered request (${filters}) ${exist}`;
 }
 
 function omittedText(o: Record<string, unknown>): Ours {
@@ -202,16 +219,16 @@ export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp
     h.offers.forEach((o, i) => lines.push(ours`${i + 1}. ${offerLine(o)}`));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(ours`Not shown: ${omitted}.`);
-    const callLimit = callLimitText(h.omitted);
+    const callLimit = callLimitText(h.omitted, r.limitPerHotel, surface);
     if (callLimit) lines.push(ours`${callLimit}.`);
-    const limit = limitText(h.omitted, surface);
+    const limit = limitText(h.omitted, r.limitPerHotel, surface);
     if (limit) lines.push(ours`Limit: ${limit}.`);
   }
   if (r.unavailable.length > 0) {
     lines.push(ours``, ours`Unavailable:`);
     for (const u of r.unavailable) {
       const why = ours`- Hotel ${token("id", u.hotelId)}: ${label(UNAVAILABLE, u.reason, ours`reason not recognized`)}`;
-      const omitted = u.omitted && joined([omittedText(u.omitted), limitText(u.omitted, surface)], "; ");
+      const omitted = u.omitted && joined([omittedText(u.omitted), limitText(u.omitted, r.limitPerHotel, surface)], "; ");
       lines.push(omitted ? ours`${why} (${omitted})` : why);
     }
   }

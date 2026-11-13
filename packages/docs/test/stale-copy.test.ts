@@ -50,6 +50,19 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /read it over the HTTP API, where each tool has an endpoint that answers JSON for the same input, or run the CLI command with --json/);
   });
 
+  // The CLI's text changed with the contract's: a script that read names bare has to know.
+  it("/changelog: the CLI migration table says text output quotes names, and how orders cancel changed", () => {
+    const changelog = readFileSync(new URL("../content/docs/changelog.mdx", import.meta.url), "utf8");
+    const cli = changelog.slice(changelog.indexOf("#### CLI"), changelog.indexOf("### Package"));
+    assert.match(cli, /\| Text output: names, addresses, the contact and special requests printed bare \| In double quotes, as JSON strings/);
+    assert.match(cli, /\| `orders cancel <orderId>` with no flag: .* \| Refused with exit 2, nothing read or sent/);
+    assert.match(cli, /\| A local refusal lists `Field \/pointer: …` for every issue \| The flag the value was typed as/);
+    // Every rename of the final round has its row.
+    for (const now of ["`payment.tokenRequest`", "`cancellation_not_allowed`", "`cancellation_refused`", "`status` `closed`", "`localityTotal`", "`details.orderId`", "`limitPerHotel`: the request's, or `null`"]) {
+      assert.ok(changelog.slice(0, changelog.indexOf("## 5.3.0")).includes(now), now);
+    }
+  });
+
   it("/mcp: no nextStep field, the consent rule ends the text", () => {
     const text = pageText("/mcp");
     assert.doesNotMatch(text, /nextStep/);

@@ -324,11 +324,21 @@ describe("consent before cancelling an order", () => {
     });
   }
 
-  // C7: the CLI never cancels without the penalty the user agreed to.
-  it("the CLI guide says orders cancel without --max-penalty or --close changes nothing", () => {
+  // A dated example goes stale, and a stay in the past is refused: dates are placeholders.
+  it("no guide gives an example with a calendar date", () => {
+    for (const surface of ["claude-skill", "cli", "mcp"] as const) {
+      for (const topic of ["main", "planning"] as const) {
+        assert.doesNotMatch(renderGuide(surface, topic), /--check-(?:in|out) \d|"check(?:In|Out)": "\d/, `${surface} ${topic}`);
+      }
+    }
+    assert.match(renderGuide("cli", "main"), /--check-in YYYY-MM-DD/);
+  });
+
+  // The CLI never cancels without the penalty the user agreed to: with no mode it sends nothing.
+  it("the CLI guide says orders cancel without --max-penalty or --close is refused, and where the command is", () => {
     assert.match(
       flat(renderGuide("cli", "main")),
-      /Without `--max-penalty` or `--close`, `fortrip orders cancel` changes nothing/,
+      /Without `--max-penalty` or `--close`, `fortrip orders cancel` is refused with exit 2 and nothing is sent: `fortrip orders get` shows the order's Cancel line, with the command to run\./,
     );
   });
 

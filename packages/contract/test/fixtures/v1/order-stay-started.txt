@@ -6,6 +6,6 @@ Special requests: none
 Terms: non-refundable: USD 366.00 from booking · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
 Hotel confirmation number: "LGR-449120"
 Contact: "Jing Chen" · "chen.jing@example.com" · "+86 139 0013 9000"
-Total: USD 366.00 · payment paid · the user's card may pay in its local currency at checkout · card charged EUR 339.80
+Total: USD 366.00 · payment paid · card charged EUR 339.80
 Cancel: not available: the stay has started; for help, the user emails info@fortrip.ai with the order's reference
 Manage: https://fortrip.ai/orders/ord_LakeStayStarted00000

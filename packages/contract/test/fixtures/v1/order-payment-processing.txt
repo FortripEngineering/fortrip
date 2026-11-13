@@ -6,7 +6,7 @@ Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
 Contact: "Mary Smith" · "mary.smith@example.com" · "+1 415 555 0134"
-Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
+Total: USD 365.00 · payment unpaid
 Payment link: none while a payment is being processed; read this order again shortly.
 Cancel: not available: a payment is under way; read the order again shortly
 Manage: https://fortrip.ai/orders/ord_BundProcessing000000

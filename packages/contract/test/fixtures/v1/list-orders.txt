@@ -21,7 +21,7 @@ Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-12 23:00 Asia/Bangkok) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
 Contact: "Mary Smith" · "mary.smith@example.com" · "+1 415 555 0134"
-Total: USD 1235.50 · payment authorized (held, not yet charged) · the user's card may pay in its local currency at checkout
+Total: USD 1235.50 · payment authorized (held, not yet charged)
 Cancel: not available: a payment is under way; read the order again shortly
 Manage: https://fortrip.ai/orders/ord_KataNoLink0000000000
 
@@ -34,8 +34,8 @@ Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shang
 Hotel confirmation number: none yet
 Contact: "Kenji Sato" · "kenji.sato@example.com" · "+81 90 1234 5678"
 Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
-Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4
-Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order with close: true)
+Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/pay/ord_BundAwaiting00000000?s=cs_test_a1B2c3D4
+Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order { orderId: "ord_BundAwaiting00000000", close: true })
 Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000
 
 Order ord_LakeConfirmed0000000 · reference FT-H3W9PA · confirmed · created 2026-10-20 03:12 UTC · updated 2026-10-20 03:40 UTC
@@ -46,8 +46,8 @@ Special requests: none
 Terms: partial penalty now: USD 91.50 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
 Hotel confirmation number: "LGR-449120"
 Contact: "Ana Costa" · "ana.costa@example.com" · "+351 912 345 678"
-Total: USD 366.00 · payment paid · the user's card may pay in its local currency at checkout · card charged EUR 339.80
-Cancel: can cancel now: penalty USD 91.50, refund USD 274.50 (only after the user's yes: call cancel_order with maximumPenalty { amount: "91.50", currency: "USD" })
+Total: USD 366.00 · payment paid · card charged EUR 339.80
+Cancel: can cancel now: penalty USD 91.50, refund USD 274.50 (only after the user's yes: call cancel_order { orderId: "ord_LakeConfirmed0000000", maximumPenalty: { amount: "91.50", currency: "USD" } })
 Manage: https://fortrip.ai/orders/ord_LakeConfirmed0000000
 
 Next page: call again with { cursor: "c_orders_page_2" }.

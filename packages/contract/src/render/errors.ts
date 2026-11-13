@@ -232,22 +232,21 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
 
 /** Which of cancel and close applies to the order instead of the one asked
  *  for, or what blocks both. The mode that applies is shown as the order's
- *  own Cancel line, with the call it takes: the caller may have the order's
- *  penalty from this error alone, and the cancel rule after it points at
- *  that line. The error holds no order id, so a CLI command names the order
- *  as a placeholder: it is the order the caller just named. */
+ *  own Cancel line, with the call it takes, the order's id in it: the
+ *  caller may have the order's penalty from this error alone, and the cancel
+ *  rule after it points at that line. */
 function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurface): Ours[] {
   const c = d.cancel;
   if (c.action === "close") {
     return [
       ours`This order isn't paid, so it is closed, not cancelled. Its Cancel line now:`,
-      cancelLine(c, null, surface),
+      cancelLine(c, d.orderId, surface),
     ];
   }
   if (c.action === "cancel") {
     return [
       ours`This order is paid, so it is cancelled under its terms, not closed. Its Cancel line now:`,
-      cancelLine(c, null, surface),
+      cancelLine(c, d.orderId, surface),
       own(cancelNextStep(surface)),
     ];
   }

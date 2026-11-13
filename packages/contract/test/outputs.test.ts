@@ -204,6 +204,7 @@ const offerFixture = {
 const omitted = { byNationality: 0, byFilters: 1, dominated: 2, unreadable: 0, byLimit: 3, byCallLimit: 4 };
 const offersFixture = {
   stay,
+  limitPerHotel: null,
   hotels: [{ hotelId: HTL, name: "Hotel A", names: { en: "Hotel A", zh: null }, offers: [offerFixture], omitted }],
   unavailable: [
     { hotelId: "htl_ZYXWVUTSRQponmlkjihg", reason: "sold_out", omitted },
@@ -257,7 +258,7 @@ const orderFixture = {
   total: usd("132.40"),
   payment: {
     status: "unpaid",
-    url: "https://fortrip.ai/booking-status?session_id=cs_test_1",
+    url: `https://fortrip.ai/pay/${ORD}?s=cs_test_1`,
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
@@ -288,7 +289,7 @@ const ERROR_FIXTURES: Record<ErrorCode, unknown> = {
   offer_already_ordered: { orderId: ORD },
   order_in_progress: { orderId: ORD },
   cancellation_changed: undefined,
-  order_not_cancellable: { cancel: cancelNow },
+  order_not_cancellable: { orderId: ORD, cancel: cancelNow },
   order_not_payable: { orderId: ORD, status: "expired" },
   payment_in_progress: { orderId: ORD },
   payment_total_mismatch: { orderId: ORD, total: usd("140.00") },
@@ -626,7 +627,7 @@ describe("v1 response fixtures parse, open and strict", () => {
       assert.equal(strictOutput(orderCancel).safeParse(cancel).success, false, JSON.stringify(cancel));
       assert.equal(order.safeParse({ ...orderFixture, cancel }).success, false, JSON.stringify(cancel));
       assert.equal(
-        errorEnvelope.safeParse(envelope("order_not_cancellable", { cancel })).success,
+        errorEnvelope.safeParse(envelope("order_not_cancellable", { orderId: ORD, cancel })).success,
         false,
         JSON.stringify(cancel),
       );
@@ -646,7 +647,7 @@ describe("v1 response fixtures parse, open and strict", () => {
       assert.ok(orderCancel.safeParse(cancel).success, JSON.stringify(cancel));
       assert.ok(order.safeParse({ ...orderFixture, status: "confirmed", cancel }).success, JSON.stringify(cancel));
       assert.ok(orderList.safeParse({ data: [orderFixture, { ...orderFixture, cancel }], nextCursor: null }).success);
-      assert.ok(errorEnvelope.safeParse(envelope("order_not_cancellable", { cancel })).success, JSON.stringify(cancel));
+      assert.ok(errorEnvelope.safeParse(envelope("order_not_cancellable", { orderId: ORD, cancel })).success, JSON.stringify(cancel));
       // The strict copy knows only this build's actions.
       assert.equal(strictOutput(orderCancel).safeParse(cancel).success, false, JSON.stringify(cancel));
     }
@@ -689,7 +690,9 @@ describe("v1 response fixtures parse, open and strict", () => {
   it("order_not_cancellable carries the order's cancel, the same object", () => {
     assert.equal(ERROR_DETAILS.order_not_cancellable.shape.cancel._zod.def, orderCancel._zod.def);
     for (const cancel of [cancelNow, { action: "close", blockedBy: null, penalty: null, refund: null }, blockedBy("stay_started")]) {
-      parsesBoth(errorEnvelope, envelope("order_not_cancellable", { cancel }));
+      parsesBoth(errorEnvelope, envelope("order_not_cancellable", { orderId: ORD, cancel }));
+      // It names its order: the call it leads to is that order's.
+      assert.equal(errorEnvelope.safeParse(envelope("order_not_cancellable", { cancel })).success, false);
     }
     assert.equal(errorEnvelope.safeParse(envelope("order_not_cancellable", { reason: "stay_started" })).success, false);
   });
@@ -883,7 +886,7 @@ const PUBLIC_KEYS = new Set([
   "unspecifiedMainMeals", "until", "updatedAt", "url", "userId", "version", "website", "window",
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
   // Orders and errors in 6.0.
-  "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "max_amount", "tokenRequest", "usageLimits",
+  "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "limitPerHotel", "max_amount", "tokenRequest", "usageLimits",
   // A search note's details.
   "places",
 ]);

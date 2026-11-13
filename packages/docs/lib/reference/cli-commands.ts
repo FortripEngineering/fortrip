@@ -42,7 +42,7 @@ const DATA_OUTPUT =
  *  and what a command without a response prints. Keyed by page slug and in
  *  docs order; `docs-data.test.ts` fails when the contract gains a command
  *  that isn't listed. */
-const DOCS: Record<string, { title: string; group: string; output?: string }> =
+const DOCS: Record<string, { title: string; group: string; output?: string; how?: string[] }> =
   {
     "hotels-search": { title: "Search hotels", group: "Hotels" },
     "hotels-get": { title: "Hotel details", group: "Hotels" },
@@ -50,7 +50,15 @@ const DOCS: Record<string, { title: string; group: string; output?: string }> =
     "orders-create": { title: "Create order", group: "Orders" },
     "orders-get": { title: "Get order", group: "Orders" },
     "orders-list": { title: "List orders", group: "Orders" },
-    "orders-cancel": { title: "Cancel order", group: "Orders" },
+    "orders-cancel": {
+      title: "Cancel order",
+      group: "Orders",
+      how: [
+        "Give exactly one of `--max-penalty` and `--close`. With neither, the command is refused with exit 2: nothing is read and nothing is sent. `fortrip orders get <orderId>` shows which applies, on the order's Cancel line, with the command to run.",
+        "With one of them, the CLI reads the order once, then cancels or closes it. A flag that doesn't fit the order (`--close` on a paid order, `--max-penalty` on an unpaid one, `--close` on an order that can be neither closed nor cancelled) is not sent: the command answers as the service does, `order_not_cancellable` with the order's Cancel line, and exits 1. `--close` on an order already `closed` or `expired` prints it and exits 0.",
+        "`--max-penalty` takes the amount alone: the CLI sends it in the currency of the order's penalty.",
+      ],
+    },
     "orders-pay": { title: "Pay order", group: "Orders" },
     login: {
       title: "Sign in",
@@ -143,7 +151,7 @@ function flagRows(spec: CommandSpec): CliFlag[] {
 const sentence = (text: string) => (/[.!?]$/.test(text) ? text : `${text}.`);
 
 export const CLI_COMMANDS: CliCommand[] = Object.entries(DOCS).map(
-  ([slug, { title, group, output = DATA_OUTPUT }]) => {
+  ([slug, { title, group, output = DATA_OUTPUT, how }]) => {
     const spec = COMMANDS.find((candidate) => commandSlug(candidate) === slug);
     if (!spec) throw new Error(`${slug} is not in the contract's COMMANDS`);
     const flags = flagRows(spec);
@@ -155,6 +163,7 @@ export const CLI_COMMANDS: CliCommand[] = Object.entries(DOCS).map(
       group,
       usage: usageOf(spec),
       summary: sentence(spec.summary),
+      how,
       flags: flags.length > 0 ? flags : undefined,
       output,
       schema: response

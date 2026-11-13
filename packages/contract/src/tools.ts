@@ -91,7 +91,8 @@ export const META_KEYS = {
 } as const;
 
 /**
- * The consent rule. It ends every result whose text holds a payment link:
+ * The consent rule. It ends every result whose text holds a payment link,
+ * whichever tool answered:
  * some clients never show the model the server instructions, and the last
  * paragraph is the one a model reads last before it answers. Only the pay
  * paragraph comes after it, and that one repeats the rule on purpose: as the
@@ -106,9 +107,11 @@ export const ORDER_NEXT_STEP =
  *  JSON arguments, or the CLI, which runs commands with flags. */
 export type RenderSurface = "mcp" | "cli";
 
-/** How each next step names the call it leads to. None carries a figure:
- *  the cancel call with the order's own penalty is on the order's Cancel
- *  line, which `cancelWith` points at. */
+/** How each next step names the call it leads to. None carries a figure or
+ *  an order's id: the whole cancel call, with the order's own id and
+ *  penalty, is on the order's Cancel line, which `cancelWith` points at, and
+ *  the whole pay call, with its id and total, on its "Pay without the link"
+ *  line, which `payWith` points at. */
 export const CALLS = {
   mcp: {
     cancel: "call cancel_order with maximumPenalty",
@@ -117,27 +120,27 @@ export const CALLS = {
     closeMode: "with close: true and no maximumPenalty",
     pay: "call pay_order",
     payWith:
-      "call pay_order with the token as sharedPaymentToken and the order's Total as total, amount and currency exactly as shown",
+      "make the pay_order call that line gives, exactly as shown, with the token in place of <spt_…>: its total is the order's Total, never a figure from anywhere else",
     paid: "pay_order",
   },
   cli: {
-    cancel: "run `fortrip orders cancel <orderId> --max-penalty <amount>`",
+    cancel: "run `fortrip orders cancel` with --max-penalty",
     cancelWith:
       "run the command that Cancel line gives, exactly as shown: its --max-penalty is the amount of the penalty on that line, never a figure from anywhere else",
     closeMode: "with --close and no --max-penalty",
     pay: "run `fortrip orders pay`",
     payWith:
-      "run `fortrip orders pay <orderId> --token <spt_…> --total <total>` with the token and the order's total",
+      "run the command that line gives, exactly as shown, with the token in place of <spt_…>: its --total is the order's total, never a figure from anywhere else",
     paid: "`fortrip orders pay`",
   },
 } as const satisfies Record<RenderSurface, Record<string, string>>;
 
 /**
  * The consent rule of a cancellation, as `surface` names the call. It
- * follows the text of every `get_order` and `list_orders` result that holds
- * an order whose Cancel line says it can be cancelled (a paid one): the last
- * paragraph there, or the one before `ORDER_NEXT_STEP` when the result also
- * holds a payment link. The `order_not_cancellable` error carries it too,
+ * follows the text of every `get_order`, `list_orders`, `cancel_order` and
+ * `pay_order` result that holds an order whose Cancel line says it can be
+ * cancelled (a paid one): the last paragraph there, or the one before
+ * `ORDER_NEXT_STEP` when the result also holds a payment link. The `order_not_cancellable` error carries it too,
  * after the order's Cancel line. It names no penalty: the figure and the
  * call that passes it are the order's own, on that line. Its last sentence
  * says which mode an unpaid order takes instead: nothing is cancelled or
@@ -153,9 +156,9 @@ export const CANCEL_NEXT_STEP = cancelNextStep("mcp");
 
 /**
  * How to pay without the link, as `surface` names the call. It is the last
- * paragraph of the text of every `create_order`, `get_order` and
- * `list_orders` result that holds an order with a "Pay without the link"
- * line, right after `ORDER_NEXT_STEP`, whose rule it repeats.
+ * paragraph of the text of every order result that holds an order with a
+ * "Pay without the link" line, right after `ORDER_NEXT_STEP`, whose rule it
+ * repeats.
  */
 export function payNextStep(surface: RenderSurface): string {
   const c = CALLS[surface];
@@ -173,7 +176,7 @@ export const PAY_NEXT_STEP = payNextStep("mcp");
  * nothing else does.
  */
 export const PRESENTATION_HINT =
-  'Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip\'s tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search\'s "estimate from" price as an estimate per room-night and an offer\'s total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel\'s name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.';
+  'Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip\'s tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search\'s "estimate from" price as an estimate per room-night and an offer\'s total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows: hotel details show them, a search does not. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel\'s name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \\" is a "): present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.';
 
 const READ = {
   readOnlyHint: true,

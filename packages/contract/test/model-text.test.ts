@@ -313,7 +313,7 @@ describe("the three pinned rules are in the description and in the result they g
       assert.ok(renderToolResult("list_orders", { data: [confirmed], nextCursor: null }, surface).endsWith(`\n\n${cancelNextStep(surface)}`), surface);
       // And of the refusal that tells a caller the order is cancelled, not closed.
       const refusal = renderError(
-        { error: { code: "order_not_cancellable", message: SERVER_MESSAGE, retryable: false, requestId: "req_1", details: { cancel: confirmed.cancel } } },
+        { error: { code: "order_not_cancellable", message: SERVER_MESSAGE, retryable: false, requestId: "req_1", details: { orderId: confirmed.orderId, cancel: confirmed.cancel } } },
         409,
         surface,
       );
@@ -517,13 +517,36 @@ describe("a rule that tells the model to copy what the text shows says what the 
   const sources = agentSources();
   const golden = (name: string) => readFileSync(new URL(`./fixtures/v1/${name}.txt`, import.meta.url), "utf8");
 
-  it("the presentation paragraph says names are in double quotes, and are given without them", () => {
+  it("the presentation paragraph says names are in double quotes, as a JSON string, and are given without them", () => {
     assert.ok(
       PRESENTATION_HINT.endsWith(
-        " Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.",
+        ' Otherwise use a short list. A hotel\'s name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \\" is a "): present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.',
       ),
       PRESENTATION_HINT,
     );
+    // What the clause is for: a name with quotes of its own is shown escaped, and read back whole.
+    const hotel = JSON.parse(readFileSync(new URL("./fixtures/v1/hotel-long-description.json", import.meta.url), "utf8"));
+    hotel.data.name = 'Hotel "Le Roi"';
+    hotel.data.names = { en: hotel.data.name, zh: null };
+    const shown = renderToolResult("get_hotel", hotel.data).split("\n")[0]!;
+    assert.ok(shown.startsWith('Hotel: "Hotel \\"Le Roi\\"" · '), shown);
+    assert.equal(JSON.parse(/^Hotel: ("(?:[^"\\]|\\.)*")/.exec(shown)![1]!), 'Hotel "Le Roi"');
+  });
+
+  // A search shows no coordinates, so the paragraph does not send the model to look for them there.
+  it("the presentation paragraph says where coordinates are shown: in hotel details, not in a search", () => {
+    assert.ok(
+      PRESENTATION_HINT.includes(
+        " and draw a map only from coordinates the text shows: hotel details show them, a search does not. Offer the choices",
+      ),
+      PRESENTATION_HINT,
+    );
+    const search = JSON.parse(readFileSync(new URL("./fixtures/v1/search-shanghai-area.json", import.meta.url), "utf8"));
+    const { lat, lng } = search.data.data[0].location;
+    assert.ok(!renderToolResult("search_hotels", search.data).split("\n").find((l) => l.startsWith("1. Hotel: "))!.includes(String(lat)));
+    assert.equal(typeof lng, "number");
+    const hotel = JSON.parse(readFileSync(new URL("./fixtures/v1/hotel-long-description.json", import.meta.url), "utf8"));
+    assert.match(renderToolResult("get_hotel", hotel.data), / · coordinates -?\d+(?:\.\d+)?, -?\d+(?:\.\d+)? · /);
   });
 
   it("no model-facing text says to keep a value 'as returned'", () => {
@@ -538,7 +561,7 @@ describe("a rule that tells the model to copy what the text shows says what the 
     }
     // Each skill says it once for every value, and again where an order is shown before paying.
     const QUOTES =
-      "In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote: give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.";
+      'In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \\" is a "): give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.';
     for (const file of ["skills/fortrip-cli/SKILL.md", "plugins/claude/skills/fortrip/SKILL.md"]) {
       const skill = (sources.skills as Text[]).concat(sources.plugins as Text[]).filter(({ where }) => where.startsWith(file)).map(({ text }) => text).join("\n");
       assert.ok(skill.includes(QUOTES), file);
@@ -550,7 +573,7 @@ describe("a rule that tells the model to copy what the text shows says what the 
     }
     // The Claude skill has the presentation paragraph; both planning references say it of a plan's hotels.
     const all = [...(sources.skills as Text[]), ...(sources.plugins as Text[])].map(({ text }) => text).join("\n");
-    assert.ok(all.includes("A hotel's name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them."));
+    assert.ok(all.includes('A hotel\'s name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \\" is a "): present it to the user without the quotes, exactly as written inside them.'));
     assert.equal(all.split("Give a hotel's name without the double quotes the text shows it in, exactly as written inside them, and dates in the user's notation.").length - 1, 2);
   });
 

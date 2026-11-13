@@ -118,7 +118,7 @@ export const omitted = openObject({
   ),
   unreadable: removed("because their details came back incomplete or inconsistent"),
   byLimit: removed(
-    `by limitPerHotel, or by the ${LIMITS.offersPerHotelDefault} a hotel gets when none is given; a higher limitPerHotel or a filter may show them`,
+    `by the request's limitPerHotel, or by the ${LIMITS.offersPerHotelDefault} a hotel gets when it gave none (the answer's limitPerHotel says which); a higher limitPerHotel or a filter may show them`,
   ),
   byCallLimit: removed(
     `because the call's hotels share ${LIMITS.offersPerCallDefault} offers in all (${LIMITS.offersPerCallMax} when limitPerHotel is given): a call for this hotel alone shows this many more`,
@@ -139,6 +139,13 @@ export const UNAVAILABLE_REASONS = [
 
 export const hotelOffersResult = openObject({
   stay: stayEcho,
+  limitPerHotel: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      `The limitPerHotel the request gave; null when it gave none, and each hotel then gets up to ${LIMITS.offersPerHotelDefault} offers within the call's ${LIMITS.offersPerCallDefault}.`,
+    ),
   hotels: z.array(
     openObject({
       hotelId,

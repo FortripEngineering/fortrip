@@ -32,6 +32,13 @@ async function commandTable(): Promise<Map<string, string>> {
 }
 
 describe("README", () => {
+  // A dated example goes stale, and a stay in the past is refused: dates are placeholders.
+  it("gives no example with a calendar date", async () => {
+    const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
+    assert.doesNotMatch(readme, /--check-(?:in|out) \d/);
+    assert.match(readme, /--check-in YYYY-MM-DD --check-out YYYY-MM-DD/);
+  });
+
   it("lists every command of the contract, as typed, with its summary", async () => {
     const table = await commandTable();
     for (const spec of COMMANDS) {

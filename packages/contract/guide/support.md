@@ -9,7 +9,7 @@
 
 The order is then cancelling, and cancelled once the hotel has cancelled and the refund is issued: check it with `{{tool:orders get}}`, which then says what the cancellation kept and returned. If the hotel refuses, the order is confirmed again and its Cancel line says so. `cancellation_changed` means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one.
 
-Close an unpaid order only once the user says they no longer want it: {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders cancel}}` with {{#if claude-skill}}`close: true`{{/if}}{{#if cli}}`--close`{{/if}}. It then reads as not paid, and nothing is charged. `payment_in_progress` means a payment of it is under way: read it again shortly.{{#if cli}} Without `--max-penalty` or `--close`, `{{tool:orders cancel}}` changes nothing: it prints the penalty and the refund, or that the order can be closed, and exits 2.{{/if}}
+Close an unpaid order only once the user says they no longer want it: {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders cancel}}` with {{#if claude-skill}}`close: true`{{/if}}{{#if cli}}`--close`{{/if}}. It then reads as not paid, and nothing is charged. `payment_in_progress` means a payment of it is under way: read it again shortly.{{#if cli}} Without `--max-penalty` or `--close`, `{{tool:orders cancel}}` is refused with exit 2 and nothing is sent: `{{tool:orders get}}` shows the order's Cancel line, with the command to run.{{/if}}
 
 ## Changes and support
 

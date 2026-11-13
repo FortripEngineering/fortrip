@@ -20,13 +20,13 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `fortrip orders cancel` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `fortrip orders pay` | Pays an order without its link, by a shared payment token from the user's wallet |
 
-In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote: give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.
+In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \" is a "): give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
 ## Setup
 
-Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@6.0.0-rc.0 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 Running `fortrip whoami` when the user first asks about hotels lets the sign-in happen while they answer your follow-up questions.
 
@@ -58,8 +58,8 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 1. **Search** with `fortrip hotels search` for candidate hotels: a destination, `--text` or both, and the stay's dates and rooms for indicative prices.
 
    ```bash
-   fortrip hotels search --place-name Bangkok --country TH --check-in 2026-11-10 \
-     --check-out 2026-11-12 --room 2 --stars-min 4 --sort price_asc --limit 10
+   fortrip hotels search --place-name Bangkok --country TH --check-in YYYY-MM-DD \
+     --check-out YYYY-MM-DD --room 2 --stars-min 4 --sort price_asc --limit 10
    ```
 
 2. **Details** (optional) with `fortrip hotels get`, when the user asks about a hotel or a stated preference needs evidence (a pool, a policy, room size). For a details-only question, call it directly when you know the hotel's `hotelId`; otherwise find the hotel with `fortrip hotels search`.
@@ -71,8 +71,8 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 3. **Offers** with `fortrip hotels offers` for a few shortlisted hotels, with the dates and rooms the user will order. It takes about 15 seconds. A hotel is available only once this returns an offer for it.
 
    ```bash
-   fortrip hotels offers --hotel <hotelId> --hotel <hotelId> --check-in 2026-11-10 \
-     --check-out 2026-11-12 --room 2 --room 2 [--require-free-cancellation]
+   fortrip hotels offers --hotel <hotelId> --hotel <hotelId> --check-in YYYY-MM-DD \
+     --check-out YYYY-MM-DD --room 2 --room 2 [--require-free-cancellation]
    ```
 
 4. **Order** with `fortrip orders create`, once the user has picked one offer and given the guests and the contact (see Ordering).
@@ -231,7 +231,7 @@ Any code:
 
 The order is then cancelling, and cancelled once the hotel has cancelled and the refund is issued: check it with `fortrip orders get`, which then says what the cancellation kept and returned. If the hotel refuses, the order is confirmed again and its Cancel line says so. `cancellation_changed` means the penalty is now higher than the one the user agreed to: read the order again and ask the user again. `order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one.
 
-Close an unpaid order only once the user says they no longer want it: run `fortrip orders cancel` with `--close`. It then reads as not paid, and nothing is charged. `payment_in_progress` means a payment of it is under way: read it again shortly. Without `--max-penalty` or `--close`, `fortrip orders cancel` changes nothing: it prints the penalty and the refund, or that the order can be closed, and exits 2.
+Close an unpaid order only once the user says they no longer want it: run `fortrip orders cancel` with `--close`. It then reads as not paid, and nothing is charged. `payment_in_progress` means a payment of it is under way: read it again shortly. Without `--max-penalty` or `--close`, `fortrip orders cancel` is refused with exit 2 and nothing is sent: `fortrip orders get` shows the order's Cancel line, with the command to run.
 
 ## Changes and support
 

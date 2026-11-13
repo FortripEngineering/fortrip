@@ -6,7 +6,7 @@ are both `fortrip`; they talk to Fortrip API v1, `https://api.fortrip.ai/v1`.
 
 ```bash
 npx -y fortrip login
-npx -y fortrip hotels search --place-name Bangkok --country TH --check-in 2026-11-10 --check-out 2026-11-12 --room 2
+npx -y fortrip hotels search --place-name Bangkok --country TH --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
 ```
 
 ## Install and run
@@ -92,8 +92,8 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
-fortrip hotels search --place-name Tokyo --country JP --check-in 2026-11-10 --check-out 2026-11-12 --room 2
-fortrip hotels offers --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --room 2 --room 2
+fortrip hotels search --place-name Tokyo --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
+fortrip hotels offers --hotel <hotelId> --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --room 2
 ```
 
 `hotels search`, `hotels offers` and `orders create` also accept `--body '<json>'`
@@ -117,9 +117,11 @@ the person agreed to exactly as shown; if the penalty has gone up since,
 nothing changes and the command exits 1 with `cancellation_changed`. An
 unpaid order is closed instead, once the person says they no longer want it:
 `orders cancel <orderId> --close` closes it, nothing is charged, and it
-becomes `closed`. Without `--max-penalty` or `--close` it changes nothing:
-it prints the order's penalty and refund, or that it can be closed, and
-exits 2.
+becomes `closed`. Without `--max-penalty` or `--close` the command is
+refused with exit 2 and nothing is sent: `orders get` shows the order's Cancel
+line, with the command to run. A flag that doesn't fit the order (`--close`
+on a paid one, `--max-penalty` on an unpaid one) is not sent either: the
+command answers `order_not_cancellable` and exits 1.
 
 ## For AI agents
 
@@ -223,9 +225,9 @@ that starts with `local_`.
 |---|---|
 | 0 | Success |
 | 1 | Any other error, including the answers of the API that aren't mistakes in the request, such as `destination_ambiguous` or `offer_changed` (`retryable` says whether it is worth one retry) |
-| 2 | Invalid arguments (local, or the API's `invalid_request`) |
+| 2 | Invalid arguments (local, or the API's `invalid_request`). Found locally, nothing is sent, and each issue names its flag (`--total is required`), or its JSON Pointer when the value came from `--body` |
 | 3 | Not signed in, or the sign-in wasn't accepted; `loginUrl` on stderr |
-| 4 | Rate limited (`retryAfterSeconds` on stderr) |
+| 4 | Rate limited: stderr says when to retry (`Retryable: retry after 7 s.`; `retryAfterSeconds` with `--json`) |
 | 5 | This version of the CLI is too old for Fortrip (`client_outdated`): stderr is Fortrip's message, with the command that updates the CLI. Update it, then run the command again |
 
 ## Support

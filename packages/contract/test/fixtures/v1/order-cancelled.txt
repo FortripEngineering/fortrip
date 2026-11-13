@@ -7,6 +7,6 @@ Special requests: none
 Terms: partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
 Hotel confirmation number: "LGR-449120"
 Contact: "Wei Wang" · "wei.wang@example.com" · "+86 138 0013 8000"
-Total: USD 366.00 · payment refunded · the user's card may pay in its local currency at checkout · card charged EUR 339.80
+Total: USD 366.00 · payment refunded · card charged EUR 339.80
 Cancel: not available: it is already cancelled
 Manage: https://fortrip.ai/orders/ord_LakeCancelled0000000

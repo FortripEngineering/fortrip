@@ -387,8 +387,9 @@ const hotelIdsError = `hotelIds must list 1 to ${LIMITS.offersHotels} distinct h
  * undefined when it gave none; `hotelsWithOffers` counts the call's hotels
  * that have any offer. The limit (the default one when none was given) holds
  * while every such hotel can have it within the call's budget; past that the
- * budget is split evenly among them (a call has at most
- * `LIMITS.offersHotels` hotels, so never under 3 each). The budget is
+ * budget is split evenly among them. A call has at most
+ * `LIMITS.offersHotels` hotels, so a share is never under 3, and needs no
+ * floor; with no hotel that has offers, the limit stands. The budget is
  * smaller when no limit was given.
  */
 export function offersPerHotel(
@@ -399,7 +400,7 @@ export function offersPerHotel(
     limitPerHotel === undefined
       ? LIMITS.offersPerCallDefault
       : LIMITS.offersPerCallMax;
-  const share = Math.max(1, Math.floor(budget / hotelsWithOffers));
+  const share = Math.floor(budget / hotelsWithOffers);
   return Math.min(limitPerHotel ?? LIMITS.offersPerHotelDefault, share);
 }
 

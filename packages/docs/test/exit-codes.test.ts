@@ -43,3 +43,21 @@ test("the errors page renders the table; the pages that name an exit code read i
   assert.ok(text.includes(`${Object.entries(EXIT_BY_STATUS).map(([s, e]) => `${s} → ${e}`).join(", ")}`));
   assert.ok(pageText("/install").includes(`exits with code ${EXIT.unauthenticated}`));
 });
+
+// What each row promises is what the CLI prints: text mode says when to retry in words, and
+// only --json carries the field by its name.
+test("the rate-limited row describes text mode and --json each as it is", () => {
+  const row = meaningOf(EXIT.rateLimited);
+  assert.match(row, /`Retryable: retry after 7 s\.` as text, `retryAfterSeconds` in the error with `--json`/);
+  assert.doesNotMatch(row, /stderr includes `retryAfterSeconds`/);
+});
+
+test("the invalid-arguments row says how a local refusal names an issue, and that orders cancel with no mode is one", () => {
+  const row = meaningOf(EXIT.usage);
+  assert.match(row, /each issue names the flag it was typed as \(`--total is required`\), or its JSON Pointer when the value came from `--body`/);
+  assert.match(row, /`orders cancel` without `--max-penalty` or `--close` is one of these\./);
+  // The command's own page says what happens instead, and when a flag does not fit the order.
+  const cancel = pageText("/cli/orders-cancel");
+  assert.match(cancel, /Give exactly one of --max-penalty and --close\. With neither, the command is refused with exit 2: nothing is read and nothing is sent\./);
+  assert.match(cancel, /is not sent: the command answers as the service does, order_not_cancellable with the order's Cancel line, and exits 1\./);
+});

@@ -12,6 +12,9 @@
  *                                  them differs from a fresh render (CI)
  *     --only guide-data            only the contract's embedded guide data,
  *                                  not the skills
+ *     --cli-version <version>      render the CLI skill for this version of
+ *                                  the CLI instead of the package's own (the
+ *                                  tests use it)
  *     --root <dir>                 read and write <dir> instead of the
  *                                  repository (the tests use it)
  *
@@ -20,6 +23,7 @@
  * its front matter, edit `SKILLS` here. Never edit a generated file.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -54,7 +58,11 @@ const SKILLS: readonly {
 
 let check = false;
 let guideDataOnly = false;
-let root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const repository = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+let root = repository;
+let cliVersion = (
+  JSON.parse(readFileSync(path.join(repository, "packages/cli/package.json"), "utf8")) as { version: string }
+).version;
 const args = process.argv.slice(2);
 for (let n = 0; n < args.length; n++) {
   const arg = args[n];
@@ -65,9 +73,11 @@ for (let n = 0; n < args.length; n++) {
     n++;
   } else if (arg === "--root" && args[n + 1] !== undefined) {
     root = path.resolve(args[++n] as string);
+  } else if (arg === "--cli-version" && args[n + 1] !== undefined) {
+    cliVersion = args[++n] as string;
   } else {
     console.error(
-      `Unknown option ${arg}\nUsage: generate.ts [--check] [--only guide-data] [--root <dir>]`,
+      `Unknown option ${arg}\nUsage: generate.ts [--check] [--only guide-data] [--root <dir>] [--cli-version <version>]`,
     );
     process.exit(2);
   }
@@ -126,6 +136,17 @@ async function unifiedDiff(file: string, before: string, after: string) {
   }
 }
 
+/**
+ * A skill's text for the CLI it is published with. The guide names the
+ * package as `fortrip@latest`. While the CLI is a prerelease (`6.0.0-rc.0`),
+ * npm's `latest` is still the release before it, which does not speak this
+ * contract, so the skill names the exact version instead; a release keeps
+ * `latest`.
+ */
+function forCliVersion(text: string): string {
+  return cliVersion.includes("-") ? text.replaceAll("fortrip@latest", `fortrip@${cliVersion}`) : text;
+}
+
 // First, so that the contract below renders from the fresh fragments.
 await update(GUIDE_DATA, await embeddedGuide());
 
@@ -133,9 +154,9 @@ const { renderGuide } = await import("../packages/contract/src/index.ts");
 for (const { dir, surface, name, description } of guideDataOnly ? [] : SKILLS) {
   await update(
     `${dir}/SKILL.md`,
-    `---\nname: ${name}\ndescription: ${description}\n---\n\n${renderGuide(surface, "main")}`,
+    forCliVersion(`---\nname: ${name}\ndescription: ${description}\n---\n\n${renderGuide(surface, "main")}`),
   );
-  await update(`${dir}/references/planning.md`, renderGuide(surface, "planning"));
+  await update(`${dir}/references/planning.md`, forCliVersion(renderGuide(surface, "planning")));
 }
 
 if (stale.length > 0) {

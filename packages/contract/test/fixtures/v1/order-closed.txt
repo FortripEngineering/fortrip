@@ -6,6 +6,6 @@ Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
 Contact: "Sofia Rossi" · "sofia.rossi@example.com" · "+39 347 555 0199"
-Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
+Total: USD 365.00 · payment unpaid
 Cancel: not available: it was closed unpaid, as asked, so there is nothing to cancel or close
 Manage: https://fortrip.ai/orders/ord_BundClosed0000000000

@@ -103,7 +103,7 @@
     },
     "payment": {
       "status": "unpaid",
-      "url": "https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4",
+      "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000?s=cs_test_a1B2c3D4",
       "requiresSignIn": false,
       "expiresAt": "2026-11-01T12:50:00Z",
       "localCurrencyAtCheckout": true,

@@ -1027,8 +1027,8 @@ describe("a value of an open enum the package does not know", () => {
       ["offer reason", (v) => sample("offer_unavailable", { offerId: "off_BundDeluxeKing000000", reason: v }), ": unavailable, for a reason not recognized. "],
       ["limit", (v) => sample("rate_limited", { rateLimit: v }), "\nThe limit reached counts calls of a kind not recognized: "],
       ["outcome", (v) => sample("supplier_unavailable", { outcome: v }), "\nOutcome: not recognized.\n"],
-      ["cancel action", (v) => sample("order_not_cancellable", { cancel: { action: v, blockedBy: null, penalty: null, refund: null } }), "\nWhat applies to this order now: an action not recognized.\n"],
-      ["cancel blocker", (v) => sample("order_not_cancellable", { cancel: { action: null, blockedBy: v, penalty: null, refund: null } }), " now: reason not recognized.\n"],
+      ["cancel action", (v) => sample("order_not_cancellable", { orderId: "ord_BundTokenPay00000000", cancel: { action: v, blockedBy: null, penalty: null, refund: null } }), "\nWhat applies to this order now: an action not recognized.\n"],
+      ["cancel blocker", (v) => sample("order_not_cancellable", { orderId: "ord_BundTokenPay00000000", cancel: { action: null, blockedBy: v, penalty: null, refund: null } }), " now: reason not recognized.\n"],
       ["changed term", (v) => sample("offer_changed", { changes: [{ field: v, previous: 1, current: 2, worse: true }], offer: load("offers-two-hotels-one-unavailable").data.hotels[0].offers[0] }), "\n- Change to a term not recognized: 1 → 2 (worse)\n"],
     ];
     for (const [what, render, unknown] of cases) {
@@ -1189,7 +1189,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   const PRESENTATION_WHOLE = [new RegExp(`^${PRESENTATION_HINT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)];
 
   /** The cancel rule, which an order's text and `order_not_cancellable` end with. */
-  const CANCEL_RULE = /^Before you (?:call cancel_order with maximumPenalty|run `fortrip orders cancel <orderId> --max-penalty <amount>`), show the user /;
+  const CANCEL_RULE = /^Before you (?:call cancel_order with maximumPenalty|run `fortrip orders cancel` with --max-penalty), show the user /;
 
   /** How a line of an order, or of a list of orders, begins. */
   const ORDER_OWN = [
@@ -1233,8 +1233,8 @@ describe("every string of a result, replaced by a hostile one", () => {
    * `order_not_cancellable` shows the order's Cancel line too.
    */
   const CANCEL_LOOKALIKES = [
-    /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order with close: true|run `fortrip orders cancel .+ --close`)\)$/,
-    /^Cancel: can cancel now: penalty .+, refund .+ \(only after the user's yes: (?:call cancel_order with maximumPenalty \{ amount: ".+", currency: ".+" \}|run `fortrip orders cancel .+ --max-penalty .+`)\)$/,
+    /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order \{ orderId: ".+", close: true \}|run `fortrip orders cancel .+ --close`)\)$/,
+    /^Cancel: can cancel now: penalty .+, refund .+ \(only after the user's yes: (?:call cancel_order \{ orderId: ".+", maximumPenalty: \{ amount: ".+", currency: ".+" \} \}|run `fortrip orders cancel .+ --max-penalty .+`)\)$/,
     /^Cancel: not available: \S.*$/,
     /^Cancel: (?:[a-z0-9_]+|an action not recognized)$/,
   ];
@@ -1481,9 +1481,9 @@ describe("every string of a result, replaced by a hostile one", () => {
     }),
     sample("offer_already_ordered", { orderId: ORDER_ID }),
     sample("order_in_progress", { orderId: ORDER_ID }),
-    sample("order_not_cancellable", { cancel: { action: null, blockedBy: "stay_started", penalty: null, refund: null } }, "blocked"),
-    sample("order_not_cancellable", { cancel: { action: "cancel", blockedBy: null, penalty: usd("120.00"), refund: usd("245.00") } }, "cancel applies"),
-    sample("order_not_cancellable", { cancel: { action: "close", blockedBy: null, penalty: null, refund: null } }, "close applies"),
+    sample("order_not_cancellable", { orderId: ORDER_ID, cancel: { action: null, blockedBy: "stay_started", penalty: null, refund: null } }, "blocked"),
+    sample("order_not_cancellable", { orderId: ORDER_ID, cancel: { action: "cancel", blockedBy: null, penalty: usd("120.00"), refund: usd("245.00") } }, "cancel applies"),
+    sample("order_not_cancellable", { orderId: ORDER_ID, cancel: { action: "close", blockedBy: null, penalty: null, refund: null } }, "close applies"),
     sample("order_not_payable", { orderId: ORDER_ID, status: "confirmed" }),
     sample("payment_in_progress", { orderId: ORDER_ID }),
     sample("payment_credential_invalid", { reason: "expired" }),

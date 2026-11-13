@@ -9,8 +9,11 @@ import {
   HTTP_ROUTES,
   type HttpRoute,
   LIMITS,
+  misplacedKeyHint,
+  misplacedKeys,
   routePath,
   TOOLS,
+  unknownFieldsMessage,
 } from "@fortrip/agent-contract";
 
 import { CliError, EXIT, usageError } from "./errors.ts";
@@ -40,6 +43,23 @@ const GUEST_FIELD = "items.hotel.rooms.guests";
 const ROOMS_FIELD = "items.hotel.rooms";
 
 /**
+ * Flags that 6.0 removed, by the command that took them (or the one that
+ * replaced it), each with the 6.0 way to say the same. For 5.x callers, who
+ * would otherwise get the argument parser's advice about an unknown option.
+ * It can go once no 5.x caller is left to tell.
+ */
+const REMOVED_FLAGS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "fortrip orders create": {
+    "--first-name": "give the contact's full name as --name",
+    "--last-name": "give the contact's full name as --name",
+  },
+  "fortrip orders pay": {
+    "--method": "an order is paid here with --token and --total only; any other way, the user pays on the order's payment link",
+  },
+  "fortrip hotels get": { "--rooms": "use --room-types" },
+};
+
+/**
  * Parses `argv` with the options a command's spec declares. Unknown flags,
  * missing values, a single-value flag given twice (which value would win?)
  * and arguments the command doesn't take all exit 2.
@@ -52,6 +72,11 @@ export function parseOptions(spec: CommandSpec, argv: string[]) {
       ...("short" in option && option.short ? { short: option.short } : {}),
       ...("multiple" in option && option.multiple ? { multiple: true } : {}),
     };
+  }
+  for (const arg of argv) {
+    if (arg === "--") break;
+    const now = REMOVED_FLAGS[commandInvocation(spec)]?.[arg.split("=")[0] as string];
+    if (now) throw usageError(`${arg.split("=")[0]} is no flag of ${commandInvocation(spec)} since 6.0: ${now}`);
   }
   let parsed;
   try {
@@ -86,7 +111,8 @@ export function parseOptions(spec: CommandSpec, argv: string[]) {
  * body, for the commands that take one), then the positionals and flags,
  * each setting the field its spec names, then the environment's defaults.
  * The contract's input schema must accept it: otherwise nothing is sent and
- * the command exits 2, listing the issues as the API would.
+ * the command exits 2, listing the issues as the API would, each by the
+ * flag it was typed as when it was.
  */
 export function parseCommand(
   spec: CommandSpec,
@@ -116,7 +142,8 @@ export function parseCommand(
     }
   }
 
-  check(spec, input, route, fromEnv);
+  const given = new Set(spec.flags.filter((flag) => values[flag.flag] !== undefined).map((flag) => flag.flag));
+  check(spec, input, route, { given, body: values.body !== undefined, fromEnv });
   const path = routePath(route, input);
   if (route.method === "GET") return { method: "GET", path };
   const body = Object.fromEntries(Object.entries(input).filter(([field]) => !route.pathFields.includes(field)));
@@ -144,19 +171,19 @@ function requestCurrency(spec: CommandSpec, values: Values, input: Body, env: No
 }
 
 /**
- * `orders cancel` reads the order first, once (C7): to show it when neither
- * its penalty flag nor `--close` is given, to close it only while it is
- * unpaid, and for the penalty's currency. The read, the penalty flag, and
- * whether `--close` is given; `request` is the cancellation or the close,
- * a penalty's currency a placeholder until the order is read, or `null`
- * with neither. `null` for any other command. Bad arguments exit 2 as
- * `orders cancel`'s own, and nothing is sent.
+ * `orders cancel` with the mode its flags give: the read of the order that
+ * comes first (to close it only while it is unpaid, and for the penalty's
+ * currency), whether `--close` was given, and the request that cancels or
+ * closes, a penalty's currency a placeholder until the order is read.
+ * `null` for any other command. Without a mode flag, as with both or with a
+ * bad order id, the command line is refused as it stands (exit 2): nothing
+ * is read and nothing is sent.
  */
-export function cancelPreview(
+export function cancelRequest(
   spec: CommandSpec,
   argv: string[],
   env: NodeJS.ProcessEnv,
-): (ApiRequest & { flag: string; orderId: string; close: boolean; request: ApiRequest | null }) | null {
+): (ApiRequest & { orderId: string; close: boolean; request: ApiRequest }) | null {
   const flag = spec.tool === "cancel_order" ? spec.flags.find((f) => f.field === "maximumPenalty") : undefined;
   if (!flag) return null;
   const { values, positionals } = parseOptions(spec, argv);
@@ -168,38 +195,116 @@ export function cancelPreview(
     );
   }
   if (positionals.length !== 1) throw usageError(`Usage: ${usageLine(spec)}`);
-  const input = { orderId: positionals[0] };
-  const request = close || penalty ? parseCommand(spec, argv, env) : null;
-  if (!request) check({ ...spec, tool: "get_order" }, input, HTTP_ROUTES.get_order, new Map());
-  const orderId = input.orderId as string;
-  return { method: "GET", path: API.order(orderId), flag: `--${flag.flag}`, orderId, close, request };
+  const orderId = positionals[0] as string;
+  if (!close && !penalty) {
+    check({ ...spec, tool: "get_order" }, { orderId }, HTTP_ROUTES.get_order, { given: new Set() });
+    const read = `${commandInvocation({ group: "orders", name: "get" })} ${orderId}`;
+    throw usageError(
+      `${commandInvocation(spec)} needs exactly one of --${flag.flag} ${flag.placeholder}, to cancel a paid order for the penalty the user agreed to, and --close, to close an unpaid one. Nothing was sent. \`${read}\` shows which applies, on the order's Cancel line, with the command to run.`,
+    );
+  }
+  const request = parseCommand(spec, argv, env);
+  return { method: "GET", path: API.order(orderId), orderId, close, request };
 }
 
-/** Refuses an input the contract's schema doesn't accept, with the issues
- *  the API's `invalid_request` would list (pointers into the body, or
- *  `/path/<name>`, and `/query/<name>` for a GET). An issue with a value an
- *  environment variable set (`fromEnv`, by pointer) names the variable. */
-export function check(spec: CommandSpec, input: Body, route: HttpRoute, fromEnv: Map<string, string>): void {
+/** Where an input's values came from, for the wording of a refusal. */
+interface Source {
+  /** The flags given on the command line, by name. */
+  given: ReadonlySet<string>;
+  /** Whether `--body` gave a body. */
+  body?: boolean;
+  /** Fields the environment set, by pointer, and the variable that did. */
+  fromEnv?: ReadonlyMap<string, string>;
+}
+
+/** An issue of a refused request, in the API's shape: a `pointer` and a
+ *  `message`. The message of a value typed as a flag or an argument starts
+ *  with it ("--hotel: …", "--total is required"), which no message of the
+ *  contract's does. */
+interface Issue {
+  pointer: string;
+  message: string;
+}
+
+/** "--name", "--name and --email", "--name, --email and --phone". */
+function listed(names: string[]): string {
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names.join("");
+}
+
+/** The value at `path` in an input; undefined when it has none. */
+function valueAt(input: unknown, path: readonly PropertyKey[]): unknown {
+  let at = input;
+  for (const key of path) {
+    if (typeof at !== "object" || at === null) return undefined;
+    at = (at as Record<PropertyKey, unknown>)[key];
+  }
+  return at;
+}
+
+/**
+ * Refuses an input the contract's schema doesn't accept, with the issues
+ * the API's `invalid_request` would list (pointers into the body, or
+ * `/path/<name>`, and `/query/<name>` for a GET). An issue is told as the
+ * value was given (`source`): the message of one typed as a flag or an
+ * argument starts with it, a required one that is missing says the flag
+ * that gives it ("--total is required"), and a value from `--body` is told
+ * by its pointer alone. A key of the body the schema doesn't know is told as the API tells
+ * it, with where it belongs or what replaced it when the contract knows. An
+ * issue with a value an environment variable set names the variable.
+ */
+export function check(
+  spec: CommandSpec,
+  input: Body,
+  route: HttpRoute,
+  source: Source = { given: new Set(spec.flags.map((flag) => flag.flag)) },
+): void {
   const schema = TOOLS.find((tool) => tool.name === spec.tool)?.input;
   const result = schema?.safeParse(input);
-  if (!result || result.success) return;
+  if (!schema || !result || result.success) return;
   const pointer = (path: readonly PropertyKey[]) => {
     const keys = path.map((key) => String(key).replaceAll("~", "~0").replaceAll("/", "~1"));
     const where =
       keys[0] === undefined ? [] : route.pathFields.includes(keys[0]) ? ["path"] : route.method === "GET" ? ["query"] : [];
     return [...where, ...keys].map((key) => `/${key}`).join("");
   };
-  const issues = result.error.issues.flatMap((issue) =>
-    issue.code === "unrecognized_keys"
-      ? issue.keys.map((key) => ({
-          pointer: pointer([...issue.path, key]),
-          message: `Unknown field: ${key}`,
-        }))
-      : [{ pointer: pointer(issue.path), message: issue.message }],
-  ).map(({ pointer, message }) => {
+  const hints = new Map(
+    misplacedKeys(schema, result.error.issues, input).map((key) => [pointer(key.path), misplacedKeyHint(key)]),
+  );
+  /** The flag or argument a field's value was typed as, or the flags that
+   *  would give a required one that is missing. */
+  const typed = (path: readonly PropertyKey[]): { flag: string; missing: boolean } | undefined => {
+    const field = path.filter((key) => typeof key !== "number").join(".");
+    const positional = spec.positionals?.find((candidate) => candidate.field === field);
+    if (positional) return { flag: `<${positional.name}>`, missing: false };
+    const given = spec.flags
+      .filter((flag) => source.given.has(flag.flag) && (field === flag.field || field.startsWith(`${flag.field}.`)))
+      .sort((a, b) => b.field.length - a.field.length)[0];
+    if (given) return { flag: `--${given.flag}`, missing: false };
+    if (source.body || valueAt(input, path) !== undefined) return undefined;
+    const gives = spec.flags.filter(
+      (flag) => flag.field === field || (flag.required && flag.field.startsWith(`${field}.`)),
+    );
+    return gives.length > 0 ? { flag: listed(gives.map((flag) => `--${flag.flag}`)), missing: true } : undefined;
+  };
+  const issues = result.error.issues.flatMap((issue): Issue[] => {
+    if (issue.code === "unrecognized_keys") {
+      return issue.keys.map((key) => {
+        const at = pointer([...issue.path, key]);
+        const hint = hints.get(at);
+        const message = unknownFieldsMessage([key]);
+        return { pointer: at, message: hint ? `${message} (${hint})` : message };
+      });
+    }
+    const at = pointer(issue.path);
     // A value no flag gave: say where it came from.
-    const name = fromEnv.get(pointer);
-    return { pointer, message: name ? `${name}: ${message}` : message };
+    const variable = source.fromEnv?.get(at);
+    if (variable) return [{ pointer: at, message: `${variable}: ${issue.message}` }];
+    const from = typed(issue.path);
+    if (!from) return [{ pointer: at, message: issue.message }];
+    const message = from.missing
+      ? `${from.flag} ${from.flag.includes(" ") ? "are" : "is"} required`
+      : `${from.flag}: ${issue.message}`;
+    return [{ pointer: at, message }];
   });
   throw new CliError(
     `Not sent: ${commandInvocation(spec)} was given an invalid request.`,

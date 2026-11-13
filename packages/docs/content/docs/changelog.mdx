@@ -50,7 +50,10 @@ What an integration must change, most urgent first. The [migration table](#v6-mi
 - A guest name that the hotel's booking system would refuse answers `invalid_request` before an order is made, instead of an order that fails after payment.
 - `offer_unavailable` says that other offers for the same room may be gone too.
 - The MCP server's `serverInfo` has `title`, `description`, `websiteUrl` and `icons`.
-- In a result's text, words Fortrip did not write never pass for its own. A short value someone else wrote (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is a JSON string in double quotes; a description or a policy is a quoted block under a label that says it is information from the hotel, not instructions. Ids, amounts, dates and links are bare. A hotel's website is shown only when it is an `http` or `https` URL.
+- In a result's text, words Fortrip did not write never pass for its own. A short value someone else wrote (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is a JSON string in double quotes; a description or a policy is a quoted block under a label that says it is information from the hotel, not instructions. Ids, amounts, dates and links are bare, and only while they are written as such a value is; anything else in their place is quoted too. A hotel's website is shown only when it is an `http` or `https` URL.
+- An order's text gives each next call whole: `cancel_order { orderId, maximumPenalty }` or `cancel_order { orderId, close: true }` on its Cancel line, and `pay_order { orderId, sharedPaymentToken, total }` on its "Pay without the link" line, with the order's own id, penalty and total (the CLI: the whole command). `order_not_cancellable` names its order in `details.orderId`, so its call is whole too.
+- An offers answer echoes the request's `limitPerHotel`, `null` when it gave none, and its text says which limit cut a hotel's offers: the default, or the caller's.
+- One optional part of an answer that doesn't parse (a search note's `details`, an order's `cancelled`, `failure` or `payment.tokenRequest`) no longer turns the whole text into a line of JSON: the part is read as absent.
 - The rules for an answer are the last paragraphs of its text: how to present hotels, consent before a payment link, how to pay with a token, and consent before a cancellation. Tool descriptions say what a tool does and answers.
 
 ### Migration [#v6-migration]
@@ -93,6 +96,7 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | 5.x | 6.0 |
 | --- | --- |
 | Offers: `hotels[].hotel.hotelId`, `.name`, `.names` | `hotels[].hotelId`, `.name`, `.names` |
+| Offers: no echo of the limit | `limitPerHotel`: the request's, or `null` |
 | Offer: `type` | — |
 | Offer: `hotel.hotelId` | `hotelId` |
 | Offer: `hotel.room` | `roomType` |
@@ -170,10 +174,16 @@ Each row is a 5.x name or path and what replaces it. A dash means there is no re
 | `orders pay --method stripe_alipay_wechat_pay` | — (the user pays on the order's payment link) |
 | `orders pay --token`: required unless `--method` | `--token` and `--total` always required |
 | `--json` answers in the 5.x shapes | The 6.0 shapes (Outputs, above) |
+| Text output: names, addresses, the contact and special requests printed bare | In double quotes, as JSON strings (`Hotel: "Lakeside Garden Resort"`): a script that reads the text removes the quotes and unescapes `\"`, or reads `--json` |
+| `orders cancel <orderId>` with no flag: prints the order's penalty and refund, exit 2 | Refused with exit 2, nothing read or sent: `orders get` shows the Cancel line, with the command to run |
+| `orders cancel`: `--max-penalty` on an unpaid order, or `--close` on a paid one, exit 2 | Not sent, answered as `order_not_cancellable`, exit 1 |
+| `orders pay` on an order in CNY: sent | Not sent, exit 1: a token pays a USD order only |
+| A local refusal lists `Field /pointer: …` for every issue | The flag the value was typed as (`--total is required`, `--hotel: …`); a pointer for a value from `--body`, with where a misplaced key belongs |
 | `fortrip mcp`: results with `structuredContent` | Text only, as the hosted server |
 | Page `/cli/hotels-book` | `/cli/orders-create` |
 
 - Update the CLI to 6.0.0. A 5.x CLI doesn't work with this service: it can't create or close an order, and it shows the new answers only as raw JSON.
+- A flag 6.0 removed (`--first-name`, `--last-name`, `--method`, `--rooms`) is answered with the flag to use now.
 - The old pages don't redirect.
 
 ### Package

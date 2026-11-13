@@ -63,6 +63,9 @@ export interface FlagSpec {
    * a value has one.
    */
   placeholder?: string;
+  /** The command needs the field: `always`, or `unless-body` for a field
+   *  `--body` can give instead. Its description says so first. */
+  required?: "always" | "unless-body";
   description: string;
 }
 
@@ -159,12 +162,10 @@ function fieldDescription(
   return node.description;
 }
 
-type FlagDef = Omit<FlagSpec, "description"> & {
-  description?: string;
-  /** The command needs it: its help starts with "Required." or, for a
-   *  field `--body` can give instead, "Required unless --body gives it." */
-  required?: "always" | "unless-body";
-};
+/** A flag before its description is settled: a required one's help starts
+ *  with "Required." or, for a field `--body` can give instead, "Required
+ *  unless --body gives it." */
+type FlagDef = Omit<FlagSpec, "description"> & { description?: string };
 
 /** The flags of a command that sends `input`, each with its field's
  *  description unless the definition words it otherwise. */
@@ -173,12 +174,12 @@ function flagsOf(
   defs: readonly FlagDef[],
 ): readonly FlagSpec[] {
   const json = z.toJSONSchema(input, { io: "input" }) as JsonSchema;
-  return defs.map(({ required, ...def }) => {
+  return defs.map((def) => {
     const description = def.description ?? fieldDescription(json, def.field, def.sets);
     const prefix =
-      required === "always"
+      def.required === "always"
         ? "Required. "
-        : required === "unless-body"
+        : def.required === "unless-body"
           ? "Required unless --body gives it. "
           : "";
     return { ...def, description: `${prefix}${description}` };
@@ -388,6 +389,7 @@ const createFlags = flagsOf(createOrderInput, [
     field: "items.offerId",
     type: "string",
     placeholder: "<off_>",
+    required: "unless-body",
     description: "The offer to order, by offerId from `hotels offers`.",
   },
   {
@@ -396,6 +398,7 @@ const createFlags = flagsOf(createOrderInput, [
     type: "string",
     multiple: true,
     placeholder: "<room>:<first>:<last>",
+    required: "unless-body",
     description:
       "A guest, as `room:first:last`, e.g. `1:John:Smith` for room 1. Repeat for each guest: at least one per room of the offer, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
   },
@@ -425,7 +428,7 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     type: "string",
     placeholder: "<amount>",
     description:
-      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it or --close, the command changes nothing: it shows the penalty and the refund, or that the order can be closed.",
+      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Give exactly one of it and --close: with neither the command is refused and nothing is sent, and `orders get` shows the penalty and the refund, or that the order can be closed.",
   },
   {
     flag: "close",

@@ -1973,6 +1973,11 @@
               "details": {
                 "type": "object",
                 "properties": {
+                  "orderId": {
+                    "type": "string",
+                    "pattern": "^ord_[0-9A-Za-z]{20}$",
+                    "description": "The order the call was for."
+                  },
                   "cancel": {
                     "type": "object",
                     "properties": {
@@ -2096,6 +2101,7 @@
                   }
                 },
                 "required": [
+                  "orderId",
                   "cancel"
                 ],
                 "additionalProperties": {}
@@ -4655,6 +4661,19 @@
         ],
         "additionalProperties": {}
       },
+      "limitPerHotel": {
+        "anyOf": [
+          {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The limitPerHotel the request gave; null when it gave none, and each hotel then gets up to 15 offers within the call's 45."
+      },
       "hotels": {
         "type": "array",
         "items": {
@@ -5318,7 +5337,7 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
-                  "description": "Offers left out by limitPerHotel, or by the 15 a hotel gets when none is given; a higher limitPerHotel or a filter may show them."
+                  "description": "Offers left out by the request's limitPerHotel, or by the 15 a hotel gets when it gave none (the answer's limitPerHotel says which); a higher limitPerHotel or a filter may show them."
                 },
                 "byCallLimit": {
                   "type": "integer",
@@ -5411,7 +5430,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Offers left out by limitPerHotel, or by the 15 a hotel gets when none is given; a higher limitPerHotel or a filter may show them."
+                      "description": "Offers left out by the request's limitPerHotel, or by the 15 a hotel gets when it gave none (the answer's limitPerHotel says which); a higher limitPerHotel or a filter may show them."
                     },
                     "byCallLimit": {
                       "type": "integer",
@@ -5448,6 +5467,7 @@
     },
     "required": [
       "stay",
+      "limitPerHotel",
       "hotels",
       "unavailable"
     ],

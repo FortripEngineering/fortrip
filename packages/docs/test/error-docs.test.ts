@@ -47,7 +47,7 @@ test("details are listed field by field, as the contract's shapes", () => {
   assert.match(details("destination_ambiguous")?.find((line) => line.startsWith("`candidates[]`")) ?? "", /\{ placeId; name; names; .*; hotels \}/);
   assert.deepEqual(details("invalid_request"), ["`issues[]`: `{ pointer: string; message: string }`"]);
   // order_not_cancellable carries the order's cancel, by its fields' names.
-  assert.deepEqual(details("order_not_cancellable"), ["`cancel`: `{ action; blockedBy; penalty; refund }`"]);
+  assert.deepEqual(details("order_not_cancellable"), ["`orderId`: `string`", "`cancel`: `{ action; blockedBy; penalty; refund }`"]);
   assert.deepEqual(details("payment_method_unavailable"), [
     '`reason`: `"payment_open_on_page" | "token_not_offered" | "charge_refused"`',
   ]);

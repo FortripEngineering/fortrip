@@ -54,6 +54,7 @@ export const ERROR_DETAILS = {
   order_in_progress: openObject({ orderId }),
   cancellation_changed: null,
   order_not_cancellable: openObject({
+    orderId: orderId.describe("The order the call was for."),
     cancel: orderCancel.describe(
       "The order's cancel as it is now: the action that applies instead of the one asked for, or what blocks both.",
     ),

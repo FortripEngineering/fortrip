@@ -5,8 +5,8 @@
 {{#if cli}}
 
    ```bash
-   {{tool:hotels search}} --place-name Bangkok --country TH --check-in 2026-11-10 \
-     --check-out 2026-11-12 --room 2 --stars-min 4 --sort price_asc --limit 10
+   {{tool:hotels search}} --place-name Bangkok --country TH --check-in YYYY-MM-DD \
+     --check-out YYYY-MM-DD --room 2 --stars-min 4 --sort price_asc --limit 10
    ```
 
 {{/if}}
@@ -22,8 +22,8 @@
 {{#if cli}}
 
    ```bash
-   {{tool:hotels offers}} --hotel <hotelId> --hotel <hotelId> --check-in 2026-11-10 \
-     --check-out 2026-11-12 --room 2 --room 2 [--require-free-cancellation]
+   {{tool:hotels offers}} --hotel <hotelId> --hotel <hotelId> --check-in YYYY-MM-DD \
+     --check-out YYYY-MM-DD --room 2 --room 2 [--require-free-cancellation]
    ```
 
 {{/if}}

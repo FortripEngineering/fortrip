@@ -91,7 +91,7 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
   },
   offer_already_ordered: { orderId: ORDER },
   order_in_progress: { orderId: ORDER },
-  order_not_cancellable: { cancel: { action: null, blockedBy: "confirming", penalty: null, refund: null } },
+  order_not_cancellable: { orderId: "ord_BundTokenPay00000000", cancel: { action: null, blockedBy: "confirming", penalty: null, refund: null } },
   order_not_payable: { orderId: ORDER, status: "confirmed" },
   payment_in_progress: { orderId: ORDER },
   payment_total_mismatch: { orderId: ORDER, total: { amount: "365.00", currency: "USD" } },

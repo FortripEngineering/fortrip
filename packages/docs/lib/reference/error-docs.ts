@@ -44,7 +44,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   cancellation_changed:
     "The order's cancellation penalty is now higher than the `maximumPenalty` sent, usually because a penalty step has passed. Nothing was cancelled. Read the order again, show the user its `cancel.penalty` and `cancel.refund`, and ask again before cancelling.",
   order_not_cancellable:
-    "The call asked to cancel an order that can only be closed, to close one that can only be cancelled, or for either on an order that allows neither. `cancel` is the order's `cancel` as it is now: its `action` is what applies instead (`cancel` with `maximumPenalty`, `close` with `close: true`), or `blockedBy` says what blocks both. `stay_started`, `non_refundable`, `refused` and `support_only` won't change: the user emails support.",
+    "The call asked to cancel an order that can only be closed, to close one that can only be cancelled, or for either on an order that allows neither. `orderId` is the order the call was for, and `cancel` is the order's `cancel` as it is now: its `action` is what applies instead (`cancel` with `maximumPenalty`, `close` with `close: true`), or `blockedBy` says what blocks both. `stay_started`, `cancellation_not_allowed`, `cancellation_refused` and `support_only` won't change: the user emails support.",
   order_not_payable: `\`pay_order\` on an order that isn't awaiting payment, or whose payment window closes within ${LIMITS.payCutoffMinutes} minutes. \`status\` is the order's. This call charged nothing.`,
   payment_in_progress:
     "Another payment of the order is under way. Read the order after `retryAfterSeconds`.",

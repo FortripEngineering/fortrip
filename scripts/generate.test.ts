@@ -58,6 +58,53 @@ function rendered() {
 const read = (root: string, file: string) =>
   readFileSync(path.join(root, file), "utf8");
 
+/*
+ * The CLI skill tells an agent which CLI to run. While the package is a prerelease, npm's
+ * `latest` is still the release before it, which does not speak this contract: the skill then
+ * names the exact version. Once released, it names `latest` again.
+ */
+describe("the CLI version a skill runs", () => {
+  /** A fresh render for a CLI of `version`. */
+  function renderedFor(version: string) {
+    const root = mkdtempSync(path.join(tmpdir(), "fortrip-generate-"));
+    roots.push(root);
+    const run = generate(root, "--cli-version", version);
+    assert.equal(run.status, 0, run.output);
+    return root;
+  }
+
+  it("a prerelease: the exact version, wherever the skill names the package", () => {
+    for (const version of ["6.0.0-rc.0", "6.1.0-beta.2"]) {
+      const root = renderedFor(version);
+      const cli = read(root, CLI_SKILL);
+      assert.ok(cli.includes(`Run every command as \`npx -y fortrip@${version} <command>\``), version);
+      for (const file of [CLI_SKILL, CLI_PLANNING]) assert.doesNotMatch(read(root, file), /fortrip@latest/, `${version} ${file}`);
+    }
+  });
+
+  it("a release: latest", () => {
+    for (const version of ["6.0.0", "6.0.1", "7.2.0"]) {
+      const root = renderedFor(version);
+      const cli = read(root, CLI_SKILL);
+      assert.ok(cli.includes("Run every command as `npx -y fortrip@latest <command>`"), version);
+      assert.doesNotMatch(cli, /fortrip@\d/, version);
+    }
+  });
+
+  it("without the option, the version is the CLI package's own, and the committed skill follows it", () => {
+    const { version } = JSON.parse(readFileSync(path.join(repo, "packages/cli/package.json"), "utf8")) as { version: string };
+    const tag = version.includes("-") ? version : "latest";
+    assert.ok(read(rendered(), CLI_SKILL).includes(`npx -y fortrip@${tag} <command>`), version);
+    assert.ok(read(repo, CLI_SKILL).includes(`npx -y fortrip@${tag} <command>`), version);
+  });
+
+  it("the Claude skill names no package either way", () => {
+    for (const version of ["6.0.0-rc.0", "6.0.0"]) {
+      assert.doesNotMatch(read(renderedFor(version), CLAUDE_SKILL), /fortrip@/, version);
+    }
+  });
+});
+
 describe("pnpm generate", () => {
   it("writes the skills, their planning guides and the guide data", () => {
     const root = rendered();
@@ -77,7 +124,7 @@ describe("pnpm generate", () => {
     assert.match(claude, /\]\(references\/planning\.md\)/);
     assert.doesNotMatch(claude, /\bnpx\b|fortrip@latest|get_planning_guide/);
     const cli = read(root, CLI_SKILL);
-    assert.match(cli, /npx -y fortrip@latest/);
+    assert.match(cli, /npx -y fortrip@\S+ <command>/);
     assert.match(cli, /`fortrip hotels search`/);
     // R18: static, nothing for the agent to fetch before it can start.
     assert.doesNotMatch(cli, /fortrip@latest skill/);

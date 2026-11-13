@@ -41,8 +41,8 @@ export const MCP_TEXT_RULES: Record<ToolName, readonly Rule[]> = {
   create_order: ["consent", "pay"],
   get_order: ["cancel", "consent", "pay"],
   list_orders: ["cancel", "consent", "pay"],
-  cancel_order: [],
-  pay_order: [],
+  cancel_order: ["cancel", "consent", "pay"],
+  pay_order: ["cancel", "consent", "pay"],
 };
 
 /** What each rule is, and when the text carries it. */

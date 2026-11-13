@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +12,8 @@ import {
   commandInvocation,
   type CommandSpec,
   LIMITS,
+  type RenderedTool,
+  renderToolResult,
   TOOLS,
 } from "@fortrip/agent-contract";
 
@@ -406,8 +409,101 @@ describe("a request the contract refuses is not sent", () => {
       ["/path/orderId"],
     );
     assert.deepEqual(issuesOf(() => parse("orders cancel", [ORDER, "--max-penalty=-1"])), [
-      { pointer: "/maximumPenalty/amount", message: "amount must be a decimal string such as 132.40" },
+      { pointer: "/maximumPenalty/amount", message: "--max-penalty: amount must be a decimal string such as 132.40" },
     ]);
+  });
+
+  /*
+   * An issue is told as its value was given. Typed as a flag or an argument, its message
+   * starts with that flag: a person fixing a command line reads flags, not JSON Pointers. A
+   * required value that no flag gave says the flag that gives it. Sent in --body, it is told
+   * by its pointer alone, as the API tells it. The pointer is there either way.
+   */
+  describe("an issue names the flag its value was typed as, and a pointer alone for a value from --body", () => {
+    it("a value from a flag or an argument: the message starts with it", () => {
+      assert.deepEqual(issuesOf(() => parse("hotels offers", ["--hotel", "266000", ...STAY, "--room", "2", "--limit-per-hotel", "99"])), [
+        { pointer: "/hotelIds/0", message: "--hotel: hotelId must be htl_ followed by 20 letters or digits" },
+        { pointer: "/limitPerHotel", message: "--limit-per-hotel: limitPerHotel must be a whole number from 1 to 30" },
+      ]);
+      assert.deepEqual(issuesOf(() => parse("hotels get", ["266000", "--locale", "fr"])), [
+        { pointer: "/path/hotelId", message: "<hotelId>: hotelId must be htl_ followed by 20 letters or digits" },
+        { pointer: "/query/locale", message: "--locale: locale must be one of: en, zh" },
+      ]);
+      // A flag that sets a field inside an object or a list is named for every field under it.
+      assert.deepEqual(issuesOf(() => parse("hotels offers", ["--hotel", HOTEL, ...STAY, "--room", "9"])), [
+        { pointer: "/stay/rooms/0/adults", message: "--room: adults must be a whole number from 1 to 8" },
+      ]);
+      assert.deepEqual(
+        issuesOf(() => parse("orders create", ["--offer", OFFER, "--guest", "1:J0hn:Smith", ...CONTACT])).map((issue) => [issue.pointer, issue.message.split(":")[0]]),
+        [["/items/0/hotel/rooms/0/guests/0/firstName", "--guest"]],
+      );
+      assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--token", "spt_1", "--total", "12,50"])), [
+        { pointer: "/total/amount", message: "--total: amount must be a decimal string such as 132.40" },
+      ]);
+    });
+
+    it("a required value that is missing: the flag that gives it is required", () => {
+      assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--token", "spt_1"])), [
+        { pointer: "/total", message: "--total is required" },
+      ]);
+      assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER])), [
+        { pointer: "/sharedPaymentToken", message: "--token is required" },
+        { pointer: "/total", message: "--total is required" },
+      ]);
+      // A whole object no flag gave: every required flag under it.
+      assert.deepEqual(issuesOf(() => parse("orders create", ["--offer", OFFER, "--guest", "1:A:B"])), [
+        { pointer: "/contact", message: "--name, --email and --phone are required" },
+      ]);
+      assert.deepEqual(issuesOf(() => parse("orders create", [...CONTACT])), [
+        { pointer: "/items", message: "--offer and --guest are required" },
+      ]);
+      assert.deepEqual(issuesOf(() => parse("orders create", ["--offer", OFFER, "--guest", "1:A:B", "--name", "A B", "--email", "a@b.co"])), [
+        { pointer: "/contact/phone", message: "--phone is required" },
+      ]);
+    });
+
+    it("a rule no one flag answers for keeps its pointer", () => {
+      assert.deepEqual(issuesOf(() => parse("hotels search", [])), [
+        { pointer: "/destination", message: "Provide a destination or text" },
+      ]);
+    });
+
+    it("a value from --body: its pointer, and no flag, though a flag could give it", () => {
+      assert.deepEqual(issuesOf(() => parse("hotels offers", ["--body", JSON.stringify({ hotelIds: ["266000"], stay: { checkIn: CHECK_IN, checkOut: CHECK_OUT, rooms: [{ adults: 2, childrenAges: [] }] } })])), [
+        { pointer: "/hotelIds/0", message: "hotelId must be htl_ followed by 20 letters or digits" },
+      ]);
+      // Missing from a body: the pointer too, as the API would say it.
+      assert.deepEqual(issuesOf(() => parse("orders create", ["--body", JSON.stringify({ items: [{ offerId: OFFER, hotel: { rooms: [{ guests: [{ firstName: "A", lastName: "B" }] }] } }] })])), [
+        { pointer: "/contact", message: "Expected a JSON object" },
+      ]);
+      // A flag over a body: the flag's value is the flag's.
+      assert.deepEqual(issuesOf(() => parse("hotels offers", ["--body", JSON.stringify({ hotelIds: [HOTEL], limitPerHotel: 99 }), ...STAY, "--room", "2", "--hotel", "266000"])), [
+        { pointer: "/hotelIds/0", message: "--hotel: hotelId must be htl_ followed by 20 letters or digits" },
+        { pointer: "/limitPerHotel", message: "limitPerHotel must be a whole number from 1 to 30" },
+      ]);
+    });
+
+    // The contract's own hints, as the API gives them: a body is where a known key lands at
+    // the wrong depth, and where a 5.x key is still sent.
+    it("a --body key at the wrong depth, or renamed in 6.0, is told where it belongs or what replaced it", () => {
+      const guests = [{ firstName: "A", lastName: "B" }];
+      const contact = { name: "A B", email: "a@b.co", phone: "+8613800000000" };
+      const sent = (body: unknown) => issuesOf(() => parse("orders create", ["--body", JSON.stringify(body)]));
+      assert.deepEqual(sent({ offerId: OFFER, items: [{ hotel: { rooms: [{ guests }] } }], contact }).filter((issue) => issue.pointer === "/offerId"), [
+        { pointer: "/offerId", message: "Unknown field: offerId (belongs at /items/0/offerId)" },
+      ]);
+      assert.deepEqual(sent({ offerId: OFFER, items: [{ offerId: OFFER, hotel: { rooms: [{ guests }] } }], contact }), [
+        { pointer: "/offerId", message: "Unknown field: offerId (already given at /items/0/offerId: remove this one)" },
+      ]);
+      assert.deepEqual(sent({ items: [{ offerId: OFFER, hotel: { rooms: [{ guests }] } }], contact: { firstName: "A", lastName: "B", email: contact.email, phone: contact.phone } }).filter((issue) => issue.message.startsWith("Unknown")), [
+        { pointer: "/contact/firstName", message: "Unknown field: firstName (contact takes one name, the full name: send it as /contact/name)" },
+        { pointer: "/contact/lastName", message: "Unknown field: lastName (contact takes one name, the full name: send it as /contact/name)" },
+      ]);
+      // A key the contract has nowhere is unknown, and that is all.
+      assert.deepEqual(sent({ items: [{ offerId: OFFER, hotel: { rooms: [{ guests }] } }], contact, nationality: "CN" }), [
+        { pointer: "/nationality", message: "Unknown field: nationality" },
+      ]);
+    });
   });
 
   // 6.0: an order is paid by token only, with the total the user approved.
@@ -418,12 +514,15 @@ describe("a request the contract refuses is not sent", () => {
   });
 
   it("orders pay needs --token", () => {
-    const token = {
-      pointer: "/sharedPaymentToken",
-      message: "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
-    };
-    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--total", "125.00"])), [token]);
-    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--token", "tok_1", "--total", "125.00"])), [token]);
+    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--total", "125.00"])), [
+      { pointer: "/sharedPaymentToken", message: "--token is required" },
+    ]);
+    assert.deepEqual(issuesOf(() => parse("orders pay", [ORDER, "--token", "tok_1", "--total", "125.00"])), [
+      {
+        pointer: "/sharedPaymentToken",
+        message: "--token: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+      },
+    ]);
   });
 
   it("a check-in in the past, and mixed rooms in offers", () => {
@@ -731,7 +830,7 @@ describe("currency", () => {
         body("hotels search", [...SEARCH, ...argv], { FORTRIP_CURRENCY: "CNY" }),
       );
       assert.deepEqual(issues, [
-        { pointer: "/currency", message: "currency must be one of: USD, CNY" },
+        { pointer: "/currency", message: "--currency: currency must be one of: USD, CNY" },
       ]);
     }
   });
@@ -745,6 +844,49 @@ describe("currency", () => {
       () => parse("orders create", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--currency", "CNY"]),
       isUsage,
     );
+  });
+});
+
+/*
+ * Every command an order's text gives on the CLI is the whole command, with the order's own id
+ * and figure in it: read back from the contract's text of every order fixture and parsed here
+ * as the CLI parses a command line.
+ */
+describe("every command an order's text gives parses as typed", () => {
+  const dir = new URL("../../contract/test/fixtures/v1/", import.meta.url);
+  const fixtures = readdirSync(dir)
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => [file, JSON.parse(readFileSync(new URL(file, dir), "utf8"))] as const);
+
+  it("the Cancel line's and the pay line's commands, in every order fixture", () => {
+    let cancels = 0;
+    let closes = 0;
+    let pays = 0;
+    for (const [file, fixture] of fixtures) {
+      if (!["create_order", "get_order", "list_orders", "cancel_order", "pay_order"].includes(fixture.tool)) continue;
+      const orders = (fixture.tool === "list_orders" ? fixture.data.data : [fixture.data]) as Record<string, any>[];
+      const lines = renderToolResult(fixture.tool as RenderedTool, fixture.data, "cli")
+        .split("\n")
+        .filter((line) => line.startsWith("Cancel: ") || line.startsWith("Pay without the link: "));
+      const typed = lines.flatMap((line) => [...line.matchAll(/`(fortrip orders (cancel|pay) [^`]+)`/g)].map((m) => m[1] as string));
+      const expected = orders.flatMap((o) => [
+        ...(o.payment.tokenRequest ? [`fortrip orders pay ${o.orderId} --token <spt_…> --total ${o.total.amount}`] : []),
+        ...(o.cancel.action === "cancel" ? [`fortrip orders cancel ${o.orderId} --max-penalty ${o.cancel.penalty.amount}`] : []),
+        ...(o.cancel.action === "close" ? [`fortrip orders cancel ${o.orderId} --close`] : []),
+      ]);
+      assert.deepEqual(typed, expected, file);
+      for (const line of typed) {
+        const [, , name, ...argv] = line.replace("<spt_…>", "spt_1TestToken0123456789").split(" ");
+        const request = parse(`orders ${name}`, argv);
+        assert.equal(request.method, "POST", line);
+        const orderId = argv[0] as string;
+        assert.equal(request.path, name === "pay" ? `/v1/orders/${orderId}/pay` : API.orderCancel(orderId), line);
+        if (name === "pay") pays++;
+        else if (request.body?.close === true) closes++;
+        else cancels++;
+      }
+    }
+    assert.ok(cancels >= 4 && closes >= 3 && pays >= 1, `${cancels} cancels, ${closes} closes, ${pays} pays`);
   });
 });
 
@@ -763,6 +905,41 @@ describe("parseOptions", () => {
       ["whoami", ["now"]],
     ] as const) {
       assert.throws(() => parseOptions(command(name), [...argv]), isUsage, `${name} ${argv}`);
+    }
+  });
+
+  // A flag 6.0 removed is answered with the 6.0 way to say the same, not with the argument
+  // parser's advice about an unknown option.
+  it("a flag 6.0 removed is answered with the flag to use now", () => {
+    const refusal = (name: string, argv: string[]) => {
+      try {
+        parseOptions(command(name), argv);
+      } catch (error) {
+        assert.ok(isUsage(error), String(error));
+        return (error as Error).message;
+      }
+      assert.fail(`${name} ${argv.join(" ")} was accepted`);
+    };
+    for (const argv of [["--first-name", "John"], ["--first-name=John"], ["--offer", OFFER, "--last-name", "Smith"]]) {
+      assert.equal(
+        refusal("orders create", argv),
+        `${argv.find((arg) => arg.startsWith("--first") || arg.startsWith("--last"))!.split("=")[0]} is no flag of fortrip orders create since 6.0: give the contact's full name as --name`,
+      );
+    }
+    assert.equal(
+      refusal("orders pay", [ORDER, "--method", "stripe_alipay_wechat_pay"]),
+      "--method is no flag of fortrip orders pay since 6.0: an order is paid here with --token and --total only; any other way, the user pays on the order's payment link",
+    );
+    assert.equal(refusal("hotels get", [HOTEL, "--rooms"]), "--rooms is no flag of fortrip hotels get since 6.0: use --room-types");
+    // Only where it was a flag: elsewhere it is unknown, as any other.
+    for (const [name, argv] of [["hotels search", ["--rooms"]], ["orders get", [ORDER, "--method", "x"]], ["hotels offers", ["--first-name", "x"]]] as const) {
+      assert.match(refusal(name, [...argv]), /^Unknown option /, `${name} ${argv.join(" ")}`);
+    }
+    // After --, it is an argument, not a flag.
+    assert.deepEqual(parseOptions(command("hotels get"), ["--", "--rooms"]).positionals, ["--rooms"]);
+    // No message of the kind names Node's advice.
+    for (const [name, argv] of [["orders create", ["--first-name", "x"]], ["hotels get", [HOTEL, "--rooms"]]] as const) {
+      assert.doesNotMatch(refusal(name, [...argv]), /positional argument/);
     }
   });
 });

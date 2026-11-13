@@ -20,7 +20,7 @@ The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip
 | `fortrip:cancel_order` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `fortrip:pay_order` | Pays an order without its link, by a shared payment token from the user's wallet |
 
-In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote: give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.
+In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \" is a "): give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 
@@ -152,7 +152,7 @@ Check the order with `fortrip:get_order`; its first line has the status:
 
 ## Presenting hotels
 
-If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel: present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.
+If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows: hotel details show them, a search does not. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \" is a "): present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.
 
 ## Errors
 

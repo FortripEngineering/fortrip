@@ -167,7 +167,8 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
       [
         ours`Total: ${money(o.total)}`,
         ours`payment ${label(PAYMENT_WORDS, p.status, ours`status not recognized`)}`,
-        p.localCurrencyAtCheckout && ours`the user's card may pay in its local currency at checkout`,
+        // Checkout is the payment link's page: said only while there is a link.
+        p.url !== null && p.localCurrencyAtCheckout && ours`the user's card may pay in its local currency at checkout`,
         p.localCharge && ours`card charged ${money(p.localCharge)}`,
       ],
       " · ",
@@ -191,9 +192,11 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
   return lines;
 }
 
-/** "Pay without the link: …": the handler by type with the business
- *  profile the token is granted for, and Stripe's usage limits for the
- *  token under Stripe's own names, as they go into the token request.
+/** "Pay without the link: …": the whole call that pays this order, with its
+ *  id and its total in it and a placeholder for the token alone; the handler
+ *  by type with the business profile the token is granted for; and Stripe's
+ *  usage limits for the token under Stripe's own names, as they go into the
+ *  token request.
  *  `max_amount` says its unit (cents, of usd), and `expires_at` is read as
  *  an instant only when it is the Unix seconds the schema takes: any other
  *  number is shown alone. */
@@ -206,7 +209,7 @@ function tokenLine(
   const pay =
     surface === "cli"
       ? ours`\`fortrip orders pay ${token("id", o.orderId)} --token <spt_…> --total ${token("amount", o.total.amount)}\``
-      : ours`pay_order`;
+      : ours`call pay_order { orderId: ${theirs(o.orderId)}, sharedPaymentToken: "<spt_…>", total: { amount: ${theirs(o.total.amount)}, currency: ${theirs(o.total.currency)} } }`;
   const unit = u.currency === "usd" ? "cents" : "the currency's minor unit";
   const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${token("currency", u.currency)}, expires_at ${u.expires_at}`;
   const until = tokenUsageLimits.shape.expires_at.safeParse(u.expires_at).success
@@ -222,26 +225,20 @@ function cancelFigures(c: OrderCancel): Ours {
   return ours`penalty ${figure(c.penalty)}, refund ${figure(c.refund)}`;
 }
 
-/** The order a CLI command names: its id, or the placeholder where the
- *  text has none to give (an error holds the order's cancel state, not its
- *  id). A tool call names no order in these words: the caller has its id. */
-function orderArgument(orderId: string | null): Ours {
-  return orderId === null ? ours`<orderId>` : token("id", orderId);
+/** The call that cancels a paid order for `penalty`, as `surface` makes it,
+ *  whole: the order's own id and penalty are in it, so on a page of orders
+ *  it can be made for no other. */
+function cancelCall(orderId: string, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
+  return surface === "cli"
+    ? ours`run \`fortrip orders cancel ${token("id", orderId)} --max-penalty ${token("amount", penalty.amount)}\``
+    : ours`call cancel_order { orderId: ${theirs(orderId)}, maximumPenalty: { amount: ${theirs(penalty.amount)}, currency: ${theirs(penalty.currency)} } }`;
 }
 
-/** The call that cancels a paid order for `penalty`, as `surface` makes it:
- *  the penalty is the order's own, as the call takes it. */
-function cancelCall(orderId: string | null, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
+/** The call that closes an unpaid order, as `surface` makes it, whole. */
+function closeCall(orderId: string, surface: RenderSurface): Ours {
   return surface === "cli"
-    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --max-penalty ${token("amount", penalty.amount)}\``
-    : ours`call cancel_order with maximumPenalty { amount: ${theirs(penalty.amount)}, currency: ${theirs(penalty.currency)} }`;
-}
-
-/** The call that closes an unpaid order, as `surface` makes it. */
-function closeCall(orderId: string | null, surface: RenderSurface): Ours {
-  return surface === "cli"
-    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --close\``
-    : ours`call cancel_order with close: true`;
+    ? ours`run \`fortrip orders cancel ${token("id", orderId)} --close\``
+    : ours`call cancel_order { orderId: ${theirs(orderId)}, close: true }`;
 }
 
 /**
@@ -249,11 +246,11 @@ function closeCall(orderId: string | null, surface: RenderSurface): Ours {
  * which of its two modes. Cancel it (a paid order), with the penalty, the
  * refund and the call that passes that penalty; close it (an unpaid one), on
  * the user's word, with its call; or what blocks both. It is an order's
- * line, and the line `order_not_cancellable` shows of the order it is about:
- * the cancel rule (`cancelNextStep`) points at it for the figure and the
- * call.
+ * line, and the line `order_not_cancellable` shows of the order it is about
+ * (`orderId`): the cancel rule (`cancelNextStep`) points at it for the
+ * figure and the call.
  */
-export function cancelLine(c: OrderCancel, orderId: string | null, surface: RenderSurface): Ours {
+export function cancelLine(c: OrderCancel, orderId: string, surface: RenderSurface): Ours {
   if (c.action === "close") {
     return ours`Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (${closeCall(orderId, surface)})`;
   }

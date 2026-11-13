@@ -236,7 +236,7 @@ describe("Markdown pages", () => {
     const cancellable = {
       ...payable,
       status: "confirmed",
-      payment: { ...payable.payment, status: "paid", url: null, expiresAt: null, token: null },
+      payment: { ...payable.payment, status: "paid", url: null, expiresAt: null, tokenRequest: null },
       cancel: { action: "cancel", blockedBy: null, penalty: { amount: "10.00", currency: "USD" }, refund: { amount: "122.40", currency: "USD" } },
     };
     const paragraphs: Record<string, string> = {
@@ -253,6 +253,14 @@ describe("Markdown pages", () => {
     // A new order has no cancel rule: the consent rule, then the pay rule.
     const created = renderToolResult("create_order", payable);
     assert.ok(created.endsWith(`\n\n${MCP_TEXT_RULES.create_order.map((rule) => paragraphs[rule]).join("\n\n")}`));
+    // The answer of a cancellation or of a payment carries the rules of what it holds, as a read does.
+    for (const tool of ["cancel_order", "pay_order"] as const) {
+      assert.deepEqual([...MCP_TEXT_RULES[tool]], order, tool);
+      const rulesOf = (data: unknown) =>
+        renderToolResult(tool, data).split("\n\n").flatMap((block) => Object.keys(paragraphs).filter((rule) => paragraphs[rule] === block));
+      assert.deepEqual(rulesOf(payable), ["consent", "pay"], tool);
+      assert.deepEqual(rulesOf(cancellable), ["cancel"], tool);
+    }
   });
 
   it("/errors.md: every error code, rate limit scope and limit", () => {

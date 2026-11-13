@@ -9,6 +9,7 @@
       }
     ]
   },
+  "limitPerHotel": null,
   "hotels": [
     {
       "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",

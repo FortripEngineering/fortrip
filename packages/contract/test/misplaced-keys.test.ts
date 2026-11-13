@@ -319,6 +319,15 @@ describe("misplacedKeys: offers and search", () => {
     const result = searchHotelsInput.safeParse({ destination });
     assert.equal(result.error?.issues[0]?.message, "Unknown field: radiusMeters");
     assert.deepEqual(hints(searchHotelsInput, { destination }), {});
+    // Without what was sent, no variant can be ruled out by its discriminator: the key is
+    // still at that very place in the others, which is no other depth to send it at.
+    assert.deepEqual(misplacedKeys(searchHotelsInput, result.error?.issues ?? []), []);
+    // While a key at another depth is still told, with or without what was sent.
+    const shallow = searchHotelsInput.safeParse({ text: "x", radiusMeters: 500 });
+    assert.deepEqual(
+      misplacedKeys(searchHotelsInput, shallow.error?.issues ?? []).map(({ path, belongsAt }) => [pointer(path), belongsAt.map(pointer)]),
+      [["/radiusMeters", ["/destination/radiusMeters"]]],
+    );
   });
 
   it("lists every place a key has on its line, in the schema's order", () => {

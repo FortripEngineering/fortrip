@@ -7,7 +7,7 @@ Terms: free cancellation until 2026-11-15 00:00 UTC (2026-11-15 00:00 Europe/Lis
 Hotel confirmation number: "CHL-20871"
 Contact: "Inês Duarte" · "ines.duarte@example.com" · no phone on record
 Total: EUR 410.00 · payment paid
-Cancel: can cancel now: penalty EUR 410.00, refund EUR 0.00 (only after the user's yes: call cancel_order with maximumPenalty { amount: "410.00", currency: "EUR" })
+Cancel: can cancel now: penalty EUR 410.00, refund EUR 0.00 (only after the user's yes: call cancel_order { orderId: "ord_CanalTwoRooms0000000", maximumPenalty: { amount: "410.00", currency: "EUR" } })
 Manage: https://fortrip.ai/stays/orders/so_4t8Yq2m
 
 Before you call cancel_order with maximumPenalty, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else. Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, with close: true and no maximumPenalty, only once the user says they no longer want it.

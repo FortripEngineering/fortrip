@@ -69,11 +69,16 @@ function localCode(failure: CliError): string {
   }
 }
 
-/** `- Field /pointer: message` for each issue, as the contract renders the API's. */
+/** One line per issue: `- Field /pointer: message`, as the contract renders
+ *  the API's. An issue whose message already names the flag or the argument
+ *  the value was typed as (`--hotel: …`, `--total is required`, `<orderId>:
+ *  …`) is that message alone: the pointer says nothing a flag does not. */
 function issueLines(details: unknown): string[] | null {
   const issues = (details as { issues?: unknown } | null)?.issues;
   if (!Array.isArray(issues)) return null;
-  return issues.map((issue: { pointer?: unknown; message?: unknown }) => `- Field ${issue.pointer}: ${issue.message}`);
+  return issues.map((issue: { pointer?: unknown; message?: unknown }) =>
+    /^(?:--|<)/.test(String(issue.message)) ? `- ${issue.message}` : `- Field ${issue.pointer}: ${issue.message}`,
+  );
 }
 
 /**

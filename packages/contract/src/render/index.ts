@@ -52,13 +52,14 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  * (`readableSearch`, `readableOrder`).
  *
  * After the data come the rules it governs, each a paragraph, last:
- * - the cancel rule (`cancelNextStep`) when a `get_order` or `list_orders`
- *   result holds an order that can be cancelled now (one that can be closed
- *   carries none: closing has no penalty);
+ * - the cancel rule (`cancelNextStep`) when a result holds an order that can
+ *   be cancelled now (one that can be closed carries none: closing has no
+ *   penalty), for every order tool but `create_order`, whose answer is an
+ *   order just made or made before, not one read to cancel;
  * - then the consent rule (`ORDER_NEXT_STEP`) whenever the result holds a
- *   payment link, so that it ends the text; only the pay rule
- *   (`payNextStep`) follows it, when an order has a "Pay without the link"
- *   line, and that one repeats it;
+ *   payment link, whichever tool answered, so that it ends the text; only
+ *   the pay rule (`payNextStep`) follows it, when an order has a "Pay
+ *   without the link" line, and that one repeats it;
  * - on MCP, how to present hotels (`PRESENTATION_HINT`) for `search_hotels`,
  *   `get_hotel` and `get_hotel_offers`. The CLI's text carries none: there
  *   the rule is the skill's, as before.
@@ -101,7 +102,9 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
     case "get_hotel_offers":
       return renderOffers(parsed as HotelOffersResult, surface);
     case "create_order":
-    case "get_order": {
+    case "get_order":
+    case "cancel_order":
+    case "pay_order": {
       const order = parsed as Order;
       return withConsent(tool, surface, renderOrder(order, surface), [order]);
     }
@@ -113,9 +116,6 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
       });
       return withConsent(tool, surface, renderOrderList({ ...page, data: orders }, surface), orders);
     }
-    case "cancel_order":
-    case "pay_order":
-      return renderOrder(parsed as Order, surface);
   }
 }
 
@@ -129,10 +129,12 @@ const READABLE: Partial<Record<RenderedTool, (data: unknown) => unknown>> = {
   pay_order: readableOrder,
 };
 
-const ORDER_TOOLS = new Set<RenderedTool>(["create_order", "get_order", "list_orders"]);
+/** The tools that answer orders: their texts carry the consent rule and the
+ *  pay rule by what they hold. */
+const ORDER_TOOLS = new Set<RenderedTool>(["create_order", "get_order", "list_orders", "cancel_order", "pay_order"]);
 
-/** The reads that carry the cancel rule; `cancel_order`'s own answer doesn't. */
-const CANCEL_TOOLS = new Set<RenderedTool>(["get_order", "list_orders"]);
+/** Those that carry the cancel rule too: every one but `create_order`. */
+const CANCEL_TOOLS = new Set<RenderedTool>(["get_order", "list_orders", "cancel_order", "pay_order"]);
 
 /** Whether a raw value holds a `payment.url` string anywhere inside it. */
 function holdsPaymentUrl(value: unknown, seen = new Set<unknown>()): boolean {

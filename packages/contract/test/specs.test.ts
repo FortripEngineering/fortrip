@@ -204,7 +204,7 @@ const orderFixture = {
   total: usd("132.40"),
   payment: {
     status: "unpaid",
-    url: "https://fortrip.ai/booking-status?session_id=cs_test_1",
+    url: `https://fortrip.ai/pay/${ORD}?s=cs_test_1`,
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
@@ -547,6 +547,29 @@ describe("SERVER_INFO", () => {
       icons: entry.icons,
     });
     assert.ok(SERVER_INFO.title && SERVER_INFO.description && SERVER_INFO.icons.length > 0);
+  });
+});
+
+describe("a flag a command needs says so, in its spec and in its help", () => {
+  it("marks the flags of required fields, and starts their descriptions with it", () => {
+    const required = Object.fromEntries(
+      COMMANDS.map((spec) => [
+        commandInvocation(spec).replace(/^fortrip /, ""),
+        Object.fromEntries(spec.flags.filter((flag) => flag.required).map((flag) => [flag.flag, flag.required])),
+      ]).filter(([, flags]) => Object.keys(flags as object).length > 0),
+    );
+    assert.deepEqual(required, {
+      // --body can give each of these instead.
+      "orders create": { offer: "unless-body", guest: "unless-body", name: "unless-body", email: "unless-body", phone: "unless-body" },
+      "orders pay": { token: "always", total: "always" },
+    });
+    for (const spec of COMMANDS) {
+      for (const flag of spec.flags) {
+        const prefix = flag.required === "always" ? "Required. " : flag.required === "unless-body" ? "Required unless --body gives it. " : null;
+        if (prefix) assert.ok(flag.description.startsWith(prefix), `--${flag.flag}: ${flag.description}`);
+        else assert.doesNotMatch(flag.description, /^Required/, `--${flag.flag}`);
+      }
+    }
   });
 });
 

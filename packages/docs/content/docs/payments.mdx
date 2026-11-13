@@ -28,7 +28,7 @@ Send `items`, which holds exactly one item, and `contact`:
 The request mirrors the order it creates: the order's `items[].hotel.rooms[].guests`, `specialRequests` and `contact` read back what was sent. The [schemas](/schemas) list every field.
 
 - A known field sent at the wrong depth, such as `offerId` beside `items`, answers `invalid_request` with the path it belongs at.
-- A guest name that the hotel's booking system would refuse answers `invalid_request` with a pointer to the name, before any order is made.
+- A guest name that the hotel's booking system would refuse answers `invalid_request` with a pointer to the name, before any order is made. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name. The user emails <Fact path="SUPPORT_EMAIL" /> instead.
 - Before it creates the order, Fortrip checks the offer with the hotel. If the price or any term changed, the answer is `409 offer_changed` instead (below). No order is made at a price the user hasn't seen.
 - A call that timed out is [safe to send again](/api#retries) with the same details.
 - Another order of the same stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid, or can be [closed](#close) now once the user says they no longer want it.
