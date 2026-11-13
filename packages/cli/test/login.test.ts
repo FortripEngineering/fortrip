@@ -961,7 +961,7 @@ describe("a re-login revokes the session it replaced", () => {
   });
 });
 
-// Spec D6b: the service refuses a CLI whose major is behind its own with
+// The service refuses a CLI whose major is behind its own with
 // HTTP 426, also on the endpoint the CLI reads before it signs in.
 describe("a CLI too old for the service (client_outdated)", () => {
   const { message } = CLIENT_OUTDATED.body.error;

@@ -319,7 +319,7 @@ describe("consent before cancelling an order", () => {
       );
       assert.match(text, /Never state a refund the order's text doesn't show, and never choose or work out an amount yourself/);
       assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
-      // Spec D7: the input picks the mode, and neither does the other's work.
+      // The input picks the mode, and neither does the other's work.
       assert.match(text, /`order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one\./);
     });
   }
@@ -368,7 +368,7 @@ describe("the MCP instructions", () => {
       "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_offers` → `create_order`; after the user pays, `get_order`",
       "anyone holding it can pay",
       "Never ask for, accept or pass on payment card details; payment happens only on the payment link or, by token, through `pay_order`.",
-      // Rules that left the tool descriptions (spec D3) and apply across calls.
+      // Rules that left the tool descriptions and apply across calls.
       "when it replaces an unpaid order, tell the user to pay only the new link.",
       "Cancel a paid order only after the user confirmed the penalty and the refund on its Cancel line; close an unpaid one only once they say they no longer want it.",
       "Every result is text: follow the rules that end it.",

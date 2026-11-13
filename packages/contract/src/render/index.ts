@@ -25,7 +25,7 @@ import { ours, own } from "./third-party.ts";
 export { renderError } from "./errors.ts";
 
 /*
- * The text of a tool result (spec D2): the one text block an MCP result
+ * The text of a tool result: the one text block an MCP result
  * holds, and what the CLI prints by default. Pure functions of the public
  * object and the surface: a next call is a tool's arguments over MCP, a
  * command and its flags on the CLI.

@@ -678,7 +678,7 @@ describe("errors", () => {
     assert.match(limited.stderr, /^Error rate_limited: too many calls of this kind in a short time\.\nRetryable: retry after 7 s\./);
   });
 
-  // Spec D6b: the service's message is complete, and the exit code is its own.
+  // The service's message is complete, and the exit code is its own.
   it("client_outdated (HTTP 426) prints Fortrip's message as it is, exits 5, and nothing retries", async () => {
     const message =
       "This fortrip CLI (5.3.0) is too old for the service. Update it with `npm install -g fortrip@latest`, then run the command again.";

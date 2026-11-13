@@ -48,11 +48,11 @@ const SUPPLIER_OUTCOME_WORDS: Record<string, string> = {
 };
 
 /*
- * The error envelope as text, built from its `code` and `details` (spec D2):
- * the server's `message` is written for HTTP readers and names JSON paths, so
+ * The error envelope as text, built from its `code` and `details`: the
+ * server's `message` is written for HTTP readers and names JSON paths, so
  * for every code this build knows the text is Fortrip's own and complete
  * without it. The message is shown only where there are no words of ours to
- * show: a code this build does not know (or details it can't read),
+ * show: a code this build does not know,
  * `client_outdated`, whose message is the whole answer, and the issues of an
  * `invalid_request`, which quote the caller's own arguments.
  *

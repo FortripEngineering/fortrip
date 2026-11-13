@@ -20,11 +20,11 @@ import { searchResult } from "./outputs/search.ts";
  * The MCP tools every agent surface describes: what the hosted server
  * registers, and what the docs and the guide name. A model reads a tool's
  * title and description, its input schema, and the text of its result
- * (`renderToolResult`): never the JSON of a result (spec D2). So the wording
- * here names tools, the caller's own arguments, and what the result text
- * shows by its label ("the payment link", "the Cancel line"), never a JSON
- * path of an answer (spec D3). Each tool takes the HTTP request of its
- * endpoint, unchanged.
+ * (`renderToolResult`): never the JSON of a result, since an MCP result is
+ * text only. So the wording here names tools, the caller's own arguments,
+ * and what the result text shows by its label ("the payment link", "the
+ * Cancel line"), never a JSON path of an answer, which a model cannot see.
+ * Each tool takes the HTTP request of its endpoint, unchanged.
  */
 
 export type ToolName =
@@ -56,9 +56,9 @@ export interface ToolSpec {
 }
 
 /**
- * What an MCP server for Fortrip says of itself in `serverInfo` (spec D6):
- * the hosted server and the CLI's bridge both send this, each with its own
- * `version`. The title, description, website and icon are the MCP Registry
+ * What an MCP server for Fortrip says of itself in `serverInfo`, one
+ * constant so that both servers say the same: the hosted server and the
+ * CLI's bridge both send this, each with its own `version`. The title, description, website and icon are the MCP Registry
  * entry's (`plugins/registry/server.json`).
  */
 export const SERVER_INFO: {
@@ -92,13 +92,12 @@ export const META_KEYS = {
 
 /**
  * The consent rule. It ends every result whose text holds a payment link,
- * whichever tool answered:
- * some clients never show the model the server instructions, and the last
- * paragraph is the one a model reads last before it answers. Only the pay
- * paragraph comes after it, and that one repeats the rule on purpose: as the
- * result's last paragraph it keeps the model from giving the link before a
- * yes (paired eval, S6). The cancel paragraph, when there is one, comes
- * before both.
+ * whichever tool answered: some clients never show the model the server
+ * instructions, and the last paragraph is the one a model reads last before
+ * it answers. Only the pay paragraph comes after it, and that one repeats
+ * the rule on purpose: as the result's last paragraph it keeps the model
+ * from giving the link before a yes (a paired eval measured it). The cancel
+ * paragraph, when there is one, comes before both.
  */
 export const ORDER_NEXT_STEP =
   "Before you give the user an order's payment link, show them its total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term (meals, cancellation, fees payable at the property), then end your reply by asking them to confirm, and wait for a clear yes. Only after they say yes, give them the payment link exactly as shown.";
@@ -269,7 +268,7 @@ export const TOOLS: readonly ToolSpec[] = [
     title: "Pay order",
     description:
       'Pay a USD order without its payment link, with a Stripe shared payment token: for an agent that can request one from the user\'s Link wallet (US and Canadian accounts), and for an order whose text has a "Pay without the link" line, which gives the business_profile and the usage limits to request the token with. Any other order is paid by its link. Call it only after the user confirmed the order\'s total and currency, the stay with each room\'s guests, the contact, any special requests and every term with a clear yes. It takes the orderId, the token as sharedPaymentToken and the order\'s total; a token pays one order. On success the order is confirming with its payment held, and its payment link stops working; a failure leaves the link open, and each error says how to recover.',
-    // Destructive: it moves money, and the client is told so (spec D1).
+    // Destructive: it moves money, and the client is told so.
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

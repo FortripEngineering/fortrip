@@ -323,7 +323,7 @@ describe("TOOLS", () => {
     assert.equal(tool("pay_order").output, order);
   });
 
-  // Spec D2: an MCP result is one text block, so no tool answers a schema of
+  // An MCP result is one text block, so no tool answers a schema of
   // its own over MCP, and nothing carries a rule as a field.
   it("a tool's output is its HTTP answer: no MCP-only field", () => {
     for (const spec of TOOLS) {
@@ -364,7 +364,7 @@ describe("TOOLS", () => {
     );
   });
 
-  // Spec D1: the same details answer the same order while the offer is held.
+  // The same details answer the same order while the offer is held.
   it("create_order's and pay_order's hints are destructive, idempotent, open world", () => {
     for (const name of ["create_order", "pay_order"] as const) {
       assert.deepEqual(tool(name).annotations, {
@@ -521,7 +521,7 @@ describe("CANCEL_NEXT_STEP", () => {
     assert.match(CANCEL_NEXT_STEP, /Never state a refund the order's text does not show\./);
   });
 
-  // Spec D7: the input picks the mode, and nothing is cancelled or closed by
+  // The input picks the mode, and nothing is cancelled or closed by
   // the other one. The paragraph says which order takes which.
   it("says the rule is for a paid order, and how an unpaid one is closed instead", () => {
     assert.match(
@@ -533,7 +533,7 @@ describe("CANCEL_NEXT_STEP", () => {
 });
 
 describe("SERVER_INFO", () => {
-  // Spec D6: one constant for the hosted server and the CLI's bridge, which
+  // One constant for the hosted server and the CLI's bridge, which
   // says of the server what its MCP Registry entry says.
   it("is the registry entry's title, description, website and icon", () => {
     const entry = JSON.parse(

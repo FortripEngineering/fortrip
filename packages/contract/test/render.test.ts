@@ -235,7 +235,7 @@ describe("search results", () => {
     assert.doesNotMatch(renderToolResult("search_hotels", data), /^Currency:/m);
   });
 
-  // Spec D2: a note's message is written for HTTP readers and names JSON
+  // A note's message is written for HTTP readers and names JSON
   // paths, so a note is worded from its code and the search it is on.
   it("words every note from its code, never with the server's message", () => {
     for (const name of GOLDENS.filter((n) => n.startsWith("search-"))) {
@@ -1356,7 +1356,7 @@ describe("orders and the consent rule", () => {
     );
   });
 
-  // Spec D7: the input picks the mode. The Cancel line says which mode the
+  // The input picks the mode. The Cancel line says which mode the
   // order takes, with the call as the surface makes it.
   it("the Cancel line of an order that can be cancelled gives the call, with the penalty as it is passed", () => {
     const confirmed = (load("order-confirmed") as ToolFixture).data as Record<string, any>;

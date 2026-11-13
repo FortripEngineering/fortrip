@@ -11,7 +11,7 @@ import * as search from "../src/outputs/search.ts";
 /*
  * Every published v1 output schema, found by module export so a new schema
  * cannot be left out of the openness, unknown-is-not-no and snapshot checks.
- * Keyed `module.export`. An MCP result is text only (spec D2), so there are
+ * Keyed `module.export`. An MCP result is text only, so there are
  * no MCP output schemas beside them.
  */
 

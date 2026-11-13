@@ -21,7 +21,7 @@ import {
 import { agentSources, errorTexts, RENDER_SURFACES, SERVER_MESSAGE, type Text } from "./agent-texts.ts";
 
 /*
- * What a model reads names what it can see (spec D2, D3). An MCP result is
+ * What a model reads names what it can see. An MCP result is
  * one text block, so a model reads a tool's title, description and input
  * schema, the text of its results and errors, and the guide: never the JSON
  * of an answer. A rule that points at `payment.url` points at nothing.
@@ -268,7 +268,7 @@ describe("no model-facing text names a JSON path of an answer", () => {
 });
 
 /*
- * Spec D3: paired evals pinned three behaviour rules in tool descriptions.
+ * Paired evals pinned three behaviour rules in tool descriptions.
  * Each is also in the result text it governs, so that a later release can
  * cut the description's sentence once an eval covers the text alone.
  */
@@ -340,7 +340,7 @@ describe("the three pinned rules are in the description and in the result they g
 });
 
 /*
- * Spec D2: one function returns the whole text of a result, how to present
+ * One function returns the whole text of a result, how to present
  * hotels included, so the hosted server and the CLI's bridge append nothing
  * (a client may join separate text blocks with no separator).
  */
@@ -402,7 +402,7 @@ describe("renderToolResult owns the whole text: it alone adds how to present hot
 });
 
 /*
- * Spec D2: the text of an error is built from its code and details, so it is
+ * The text of an error is built from its code and details, so it is
  * complete without the server's message, which names JSON paths.
  */
 describe("every known error is worded without the server's message", () => {
@@ -436,7 +436,7 @@ describe("every known error is worded without the server's message", () => {
 });
 
 /*
- * Rules that left a tool description for the text they govern (spec D3).
+ * Rules that left a tool description for the text they govern.
  * Each stands in one place now, so each is pinned where it is: a rule that
  * can be deleted with every test green is a rule nobody will notice missing.
  */
