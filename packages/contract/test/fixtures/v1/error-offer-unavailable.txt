@@ -1,0 +1,4 @@
+Error offer_unavailable (HTTP 422): This offer is sold out.
+Not retryable.
+Offer off_BundKingBreakfast000: sold out. Other offers for the same room may be gone too: get offers again.
+Request id: req_4Kd9sSold

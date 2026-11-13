@@ -119,11 +119,6 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
     String(l.tokensPerOrder),
     "Shared payment tokens one order can take, declined ones included; past it, `payment_method_unavailable`.",
   ],
-  wechatCodeMinutes: (l) => [
-    "WeChat Pay code",
-    `${l.wechatCodeMinutes} minutes`,
-    "How long a WeChat Pay code in `payment.methods` lasts after it is made.",
-  ],
 };
 
 /** The rows of the limits table. Takes the limits as an argument so a test

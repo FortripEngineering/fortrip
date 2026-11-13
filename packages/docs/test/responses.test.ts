@@ -54,14 +54,14 @@ describe("example responses", () => {
     const first = offers.hotels[0]?.offers[0];
     assert.equal(body("order").items[0].offerId, EXAMPLE_IDS.offerId);
     assert.equal(first?.offerId, EXAMPLE_IDS.offerId);
-    assert.deepEqual(created.price.total, first?.price.total);
+    assert.deepEqual(created.total, first?.price.total);
     assert.equal(created.items[0]?.hotel.hotelId, EXAMPLE_IDS.hotelId);
     // Every answer about the order is about the same order, at the total the pay requests send.
     for (const answer of [RESPONSES.get_order, RESPONSES.cancel_order, ...Object.values(PAY_RESPONSES)]) {
       assert.equal(answer.orderId, EXAMPLE_IDS.orderId);
-      assert.deepEqual(answer.price.total, created.price.total);
+      assert.deepEqual(answer.total, created.total);
     }
-    assert.deepEqual(body("pay-token").total, created.price.total);
+    assert.deepEqual(body("pay-token").total, created.total);
     assert.equal(created.status, "awaiting_payment");
     assert.ok(created.payment.url?.includes(EXAMPLE_IDS.orderId));
     // The changed offer is a new offer of the same hotel.
@@ -76,11 +76,11 @@ describe("example responses", () => {
     const destination = RESPONSES.search_hotels.destination;
     assert.equal(destination.radiusSource, "default");
     assert.equal(destination.radiusMeters, LIMITS.radiusMetersDefault);
-    const token = RESPONSES.book_hotel.payment.methods.find((m) => m.id === "stripe_shared_payment_token");
-    const limits = token && "limits" in token ? token.limits : undefined;
-    // A token is offered: the total is under the token cap, in cents.
-    assert.ok(Number(RESPONSES.book_hotel.price.total.amount) <= LIMITS.tokenPaymentMaxUsd);
-    assert.equal(limits?.maxAmount, Math.round(Number(RESPONSES.book_hotel.price.total.amount) * 100));
+    const { usageLimits } = RESPONSES.book_hotel.payment.token;
+    // A token is offered: the total is under the token cap, in cents, until the time to pay ends.
+    assert.ok(Number(RESPONSES.book_hotel.total.amount) <= LIMITS.tokenPaymentMaxUsd);
+    assert.equal(usageLimits.max_amount, Math.round(Number(RESPONSES.book_hotel.total.amount) * 100));
+    assert.equal(usageLimits.expires_at, Date.parse(RESPONSES.book_hotel.payment.expiresAt) / 1000);
   });
 });
 

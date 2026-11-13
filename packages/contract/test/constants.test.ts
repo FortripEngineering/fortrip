@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { renderGuide } from "../src/guide.ts";
 import { LIMITS } from "../src/limits.ts";
-import { TOOLS } from "../src/tools.ts";
 import { CONTRACT_VERSION } from "../src/version.ts";
 
 describe("CONTRACT_VERSION", () => {
@@ -17,21 +15,15 @@ describe("CONTRACT_VERSION", () => {
 });
 
 describe("pay-eligibility limits", () => {
-  it("states the token and wallet numbers", () => {
+  it("states the token numbers, and none for a wallet payment", () => {
     assert.equal(LIMITS.tokenPaymentMaxUsd, 500);
     assert.equal(LIMITS.payMinMinutesLeft, 15);
     assert.equal(LIMITS.tokensPerOrder, 5);
-    assert.equal(LIMITS.wechatCodeMinutes, 120);
+    assert.ok(!("wechatCodeMinutes" in LIMITS));
   });
 
   it("states the pay cutoff below the pay-start floor", () => {
     assert.equal(LIMITS.payCutoffMinutes, 2);
     assert.ok(LIMITS.payCutoffMinutes < LIMITS.payMinMinutesLeft);
-  });
-
-  it("renders the code lifetime in the guide and the pay_order tool", () => {
-    assert.ok(renderGuide("cli", "main").includes("120 minutes"));
-    const pay = TOOLS.find((tool) => tool.name === "pay_order");
-    assert.ok(pay?.description.includes("120 minutes"));
   });
 });

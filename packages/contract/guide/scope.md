@@ -5,7 +5,7 @@
 Fortrip: hotel search, live offers and orders with a payment link.{{#if claude-skill cli}} Not for flights, activities, or changing an existing order.{{/if}}
 
 {{#if mcp}}
-Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:hotels book}}`; after the user pays, `{{tool:orders get}}`; `{{tool:orders list}}` lists, `{{tool:orders cancel}}` cancels or closes an unpaid one, `{{tool:orders pay}}` pays by token or Alipay/WeChat Pay.
+Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:hotels book}}`; after the user pays, `{{tool:orders get}}`; `{{tool:orders list}}` lists, `{{tool:orders cancel}}` cancels or closes an unpaid one, `{{tool:orders pay}}` pays by token.
 {{/if}}
 {{#if claude-skill}}
 The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip connector added on claude.ai can show under its own name). They're written `fortrip:<tool>` below:
@@ -24,7 +24,7 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `{{tool:orders get}}` | One order and its status, including whether the hotel confirmed it |
 | `{{tool:orders list}}` | The user's orders, newest first, including those made on the Fortrip website |
 | `{{tool:orders cancel}}` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
-| `{{tool:orders pay}}` | Pays an order without its link, by a shared payment token from the user's wallet, or with Alipay or WeChat Pay |
+| `{{tool:orders pay}}` | Pays an order without its link, by a shared payment token from the user's wallet |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.
 {{/if}}

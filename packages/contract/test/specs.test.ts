@@ -166,18 +166,24 @@ const orderFixture = {
               { firstName: "Mary", lastName: "Smith" },
               { firstName: "Tom", lastName: "Smith" },
             ],
+            roomType: {
+              name: { text: "Deluxe King", locale: "en" },
+              beds: null,
+              areaSqm: null,
+              maxOccupancy: null,
+              window: null,
+            },
+            meals: {
+              known: false,
+              included: null,
+              unspecifiedMainMeals: null,
+              allInclusive: null,
+              guestsCoveredPerRoom: null,
+              label: null,
+            },
           },
         ],
         specialRequests: null,
-        room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
-        meals: {
-          known: false,
-          included: null,
-          unspecifiedMainMeals: null,
-          allInclusive: null,
-          guestsCoveredPerRoom: null,
-          label: null,
-        },
         cancellation: {
           status: "unknown",
           asOf: "2026-10-24T08:00:00Z",
@@ -185,23 +191,25 @@ const orderFixture = {
           penalties: [],
           timeZone: "Asia/Shanghai",
         },
+        confirmation: null,
         payAtProperty: { disclosure: "incomplete", items: [] },
         confirmationNumber: null,
       },
     },
   ],
-  price: { total: usd("132.40") },
+  total: usd("132.40"),
   payment: {
     status: "unpaid",
     url: "https://fortrip.ai/booking-status?session_id=cs_test_1",
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
-    chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    methods: [],
+    token: null,
   },
-  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
+  cancel: { action: "close", blockedBy: null, penalty: null, refund: null },
+  cancelled: null,
+  failure: null,
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
@@ -261,14 +269,12 @@ describe("TOOLS", () => {
     );
   });
 
-  it("pay_order describes both forms: a token and method stripe_alipay_wechat_pay", () => {
+  it("pay_order describes paying by token, and no Alipay or WeChat Pay payment", () => {
     const pay = TOOLS.find((t) => t.name === "pay_order");
-    assert.match(pay?.description ?? "", /by one of its payment\.methods/);
-    assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
-    assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
-    assert.match(pay?.description ?? "", /then show the entry it returns: the WeChat code as an image if you can, and both links/);
+    assert.match(pay?.description ?? "", /with a Stripe shared payment token, only if you can request one from the user's Link wallet/);
+    assert.match(pay?.description ?? "", /Request the token with payment\.token's handler config\.business_profile and usageLimits, and pass it with the order's total/);
+    assert.doesNotMatch(pay?.description ?? "", /Alipay|WeChat|method|payment\.methods|price\.total/);
     assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes/);
-    assert.match(pay?.description ?? "", /A code lasts 120 minutes/);
     assert.match(pay?.description ?? "", /^Pay a USD order without its link/);
     assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
   });
@@ -404,7 +410,7 @@ describe("TOOLS", () => {
     assert.ok(description.length <= 1024, String(description.length));
     assert.equal(annotations.destructiveHint, true);
     assert.equal(annotations.idempotentHint, true);
-    assert.equal(CALLS.mcp.close, "call cancel_order");
+    assert.equal(CALLS.mcp.close, "call cancel_order with close: true");
     assert.equal(CALLS.cli.close, "run `fortrip orders cancel <orderId> --close`");
   });
 

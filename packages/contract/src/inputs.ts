@@ -635,14 +635,14 @@ const sharedPaymentTokenError =
   "sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits";
 
 /** The ways an order is paid: the order's own link, or through `pay_order`
- *  a shared payment token, named by its id in the order's `payment.methods`. */
+ *  a shared payment token, which the order offers as `payment.token`. */
 export const PAY_WAYS = ["payment_link", "stripe_shared_payment_token"] as const;
 export type PayWay = (typeof PAY_WAYS)[number];
 
 /** `POST /v1/orders/{orderId}/pay` and the MCP `pay_order` arguments: the
  *  order, the Stripe shared payment token granted for it, and the total the
  *  user approved. A total other than the order's answers
- *  `payment_total_changed` and charges nothing. */
+ *  `payment_total_mismatch` and charges nothing. */
 export const payOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to pay."),
   sharedPaymentToken: z

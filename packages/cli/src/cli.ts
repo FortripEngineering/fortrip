@@ -27,7 +27,6 @@ import {
   usageError,
 } from "./errors.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
-import { terminalQr } from "./qr.ts";
 import { VERSION } from "./version.ts";
 
 /** A global flag as typed: `--help` and `-h`. */
@@ -150,10 +149,10 @@ async function inOrderCurrency(
 ): Promise<void> {
   const [orderId] = parseOptions(spec, rest).positionals as [string];
   const order = unwrap(await authorizedRequest(apiUrl, API.order(orderId), { method: "GET" }));
-  const currency = (order as { price?: { total?: { currency?: unknown } } } | null)?.price?.total?.currency;
+  const currency = (order as { total?: { currency?: unknown } } | null)?.total?.currency;
   if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
     throw new CliError(
-      `Not sent: the order ${orderId} has no price.total.currency in USD or CNY to pay in.`,
+      `Not sent: the order ${orderId} has no total.currency in USD or CNY to pay in.`,
       EXIT.error,
     );
   }
@@ -165,9 +164,9 @@ async function inOrderCurrency(
  *  be in the contract's shape. */
 type ReadOrder = {
   status?: unknown;
-  price?: { total?: { currency?: unknown } };
+  total?: { currency?: unknown };
   payment?: { status?: unknown };
-  cancel?: { available?: unknown; reason?: unknown; penalty?: { currency?: unknown } | null };
+  cancel?: { action?: unknown; penalty?: { currency?: unknown } | null };
 } | null;
 
 /**
@@ -185,12 +184,12 @@ async function cancelOrder(
   const { flag, orderId, close, request } = preview;
   const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
   const read = order as ReadOrder;
-  const closable = read?.cancel?.available === true && read.cancel.reason === "unpaid";
+  const closable = read?.cancel?.action === "close";
   if (!request || (!close && closable)) throw usageError(notCancelled(spec, flag, orderId, order));
   if (close) {
     if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
     if (!closable) {
-      if (read?.cancel?.available === true && read.cancel.reason === "cancellable") {
+      if (read?.cancel?.action === "cancel") {
         throw usageError(
           `Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`${commandInvocation(spec)} ${orderId} ${flag} <amount>\`.`,
         );
@@ -205,7 +204,7 @@ async function cancelOrder(
     return { data, text };
   }
   const penalty = read?.cancel?.penalty?.currency;
-  const currency = typeof penalty === "string" ? penalty : read?.price?.total?.currency;
+  const currency = typeof penalty === "string" ? penalty : read?.total?.currency;
   if (typeof currency !== "string") {
     throw new CliError(`Not sent: the order ${orderId} has no currency to send the penalty in.`, EXIT.error);
   }
@@ -231,11 +230,11 @@ function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: u
   const parsed = orderSchema.safeParse(order);
   const cancel = parsed.success ? parsed.data.cancel : undefined;
   const next =
-    cancel?.available && cancel.reason === "unpaid"
+    cancel?.action === "close"
       ? [
           `Only once the user says they no longer want this order, run \`${commandInvocation(spec)} ${orderId} --close\`.`,
         ]
-      : cancel?.available && cancel.penalty
+      : cancel?.action === "cancel" && cancel.penalty
         ? [
             `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
           ]
@@ -278,19 +277,6 @@ function takeJson(argv: string[]): { json: boolean; argv: string[] } {
   return { json: kept.length < before.length, argv: [...kept, ...after] };
 }
 
-/** The WeChat Pay code of an `orders pay` answer's Alipay or WeChat Pay
- *  entry in `payment.methods`, drawn for the terminal;
- *  null when it isn't one, there is no code, or it doesn't fit. */
-function walletCode(argv: string[], data: unknown): string | null {
-  if (argv[0] !== "orders" || argv[1] !== "pay" || !process.stdout.isTTY) return null;
-  const methods = (data as { payment?: { methods?: unknown } } | null)?.payment?.methods;
-  const wallet = Array.isArray(methods)
-    ? (methods as { id?: unknown; wechatPay?: { qrData?: unknown } }[]).find((m) => m?.id === "stripe_alipay_wechat_pay")
-    : undefined;
-  const qrData = wallet?.wechatPay?.qrData;
-  return typeof qrData === "string" ? terminalQr(qrData, process.stdout.columns) : null;
-}
-
 async function main(): Promise<ExitCode> {
   const { json, argv } = takeJson(process.argv.slice(2));
   try {
@@ -303,8 +289,6 @@ async function main(): Promise<ExitCode> {
         process.stdout.write(`${JSON.stringify(output)}\n`);
       } else {
         process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
-        const code = walletCode(argv, data);
-        if (code) process.stdout.write(`Or scan this WeChat Pay code:\n${code}\n`);
       }
     }
     return EXIT.ok;

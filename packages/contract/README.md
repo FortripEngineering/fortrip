@@ -35,10 +35,9 @@ It exports:
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
   command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP`, `CANCEL_NEXT_STEP`,
-  `PAY_NEXT_STEP` and `WALLET_NEXT_STEP` (`cancelNextStep(surface)`,
-  `payNextStep(surface)` and `walletNextStep(surface)` word the last three for
-  `"mcp"` or `"cli"`);
+  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP`, `CANCEL_NEXT_STEP` and
+  `PAY_NEXT_STEP` (`cancelNextStep(surface)` and `payNextStep(surface)` word
+  the last two for `"mcp"` or `"cli"`);
 - `renderToolResult(tool, data, surface?)` and
   `renderError(envelope, status?, surface?)`, the compact text of a result or
   an error, naming tools (`"mcp"`, the default) or commands and flags

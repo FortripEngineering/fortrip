@@ -26,25 +26,28 @@
                 {
                   "adults": 1,
                   "childrenAges": [],
-                  "guests": null
+                  "guests": null,
+                  "roomType": {
+                    "name": {
+                      "text": "Classic Double",
+                      "locale": "en"
+                    },
+                    "beds": null,
+                    "areaSqm": null,
+                    "maxOccupancy": null,
+                    "window": null
+                  },
+                  "meals": {
+                    "known": false,
+                    "included": null,
+                    "unspecifiedMainMeals": null,
+                    "allInclusive": null,
+                    "guestsCoveredPerRoom": null,
+                    "label": null
+                  }
                 }
               ],
               "specialRequests": null,
-              "room": {
-                "name": {
-                  "text": "Classic Double",
-                  "locale": "en"
-                },
-                "beds": null
-              },
-              "meals": {
-                "known": false,
-                "included": null,
-                "unspecifiedMainMeals": null,
-                "allInclusive": null,
-                "guestsCoveredPerRoom": null,
-                "label": null
-              },
               "cancellation": {
                 "status": "unknown",
                 "asOf": "2026-11-02T10:00:00Z",
@@ -52,6 +55,7 @@
                 "penalties": [],
                 "timeZone": "Europe/Lisbon"
               },
+              "confirmation": null,
               "payAtProperty": {
                 "disclosure": "incomplete",
                 "items": []
@@ -60,28 +64,27 @@
             }
           }
         ],
-        "price": {
-          "total": {
-            "amount": "410.00",
-            "currency": "EUR"
-          }
+        "total": {
+          "amount": "410.00",
+          "currency": "EUR"
         },
         "payment": {
           "status": "unpaid",
           "url": "https://fortrip.ai/stays/book/sb_9f3k2Lx",
           "requiresSignIn": true,
           "expiresAt": "2026-11-02T10:30:00Z",
-          "chargeCurrency": "EUR",
           "localCurrencyAtCheckout": false,
           "localCharge": null,
-          "methods": []
+          "token": null
         },
         "cancel": {
-          "available": false,
-          "reason": "not_confirmed",
+          "action": null,
+          "blockedBy": "website_checkout",
           "penalty": null,
           "refund": null
         },
+        "cancelled": null,
+        "failure": null,
         "manageUrl": "https://fortrip.ai/stays/book/sb_9f3k2Lx"
       },
       {
@@ -123,7 +126,36 @@
                       "firstName": "Tom",
                       "lastName": "Smith"
                     }
-                  ]
+                  ],
+                  "roomType": {
+                    "name": {
+                      "text": "Deluxe King Room",
+                      "locale": "en"
+                    },
+                    "beds": {
+                      "text": "1 king bed",
+                      "locale": "en"
+                    },
+                    "areaSqm": {
+                      "min": 32,
+                      "max": 32
+                    },
+                    "maxOccupancy": 2,
+                    "window": "yes"
+                  },
+                  "meals": {
+                    "known": true,
+                    "included": [
+                      "breakfast"
+                    ],
+                    "unspecifiedMainMeals": 0,
+                    "allInclusive": false,
+                    "guestsCoveredPerRoom": 2,
+                    "label": {
+                      "text": "Breakfast for 2",
+                      "locale": "en"
+                    }
+                  }
                 },
                 {
                   "adults": 2,
@@ -135,33 +167,39 @@
                       "firstName": "Li",
                       "lastName": "Na"
                     }
-                  ]
+                  ],
+                  "roomType": {
+                    "name": {
+                      "text": "Deluxe King Room",
+                      "locale": "en"
+                    },
+                    "beds": {
+                      "text": "1 king bed",
+                      "locale": "en"
+                    },
+                    "areaSqm": {
+                      "min": 32,
+                      "max": 32
+                    },
+                    "maxOccupancy": 2,
+                    "window": "yes"
+                  },
+                  "meals": {
+                    "known": true,
+                    "included": [
+                      "breakfast"
+                    ],
+                    "unspecifiedMainMeals": 0,
+                    "allInclusive": false,
+                    "guestsCoveredPerRoom": 2,
+                    "label": {
+                      "text": "Breakfast for 2",
+                      "locale": "en"
+                    }
+                  }
                 }
               ],
               "specialRequests": null,
-              "room": {
-                "name": {
-                  "text": "Deluxe King Room",
-                  "locale": "en"
-                },
-                "beds": {
-                  "text": "1 king bed",
-                  "locale": "en"
-                }
-              },
-              "meals": {
-                "known": true,
-                "included": [
-                  "breakfast"
-                ],
-                "unspecifiedMainMeals": 0,
-                "allInclusive": false,
-                "guestsCoveredPerRoom": 2,
-                "label": {
-                  "text": "Breakfast for 2",
-                  "locale": "en"
-                }
-              },
               "cancellation": {
                 "status": "free",
                 "asOf": "2026-11-01T09:00:00Z",
@@ -177,6 +215,10 @@
                 ],
                 "timeZone": "Asia/Bangkok"
               },
+              "confirmation": {
+                "mode": "instant",
+                "withinMinutes": null
+              },
               "payAtProperty": {
                 "disclosure": "complete",
                 "items": []
@@ -185,28 +227,27 @@
             }
           }
         ],
-        "price": {
-          "total": {
-            "amount": "1235.50",
-            "currency": "USD"
-          }
+        "total": {
+          "amount": "1235.50",
+          "currency": "USD"
         },
         "payment": {
           "status": "authorized",
           "url": null,
           "requiresSignIn": false,
           "expiresAt": null,
-          "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "methods": []
+          "token": null
         },
         "cancel": {
-          "available": false,
-          "reason": "not_confirmed",
+          "action": null,
+          "blockedBy": "payment_in_progress",
           "penalty": null,
           "refund": null
         },
+        "cancelled": null,
+        "failure": null,
         "manageUrl": "https://fortrip.ai/orders/ord_KataNoLink0000000000"
       },
       {
@@ -246,33 +287,39 @@
                       "firstName": "Tom",
                       "lastName": "Sato"
                     }
-                  ]
+                  ],
+                  "roomType": {
+                    "name": {
+                      "text": "Deluxe King Room",
+                      "locale": "en"
+                    },
+                    "beds": {
+                      "text": "1 king bed",
+                      "locale": "en"
+                    },
+                    "areaSqm": {
+                      "min": 32,
+                      "max": 32
+                    },
+                    "maxOccupancy": 2,
+                    "window": "yes"
+                  },
+                  "meals": {
+                    "known": true,
+                    "included": [
+                      "breakfast"
+                    ],
+                    "unspecifiedMainMeals": 0,
+                    "allInclusive": false,
+                    "guestsCoveredPerRoom": 2,
+                    "label": {
+                      "text": "Breakfast for 2",
+                      "locale": "en"
+                    }
+                  }
                 }
               ],
               "specialRequests": null,
-              "room": {
-                "name": {
-                  "text": "Deluxe King Room",
-                  "locale": "en"
-                },
-                "beds": {
-                  "text": "1 king bed",
-                  "locale": "en"
-                }
-              },
-              "meals": {
-                "known": true,
-                "included": [
-                  "breakfast"
-                ],
-                "unspecifiedMainMeals": 0,
-                "allInclusive": false,
-                "guestsCoveredPerRoom": 2,
-                "label": {
-                  "text": "Breakfast for 2",
-                  "locale": "en"
-                }
-              },
               "cancellation": {
                 "status": "free",
                 "asOf": "2026-11-01T09:00:00Z",
@@ -288,6 +335,10 @@
                 ],
                 "timeZone": "Asia/Shanghai"
               },
+              "confirmation": {
+                "mode": "instant",
+                "withinMinutes": null
+              },
               "payAtProperty": {
                 "disclosure": "complete",
                 "items": []
@@ -296,28 +347,27 @@
             }
           }
         ],
-        "price": {
-          "total": {
-            "amount": "365.00",
-            "currency": "USD"
-          }
+        "total": {
+          "amount": "365.00",
+          "currency": "USD"
         },
         "payment": {
           "status": "unpaid",
           "url": "https://fortrip.ai/booking-status?session_id=cs_test_a1B2c3D4",
           "requiresSignIn": false,
           "expiresAt": "2026-11-01T12:50:00Z",
-          "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
-          "methods": []
+          "token": null
         },
         "cancel": {
-          "available": true,
-          "reason": "unpaid",
+          "action": "close",
+          "blockedBy": null,
           "penalty": null,
           "refund": null
         },
+        "cancelled": null,
+        "failure": null,
         "manageUrl": "https://fortrip.ai/orders/ord_BundAwaiting00000000"
       },
       {
@@ -360,25 +410,28 @@
                       "firstName": "Tom",
                       "lastName": "Costa"
                     }
-                  ]
+                  ],
+                  "roomType": {
+                    "name": {
+                      "text": "Deluxe King Room",
+                      "locale": "en"
+                    },
+                    "beds": null,
+                    "areaSqm": null,
+                    "maxOccupancy": null,
+                    "window": null
+                  },
+                  "meals": {
+                    "known": true,
+                    "included": [],
+                    "unspecifiedMainMeals": 0,
+                    "allInclusive": false,
+                    "guestsCoveredPerRoom": null,
+                    "label": null
+                  }
                 }
               ],
               "specialRequests": null,
-              "room": {
-                "name": {
-                  "text": "Deluxe King Room",
-                  "locale": "en"
-                },
-                "beds": null
-              },
-              "meals": {
-                "known": true,
-                "included": [],
-                "unspecifiedMainMeals": 0,
-                "allInclusive": false,
-                "guestsCoveredPerRoom": null,
-                "label": null
-              },
               "cancellation": {
                 "status": "partial_penalty",
                 "asOf": "2026-10-24T08:00:00Z",
@@ -400,6 +453,10 @@
                   }
                 ],
                 "timeZone": "Asia/Shanghai"
+              },
+              "confirmation": {
+                "mode": "on_request",
+                "withinMinutes": 60
               },
               "payAtProperty": {
                 "disclosure": "complete",
@@ -423,28 +480,25 @@
             }
           }
         ],
-        "price": {
-          "total": {
-            "amount": "366.00",
-            "currency": "USD"
-          }
+        "total": {
+          "amount": "366.00",
+          "currency": "USD"
         },
         "payment": {
           "status": "paid",
           "url": null,
           "requiresSignIn": false,
           "expiresAt": null,
-          "chargeCurrency": "USD",
           "localCurrencyAtCheckout": true,
           "localCharge": {
             "amount": "339.80",
             "currency": "EUR"
           },
-          "methods": []
+          "token": null
         },
         "cancel": {
-          "available": true,
-          "reason": "cancellable",
+          "action": "cancel",
+          "blockedBy": null,
           "penalty": {
             "amount": "120.00",
             "currency": "USD"
@@ -454,6 +508,8 @@
             "currency": "USD"
           }
         },
+        "cancelled": null,
+        "failure": null,
         "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"
       }
     ],

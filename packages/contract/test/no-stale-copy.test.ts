@@ -18,8 +18,6 @@ import {
   PRESENTATION_HINT,
   type RenderSurface,
   TOOLS,
-  WALLET_NEXT_STEP,
-  walletNextStep,
 } from "../src/tools.ts";
 
 /*
@@ -57,6 +55,12 @@ const STALE: readonly RegExp[] = [
   /order_attempts_exhausted/,
   /ordersPerStay/,
   /[Oo]rders per stay/,
+  // Contract 6: agents open no Alipay or WeChat Pay payment, and the total
+  // an order refuses has not changed.
+  /stripe_alipay_wechat_pay/,
+  /Pay with Alipay or WeChat Pay/,
+  /wechatPay/,
+  /payment_total_changed/,
 ];
 
 /** Only the token is USD-only: "in USD" is said of it alone. */
@@ -72,7 +76,6 @@ const SURFACES = Object.keys({
 } satisfies Record<GuideSurface, true>) as GuideSurface[];
 const TOPICS = Object.keys({ main: true, planning: true } satisfies Record<GuideTopic, true>) as GuideTopic[];
 const RENDER_SURFACES = Object.keys({ mcp: true, cli: true } satisfies Record<RenderSurface, true>) as RenderSurface[];
-const TOKEN_METHOD = "stripe_shared_payment_token";
 
 type Text = { where: string; text: string; usdAllowed?: boolean };
 
@@ -89,22 +92,13 @@ function guideTexts(where: string, markdown: string): Text[] {
   ];
 }
 
-/** Every description in a JSON schema; those of the token's payment method
- *  entry may say "in USD". */
-function schemaTexts(where: string, node: unknown, inToken = false): Text[] {
-  if (Array.isArray(node)) return node.flatMap((item, n) => schemaTexts(`${where}[${n}]`, item, inToken));
+/** Every description in a JSON schema. */
+function schemaTexts(where: string, node: unknown): Text[] {
+  if (Array.isArray(node)) return node.flatMap((item, n) => schemaTexts(`${where}[${n}]`, item));
   if (typeof node !== "object" || node === null) return [];
   const record = node as Record<string, unknown>;
-  const id = (record.properties as Record<string, { const?: unknown }> | undefined)?.id;
-  const token = inToken || id?.const === TOKEN_METHOD;
-  const own: Text[] =
-    typeof record.description === "string"
-      ? [{ where, text: record.description, usdAllowed: token }]
-      : [];
-  return [
-    ...own,
-    ...Object.entries(record).flatMap(([key, value]) => schemaTexts(`${where}.${key}`, value, token)),
-  ];
+  const own: Text[] = typeof record.description === "string" ? [{ where, text: record.description }] : [];
+  return [...own, ...Object.entries(record).flatMap(([key, value]) => schemaTexts(`${where}.${key}`, value))];
 }
 
 /** Minimal details for each code that has them; the rest send none. */
@@ -120,7 +114,7 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
   offer_changed: {
     changes: [
       {
-        field: "price",
+        field: "total",
         previous: { amount: "300.00", currency: "USD" },
         current: OFFER.price.total,
         worse: true,
@@ -130,12 +124,13 @@ const DETAILS: Partial<Record<ErrorCode, unknown>> = {
   },
   offer_already_ordered: { orderId: ORDER },
   order_in_progress: { orderId: ORDER },
-  order_not_cancellable: { reason: "not_confirmed" },
+  order_not_cancellable: { cancel: { action: null, blockedBy: "confirming", penalty: null, refund: null } },
   order_not_payable: { orderId: ORDER, status: "confirmed" },
   payment_in_progress: { orderId: ORDER },
-  payment_total_changed: { orderId: ORDER, total: { amount: "365.00", currency: "USD" } },
+  payment_total_mismatch: { orderId: ORDER, total: { amount: "365.00", currency: "USD" } },
   payment_credential_invalid: { reason: "currency" },
   payment_declined: { declineCode: null },
+  payment_method_unavailable: { reason: "payment_open_on_page" },
   destination_ambiguous: errorDetails("error-destination-ambiguous-suzhou"),
   destination_not_found: errorDetails("error-not-a-locality-patong"),
   search_too_broad: errorDetails("error-search-too-broad-bali"),
@@ -222,12 +217,10 @@ function agentSources(): Record<string, Text[]> {
       { where: "ORDER_NEXT_STEP", text: ORDER_NEXT_STEP },
       { where: "CANCEL_NEXT_STEP", text: CANCEL_NEXT_STEP },
       { where: "PAY_NEXT_STEP", text: PAY_NEXT_STEP, usdAllowed: true },
-      { where: "WALLET_NEXT_STEP", text: WALLET_NEXT_STEP },
       { where: "PRESENTATION_HINT", text: PRESENTATION_HINT },
       ...RENDER_SURFACES.flatMap((surface) => [
         { where: `cancelNextStep(${surface})`, text: cancelNextStep(surface) },
         { where: `payNextStep(${surface})`, text: payNextStep(surface), usdAllowed: true },
-        { where: `walletNextStep(${surface})`, text: walletNextStep(surface) },
       ]),
     ],
     guide: SURFACES.flatMap((surface) =>
@@ -256,7 +249,6 @@ describe("no stale copy in what agents read", () => {
     ]) {
       assert.match(texts.find((t) => t.where === where)?.text ?? "", IN_USD, where);
     }
-    assert.ok(texts.some((t) => t.usdAllowed && t.where.startsWith("book_hotel output") && IN_USD.test(t.text)));
   });
 
   it("states none of the old facts", () => {

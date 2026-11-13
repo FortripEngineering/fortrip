@@ -40,25 +40,28 @@
                   "firstName": "Tom",
                   "lastName": "Costa"
                 }
-              ]
+              ],
+              "roomType": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": null,
+                "areaSqm": null,
+                "maxOccupancy": null,
+                "window": null
+              },
+              "meals": {
+                "known": true,
+                "included": [],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              }
             }
           ],
           "specialRequests": "Late arrival, around 23:00. A quiet room if possible.",
-          "room": {
-            "name": {
-              "text": "Deluxe King Room",
-              "locale": "en"
-            },
-            "beds": null
-          },
-          "meals": {
-            "known": true,
-            "included": [],
-            "unspecifiedMainMeals": 0,
-            "allInclusive": false,
-            "guestsCoveredPerRoom": null,
-            "label": null
-          },
           "cancellation": {
             "status": "partial_penalty",
             "asOf": "2026-10-24T08:00:00Z",
@@ -80,6 +83,10 @@
               }
             ],
             "timeZone": "Asia/Shanghai"
+          },
+          "confirmation": {
+            "mode": "on_request",
+            "withinMinutes": 60
           },
           "payAtProperty": {
             "disclosure": "complete",
@@ -103,28 +110,25 @@
         }
       }
     ],
-    "price": {
-      "total": {
-        "amount": "366.00",
-        "currency": "USD"
-      }
+    "total": {
+      "amount": "366.00",
+      "currency": "USD"
     },
     "payment": {
       "status": "paid",
       "url": null,
       "requiresSignIn": false,
       "expiresAt": null,
-      "chargeCurrency": "USD",
       "localCurrencyAtCheckout": true,
       "localCharge": {
         "amount": "339.80",
         "currency": "EUR"
       },
-      "methods": []
+      "token": null
     },
     "cancel": {
-      "available": true,
-      "reason": "cancellable",
+      "action": "cancel",
+      "blockedBy": null,
       "penalty": {
         "amount": "120.00",
         "currency": "USD"
@@ -134,6 +138,8 @@
         "currency": "USD"
       }
     },
+    "cancelled": null,
+    "failure": null,
     "manageUrl": "https://fortrip.ai/orders/ord_LakeConfirmed0000000"
   }
 }

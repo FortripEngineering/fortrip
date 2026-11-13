@@ -35,31 +35,37 @@
                 "firstName": "Tom",
                 "lastName": "Costa"
               }
-            ]
+            ],
+            "roomType": {
+              "name": {
+                "text": "Standard Double Room",
+                "locale": null
+              },
+              "beds": {
+                "text": "1 double bed",
+                "locale": null
+              },
+              "areaSqm": {
+                "min": 18,
+                "max": 18
+              },
+              "maxOccupancy": 2,
+              "window": "yes"
+            },
+            "meals": {
+              "known": true,
+              "included": [],
+              "unspecifiedMainMeals": 0,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": null,
+              "label": {
+                "text": "Room only",
+                "locale": "en"
+              }
+            }
           }
         ],
         "specialRequests": null,
-        "room": {
-          "name": {
-            "text": "Standard Double Room",
-            "locale": null
-          },
-          "beds": {
-            "text": "1 double bed",
-            "locale": null
-          }
-        },
-        "meals": {
-          "known": true,
-          "included": [],
-          "unspecifiedMainMeals": 0,
-          "allInclusive": false,
-          "guestsCoveredPerRoom": null,
-          "label": {
-            "text": "Room only",
-            "locale": "en"
-          }
-        },
         "cancellation": {
           "status": "free",
           "asOf": "2027-02-20T08:04:12Z",
@@ -74,6 +80,10 @@
             }
           ],
           "timeZone": "Asia/Tokyo"
+        },
+        "confirmation": {
+          "mode": "instant",
+          "withinMinutes": null
         },
         "payAtProperty": {
           "disclosure": "complete",
@@ -97,27 +107,26 @@
       }
     }
   ],
-  "price": {
-    "total": {
-      "amount": "132.40",
-      "currency": "USD"
-    }
+  "total": {
+    "amount": "132.40",
+    "currency": "USD"
   },
   "payment": {
     "status": "authorized",
     "url": null,
     "requiresSignIn": false,
     "expiresAt": null,
-    "chargeCurrency": "USD",
     "localCurrencyAtCheckout": false,
     "localCharge": null,
-    "methods": []
+    "token": null
   },
   "cancel": {
-    "available": false,
-    "reason": "in_progress",
+    "action": null,
+    "blockedBy": "confirming",
     "penalty": null,
     "refund": null
   },
+  "cancelled": null,
+  "failure": null,
   "manageUrl": "https://fortrip.ai/orders/ord_Wr4tY7uI0oPa3SdF6gHj"
 }

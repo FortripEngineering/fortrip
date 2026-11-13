@@ -24,8 +24,6 @@ import {
   strictOutput,
 } from "@fortrip/agent-contract";
 
-import { terminalQr } from "../src/qr.ts";
-
 const run = promisify(execFile);
 
 /** What the fake API answers next, and every request it has received. */
@@ -150,10 +148,10 @@ describe("requests", () => {
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.5", currency: "USD" } });
   });
 
-  it("orders cancel --max-penalty takes cancel.penalty's currency, else price.total's, else sends nothing", async () => {
+  it("orders cancel --max-penalty takes cancel.penalty's currency, else the total's, else sends nothing", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
     order.cancel.penalty = { amount: "12.50", currency: "CNY" };
-    order.price.total = { amount: "880.00", currency: "CNY" };
+    order.total = { amount: "880.00", currency: "CNY" };
     replies = [{ status: 200, body: order }, reply];
     const cny = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(cny.code, 0, cny.stderr);
@@ -161,13 +159,13 @@ describe("requests", () => {
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
 
     requests = [];
-    order.cancel.penalty = null;
+    order.cancel = { action: null, blockedBy: "confirming", penalty: null, refund: null };
     replies = [{ status: 200, body: order }, reply];
     assert.equal((await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"])).code, 0);
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
 
     requests = [];
-    delete order.price.total.currency;
+    delete order.total.currency;
     replies = [{ status: 200, body: order }, reply];
     const none = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(none.code, 1);
@@ -178,7 +176,7 @@ describe("requests", () => {
   it("orders cancel --max-penalty on a confirmed order in another currency posts the penalty in that currency", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
     order.cancel.penalty = { amount: "12.50", currency: "EUR" };
-    order.price.total = { amount: "880.00", currency: "EUR" };
+    order.total = { amount: "880.00", currency: "EUR" };
     replies = [{ status: 200, body: order }, reply];
     const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(code, 0, stderr);
@@ -257,7 +255,7 @@ describe("requests", () => {
     closed.status = "expired";
     closed.payment.url = null;
     closed.payment.expiresAt = null;
-    closed.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    closed.cancel = { action: null, blockedBy: "expired", penalty: null, refund: null };
     replies = [{ status: 200, body: data }, { status: 200, body: closed }];
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 0, stderr);
@@ -303,7 +301,7 @@ describe("requests", () => {
     order.status = "expired";
     order.payment.url = null;
     order.payment.expiresAt = null;
-    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    order.cancel = { action: null, blockedBy: "expired", penalty: null, refund: null };
     reply = { status: 200, body: order };
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 0, stderr);
@@ -313,13 +311,16 @@ describe("requests", () => {
 
   it("orders cancel --close on an unpaid order it can't close prints its Cancel line and exits 1", async () => {
     const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
-    for (const [requiresSignIn, line] of [
-      [true, "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC"],
-      [false, "Cancel: not now: a payment is under way; read the order again shortly"],
+    for (const [blockedBy, line] of [
+      [
+        "website_checkout",
+        "Cancel: not available: it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there",
+      ],
+      ["payment_in_progress", "Cancel: not available: a payment is under way; read the order again shortly"],
     ] as const) {
       requests = [];
-      order.payment.requiresSignIn = requiresSignIn;
+      order.cancel = { action: null, blockedBy, penalty: null, refund: null };
+      order.payment.requiresSignIn = blockedBy === "website_checkout";
       reply = { status: 200, body: order };
       const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
       assert.equal(code, 1, line);
@@ -332,7 +333,7 @@ describe("requests", () => {
 
   it("orders cancel --close on a paid order that can't be cancelled prints its Cancel line, exits 1, and offers no --max-penalty", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
-    order.cancel = { available: false, reason: "non_refundable", penalty: null, refund: null };
+    order.cancel = { action: null, blockedBy: "non_refundable", penalty: null, refund: null };
     reply = { status: 200, body: order };
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 1);
@@ -464,8 +465,8 @@ describe("requests", () => {
 
   it("orders pay --total takes the order's currency", async () => {
     const { data } = await fixture("order-awaiting-payment");
-    const order = structuredClone(data) as { price: { total: Record<string, unknown> } };
-    order.price.total = { amount: "880.00", currency: "CNY" };
+    const order = structuredClone(data) as { total: Record<string, unknown> };
+    order.total = { amount: "880.00", currency: "CNY" };
     replies = [{ status: 200, body: order }, { status: 200, body: {} }];
     const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
     assert.equal(code, 0, stderr);
@@ -486,7 +487,7 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("orders pay on an order without a price currency exits 1 and posts nothing", async () => {
+  it("orders pay on an order without a total currency exits 1 and posts nothing", async () => {
     replies = [{ status: 200, body: { id: ORDER } }, { status: 200, body: {} }];
     const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
     assert.equal(code, 1);
@@ -529,30 +530,24 @@ describe("output", () => {
     assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
   });
 
-  // The CLI no longer opens a wallet payment (no --method); it still draws
-  // the code of an answer that holds one.
-  it("orders pay prints an open wallet entry's links and, on a wide TTY, its code", async () => {
-    const { data } = await fixture("order-wallets-open");
-    const read = { status: 200, body: (await fixture("order-awaiting-payment")).data };
+  // An order holds no Alipay or WeChat Pay payment for the CLI to draw: the
+  // answer is the order's text and nothing after it, on a TTY too.
+  it("orders pay prints the paid order's text, and no code after it", async () => {
+    const { data } = await fixture("order-confirmed");
+    const read = { status: 200, body: (await fixture("order-payable-by-token")).data };
     const args = ["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "365.00"];
-    replies = [read, { status: 200, body: data }];
-    // The spawned CLI has no TTY, so the code stays out and the links stay in.
-    const { code, stdout, stderr } = await cli(args);
-    assert.equal(code, 0, stderr);
-    assert.deepEqual(requests[1]?.body, {
-      sharedPaymentToken: "spt_1TestToken0123456789",
-      total: { amount: "365.00", currency: "USD" },
-    });
-    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
-    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/alipay/);
-    assert.ok(!stdout.includes("█"));
-    // On a wide TTY, the code drawn is the wallet entry's wechatPay.qrData.
-    const { qrData } = (data as { payment: { methods: { wechatPay: { qrData: string } }[] } }).payment.methods[0]!
-      .wechatPay;
-    replies = [read, { status: 200, body: data }];
-    const tty = await cli(args, {}, [WIDE_TTY]);
-    assert.equal(tty.code, 0, tty.stderr);
-    assert.ok(tty.stdout.endsWith(`\nOr scan this WeChat Pay code:\n${terminalQr(qrData, 200)}\n`), tty.stdout);
+    for (const preload of [[], [WIDE_TTY]]) {
+      requests = [];
+      replies = [read, { status: 200, body: data }];
+      const { code, stdout, stderr } = await cli(args, {}, preload);
+      assert.equal(code, 0, stderr);
+      assert.deepEqual(requests[1]?.body, {
+        sharedPaymentToken: "spt_1TestToken0123456789",
+        total: { amount: "365.00", currency: "USD" },
+      });
+      assert.equal(stdout, `${renderToolResult("pay_order", data, "cli")}\n`);
+      assert.ok(!stdout.includes("█"));
+    }
   });
 
   it("orders pay --wallet and --method are no flags: each exits 2 and sends nothing", async () => {

@@ -75,16 +75,16 @@ describe("stale statements stay fixed", () => {
     assert.match(pageText("/payments"), /Alipay or WeChat Pay/);
   });
 
-  it("the payment errors cover Alipay and WeChat Pay (checked against the pay handler)", () => {
-    // payment_total_changed: the wallet path checks the total before it opens.
-    assert.match(meaning("payment_total_changed"), /same token/);
-    assert.match(meaning("payment_total_changed"), /Alipay or WeChat Pay/);
-    assert.match(meaning("payment_total_changed"), /charged nothing/);
-    // payment_method_unavailable: the wallet's own refusals, and a token
-    // refused while a wallet payment is open.
-    assert.match(meaning("payment_method_unavailable"), /`method`/);
-    assert.match(meaning("payment_method_unavailable"), /Alipay or WeChat Pay/);
-    assert.match(meaning("payment_method_unavailable"), /`payment\.methods`/);
+  it("the payment errors name the token and the payment page, never a method agents no longer have", () => {
+    assert.match(meaning("payment_total_mismatch"), /same token/);
+    assert.match(meaning("payment_total_mismatch"), /hasn't changed/);
+    assert.match(meaning("payment_total_mismatch"), /charged nothing/);
+    // payment_method_unavailable: a token refused while the user pays on the
+    // payment page, among its reasons.
+    assert.match(meaning("payment_method_unavailable"), /`payment_open_on_page` \(the user has a payment open on the order's payment page/);
+    for (const code of ["payment_total_mismatch", "payment_method_unavailable"]) {
+      assert.doesNotMatch(meaning(code), /`method`|Alipay|WeChat|`payment\.methods`/, code);
+    }
   });
 
   it("no page states the access token's lifetime or the order reference's length", () => {

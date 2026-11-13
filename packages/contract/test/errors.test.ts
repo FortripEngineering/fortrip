@@ -28,7 +28,7 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   order_not_cancellable: [[409], false],
   order_not_payable: [[409], false],
   payment_in_progress: [[409], true],
-  payment_total_changed: [[409], false],
+  payment_total_mismatch: [[409], false],
   payment_credential_invalid: [[422], false],
   payment_declined: [[402], false],
   payment_action_required: [[402], false],
@@ -44,6 +44,7 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   ordering_paused: [[503], true],
   service_unavailable: [[503], true],
   supplier_unavailable: [[503, 504], true],
+  client_outdated: [[426], false],
   internal: [[500], false],
 };
 
@@ -67,6 +68,21 @@ describe("currency_unavailable", () => {
     assert.deepEqual(Object.keys(ERROR_DETAILS.currency_unavailable.shape), ["currency"]);
     assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "CNY" }).success);
     assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "EUR" }).success);
+  });
+});
+
+describe("client_outdated", () => {
+  it("is a 426 no retry can fix, with no details: its message is the whole of it", () => {
+    assert.deepEqual(ERROR_CODES.client_outdated, { status: [426], retryable: false });
+    assert.equal(ERROR_DETAILS.client_outdated, null);
+  });
+});
+
+describe("payment_total_mismatch", () => {
+  it("replaces payment_total_changed: the total sent is not the order's, which has not changed", () => {
+    assert.ok(!("payment_total_changed" in ERROR_CODES));
+    assert.deepEqual(ERROR_CODES.payment_total_mismatch, { status: [409], retryable: false });
+    assert.deepEqual(Object.keys(ERROR_DETAILS.payment_total_mismatch.shape), ["orderId", "total"]);
   });
 });
 
@@ -120,7 +136,6 @@ describe("LIMITS and friends", () => {
       payMinMinutesLeft: 15,
       payCutoffMinutes: 2,
       tokensPerOrder: 5,
-      wechatCodeMinutes: 120,
     });
     assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");

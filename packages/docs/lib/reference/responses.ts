@@ -136,7 +136,7 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
       "hotels[0].offers[0].confirmation.mode",
     ],
   },
-  order: { answer: order, paths: ["orderId", "reference", "status", "price.total", "payment.url", "payment.expiresAt"] },
+  order: { answer: order, paths: ["orderId", "reference", "status", "total", "payment.url", "payment.expiresAt"] },
   "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },

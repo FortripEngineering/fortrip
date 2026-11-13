@@ -28,19 +28,7 @@ An order whose `payment.methods` has the `stripe_shared_payment_token` entry (in
 2. Request the token from the user's Link wallet with that entry's `handler.config.business_profile` and its `limits`: `maxAmount` (in cents), `currency` and `expiresAt`.
 3. {{#if claude-skill}}Call{{/if}}{{#if cli}}Run{{/if}} `{{tool:orders pay}}` with the token and the order's `price.total`{{#if cli}} (`--token`, `--total`){{/if}}{{#if claude-skill}}, the token as `sharedPaymentToken` or in UCP's `payment.instruments`{{/if}}. The order is then `confirming`, its payment `authorized`: check it as after payment.
 
-The charge is in USD: a card in another currency may add a foreign transaction fee. Once `{{tool:orders pay}}` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_changed` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with that entry's `limits`. `service_unavailable`: call `{{tool:orders pay}}` again with the same token, never a new one. A token pays one order only.
-
-## Paying with Alipay or WeChat Pay
-
-An order whose result text has the line "Pay with Alipay or WeChat Pay" can be paid in the user's Alipay or WeChat wallet, with no token. {{#if claude-skill}}Call{{/if}}{{#if cli}}Run{{/if}} `{{tool:orders pay}}` {{#if claude-skill}}with `method` `stripe_alipay_wechat_pay`{{/if}}{{#if cli}}the way that line shows{{/if}} and the order's `price.total`, only after the user has confirmed.
-
-1. Confirm the order with the user as before giving the payment link: its total and currency, the stay with each room's guests, the contact, any special requests and every term, and a clear yes.
-2. Then show the `stripe_alipay_wechat_pay` entry of `payment.methods`: the WeChat Pay code as an image if you can, and both links (WeChat Pay and Alipay). The user pays once, by either. Alipay and WeChat Pay charge at once; if the hotel can't confirm, the payment is refunded in full. The total is in the order's currency, and the wallets show it in yuan at their rate.
-3. Check the order with `{{tool:orders get}}` until it isn't `awaiting_payment`.
-
-A WeChat Pay code expires {{limit:wechatCodeMinutes}} minutes after it is made, and goes dead earlier if the user opens the Alipay link instead. Then that entry's `wechatPay.qrData` is null: tell the user to open the WeChat link again, or {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again for a new code.
-
-WeChat can't scan a code shown on the same phone's screen. Offer both ways, since you can't tell which device the user is on: save the image and scan it from the album (WeChat, then Scan, then Album), or open the WeChat link on another screen; on a phone, the Alipay link opens the Alipay app.
+The charge is in USD: a card in another currency may add a foreign transaction fee. Once `{{tool:orders pay}}` succeeds, `payment.url` stops working; a payment that fails leaves the link open. `payment_total_mismatch` means the total sent isn't the order's (`details.total`); the order's total hasn't changed: confirm it with the user, then {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again with it and the same token. `payment_declined`: the user picks another payment method in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with that entry's `limits`. `service_unavailable`: call `{{tool:orders pay}}` again with the same token, never a new one. A token pays one order only.
 
 ## After payment
 

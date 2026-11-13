@@ -31,7 +31,7 @@ test("each limit row says what it limits and shows its value", () => {
   assert.equal(row("Nights per stay")?.[1], "15");
   assert.equal(row("Search radius")?.[1], "1–80,000 m, default 8,000 m");
   assert.equal(row("Token payment")?.[1], "up to $500");
-  assert.equal(row("WeChat Pay code")?.[1], "120 minutes");
+  assert.equal(row("WeChat Pay code"), undefined);
   assert.equal(row("Time left to pay")?.[1], `${LIMITS.payCutoffMinutes} minutes`);
 });
 
