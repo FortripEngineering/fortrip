@@ -50,7 +50,7 @@ A region that isn't enabled isn't matched by its name, so the name can still mat
 
 ## Localities [#localities]
 
-A search over an area lists its `localities`: the <Fact path="LIMITS.localitiesShown" /> towns with the most matching hotels, each gathering the hotels near it. Each has its `count` in this search, its `total` anywhere, and up to <Fact path="SEARCH_RULES.hubIncludes" /> places it `includes` ("Mestre, incl. Venice"). Search one as `{ kind: "locality", placeId }`: it returns exactly its `total`.
+A search over an area lists its `localities`: the <Fact path="LIMITS.localitiesShown" /> towns with the most matching hotels, each gathering the hotels near it. Each has its `count` in this search, its `total` anywhere, and up to <Fact path="SEARCH_RULES.localityIncludes" /> places it `includes` ("Mestre, incl. Venice"). Search one as `{ kind: "locality", placeId }`: it returns exactly its `total`.
 
 A price sort or price filter prices up to <Fact path="LIMITS.poolLimit" /> hotels. Over a radius with more, the nearest are priced and the note `pool_limited` gives the distance covered. Over an area or text with more, the answer is `search_too_broad` with the localities to choose from.
 
