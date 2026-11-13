@@ -248,6 +248,12 @@ describe("misplacedKeys: a key this release renamed", () => {
     const other = z.strictObject({ contact: z.strictObject({ label: z.string() }) });
     const value = { contact: { label: "x", firstName: "Wei" } };
     assert.deepEqual(misplacedKeys(other, other.safeParse(value).error?.issues ?? [], value), []);
+    // And it is the contact's key: the same key in another object of an input that has contact.name says nothing.
+    const two = z.strictObject({ contact: z.strictObject({ name: z.string() }), billing: z.strictObject({ label: z.string() }) });
+    const elsewhere = { contact: { name: "Wei Zhang" }, billing: { label: "x", firstName: "Wei" } };
+    assert.deepEqual(misplacedKeys(two, two.safeParse(elsewhere).error?.issues ?? [], elsewhere), []);
+    const there = { contact: { name: "Wei Zhang", firstName: "Wei" }, billing: { label: "x" } };
+    assert.equal(misplacedKeys(two, two.safeParse(there).error?.issues ?? [], there)[0]?.renamed, "contact takes one name, the full name: send it as /contact/name");
   });
 });
 
