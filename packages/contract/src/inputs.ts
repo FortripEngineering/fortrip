@@ -387,7 +387,8 @@ const hotelIdsError = `hotelIds must list 1 to ${LIMITS.offersHotels} distinct h
  * undefined when it gave none; `hotelsWithOffers` counts the call's hotels
  * that have any offer. The limit (the default one when none was given) holds
  * while every such hotel can have it within the call's budget; past that the
- * budget is split evenly among them, never under the floor. The budget is
+ * budget is split evenly among them (a call has at most
+ * `LIMITS.offersHotels` hotels, so never under 3 each). The budget is
  * smaller when no limit was given.
  */
 export function offersPerHotel(
@@ -398,10 +399,7 @@ export function offersPerHotel(
     limitPerHotel === undefined
       ? LIMITS.offersPerCallDefault
       : LIMITS.offersPerCallMax;
-  const share = Math.max(
-    LIMITS.offersPerHotelFloor,
-    Math.floor(budget / hotelsWithOffers),
-  );
+  const share = Math.max(1, Math.floor(budget / hotelsWithOffers));
   return Math.min(limitPerHotel ?? LIMITS.offersPerHotelDefault, share);
 }
 
@@ -431,7 +429,7 @@ export const hotelOffersInput = strictInput({
   limitPerHotel: wholeNumber("limitPerHotel", 1, LIMITS.offersPerHotelMax)
     .optional()
     .describe(
-      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Left out: ${LIMITS.offersPerHotelDefault} for each hotel that has offers while that is at most ${LIMITS.offersPerCallDefault} offers in all, otherwise ${LIMITS.offersPerCallDefault} split evenly among those hotels, never under ${LIMITS.offersPerHotelFloor} each (5 hotels: ${offersPerHotel(undefined, 5)} each; ${LIMITS.offersHotels} hotels: ${offersPerHotel(undefined, LIMITS.offersHotels)} each). Given: that many for each hotel while that is at most ${LIMITS.offersPerCallMax} offers in all, otherwise ${LIMITS.offersPerCallMax} split evenly the same way.`,
+      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Left out: ${LIMITS.offersPerHotelDefault} for each hotel that has offers while that is at most ${LIMITS.offersPerCallDefault} offers in all, otherwise ${LIMITS.offersPerCallDefault} split evenly among those hotels (5 hotels: ${offersPerHotel(undefined, 5)} each; ${LIMITS.offersHotels} hotels: ${offersPerHotel(undefined, LIMITS.offersHotels)} each). Given: that many for each hotel while that is at most ${LIMITS.offersPerCallMax} offers in all, otherwise ${LIMITS.offersPerCallMax} split evenly the same way.`,
     ),
   locale: locale.optional(),
   currency: oneOf("currency", CURRENCIES)
@@ -477,15 +475,20 @@ function guestName(name: string) {
 
 const contactNameError = `name must be text of 1 to ${LIMITS.contactName} characters`;
 
-/** The contact's name: one field, in any script, trimmed. */
+/** The contact's name: one field, in any script, trimmed, every run of
+ *  whitespace one space, and not only invisible characters. */
 const contactName = z
   .string({ error: contactNameError })
   .trim()
+  .overwrite((value) => value.replace(/\s+/g, " "))
   .min(1, { error: contactNameError })
   .max(LIMITS.contactName, { error: contactNameError })
+  // Empty is `min`'s to report; this is for a name with nothing to see.
+  .refine((value) => value === "" || value.replace(/[\p{Cf}\s]/gu, "") !== "", {
+    error: contactNameError,
+  })
   .refine((value) => !containsCardNumber(value), {
     error: CARD_NUMBER_MESSAGE,
-    abort: true,
   });
 
 const emailError = "email must be an email address";
@@ -605,7 +608,10 @@ const cancelModeError =
 export const cancelOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to cancel."),
   close: z
-    .literal(true, { error: "close must be true" })
+    .literal(true, {
+      error:
+        "close must be true to close an unpaid order; leave it out when cancelling a paid order with maximumPenalty",
+    })
     .optional()
     .describe(
       "Send true to close an unpaid order: nothing is charged. Send exactly one of close and maximumPenalty.",

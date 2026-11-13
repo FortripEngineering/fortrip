@@ -23,7 +23,7 @@ function hints(schema: z.ZodType, value: unknown): Record<string, string[]> {
   const result = schema.safeParse(value);
   assert.equal(result.success, false, JSON.stringify(value));
   return Object.fromEntries(
-    misplacedKeys(schema, result.error?.issues ?? []).map(({ path, belongsAt }) => [
+    misplacedKeys(schema, result.error?.issues ?? [], value).map(({ path, belongsAt }) => [
       pointer(path),
       belongsAt.map(pointer),
     ]),
@@ -158,6 +158,13 @@ describe("misplacedKeys: offers and search", () => {
       "/radiusMeters": ["/destination/radiusMeters"],
       "/lat": ["/destination/location/lat"],
     });
+  });
+
+  it("follows only the variant the sent discriminator selects", () => {
+    const destination = { kind: "place_name", name: "Tokyo", countryCode: "JP", lat: 35, lng: 139 };
+    const result = searchHotelsInput.safeParse({ destination });
+    assert.equal(result.success, false);
+    assert.deepEqual(hints(searchHotelsInput, { destination }), {});
   });
 
   it("says nothing for a key that another variant has at the same place", () => {
