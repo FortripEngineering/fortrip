@@ -1,5 +1,5 @@
 {
-  "tool": "book_hotel",
+  "tool": "create_order",
   "data": {
     "orderId": "ord_BundAwaiting00000000",
     "reference": "FT-7KQ2MX",

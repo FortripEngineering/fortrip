@@ -35,14 +35,16 @@ It exports:
   `parseOpen`, a parser that keeps unknown fields and values;
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
-  command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP`, `CANCEL_NEXT_STEP` and
-  `PAY_NEXT_STEP` (`cancelNextStep(surface)` and `payNextStep(surface)` word
-  the last two for `"mcp"` or `"cli"`);
+  command as it is typed (`fortrip hotels search`), `TOOLS`, the MCP
+  tools, and `SERVER_INFO`, what an MCP server for Fortrip says of itself;
 - `renderToolResult(tool, data, surface?)` and
-  `renderError(envelope, status?, surface?)`, the compact text of a result or
+  `renderError(envelope, status?, surface?)`, the whole text of a result or
   an error, naming tools (`"mcp"`, the default) or commands and flags
-  (`"cli"`), and `renderGuide(surface, topic)`, the agent
+  (`"cli"`): an MCP result is this one text block, with nothing added. The
+  rules a result ends with are exported too (`ORDER_NEXT_STEP`,
+  `CANCEL_NEXT_STEP`, `PAY_NEXT_STEP`, `PRESENTATION_HINT`, and
+  `cancelNextStep(surface)` and `payNextStep(surface)`, which word two of
+  them for `"mcp"` or `"cli"`), and `renderGuide(surface, topic)`, the agent
   guide as Markdown for `"mcp"`, `"claude-skill"` or `"cli"`;
 - field rules such as `containsCardNumber`, the guest-name rule and the date
   helpers, and `CONTRACT_VERSION`.

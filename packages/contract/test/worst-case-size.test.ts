@@ -12,8 +12,8 @@ import { PRESENTATION_HINT } from "../src/tools.ts";
 
 /*
  * The largest offers result a call can answer (spec D5), measured as the
- * text a model reads: the rendered result and the presentation hint an MCP
- * result ends with. In characters, since tokens cannot be counted offline.
+ * text a model reads: the whole MCP text, which ends with the presentation
+ * hint. In characters, since tokens cannot be counted offline.
  * The offers are the fixture's longest, every hotel also says what it left
  * out, and the counts come from `offersPerHotel` and `LIMITS`, so a change
  * of the budget is measured too.
@@ -56,7 +56,8 @@ function size(data: HotelOffersResult): number {
   strictOutput(hotelOffersResult).parse(data);
   const text = renderToolResult("get_hotel_offers", data);
   assert.equal(text.split("\n").filter((line) => /^\d+\. Offer off_/.test(line)).length, data.hotels.flatMap((h) => h.offers).length);
-  return `${text}\n\n${PRESENTATION_HINT}`.length;
+  assert.ok(text.endsWith(`\n\n${PRESENTATION_HINT}`));
+  return text.length;
 }
 
 /** For each number of hotels a call can have: its offers, and the size of its text. */

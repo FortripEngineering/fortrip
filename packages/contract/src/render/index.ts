@@ -8,6 +8,7 @@ import {
   cancelNextStep,
   ORDER_NEXT_STEP,
   payNextStep,
+  PRESENTATION_HINT,
   type RenderSurface,
   TOOLS,
   type ToolName,
@@ -22,33 +23,48 @@ import { ours } from "./third-party.ts";
 export { renderError } from "./errors.ts";
 
 /*
- * The compact text of a tool result (spec §12): what MCP sends as
- * `content[0]` and what the CLI prints by default. Pure functions of the
- * public object and the surface: a next call is a tool's arguments over
- * MCP, a command and its flags on the CLI.
+ * The text of a tool result (spec D2): the one text block an MCP result
+ * holds, and what the CLI prints by default. Pure functions of the public
+ * object and the surface: a next call is a tool's arguments over MCP, a
+ * command and its flags on the CLI.
  */
 
 export type RenderedTool = ToolName;
 
+/** The tools whose MCP text ends with how to present hotels. */
+const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_hotel_offers"]);
+
 /**
- * Renders `data`, the answer of `tool`, after parsing it with the tool's
- * open output schema: unknown fields are ignored, and an unknown value is
- * shown as it came only when it reads as a code. A result that does not
- * parse is shown as JSON, never thrown.
- * The consent rule (`ORDER_NEXT_STEP`) is the last paragraph whenever the
- * result holds a non-null `payment.url`; the pay rule (`PAY_NEXT_STEP`)
- * follows it when a result holds an order whose `payment.token` is not
- * null; the cancel rule (`CANCEL_NEXT_STEP`) follows it when a `get_order`
- * or `list_orders` result holds an order whose `cancel.action` is `cancel`
- * (one that can be closed carries none: closing has no penalty).
- * `surface` names the next calls: tools (`mcp`, the default) or commands
- * (`cli`).
+ * The whole model-facing text of `data`, the answer of `tool`, on `surface`:
+ * tools (`mcp`, the default) or commands (`cli`). Whoever sends it adds
+ * nothing: the hosted server and the CLI's bridge send this as the result's
+ * one text block.
+ *
+ * `data` is parsed with the tool's open output schema: unknown fields are
+ * ignored, and an unknown value is shown as it came only when it reads as a
+ * code. A result that does not parse is shown as JSON, never thrown.
+ *
+ * After the data come the rules it governs, each a paragraph, last:
+ * - the consent rule (`ORDER_NEXT_STEP`) whenever the result holds a payment
+ *   link; the pay rule (`payNextStep`) after it when an order has a "Pay
+ *   without the link" line; the cancel rule (`cancelNextStep`) after those
+ *   when a `get_order` or `list_orders` result holds an order that can be
+ *   cancelled now (one that can be closed carries none: closing has no
+ *   penalty);
+ * - on MCP, how to present hotels (`PRESENTATION_HINT`) for `search_hotels`,
+ *   `get_hotel` and `get_hotel_offers`. The CLI's text carries none: there
+ *   the rule is the skill's, as before.
  */
 export function renderToolResult(
   tool: RenderedTool,
   data: unknown,
   surface: RenderSurface = "mcp",
 ): string {
+  const text = resultText(tool, data, surface);
+  return surface === "mcp" && HOTEL_TOOLS.has(tool) ? `${text}\n\n${PRESENTATION_HINT}` : text;
+}
+
+function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): string {
   const schema = TOOLS.find((t) => t.name === tool)?.output;
   let parsed: unknown;
   try {
@@ -75,7 +91,7 @@ export function renderToolResult(
       return renderHotel(parsed as Hotel);
     case "get_hotel_offers":
       return renderOffers(parsed as HotelOffersResult, surface);
-    case "book_hotel":
+    case "create_order":
     case "get_order": {
       const order = parsed as Order;
       return withConsent(tool, surface, renderOrder(order, surface), [order]);
@@ -90,7 +106,7 @@ export function renderToolResult(
   }
 }
 
-const ORDER_TOOLS = new Set<RenderedTool>(["book_hotel", "get_order", "list_orders"]);
+const ORDER_TOOLS = new Set<RenderedTool>(["create_order", "get_order", "list_orders"]);
 
 /** The reads that carry the cancel rule; `cancel_order`'s own answer doesn't. */
 const CANCEL_TOOLS = new Set<RenderedTool>(["get_order", "list_orders"]);

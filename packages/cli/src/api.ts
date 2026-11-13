@@ -6,7 +6,7 @@ import { VERSION } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
-/** Longer than the API's longest route (`hotels book`, 120 s), so the CLI
+/** Longer than the API's longest route (`orders create`, 120 s), so the CLI
  *  doesn't give up, and an agent retry, just as the server is answering. */
 export const REQUEST_TIMEOUT_MS = 150_000;
 

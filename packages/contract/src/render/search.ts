@@ -1,5 +1,5 @@
 import { LIMITS } from "../limits.ts";
-import type { HotelSummary, SearchResult } from "../outputs/search.ts";
+import type { HotelSummary, SearchNoteCode, SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
 import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
@@ -211,6 +211,93 @@ function currencyHintLine(hint: NonNullable<SearchResult["currencyHint"]>, surfa
   return reason ? ours`Currency: ${reason}. ${offer}` : ours`Currency: ${offer}`;
 }
 
+/** The place a search is in, in words; a search with none still reads. */
+function placeOf(r: SearchResult): { name: Ours; kind: Ours; countryCode: Ours } {
+  const place = r.destination?.kind === "place" ? (r.destination as PlaceDestination).place : null;
+  return {
+    name: place ? oneLine(place.name) : ours`This place`,
+    kind: place ? code(place.kind, ours`area`) : ours`area`,
+    countryCode: place ? oneLine(place.countryCode) : ours`the country`,
+  };
+}
+
+/** What to try when a search has no hotel to show, from what it counted. */
+function nextSteps(r: SearchResult): Ours {
+  const c = r.coverage;
+  const steps: Ours[] = [];
+  if (c.excludedNoPrice !== null) steps.push(ours`raise or drop the price limit`);
+  if (c.excludedNoFacilityData !== null) steps.push(ours`drop an amenity filter`);
+  if (r.text !== null) steps.push(ours`check the text's words (exact words only) or drop it`);
+  if (r.destination !== null && c.textAnywhere !== null && c.textAnywhere > c.matched) {
+    steps.push(ours`search the text without the destination`);
+  }
+  if (c.withinMaxRadius !== null && c.withinMaxRadius > c.matched) steps.push(ours`widen the search radius`);
+  if (c.nameAsText !== null && c.nameAsText > 0) steps.push(ours`search the name as text`);
+  if (steps.length === 0) steps.push(ours`try another destination or fewer filters`);
+  return joined(steps, "; ");
+}
+
+/**
+ * A note in Fortrip's words, from its code and the search it is on: a note
+ * carries no details, and its `message` is written for HTTP readers (it
+ * names JSON paths). null for a code this build does not know, whose
+ * message is then shown.
+ */
+function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ours | null {
+  const c = r.coverage;
+  const p = placeOf(r);
+  const d = r.destination?.kind === "place" ? (r.destination as PlaceDestination) : null;
+  switch (noteCode as SearchNoteCode) {
+    case "indicative_prices":
+      return ours`the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.`;
+    case "prices_unavailable":
+      return ours`indicative prices are unavailable right now, so no hotel shows one. Try again shortly, or get offers for the hotels.`;
+    case "pool_limited":
+      return ours`more than ${num(LIMITS.poolLimit)} hotels match, so only the nearest were priced: the price order and the price filter cover those alone, and cheaper hotels farther out are not compared.`;
+    case "amenities_listed_only":
+      return c.excludedNoFacilityData === null
+        ? ours`amenity filters match hotels that list the amenity; not listed is not absent.`
+        : ours`amenity filters match hotels that list the amenity; not listed is not absent. ${plural(c.excludedNoFacilityData, "hotel")} here list no facilities at all and were left out.`;
+    case "place_resolved_dominant":
+      return d
+        ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${d.place.placeId}.`
+        : ours`the name also belongs to other places; this is the most populous.`;
+    case "area_absorbed":
+      return ours`${p.name} is searched as the whole ${p.kind}: smaller places of the same name are inside it.`;
+    case "broad_area":
+      return ours`${p.name} is a wide ${p.kind}, not one city: results run outward from its center. Search one of the localities listed above for one town.`;
+    case "island_radius":
+      return ours`this is a circle around the island's point: the island has no mapped outline, so the circle may miss parts of it or reach other shores.`;
+    case "area_retired":
+      return ours`this place id was retired: it now searches a circle around its last center. Search by name again for the current place.`;
+    case "more_outside_radius": {
+      const wider = surface === "cli" ? "--radius-meters" : "radiusMeters";
+      return c.withinMaxRadius === null
+        ? ours`more hotels match farther from the center: a larger ${wider} finds them.`
+        : ours`${plural(c.withinMaxRadius, "hotel")} match within ${LIMITS.radiusMetersMax / 1000} km of the center (${num(c.matched)} in this circle): a larger ${wider} finds more.`;
+    }
+    case "more_elsewhere":
+      return c.textAnywhere === null
+        ? ours`more hotels match the text elsewhere in ${p.countryCode}: the words may also name places elsewhere.`
+        : ours`${plural(c.textAnywhere, "hotel")} in ${p.countryCode} match the text (${num(c.matched)} here): the words may also name places elsewhere.`;
+    case "few_hotels_in_scope":
+      return c.matched === 0
+        ? ours`no hotel matches here; the Counts line says how many match farther out or elsewhere.`
+        : ours`only ${plural(c.matched, "hotel")} here; the Counts line says how many match farther out or elsewhere.`;
+    case "party_split_required":
+      return ours`the rooms are for different parties, so the search used only the dates. Offers take one party per call: get offers for each party separately.`;
+    case "no_results":
+      return ours`no hotels to show. Next: ${nextSteps(r)}.`;
+    case "locality_available": {
+      if (!d) return ours`this place is also a locality: search it as a locality for exactly its hotels instead of this circle.`;
+      const as = surface === "cli" ? ours`--locality ${d.place.placeId}` : ours`{ kind: "locality", placeId: "${d.place.placeId}" }`;
+      return ours`${p.name} is also a locality: search ${as} for exactly its hotels instead of this circle.`;
+    }
+    default:
+      return null;
+  }
+}
+
 export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): string {
   const lines: Ours[] = [header(r)];
   lines.push(
@@ -258,7 +345,11 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
     lines.push(
       ours``,
       ours`Notes:`,
-      ...r.notes.map((n) => ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${n.message}`),
+      // Ours for a code this build knows; the server's message, after our
+      // words, only for one it does not.
+      ...r.notes.map(
+        (n) => ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${noteText(n.code, r, surface) ?? n.message}`,
+      ),
     );
   }
   lines.push(

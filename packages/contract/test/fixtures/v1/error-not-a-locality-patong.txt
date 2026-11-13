@@ -1,4 +1,4 @@
-Error destination_not_found (HTTP 422): Patong is not a locality: its hotels belong to the locality Phuket. Search Phuket as a locality, or Patong itself as a place (an 8 km circle).
+Error destination_not_found (HTTP 422): the destination can't be searched as it was given.
 Not retryable.
 Field: /destination/placeId
 Place plc_9200010 is not a locality. Its hotels belong to the locality Phuket plc_9200002 (2,752 matching hotels).

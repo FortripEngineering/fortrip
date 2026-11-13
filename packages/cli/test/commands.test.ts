@@ -201,7 +201,7 @@ const CASES: {
     },
   },
   {
-    name: "hotels book",
+    name: "orders create",
     argv: [
       ...["--offer", OFFER, "--guest", "1:John:Smith", "--guest", "2:Mary Ann:Lee"],
       ...["--guest", "1:Jane:Smith", ...CONTACT, "--special-requests", "Late arrival"],
@@ -315,7 +315,7 @@ describe("every command builds the request the contract accepts", () => {
       "hotels search",
       "hotels get",
       "hotels offers",
-      "hotels book",
+      "orders create",
       "orders get",
       "orders list",
       "orders cancel",
@@ -375,7 +375,7 @@ describe("a request the contract refuses is not sent", () => {
 
   it("a --body field the input doesn't take is refused, one issue per field", () => {
     const issues = issuesOf(() =>
-      parse("hotels book", [
+      parse("orders create", [
         "--body",
         '{"nationality":"CN","currency":"USD"}',
         ...["--offer", OFFER, "--guest", "1:A:B", ...CONTACT],
@@ -468,12 +468,12 @@ describe("flags", () => {
   });
 
   it("--guest room:first:last lands in that room's guests", () => {
-    const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:John:Smith", ...CONTACT]);
+    const sent = body("orders create", ["--offer", OFFER, "--guest", "1:John:Smith", ...CONTACT]);
     assert.deepEqual(sent.items, [
       { offerId: OFFER, hotel: { rooms: [{ guests: [{ firstName: "John", lastName: "Smith" }] }] } },
     ]);
     const rooms = (
-      body("hotels book", ["--offer", OFFER, "--guest", " 2 : Mary Ann : Lee ", "--guest", "1:A:B", ...CONTACT])
+      body("orders create", ["--offer", OFFER, "--guest", " 2 : Mary Ann : Lee ", "--guest", "1:A:B", ...CONTACT])
         .items as { hotel: { rooms: unknown } }[]
     )[0]?.hotel.rooms;
     assert.deepEqual(rooms, [
@@ -497,7 +497,7 @@ describe("flags", () => {
       ],
     });
     const roomsOf = (argv: string[]) =>
-      (body("hotels book", ["--body", BODY, ...argv, ...CONTACT]).items as { hotel: { rooms: unknown } }[])[0]
+      (body("orders create", ["--body", BODY, ...argv, ...CONTACT]).items as { hotel: { rooms: unknown } }[])[0]
         ?.hotel.rooms;
     // Room 1's guests are replaced; room 2 is kept.
     assert.deepEqual(roomsOf(["--guest", "1:John:Smith"]), [
@@ -530,7 +530,7 @@ describe("flags", () => {
       ["1000000000:A:B"],
     ]) {
       assert.throws(
-        () => parse("hotels book", ["--offer", OFFER, ...guests.flatMap((g) => ["--guest", g]), ...CONTACT]),
+        () => parse("orders create", ["--offer", OFFER, ...guests.flatMap((g) => ["--guest", g]), ...CONTACT]),
         (error) => isUsage(error) && /--guest/.test((error as Error).message),
         guests.join(" "),
       );
@@ -621,7 +621,7 @@ describe("--body", () => {
       { text: "Osaka", limit: 5 },
     );
     assert.deepEqual(
-      body("hotels book", [
+      body("orders create", [
         "--body",
         `{"items":[{"offerId":"${OFFER}","hotel":{"rooms":[{"guests":[{"firstName":"A","lastName":"B"}]}],"specialRequests":"Quiet"}}]}`,
         "--guest",
@@ -730,12 +730,12 @@ describe("currency", () => {
   });
 
   it("orders never take one: they are charged in the currency of their offer", () => {
-    const sent = body("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT], {
+    const sent = body("orders create", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT], {
       FORTRIP_CURRENCY: "CNY",
     });
     assert.equal("currency" in sent, false);
     assert.throws(
-      () => parse("hotels book", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--currency", "CNY"]),
+      () => parse("orders create", ["--offer", OFFER, "--guest", "1:A:B", ...CONTACT, "--currency", "CNY"]),
       isUsage,
     );
   });

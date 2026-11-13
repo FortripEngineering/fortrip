@@ -32,7 +32,7 @@ const TOOL_ENDPOINTS: Record<HttpToolName, Docs> = {
   search_hotels: { title: "Search hotels", cliSlug: "hotels-search", input: "body", auth: true },
   get_hotel: { title: "Hotel details", cliSlug: "hotels-get", input: "query", auth: true },
   get_hotel_offers: { title: "Live offers", cliSlug: "hotels-offers", input: "body", auth: true },
-  book_hotel: { title: "Create order", cliSlug: "hotels-book", input: "body", auth: true },
+  create_order: { title: "Create order", cliSlug: "orders-create", input: "body", auth: true },
   get_order: { title: "Get order", cliSlug: "orders-get", input: "query", auth: true },
   list_orders: { title: "List orders", cliSlug: "orders-list", input: "query", auth: true },
   cancel_order: { title: "Cancel order", cliSlug: "orders-cancel", input: "body", auth: true },

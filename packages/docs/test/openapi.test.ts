@@ -121,7 +121,7 @@ describe("OpenAPI document", () => {
     }
   });
 
-  it("answers book_hotel 201, or 200 with the replay header", () => {
+  it("answers create_order 201, or 200 with the replay header", () => {
     const responses = doc.paths?.["/v1/orders"]?.post?.responses ?? {};
     assert.deepEqual(Object.keys(responses).sort(), [
       String(ORDER_HTTP.createdStatus),
@@ -142,7 +142,7 @@ describe("OpenAPI document", () => {
         { $ref: "#/components/schemas/ErrorEnvelope" },
         `${method} ${path}`,
       );
-      if (op.operationId === "book_hotel") continue;
+      if (op.operationId === "create_order") continue;
       assert.deepEqual(Object.keys(op.responses ?? {}).sort(), ["200", "default"], op.operationId);
     }
   });
@@ -158,9 +158,9 @@ describe("OpenAPI document", () => {
         .map(([status]) => `${op.operationId} ${status}`),
     );
     assert.deepEqual(orderAnswers.sort(), [
-      `book_hotel ${ORDER_HTTP.replayedStatus}`,
-      `book_hotel ${ORDER_HTTP.createdStatus}`,
       "cancel_order 200",
+      `create_order ${ORDER_HTTP.replayedStatus}`,
+      `create_order ${ORDER_HTTP.createdStatus}`,
       "get_order 200",
       "pay_order 200",
     ]);

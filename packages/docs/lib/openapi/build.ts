@@ -110,7 +110,7 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
 /** What an operation answers, by status. */
 export function answers(op: OperationSpec): Record<string, z.ZodType> {
   const ok: Record<string, z.ZodType> =
-    op.id === "book_hotel"
+    op.id === "create_order"
       ? { [ORDER_HTTP.createdStatus]: op.output, [ORDER_HTTP.replayedStatus]: op.output }
       : { 200: op.output };
   return { ...ok, default: errorEnvelope };
@@ -183,7 +183,7 @@ function operation(op: OperationSpec, answer: (schema: z.ZodType) => Schema) {
         description: status === "default" ? "Error" : endpoint.title,
         content: json(answer(schema), examples(status)),
       };
-      if (id === "book_hotel" && status === String(ORDER_HTTP.replayedStatus)) {
+      if (id === "create_order" && status === String(ORDER_HTTP.replayedStatus)) {
         const header = { required: true, schema: { type: "boolean", const: true } };
         return [status, { ...response, headers: { [ORDER_HTTP.replayedHeader]: header } }];
       }

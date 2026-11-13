@@ -33,7 +33,7 @@ import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDoc, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDoc } from "../lib/reference/response-docs.ts";
 import { inputRows } from "../lib/reference/schema-rows.ts";
 import { pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
 
@@ -53,10 +53,6 @@ const unescape = (text: string) =>
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">")
     .replaceAll("&amp;", "&");
-
-/** "`a`, `b` and `c`" (or `last`), as the pages write a list of names. */
-const codeList = (names: string[], last = "and") =>
-  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? ` ${last} ` : ", "}${name}`);
 
 /** `assert.ok(text.includes(part))` for each part, naming the misses. */
 function includesAll(text: string, parts: readonly string[], where: string) {
@@ -223,9 +219,6 @@ describe("Markdown pages", () => {
       const line = mcp.split("\n").find((l) => l.includes(phrase)) ?? "";
       includesAll(line, tools.map((tool) => `\`${tool}\``), block);
     }
-    const nextStep = TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep).map((tool) => tool.name);
-    assert.ok(nextStep.length > 0);
-    assert.ok(mcp.includes(`An answer of ${codeList(nextStep)} that holds`), "nextStep tools");
     const cli = pageMarkdown("/cli");
     includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");
     includesAll(cli, GLOBAL_FLAGS.map((flag) => `--${flag.flag}`), "global flags");
@@ -312,7 +305,7 @@ describe("Markdown pages", () => {
       }
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);
     }
-    assert.match(pageMarkdown("/api/reference/book_hotel"), /The JSON body holds every field\./);
+    assert.match(pageMarkdown("/api/reference/create_order"), /The JSON body holds every field\./);
     assert.match(pageMarkdown("/api/reference/pay_order"), /Path: `orderId`; the JSON body holds the rest\./);
   });
 });

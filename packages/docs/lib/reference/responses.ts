@@ -28,7 +28,7 @@ export const RESPONSES = {
   search_hotels: search,
   get_hotel: hotel,
   get_hotel_offers: offers,
-  book_hotel: order,
+  create_order: order,
   get_order: order,
   list_orders: { data: [order], nextCursor: null },
   cancel_order: cancelling,
@@ -74,7 +74,7 @@ export const ERRORS = {
 /** The error an operation's reference page shows: the one its callers meet
  *  first that the endpoint answers. */
 export function errorExampleFor(id: OperationId): keyof typeof ERRORS {
-  if (id === "book_hotel") return "offer_changed";
+  if (id === "create_order") return "offer_changed";
   return id === "auth_config" ? "service_unavailable" : "unauthenticated";
 }
 

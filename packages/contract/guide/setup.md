@@ -1,7 +1,7 @@
 {{#if cli}}
 ## Setup
 
-Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:hotels book}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `{{tool:hotels search}}`, `{{tool:hotels offers}}` and `{{tool:orders create}}` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 Running `{{tool:whoami}}` when the user first asks about hotels lets the sign-in happen while they answer your follow-up questions.
 
@@ -31,10 +31,10 @@ In a remote agent environment or a CI run without a browser, the user can set `F
 | Code | Meaning | What to do |
 |---|---|---|
 | 0 | Success; the answer on stdout | Continue |
-| 1 | Any other error: an error from Fortrip (see Errors), a network error or a timeout | Read the error on stderr. If `retryable` is true, wait `retryAfterSeconds` (or a few seconds) and retry once |
+| 1 | Any other error: an error from Fortrip (see Errors), a network error or a timeout | Read the error on stderr. If it says it is retryable, wait as long as it says (or a few seconds) and retry once |
 | 2 | Invalid arguments, or `invalid_request` from Fortrip | Fix the flags; the error lists each bad field with a message |
 | 3 | Not signed in | Show `loginUrl` to the user, then rerun (above) |
-| 4 | Rate limited | Wait `retryAfterSeconds`, then retry once |
+| 4 | Rate limited | Wait as long as the error says, then retry once |
 
 Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-in couldn't be saved): pass it on to the user.
 {{/if}}

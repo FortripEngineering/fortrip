@@ -55,7 +55,7 @@ const DOCS: Record<
     human:
       "Gets the live, bookable offers for one stay at the hotels you name: the total, meals, cancellation terms and confirmation of each. It only reads: nothing is booked or held.",
   },
-  book_hotel: {
+  create_order: {
     group: "Orders",
     access: "Creates an unpaid order",
     human:

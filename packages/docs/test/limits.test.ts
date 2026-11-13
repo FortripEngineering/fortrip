@@ -56,7 +56,7 @@ test("the rate limits are the contract's, one row per scope, per minute", () => 
     rateLimitRows().map(({ scope, operations }) => [scope, operations]),
   );
   assert.deepEqual(operations.orders_read, ["get_order", "list_orders"]);
-  assert.deepEqual(operations.orders_create, ["book_hotel"]);
+  assert.deepEqual(operations.orders_create, ["create_order"]);
   assert.deepEqual(operations.orders_cancel, ["cancel_order"]);
   assert.deepEqual(operations.orders_pay, ["pay_order"]);
   assert.equal(rateLimitRows().find((row) => row.scope === "orders_create")?.failClosed, true);
@@ -68,8 +68,8 @@ test("every HTTP tool counts against exactly one scope", () => {
   assert.deepEqual(
     [...counted].sort(),
     [
-      "book_hotel",
       "cancel_order",
+      "create_order",
       "get_hotel",
       "get_hotel_offers",
       "get_order",

@@ -1,4 +1,4 @@
-Error destination_ambiguous (HTTP 422): Several places in CN are named "Suzhou". Ask the user which one, then search it by placeId.
+Error destination_ambiguous (HTTP 422): several places bear this name.
 Not retryable.
 Field: /destination/name
 Places named "Suzhou" in CN (2). Ask the user which one, then search with destination { kind: "place", placeId: "<id>" }:

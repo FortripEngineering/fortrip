@@ -20,7 +20,7 @@ export const MCP_CONTENT: Record<ToolName, readonly Block[]> = {
   search_hotels: ["text", "presentation_hint"],
   get_hotel: ["text", "presentation_hint"],
   get_hotel_offers: ["text", "presentation_hint"],
-  book_hotel: ["text"],
+  create_order: ["text"],
   get_order: ["text"],
   list_orders: ["text"],
   cancel_order: ["text"],

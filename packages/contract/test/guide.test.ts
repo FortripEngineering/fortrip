@@ -110,8 +110,8 @@ describe("the settled rules (design §3.4)", () => {
     "guest name": new RegExp(`1–${LIMITS.guestName} characters`),
     "search too broad": /`search_too_broad`/,
     "offer changed": /`offer_changed`/,
-    "price units": /`price\.total` is the whole stay for all rooms/,
-    "payment.url": /exactly as returned/,
+    "price units": /the total is the whole stay for all rooms/,
+    "payment link": /give the payment link exactly as shown/,
     "one party per call": /one party per call/,
   };
 
@@ -135,18 +135,18 @@ describe("the settled rules (design §3.4)", () => {
     const tools = flat(
       TOOLS.map((t) => `${t.description} ${JSON.stringify(z.toJSONSchema(t.input, { io: "input" }))}`).join(" "),
     );
-    assert.match(tools, /price\.total, in the request's currency, for the whole stay and every room \(what is charged\)/);
+    assert.match(tools, /the total, in the request's currency, for the whole stay and every room \(what is charged\)/);
     assert.match(tools, /for different parties, call once per party/);
     assert.match(tools, /offer_changed with every change and a new offer/);
     assert.match(tools, /in Latin letters as on the passport/);
     assert.match(tools, /indicative per-room-night price/);
   });
 
-  it("price units: price.total is the whole stay for all rooms, charged in the request's currency", () => {
+  it("price units: the total is the whole stay for all rooms, charged in the request's currency", () => {
     for (const surface of ["claude-skill", "cli"] as const) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /`price\.total` is the whole stay for all rooms and is what is charged, in the request's `(--)?currency`/,
+        /the total is the whole stay for all rooms and is what is charged, in the request's `(--)?currency`/,
         surface,
       );
     }
@@ -240,13 +240,18 @@ describe("the settled rules (design §3.4)", () => {
     }
   });
 
-  it("payment.url: given exactly as returned, never rebuilt", () => {
+  // The link is named as the order's text shows it ("Payment link"), not
+  // by a field of the JSON a model does not read.
+  it("the payment link: given exactly as shown, never rebuilt", () => {
     for (const surface of SURFACES) {
       assert.match(
         flat(renderGuide(surface, "main")),
-        /give `payment\.url` exactly as returned/,
+        /give the payment link exactly as shown/,
         surface,
       );
+    }
+    for (const surface of ["claude-skill", "cli"] as const) {
+      assert.match(flat(renderGuide(surface, "main")), /exactly as shown \(don't shorten, rebuild or re-encode it\)/, surface);
     }
   });
 
@@ -266,14 +271,14 @@ describe("consent before the payment link, on every surface", () => {
   // Conditions decide what each surface shows, so one misplaced {{#if}}
   // could drop a consent step from one surface without any other error.
   for (const surface of SURFACES) {
-    const book = renderText("{{tool:hotels book}}", surface);
+    const book = renderText("{{tool:orders create}}", surface);
 
     it(`${surface} main: order only the picked offer, show the charge and terms, ask, wait`, () => {
       const text = flat(renderGuide(surface, "main"));
       for (const phrase of [
         `Call \`${book}\` only for the offer the user picked`,
         "end that reply by asking the user to confirm, and wait for a clear yes",
-        "give `payment.url` exactly as returned",
+        "give the payment link exactly as shown",
       ]) {
         assert.ok(text.toLowerCase().includes(phrase.toLowerCase()), phrase);
       }
@@ -302,13 +307,15 @@ describe("consent before cancelling an order", () => {
 
     it(`${surface} main: show the stay, the penalty and the refund, ask, wait, then pass the penalty shown`, () => {
       const text = flat(renderGuide(surface, "main"));
-      assert.match(text, /Show the user the stay[^.]*`cancel\.penalty` and `cancel\.refund` \(amount and currency\)/);
+      assert.match(text, /Show the user the stay[^.]*the penalty and the refund on the Cancel line \(amount and currency\)/);
       assert.ok(
         text.includes("End that reply by asking the user to confirm the cancellation, and wait for a clear yes"),
       );
-      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to \`cancel.penalty\` as shown`));
-      assert.match(text, /Never state a refund the order didn't return, and never choose or work out an amount yourself/);
+      assert.ok(text.includes(`\`${cancel}\` with \`${penalty}\` set to that penalty as shown`));
+      assert.match(text, /Never state a refund the order's text doesn't show, and never choose or work out an amount yourself/);
       assert.match(text, /`cancellation_changed`[^.]*read the order again and ask the user again/);
+      // Spec D7: the input picks the mode, and neither does the other's work.
+      assert.match(text, /`order_not_cancellable` says which of cancelling and closing applies to the order now, or what blocks both; nothing is ever cancelled or closed by the other one\./);
     });
   }
 
@@ -324,15 +331,16 @@ describe("consent before cancelling an order", () => {
   for (const surface of ["claude-skill", "cli"] as const) {
     it(`${surface} main: close an unpaid order only once the user says they no longer want it`, () => {
       const text = flat(renderGuide(surface, "main"));
-      const close = surface === "cli" ? "with `--close`" : "without `maximumPenalty`";
+      const close = surface === "cli" ? "with `--close`" : "with `close: true`";
       assert.ok(
         text.includes(
           `Close an unpaid order only once the user says they no longer want it: ${surface === "cli" ? "run" : "call"} \`${renderText("{{tool:orders cancel}}", surface)}\` ${close}.`,
         ),
         surface,
       );
-      assert.match(text, /It becomes `expired`, and nothing is charged\./);
-      assert.match(text, /`payment_in_progress` \(409\) means a payment of it is under way: read it again shortly\./);
+      // As the order's first line then says it: the status is in words there.
+      assert.match(text, /It then reads as not paid, and nothing is charged\./);
+      assert.match(text, /`payment_in_progress` means a payment of it is under way: read it again shortly\./);
     });
   }
 });
@@ -342,9 +350,13 @@ describe("the MCP instructions", () => {
 
   it("carry the cross-tool rules", () => {
     for (const phrase of [
-      "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_offers` → `book_hotel`; after the user pays, `get_order`",
+      "Call order: `search_hotels` → (optional) `get_hotel` → `get_hotel_offers` → `create_order`; after the user pays, `get_order`",
       "anyone holding it can pay",
-      "Never ask for, accept or pass on payment card details; payment happens only on `payment.url` or by a way in the order's `payment.methods`.",
+      "Never ask for, accept or pass on payment card details; payment happens only on the payment link or, by token, through `pay_order`.",
+      // Rules that left the tool descriptions (spec D3) and apply across calls.
+      "when it replaces an unpaid order, tell the user to pay only the new link.",
+      "Cancel a paid order only after the user confirmed the penalty and the refund on its Cancel line; close an unpaid one only once they say they no longer want it.",
+      "Every result is text: follow the rules that end it.",
       "Never ask the user to paste a token",
       `emails ${SUPPORT_EMAIL}`,
     ]) {
@@ -381,7 +393,7 @@ describe("the Claude skill", () => {
     assert.match(main, /^## Before giving the payment link$/m);
     assert.match(main, /^1\. Show the order's total/m);
     assert.match(main, /^2\. End that reply by asking the user to confirm/m);
-    assert.match(main, /^3\. Then pay one way only: give `payment\.url` exactly as returned/m);
+    assert.match(main, /^3\. Then pay one way only: give the payment link exactly as shown/m);
   });
 
   it("points to its planning reference file, and has no CLI text", () => {
@@ -392,7 +404,7 @@ describe("the Claude skill", () => {
   it("names tools as fortrip:<tool>", () => {
     const planning = renderGuide("claude-skill", "planning");
     for (const text of [main, planning]) {
-      assert.doesNotMatch(text, /(?<!fortrip:)\b(search_hotels|get_hotel|get_hotel_offers|book_hotel|get_order|list_orders)\b/);
+      assert.doesNotMatch(text, /(?<!fortrip:)\b(search_hotels|get_hotel|get_hotel_offers|create_order|get_order|list_orders)\b/);
     }
   });
 });
@@ -403,10 +415,10 @@ describe("the CLI guide", () => {
 
   it("states the booking contract", () => {
     for (const phrase of [
-      "`retryAfterSeconds`",
+      "wait as long as the error says",
       // Consent.
-      "give `payment.url` exactly as returned",
-      "`price.total`",
+      "give the payment link exactly as shown",
+      "the total is the whole stay for all rooms",
       "Never ask for, accept or pass on payment card details",
       "run it again with identical flags",
       // Errors and sign-in edge cases.
@@ -438,7 +450,7 @@ describe("the CLI guide", () => {
   it("the planning guide asks for confirmation of what book returned", () => {
     assert.ok(
       planning.includes(
-        "give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip hotels book` returned",
+        "give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip orders create` returned",
       ),
     );
     // The one-party rule lives in SKILL.md, which planning.md points back to.
@@ -484,7 +496,7 @@ describe("the CLI guide", () => {
 describe("the full guides", () => {
   for (const surface of ["claude-skill", "cli"] as const) {
     const main = renderGuide(surface, "main");
-    const book = renderText("{{tool:hotels book}}", surface);
+    const book = renderText("{{tool:orders create}}", surface);
     const order = renderText("{{tool:orders get}}", surface);
 
     it(`${surface}: the rules of the full guide`, () => {
@@ -539,8 +551,8 @@ describe("renderText", () => {
     assert.equal(renderText("{{tool:hotels offers}}", "mcp"), "get_hotel_offers");
     assert.equal(renderText("{{tool:orders list}}", "cli"), "fortrip orders list");
     assert.equal(renderText("{{tool:orders get}}", "mcp"), "get_order");
-    assert.equal(renderText("{{tool:hotels book}}", "mcp"), "book_hotel");
-    assert.equal(renderText("{{tool:hotels book}}", "claude-skill"), "fortrip:book_hotel");
+    assert.equal(renderText("{{tool:orders create}}", "mcp"), "create_order");
+    assert.equal(renderText("{{tool:orders create}}", "claude-skill"), "fortrip:create_order");
     assert.equal(renderText("{{tool:whoami}}", "cli"), "fortrip whoami");
   });
 

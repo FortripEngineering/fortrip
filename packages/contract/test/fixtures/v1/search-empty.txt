@@ -6,8 +6,10 @@ Counts: 0 matched, 0 priced, 0 with a price, 0 within 80 km, 2 match the text an
 No hotels on this page.
 
 Notes:
-- Note few_hotels_in_scope: 0 hotels match within 8.0 km of Niseko (a settlement); 0 within 80 km.
-- Note more_elsewhere: 2 hotels match "Ritz Carlton" elsewhere in JP.
-- Note no_results: No hotel within 8.0 km of Niseko matches "Ritz Carlton" (0 within 80 km, 2 elsewhere in JP). Search the text without a destination, or Niseko without the text.
+- Note few_hotels_in_scope: no hotel matches here; the Counts line says how many match farther out or elsewhere.
+- Note more_elsewhere: 2 hotels in JP match the text (0 here): the words may also name places elsewhere.
+- Note no_results: no hotels to show. Next: check the text's words (exact words only) or drop it; search the text without the destination.
 
 Last page.
+
+Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. Keep hotel names as returned, and never invent photos, ratings, reviews, prices, terms or coordinates.

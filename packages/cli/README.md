@@ -77,9 +77,9 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | Command | What it does |
 |---|---|
 | `hotels search` | Find hotels in a place, near a point or by name, with indicative prices |
-| `hotels get <hotelId>` | Hotel details: description, policies, amenities and rooms |
+| `hotels get <hotelId>` | Hotel details: description, policies, amenities and room types |
 | `hotels offers` | Live bookable offers for up to 15 hotels |
-| `hotels book` | Order an offer: an unpaid order with a payment link |
+| `orders create` | Create an unpaid order for an offer, with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
 | `orders cancel <orderId>` | Cancel a paid order under its terms (--max-penalty), or close an unpaid one (--close) |
@@ -94,7 +94,7 @@ fortrip hotels search --place-name Tokyo --country JP --check-in 2026-11-10 --ch
 fortrip hotels offers --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --room 2 --room 2
 ```
 
-`hotels search`, `hotels offers` and `hotels book` also accept `--body '<json>'`
+`hotels search`, `hotels offers` and `orders create` also accept `--body '<json>'`
 or `--body @file.json` with the raw request body; flags override its fields.
 
 `--room` gives one room's party, as `adults` or `adults:age,age` with each
@@ -103,7 +103,7 @@ child of 6, is `--room 2 --room 2:6`. `hotels search` accepts rooms that
 differ; `hotels offers` takes one party per call, so every room must be the
 same.
 
-`hotels book` creates an unpaid order and prints a payment link for it.
+`orders create` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens, or
 approves a shared payment token for `orders pay` in their wallet. Orders
 are paid in the currency of the offers they come from (`--currency`).
@@ -133,7 +133,7 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
 `search_hotels`, `get_hotel`, `get_hotel_offers`,
-`book_hotel`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
+`create_order`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the

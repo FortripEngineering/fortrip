@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { parseOpen } from "../conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
-import { LIMITS } from "../limits.ts";
+import { LIMITS, SUPPORT_EMAIL } from "../limits.ts";
 import {
   errorEnvelope,
   type ERROR_DETAILS,
@@ -48,13 +48,71 @@ const SUPPLIER_OUTCOME_WORDS: Record<string, string> = {
 };
 
 /*
- * The error envelope (spec §11) as text. An error that leads to a next call
- * renders that call (§12). Never throws: an unknown code, or a body that
- * does not parse, falls back to the HTTP status, `retryable` and the raw
- * details. Every line begins with Fortrip's words, and every value of the
- * envelope (the message, a pointer, the request id, names, codes) is one
- * line inside them.
+ * The error envelope as text, built from its `code` and `details` (spec D2):
+ * the server's `message` is written for HTTP readers and names JSON paths, so
+ * for every code this build knows the text is Fortrip's own and complete
+ * without it. The message is shown only where there are no words of ours to
+ * show: a code this build does not know (or details it can't read),
+ * `client_outdated`, whose message is the whole answer, and the issues of an
+ * `invalid_request`, which quote the caller's own arguments.
+ *
+ * An error that leads to a next call renders that call. Never throws: an
+ * unknown code, or a body that does not parse, falls back to the HTTP
+ * status, `retryable`, the message and the raw details. Every line begins
+ * with Fortrip's words, and every value of the envelope (a message, a
+ * pointer, the request id, names, codes) is one line inside them.
  */
+
+/** What each code says happened: the head of its text, after the code. */
+const HAPPENED: Record<Exclude<ErrorCode, "client_outdated">, string> = {
+  invalid_request: "the request can't be accepted as sent, and nothing was done. Fix what each line below says, then send it again.",
+  cursor_invalid: "this cursor can't continue its list.",
+  unauthenticated: "the user is not signed in to Fortrip, or the sign-in is no longer accepted.",
+  forbidden: "this sign-in is not allowed to make this call.",
+  not_found: "no such hotel, or no such order for this user.",
+  offer_expired: "the offer expired, and nothing was ordered.",
+  offer_changed: "the price or terms changed since the offer, and nothing was ordered.",
+  offer_already_ordered: "this offer was already ordered, with other details; no new order was made.",
+  order_in_progress: "the order is still being created, or still being confirmed with the hotel.",
+  cancellation_changed: "the penalty for cancelling is now higher than the one sent, and nothing was cancelled.",
+  order_not_cancellable: "the order can't be cancelled or closed the way that was asked, and nothing changed.",
+  order_not_payable: "this order can't be paid now.",
+  payment_in_progress: "a payment of this order is under way.",
+  payment_total_mismatch: "the payment was not made.",
+  payment_credential_invalid: "the token can't pay this order.",
+  payment_declined: "the payment was declined.",
+  payment_action_required: "the card asks for a verification that a payment by token can't give.",
+  payment_method_unavailable: "this order takes no token now.",
+  destination_ambiguous: "several places bear this name.",
+  destination_not_found: "the destination can't be searched as it was given.",
+  search_too_broad: "too many hotels match to sort or filter them by price.",
+  stay_unsupported: "this stay can't be priced or ordered as asked.",
+  stay_in_past: "the check-in date has passed.",
+  offer_unavailable: "the offer can no longer be ordered, and nothing was ordered.",
+  currency_unavailable: "prices in this currency aren't available.",
+  rate_limited: "too many calls of this kind in a short time.",
+  ordering_paused: "ordering is paused on Fortrip's side.",
+  service_unavailable: "Fortrip couldn't answer this time.",
+  supplier_unavailable: "the hotel's side couldn't be reached this time.",
+  internal: "something went wrong on Fortrip's side.",
+};
+
+const CURSOR_WORDS: Record<string, string> = {
+  expired: "has expired",
+  mismatch: "is not this user's, or was changed",
+  malformed: "is not one Fortrip gave",
+};
+
+/** What each rate limit counts. */
+const RATE_LIMIT_WORDS: Record<string, string> = {
+  search: "hotel searches",
+  offers: "calls for offers",
+  hotel: "reads of a hotel's details",
+  orders_read: "reads of orders",
+  orders_create: "orders created",
+  orders_cancel: "cancellations",
+  orders_pay: "payments",
+};
 
 type DetailSchemas = typeof ERROR_DETAILS;
 type Details<C extends ErrorCode> = z.output<Exclude<DetailSchemas[C], null>>;
@@ -87,6 +145,7 @@ function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): Ours[
   const locality =
     surface === "cli" ? "--locality <id>" : 'destination { kind: "locality", placeId: "<id>" }';
   const lines = [
+    ours`${plural(d.matched, "hotel")} match; a price sort or a price filter covers at most ${num(d.poolLimit)}.`,
     ours`Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with ${locality} and the same text, filters, stay and sort.`,
     ...localitiesLines(d.localities, null, surface),
   ];
@@ -138,7 +197,7 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
   switch (d.reason) {
     case "no_match": {
       const m = d as Extract<typeof d, { reason: "no_match" }>;
-      const none = ours`No place named "${m.name}" in ${m.countryCode}.`;
+      const none = ours`No place named "${m.name}" in ${m.countryCode}. Names match exactly, accents and periods included: check the spelling, or try another name for the place.`;
       return [
         m.nameAsText === null
           ? none
@@ -146,7 +205,7 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
       ];
     }
     case "unknown_id":
-      return [ours`Unknown placeId ${(d as { placeId: string }).placeId}.`];
+      return [ours`No place has the id ${(d as { placeId: string }).placeId}: use an id an earlier answer showed, exactly as shown.`];
     case "not_a_locality": {
       const n = d as Extract<typeof d, { reason: "not_a_locality" }>;
       const town =
@@ -191,16 +250,33 @@ function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurf
   ];
 }
 
+/** What happened in detail and what to do next, by code. */
 function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
-  if (!("details" in e)) return [];
   const getOrder = (id: string) => (surface === "cli" ? ours`\`fortrip orders get ${id}\`` : ours`get_order`);
   switch (e.code) {
-    case "invalid_request":
-      return e.details.issues.map((i) => ours`- Field ${i.pointer}: ${i.message}`);
+    case "invalid_request": {
+      const issues = e.details.issues.map((i) => ours`- Field ${i.pointer}: ${i.message}`);
+      // With no issue to show, the message is all there is to fix it by.
+      return issues.length > 0 ? issues : [ours`- What was refused: ${e.message}`];
+    }
     case "cursor_invalid":
-      return [ours`The cursor is ${code(e.details.reason, ours`not usable`)}: search again without a cursor.`];
+      return [
+        ours`The cursor ${label(CURSOR_WORDS, e.details.reason, ours`can't be used`)}: start again from the first page, without a cursor.`,
+      ];
+    case "unauthenticated":
+      return [
+        surface === "cli"
+          ? ours`The user signs in again through the browser. Never ask them to paste a token.`
+          : ours`Ask the user to connect Fortrip again and sign in. Sign-in happens in the browser: never ask them to paste a token.`,
+      ];
+    case "forbidden":
+      return [ours`Tell the user. Sending it again won't help.`];
+    case "not_found":
+      return [ours`Use an id an earlier answer showed, exactly as shown.`];
     case "offer_expired":
-      return [ours`Offer ${e.details.offerId} expired at ${when(e.details.expiredAt, null)}: get fresh offers.`];
+      return [
+        ours`Offer ${e.details.offerId} expired at ${when(e.details.expiredAt, null)}: get offers again and let the user choose again.`,
+      ];
     case "offer_changed":
       return [
         ours`Changes:`,
@@ -210,8 +286,15 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
         ours`Show the user these changes and ask again before ordering the new offer.`,
       ];
     case "offer_already_ordered":
+      return [
+        ours`Order ${e.details.orderId}: read it with ${getOrder(e.details.orderId)}. An offer is ordered once, even when its order failed or expired: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
+      ];
     case "order_in_progress":
-      return [ours`Order ${e.details.orderId}.`];
+      return [ours`Order ${e.details.orderId}: wait, then send the same call again with the same details.`];
+    case "cancellation_changed":
+      return [
+        ours`Read the order again with ${getOrder("<orderId>")}, show the user the penalty and the refund now on its Cancel line, and ask them again before cancelling.`,
+      ];
     case "order_not_cancellable":
       return notCancellable(e.details, surface);
     case "order_not_payable":
@@ -242,9 +325,13 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
     case "payment_declined": {
       const declined = e.details.declineCode ? ours`Declined (${e.details.declineCode})` : ours`Declined`;
       return [
-        ours`${declined}: the user picks another payment method in their wallet for a new token, or pays by link: read the order with ${getOrder("<orderId>")} and give its payment.url.`,
+        ours`${declined}: the user picks another card in their Link wallet for a new token, or pays by link: read the order with ${getOrder("<orderId>")} and give its payment link.`,
       ];
     }
+    case "payment_action_required":
+      return [
+        ours`The user pays by link instead: read the order with ${getOrder("<orderId>")} and give its payment link.`,
+      ];
     case "destination_ambiguous":
       return ambiguous(e.details, surface);
     case "destination_not_found":
@@ -262,8 +349,8 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
     case "stay_in_past":
       return [
         e.details.timeZone
-          ? ours`Check-in ${e.details.checkIn} is already past in ${e.details.timeZone}.`
-          : ours`Check-in ${e.details.checkIn} is already past.`,
+          ? ours`Check-in ${e.details.checkIn} is already past in ${e.details.timeZone}: ask the user for new dates.`
+          : ours`Check-in ${e.details.checkIn} is already past: ask the user for new dates.`,
       ];
     case "offer_unavailable":
       return [
@@ -274,15 +361,28 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
         ours`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`,
       ];
     case "rate_limited":
-      return [ours`Limit reached for: ${code(e.details.rateLimit, ours`a limit not recognized`)}.`];
+      return [
+        ours`The limit reached counts ${label(RATE_LIMIT_WORDS, e.details.rateLimit, ours`calls of a kind not recognized`)}: wait, then retry once.`,
+      ];
+    case "ordering_paused":
+      return [ours`Tell the user, and try again later: no sooner than the retry line says.`];
+    case "service_unavailable":
+      return [
+        ours`Retry once with the same details (a payment with the same token, never a new one); if it fails again, tell the user.`,
+      ];
     case "supplier_unavailable":
       return [
         Object.hasOwn(SUPPLIER_OUTCOME_WORDS, e.details.outcome)
           ? label(SUPPLIER_OUTCOME_WORDS, e.details.outcome)
           : ours`Outcome: ${code(e.details.outcome, ours`not recognized`)}.`,
+        ours`Retry once with the same details; if it fails again, tell the user.`,
       ];
+    case "internal":
+      return [ours`Tell the user; for help they email ${SUPPORT_EMAIL} with the request id below.`];
+    case "client_outdated":
+      return [];
     default:
-      return [ours`Details: ${raw((e as { details: unknown }).details)}`];
+      return [ours`Details: ${raw((e as { details?: unknown }).details)}`];
   }
 }
 
@@ -320,12 +420,19 @@ export function renderError(
     return lines.join("\n");
   }
 
-  // The code as it came only when it reads as one; the message is the
-  // server's, and may quote the caller: one line, after our words.
+  // The code as it came only when it reads as one. What happened is ours
+  // for a code this build knows; otherwise it is the server's message, which
+  // may quote the caller: one line, after our words.
   const name = typeof body.code === "string" ? code(body.code, ours`unknown`) : ours`unknown`;
   const head = status === undefined ? ours`Error ${name}` : ours`Error ${name} (HTTP ${status})`;
+  const happened =
+    known && known.code !== "client_outdated"
+      ? HAPPENED[known.code]
+      : typeof body.message === "string"
+        ? body.message
+        : null;
   const lines = [
-    typeof body.message === "string" ? ours`${head}: ${body.message}` : head,
+    happened === null ? head : ours`${head}: ${happened}`,
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
   if (typeof body.pointer === "string") lines.push(ours`Field: ${body.pointer}`);

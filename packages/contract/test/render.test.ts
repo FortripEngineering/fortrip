@@ -6,12 +6,14 @@ import { strictOutput } from "../src/conventions/open.ts";
 import { errorEnvelope } from "../src/outputs/error-details.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { CANCEL_BLOCKERS, FAILURE_REASONS, PAYMENT_METHOD_UNAVAILABLE_REASONS } from "../src/outputs/order.ts";
+import { SEARCH_NOTE_CODES } from "../src/outputs/search.ts";
 import {
   CANCEL_NEXT_STEP,
   cancelNextStep,
   ORDER_NEXT_STEP,
   PAY_NEXT_STEP,
   payNextStep,
+  PRESENTATION_HINT,
   TOOLS,
   type ToolName,
 } from "../src/tools.ts";
@@ -206,10 +208,11 @@ describe("search results", () => {
     assert.doesNotMatch(render(fixture), /^Currency:/m);
     const data = fixture.data as Record<string, unknown>;
     data.currencyHint = { currency: "CNY", reason: "request_location" };
+    // The last of the data; on MCP, how to present hotels comes after it.
     const mcp = renderToolResult("search_hotels", data);
     assert.ok(
       mcp.endsWith(
-        "\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers with currency CNY.",
+        `\n\nCurrency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers with currency CNY.\n\n${PRESENTATION_HINT}`,
       ),
       mcp,
     );
@@ -223,14 +226,58 @@ describe("search results", () => {
     assert.doesNotMatch(renderToolResult("search_hotels", data), /^Currency:/m);
   });
 
-  it("writes every note's message", () => {
+  // Spec D2: a note's message is written for HTTP readers and names JSON
+  // paths, so a note is worded from its code and the search it is on.
+  it("words every note from its code, never with the server's message", () => {
     for (const name of GOLDENS.filter((n) => n.startsWith("search-"))) {
       const fixture = load(name) as ToolFixture;
       const text = render(fixture);
       const notes = fixture.data.notes as { code: string; message: string }[];
       assert.ok(notes.length > 0, name);
-      for (const note of notes) assert.ok(text.includes(note.message), `${name}: ${note.code}`);
+      for (const note of notes) {
+        assert.ok(!text.includes(note.message), `${name}: ${note.code}`);
+        assert.match(text, new RegExp(`^- Note ${note.code}: \\S`, "m"), `${name}: ${note.code}`);
+      }
     }
+  });
+
+  it("has words of its own for every note code there is, on both surfaces, whatever the search holds", () => {
+    const MESSAGE = "The server's own words, naming coverage.localities.";
+    const worded = new Set<string>();
+    for (const name of ["search-shanghai-area", "search-empty", "search-pool-limited"] as const) {
+      for (const surface of ["mcp", "cli"] as const) {
+        const fixture = copy(load(name)) as ToolFixture;
+        fixture.data.notes = SEARCH_NOTE_CODES.map((code) => ({ code, message: MESSAGE }));
+        const text = renderToolResult("search_hotels", fixture.data, surface);
+        assert.ok(!text.includes(MESSAGE), `${name} ${surface}`);
+        const notes = text.split("\n").filter((line) => line.startsWith("- Note "));
+        assert.equal(notes.length, SEARCH_NOTE_CODES.length);
+        notes.forEach((line, i) => {
+          assert.match(line, new RegExp(`^- Note ${SEARCH_NOTE_CODES[i]}: \\S.+\\.$`), line);
+          worded.add(line.replace(/^- Note [a-z_]+: /, ""));
+        });
+        assertClean(text);
+        // A destination the build can't read still leaves every note worded.
+        fixture.data.destination = null;
+        assert.ok(!renderToolResult("search_hotels", fixture.data, surface).includes(MESSAGE));
+      }
+    }
+    assert.ok(worded.size >= SEARCH_NOTE_CODES.length);
+  });
+
+  it("a note names the next call as the surface makes it", () => {
+    const fixture = copy(load("search-pool-limited")) as ToolFixture;
+    fixture.data.notes = [
+      { code: "locality_available", message: "m" },
+      { code: "more_outside_radius", message: "m" },
+    ];
+    (fixture.data.coverage as Record<string, unknown>).withinMaxRadius = 9000;
+    const mcp = renderToolResult("search_hotels", fixture.data);
+    assert.ok(mcp.includes('- Note locality_available: Shanghai is also a locality: search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of this circle.'), mcp);
+    assert.ok(mcp.includes("- Note more_outside_radius: 9,000 hotels match within 80 km of the center (8,412 in this circle): a larger radiusMeters finds more."), mcp);
+    const cli = renderToolResult("search_hotels", fixture.data, "cli");
+    assert.ok(cli.includes("search --locality plc_9100002 for exactly its hotels"), cli);
+    assert.ok(cli.includes("a larger --radius-meters finds more."), cli);
   });
 
   it("heads a locality search as 'Place: Phuket (locality) · 2,752 hotels'", () => {
@@ -302,7 +349,7 @@ describe("search results", () => {
   it("says a next page takes the cursor and, optionally, limit", () => {
     const text = render(load("search-shanghai-area"));
     assert.ok(
-      text.endsWith('Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.'),
+      text.split("\n").includes('Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.'),
       text,
     );
   });
@@ -915,7 +962,7 @@ describe("orders and the consent rule", () => {
   it("asks for the guests, the contact and the requests before the link", () => {
     assert.match(
       ORDER_NEXT_STEP,
-      /^Before you give the user an order's payment\.url, show them its total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\. /,
+      /^Before you give the user an order's payment link, show them its total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\. /,
     );
   });
 
@@ -1039,7 +1086,10 @@ describe("orders and the consent rule", () => {
     const data = fixture.data as Record<string, any>;
     const lines = render(fixture).split("\n");
     assert.match(lines[0]!, / · failed · /);
-    assert.equal(lines[1], "Why it failed: the rate could no longer be booked when the hotel was asked; get offers again");
+    assert.equal(
+      lines[1],
+      "Why it failed: the rate could no longer be booked when the hotel was asked; get offers again and let the user choose again",
+    );
     assert.ok(lines.includes("Cancel: not available: no stay was booked, so there is nothing to cancel"));
     const worded = new Set<string>();
     for (const reason of FAILURE_REASONS) {
@@ -1049,6 +1099,17 @@ describe("orders and the consent rule", () => {
       worded.add(line);
     }
     assert.equal(worded.size, FAILURE_REASONS.length);
+    // Each reason says what to do next, so the same order is not made again.
+    const why = (reason: string) => {
+      data.failure = { reason };
+      return render(fixture).split("\n")[1]!;
+    };
+    assert.match(why("rate_unavailable"), /; get offers again and let the user choose again$/);
+    assert.match(
+      why("hotel_refused"),
+      /would refuse the same order again; check the guest names with the user \(as on the passport\) before ordering again, and for help, the user emails info@fortrip\.ai with the order's reference$/,
+    );
+    assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails info@fortrip\.ai with the order's reference$/);
     data.failure = { reason: "struck_by_lightning" };
     assert.equal(render(fixture).split("\n")[1], "Why it failed: struck_by_lightning");
     // Unknown is not no: a failed order with no failure on record still says so.
@@ -1090,7 +1151,24 @@ describe("orders and the consent rule", () => {
     const text = render(load("order-confirmed"));
     assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
     assert.equal(text.split(CANCEL_NEXT_STEP).length, 2);
-    assert.match(text, /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00$/m);
+    assert.match(
+      text,
+      /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "120\.00", currency: "USD" \}\)$/m,
+    );
+  });
+
+  // Spec D7: the input picks the mode. The Cancel line says which mode the
+  // order takes, with the call as the surface makes it.
+  it("the Cancel line of an order that can be cancelled gives the call, with the penalty as it is passed", () => {
+    const confirmed = (load("order-confirmed") as ToolFixture).data as Record<string, any>;
+    assert.match(
+      renderToolResult("get_order", confirmed, "cli"),
+      /^Cancel: can cancel now: penalty USD 120\.00, refund USD 246\.00 \(only after the user's yes: run `fortrip orders cancel ord_LakeConfirmed0000000 --max-penalty 120\.00`\)$/m,
+    );
+    // Each order of a list has its own.
+    const list = renderToolResult("list_orders", (load("list-orders") as ToolFixture).data);
+    assert.equal(list.split("call cancel_order with maximumPenalty { amount:").length - 1, 1);
+    assert.equal(list.split("(call cancel_order with close: true)").length - 1, 1);
   });
 
   it("a paid order past its free deadline can still be cancelled: the whole total kept, nothing refunded", () => {
@@ -1103,7 +1181,7 @@ describe("orders and the consent rule", () => {
     };
     strictOutput(outputOf("get_order")).parse(data);
     const text = renderToolResult("get_order", data);
-    assert.match(text, /^Cancel: can cancel now: penalty USD 366\.00, refund USD 0\.00$/m);
+    assert.match(text, /^Cancel: can cancel now: penalty USD 366\.00, refund USD 0\.00 \(only after the user's yes: call cancel_order with maximumPenalty \{ amount: "366\.00", currency: "USD" \}\)$/m);
     assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
   });
 
@@ -1242,7 +1320,7 @@ describe("orders and the consent rule", () => {
       config: { business_profile: "profile_test_1" },
     });
     strictOutput(outputOf("get_order")).parse(data);
-    for (const tool of ["book_hotel", "get_order", "pay_order"] as const) {
+    for (const tool of ["create_order", "get_order", "pay_order"] as const) {
       const text = renderToolResult(tool, data);
       assert.ok(
         text
@@ -1261,11 +1339,17 @@ describe("orders and the consent rule", () => {
     assert.match(render(load("order-payable-by-token")), /max_amount 36500, currency usd, expires_at 1793537400 \(2026-11-01 12:50 UTC\)\.$/m);
     assert.match(PAY_NEXT_STEP, /^To pay without the link: only if you have a tool that can request a Stripe shared payment token /);
     assert.match(PAY_NEXT_STEP, /never ask the user to create, type or paste a token\. Before you call pay_order, show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./);
-    assert.match(PAY_NEXT_STEP, /Pay one way only: either give payment\.url or call pay_order\./);
+    assert.match(PAY_NEXT_STEP, /Pay one way only: either give the payment link or call pay_order\./);
+    // The paragraph names what the order's text shows: the line, and Stripe's
+    // own names on it, which go into the token request as they are.
+    assert.match(PAY_NEXT_STEP, /and the order's text has a "Pay without the link" line\. Otherwise give the payment link,/);
+    assert.match(PAY_NEXT_STEP, /with the business_profile and the usage limits on that line \(max_amount in cents, currency, expires_at\), and call pay_order with the token as sharedPaymentToken and the order's Total as total, amount and currency exactly as shown\./);
+    assert.match(PAY_NEXT_STEP, /Once pay_order succeeds, the payment link stops working; a failed payment leaves it open\.$/);
+    assert.doesNotMatch(PAY_NEXT_STEP, /method|Alipay|WeChat/i);
     // An order with no token: the link alone, and only its rule.
     const unpayable = load("order-awaiting-payment") as ToolFixture;
     assert.equal((unpayable.data as Record<string, any>).payment.token, null);
-    for (const tool of ["book_hotel", "get_order", "list_orders"] as const) {
+    for (const tool of ["create_order", "get_order", "list_orders"] as const) {
       const data = tool === "list_orders" ? { data: [unpayable.data], nextCursor: null } : unpayable.data;
       const plain = renderToolResult(tool, data);
       assert.doesNotMatch(plain, /^Pay without the link/m, tool);
@@ -1280,7 +1364,7 @@ describe("orders and the consent rule", () => {
     }
   });
 
-  it("leaves ORDER_NEXT_STEP out when no payment.url is set", () => {
+  it("leaves ORDER_NEXT_STEP out when the order has no payment link", () => {
     const text = render(load("order-confirmed"));
     assert.ok(!text.includes(ORDER_NEXT_STEP));
     assert.match(text, /LGR-449120/);
@@ -1320,7 +1404,7 @@ describe("orders and the consent rule", () => {
 
 describe("renderToolResult on malformed data", () => {
   it("never throws, and shows the raw value", () => {
-    for (const tool of ["search_hotels", "get_hotel", "get_hotel_offers", "book_hotel", "get_order", "list_orders", "cancel_order"] as const) {
+    for (const tool of ["search_hotels", "get_hotel", "get_hotel_offers", "create_order", "get_order", "list_orders", "cancel_order"] as const) {
       for (const value of [undefined, null, 1, "x", { data: "nope" }]) {
         const text = renderToolResult(tool, value);
         assert.equal(typeof text, "string");
@@ -1332,7 +1416,7 @@ describe("renderToolResult on malformed data", () => {
   it("keeps the consent rule when a result with a payment.url does not parse", () => {
     const order = copy(load("order-awaiting-payment")) as ToolFixture;
     (order.data as Record<string, any>).createdAt = "2026-11-01 09:05";
-    for (const tool of ["book_hotel", "get_order"] as const) {
+    for (const tool of ["create_order", "get_order"] as const) {
       const text = renderToolResult(tool, order.data);
       assert.match(text, /not in the expected shape/);
       assert.ok(text.includes("booking-status?session_id="));
@@ -1351,7 +1435,7 @@ describe("renderToolResult on malformed data", () => {
     const text = renderToolResult("get_order", order.data);
     assert.match(text, /not in the expected shape/);
     assert.ok(text.endsWith(`\n\n${CANCEL_NEXT_STEP}`));
-    for (const tool of ["book_hotel", "cancel_order"] as const) {
+    for (const tool of ["create_order", "cancel_order"] as const) {
       assert.ok(!renderToolResult(tool, order.data).includes(CANCEL_NEXT_STEP), tool);
     }
     (order.data as Record<string, any>).cancel = blocked("stay_started");
@@ -1380,7 +1464,7 @@ describe("renderToolResult on malformed data", () => {
 describe("the CLI surface", () => {
   /** What only an MCP client can call: tool names and JSON arguments. */
   const MCP_ONLY =
-    /\b(search_hotels|get_hotel|get_hotel_offers|book_hotel|get_order|list_orders|cancel_order|pay_order|maximumPenalty|radiusMeters|limitPerHotel|requireBreakfast|place_name)\b|\{ (cursor|kind):/;
+    /\b(search_hotels|get_hotel|get_hotel_offers|create_order|get_order|list_orders|cancel_order|pay_order|maximumPenalty|sharedPaymentToken|radiusMeters|limitPerHotel|requireBreakfast|place_name)\b|\{ (cursor|kind|amount):|close: true/;
 
   function cli(fixture: Fixture): string {
     return "tool" in fixture
@@ -1402,14 +1486,13 @@ describe("the CLI surface", () => {
 
   it("names commands and flags, never a tool or JSON arguments, in every fixture", () => {
     for (const name of GOLDENS) {
-      const fixture = load(name);
-      // A search note's message is the server's own text.
-      const notes = "tool" in fixture ? stringsAt(fixture.data.notes ?? [], "message") : [];
-      const text = notes.reduce((t, message) => t.replace(message, ""), cli(fixture));
+      const text = cli(load(name));
       assert.doesNotMatch(text, MCP_ONLY, name);
+      // How to present hotels is the skill's on the CLI, not the text's.
+      assert.ok(!text.includes(PRESENTATION_HINT), name);
       assertClean(text);
     }
-    for (const tool of ["book_hotel", "get_order", "list_orders"] as const) {
+    for (const tool of ["create_order", "get_order", "list_orders"] as const) {
       const data = tool === "list_orders" ? { data: [withToken()], nextCursor: "c_2" } : withToken();
       assert.doesNotMatch(renderToolResult(tool, data, "cli"), MCP_ONLY, tool);
     }
@@ -1433,6 +1516,7 @@ describe("the CLI surface", () => {
     const text = cli(load("order-confirmed"));
     assert.ok(text.endsWith(`\n\n${cancelNextStep("cli")}`));
     assert.match(cancelNextStep("cli"), /^Before you run `fortrip orders cancel <orderId> --max-penalty <amount>`, show the user/);
+    assert.ok(cancelNextStep("cli").includes("Pass the penalty's amount as --max-penalty (120.00 for a penalty of USD 120.00)."));
     assert.equal(cancelNextStep("mcp"), CANCEL_NEXT_STEP);
   });
 
@@ -1463,7 +1547,7 @@ describe("the CLI surface", () => {
       renderError({ error: { code, message: "m", retryable: false, requestId: "req_1", details } }, undefined, "cli");
     assert.match(error("order_not_payable", { orderId: order, status: "confirmed" }), new RegExp(`read it with \`fortrip orders get ${order}\`; this call charged nothing`));
     assert.match(error("payment_in_progress", { orderId: order }), new RegExp(`read it with \`fortrip orders get ${order}\` in a few seconds`));
-    assert.match(error("payment_declined", { declineCode: null }), /read the order with `fortrip orders get <orderId>` and give its payment\.url/);
+    assert.match(error("payment_declined", { declineCode: null }), /the user picks another card in their Link wallet for a new token, or pays by link: read the order with `fortrip orders get <orderId>` and give its payment link\./);
     assert.match(
       error("payment_total_mismatch", { orderId: order, total: { amount: "365.00", currency: "USD" } }),
       new RegExp(`Confirm this total with the user, then run the same \`fortrip orders pay ${order}\` command again with \`--total 365\\.00\`\\. Nothing was charged\\.`),

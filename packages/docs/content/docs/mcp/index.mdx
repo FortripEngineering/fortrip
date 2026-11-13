@@ -23,7 +23,7 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 <ToolResultSample tool="get_hotel_offers" />
 
-An answer of <NextStepTools /> that holds a `payment.url` also carries `nextStep` in `structuredContent`, and its text states the same rule:
+The text of an answer that holds a payment link ends with the consent rule:
 
 > <Fact path="ORDER_NEXT_STEP" />
 
@@ -31,7 +31,7 @@ An answer of <NextStepTools /> that holds a `payment.url` also carries `nextStep
 
 A failed call has `isError: true` and no `structuredContent`. `content[0]` says what happened and the next call to make; `content[1]` is the [error envelope](/errors) as JSON text, and `_meta["ai.fortrip/error"]` carries it too. Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault.
 
-`content[0]` of an `offer_changed` error from `book_hotel`:
+`content[0]` of an `offer_changed` error from `create_order`:
 
 <ToolErrorSample code="offer_changed" />
 
@@ -43,8 +43,8 @@ On connect the server returns `instructions`, a short form of the agent guide: w
 
 ## Timeouts and retries [#retries]
 
-- Creating an order or paying can take a couple of minutes. Give `book_hotel` and `pay_order` a timeout of at least three minutes.
-- After a `book_hotel` timeout, call it again with the same details: it is [safe to send again](/api#retries).
+- Creating an order or paying can take a couple of minutes. Give `create_order` and `pay_order` a timeout of at least three minutes.
+- After a `create_order` timeout, call it again with the same details: it is [safe to send again](/api#retries).
 - After a `pay_order` timeout, <PayAfterTimeout />
 
 <RetryCodes />

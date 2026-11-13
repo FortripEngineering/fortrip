@@ -58,12 +58,12 @@ The same steps with the CLI. Each answer is compact text with the ids the next c
 ```sh
 npx fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
 npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
-npx fortrip hotels book --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
+npx fortrip orders create --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
 npx fortrip orders get ord_…
 ```
 
 `--room 2` is one room for two adults; `--guest 1:First:Last` is a guest in room 1, named as on the passport.
 
-`hotels book` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
+`orders create` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
 
 Each command's usage and options are in the [CLI reference](/cli).

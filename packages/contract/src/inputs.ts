@@ -283,7 +283,7 @@ export function createSearchHotelsInput(now: () => number = Date.now) {
     cursor: cursor
       .optional()
       .describe(
-        "`nextCursor` from the previous response. A next page is the cursor and, optionally, `limit`; nothing else.",
+        "The cursor the previous response gave for its next page (`nextCursor`). A next page is the cursor and, optionally, `limit`; nothing else.",
       ),
     locale: locale.optional(),
     currency: oneOf("currency", CURRENCIES).optional().describe(currencyDescription),
@@ -429,7 +429,7 @@ export const hotelOffersInput = strictInput({
   limitPerHotel: wholeNumber("limitPerHotel", 1, LIMITS.offersPerHotelMax)
     .optional()
     .describe(
-      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Left out: ${LIMITS.offersPerHotelDefault} for each hotel that has offers while that is at most ${LIMITS.offersPerCallDefault} offers in all, otherwise ${LIMITS.offersPerCallDefault} split evenly among those hotels (5 hotels: ${offersPerHotel(undefined, 5)} each; ${LIMITS.offersHotels} hotels: ${offersPerHotel(undefined, LIMITS.offersHotels)} each). Given: that many for each hotel while that is at most ${LIMITS.offersPerCallMax} offers in all, otherwise ${LIMITS.offersPerCallMax} split evenly the same way.`,
+      `Offers per hotel, 1 to ${LIMITS.offersPerHotelMax}. Left out: ${LIMITS.offersPerHotelDefault} for each hotel that has offers while that is at most ${LIMITS.offersPerCallDefault} offers in all, otherwise ${LIMITS.offersPerCallDefault} split evenly among those hotels (5 hotels: ${offersPerHotel(undefined, 5)} each; ${LIMITS.offersHotels} hotels: ${offersPerHotel(undefined, LIMITS.offersHotels)} each). Given: that many for each hotel while that is at most ${LIMITS.offersPerCallMax} offers in all, otherwise ${LIMITS.offersPerCallMax} split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.`,
     ),
   locale: locale.optional(),
   currency: oneOf("currency", CURRENCIES)
@@ -495,29 +495,16 @@ const emailError = "email must be an email address";
 const guestsError = "guests must list at least one guest per room";
 const maxGuestsPerRoom = LIMITS.adultsPerRoom + LIMITS.childrenPerRoom;
 
-/** `POST /v1/orders` and the MCP `book_hotel` arguments. */
+/** `POST /v1/orders` and the MCP `create_order` arguments. `items` comes
+ *  first: it is the first property a model reads, and the offer goes inside
+ *  its item (a model that also sent a top-level `offerId` was refused). */
 export const createOrderInput = strictInput({
-  contact: strictInput({
-    name: contactName.describe(
-      `Contact person's full name, in any script, at most ${LIMITS.contactName} characters.`,
-    ),
-    email: z
-      .string({ error: emailError })
-      .trim()
-      .pipe(z.email({ error: emailError }))
-      .describe("Contact email; the confirmation is sent here."),
-    // Only cards of 16+ digits: a phone number has at most 15 (E.164).
-    phone: cardFreeText(
-      "phone",
-      LIMITS.contactPhoneMin,
-      LIMITS.contactPhoneMax,
-      16,
-    ).describe("Contact phone number, with country code."),
-  }).describe("Who the hotel and the confirmation reach."),
   items: z
     .array(
       strictInput({
-        offerId: offerId.describe("offerId from an offers response."),
+        offerId: offerId.describe(
+          "The offer to order: an offerId from an offers response. It goes here, inside the item, and nowhere else in the request.",
+        ),
         hotel: strictInput({
           rooms: z
             .array(
@@ -562,7 +549,26 @@ export const createOrderInput = strictInput({
     )
     .min(1, { error: "items must list exactly one offer" })
     .max(1, { error: "items must list exactly one offer" })
-    .describe("The offer to book: exactly one."),
+    .describe(
+      "What to order: exactly one item, which holds the offer's offerId and what its hotel needs to know. The offerId goes inside the item, not beside items.",
+    ),
+  contact: strictInput({
+    name: contactName.describe(
+      `Contact person's full name, in any script, at most ${LIMITS.contactName} characters.`,
+    ),
+    email: z
+      .string({ error: emailError })
+      .trim()
+      .pipe(z.email({ error: emailError }))
+      .describe("Contact email; the confirmation is sent here."),
+    // Only cards of 16+ digits: a phone number has at most 15 (E.164).
+    phone: cardFreeText(
+      "phone",
+      LIMITS.contactPhoneMin,
+      LIMITS.contactPhoneMax,
+      16,
+    ).describe("Contact phone number, with country code."),
+  }).describe("Who the hotel and the confirmation reach."),
 });
 
 export type CreateOrderInput = z.input<typeof createOrderInput>;
@@ -582,7 +588,7 @@ const listLimitError = `limit must be a whole number from 1 to ${LIMITS.pageSize
 export const listOrdersInput = strictInput({
   cursor: cursor
     .optional()
-    .describe("`nextCursor` from the previous page of orders."),
+    .describe("The cursor the previous page of orders gave for the next one (`nextCursor`)."),
   limit: z.coerce
     .number({ error: listLimitError })
     .int({ error: listLimitError })
@@ -619,7 +625,7 @@ export const cancelOrderInput = strictInput({
   maximumPenalty: echoedMoney("maximumPenalty")
     .optional()
     .describe(
-      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling (the order's cancel.penalty, exactly as returned). Send exactly one of close and maximumPenalty.",
+      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling. It is the penalty the order says a cancellation now keeps, exactly as the order gives it (cancel.penalty). Send exactly one of close and maximumPenalty.",
     ),
 }).superRefine((input, ctx) => {
   const both = input.close !== undefined && input.maximumPenalty !== undefined;
@@ -655,10 +661,10 @@ export const payOrderInput = strictInput({
     .string({ error: sharedPaymentTokenError })
     .regex(sharedPaymentTokenRe, { error: sharedPaymentTokenError })
     .describe(
-      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.token.usageLimits).",
     ),
   total: requestMoney("total").describe(
-    "The total the user approved: the order's price.total, in its currency, exactly as returned.",
+    "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total).",
   ),
 });
 

@@ -47,7 +47,7 @@ test("input rows carry type, required and constraints", () => {
   assert.equal(rows.get("stay.rooms[].adults")?.depth, 2);
   assert.deepEqual(rows.get("stay.rooms[].adults")?.meta, ["1–8"]);
 
-  const guestName = inputRows(TOOL_INPUTS.book_hotel).find(
+  const guestName = inputRows(TOOL_INPUTS.create_order).find(
     (row) => row.path === "items[].hotel.rooms[].guests[].firstName",
   );
   assert.equal(guestName?.badge, "required");

@@ -38,7 +38,7 @@ export const RETRY_WAYS = {
  */
 export const RETRY_DOCS: readonly RetryDoc[] = [
   {
-    tools: ["book_hotel"],
+    tools: ["create_order"],
     again: `Safe. The same details answer the same order: HTTP ${ORDER_HTTP.replayedStatus} with \`${ORDER_HTTP.replayedHeader}: true\`, or \`_meta["ai.fortrip/replayed"]\` over MCP. The same details are the same \`offerId\`, contact, guests in each room and special requests; spacing in a name, the email's letter case, and spaces and punctuation in the phone don't count (a leading \`+\` does). Other details answer \`offer_already_ordered\`, even when the offer's order failed or expired. While the first call is still running, the answer is \`order_in_progress\`: send it again after \`retryAfterSeconds\`.`,
   },
   {

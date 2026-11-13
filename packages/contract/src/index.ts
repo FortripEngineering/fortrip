@@ -187,12 +187,12 @@ export { ERROR_CODES, type ErrorCode } from "./errors.ts";
 export {
   CANCEL_NEXT_STEP,
   cancelNextStep,
-  MCP_OUTPUT,
   ORDER_NEXT_STEP,
   PAY_NEXT_STEP,
   payNextStep,
   PRESENTATION_HINT,
   type RenderSurface,
+  SERVER_INFO,
   TOOLS,
   type ToolName,
   type ToolSpec,

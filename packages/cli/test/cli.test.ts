@@ -105,7 +105,7 @@ const ORDER = `ord_${"d4".repeat(10)}`;
 const SEARCH = ["hotels", "search", "--place-name", "Bangkok", "--country", "TH", ...STAY, "--room", "2"];
 const OFFERS = ["hotels", "offers", "--hotel", HOTEL, ...STAY, "--room", "2:6", "--room", "2:6"];
 const BOOK = [
-  ...["hotels", "book", "--offer", OFFER, "--guest", "1:John:Smith"],
+  ...["orders", "create", "--offer", OFFER, "--guest", "1:John:Smith"],
   ...["--name", "John Smith", "--email", "john@example.com"],
   ...["--phone", "+8613800000000"],
 ];
@@ -196,10 +196,11 @@ describe("requests", () => {
   it("orders cancel without --max-penalty reads the order, prints its stay and Cancel lines, the consent step, and exits 2", async () => {
     const { data } = await fixture("order-confirmed");
     reply = { status: 200, body: data };
-    const hotelLine = renderToolResult("get_order", data, "cli")
-      .split("\n")
-      .find((line) => line.startsWith("Hotel: "));
-    assert.ok(hotelLine);
+    const lines = renderToolResult("get_order", data, "cli").split("\n");
+    const hotelLine = lines.find((line) => line.startsWith("Hotel: "));
+    // The contract's Cancel line: the penalty, the refund and the call that cancels.
+    const cancelLine = lines.find((line) => line.startsWith("Cancel: can cancel now: penalty USD 120.00, refund USD 246.00 ("));
+    assert.ok(hotelLine && cancelLine);
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER]);
     assert.equal(code, 2);
     assert.equal(stdout, "");
@@ -208,7 +209,7 @@ describe("requests", () => {
       [
         "Error: Not cancelled: nothing was sent.",
         hotelLine,
-        "Cancel: can cancel now: penalty USD 120.00, refund USD 246.00",
+        cancelLine,
         `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`fortrip orders cancel ${ORDER} --max-penalty 120.00\`.`,
         "",
       ].join("\n"),
@@ -527,7 +528,7 @@ describe("output", () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 201, body: data };
     const { stdout } = await cli(BOOK);
-    assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
+    assert.match(stdout, /Only after they say yes, give them the payment link exactly as shown\.\n$/);
   });
 
   // An order holds no Alipay or WeChat Pay payment for the CLI to draw: the
@@ -643,7 +644,9 @@ describe("errors", () => {
     const { code, stdout, stderr } = await cli(["orders", "list"]);
     assert.equal(code, 3);
     assert.equal(stdout, "");
-    assert.match(stderr, /^Error unauthenticated: Invalid token\n/);
+    // The contract words a known code itself; the server's message is not shown.
+    assert.match(stderr, /^Error unauthenticated: the user is not signed in to Fortrip, or the sign-in is no longer accepted\.\n/);
+    assert.doesNotMatch(stderr, /Invalid token/);
     assert.match(stderr, /^tokenSource: FORTRIP_TOKEN$/m);
     assert.match(stderr, /didn't accept FORTRIP_TOKEN/);
 
@@ -861,7 +864,7 @@ describe("help", () => {
 
   it("-h works like --help, and anywhere in the command", async () => {
     for (const args of [
-      ["hotels", "book", "-h"],
+      ["orders", "create", "-h"],
       ["hotels", "offers", "--hotel", "1", "--help"],
       ["orders", "get", "-h"],
     ]) {
@@ -909,7 +912,7 @@ describe("help", () => {
   });
 
   it("no help names an API path", async () => {
-    for (const args of [["--help"], ["hotels", "offers", "--help"], ["hotels", "book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "offers", "--help"], ["orders", "create", "--help"]]) {
       assert.doesNotMatch((await cli(args)).stdout, /\/api\/|\/v1\//);
     }
   });
@@ -919,7 +922,7 @@ describe("unknown commands", () => {
   it("a group's command typed without its group names the command", async () => {
     for (const [typed, meant] of [
       ["search", "`fortrip hotels search`"],
-      ["book", "`fortrip hotels book`"],
+      ["create", "`fortrip orders create`"],
       ["get", "`fortrip hotels get` or `fortrip orders get`"],
       ["list", "`fortrip orders list`"],
     ]) {

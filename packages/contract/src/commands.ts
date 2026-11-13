@@ -101,7 +101,7 @@ export interface CommandSpec {
     | "search"
     | "get"
     | "offers"
-    | "book"
+    | "create"
     | "list"
     | "cancel"
     | "pay"
@@ -342,7 +342,7 @@ const searchFlags = flagsOf(searchHotelsInput, [
     type: "string",
     placeholder: "<cursor>",
     description:
-      "`nextCursor` from the previous page. A next page takes only `--cursor` and `--limit`.",
+      "The cursor the previous page gave for the next one. A next page takes only `--cursor` and `--limit`.",
   },
   localeFlag,
   currencyFlag,
@@ -354,7 +354,7 @@ const hotelFlags = flagsOf(getHotelInput, [
     field: "include",
     type: "boolean",
     value: "roomTypes",
-    description: "Add the hotel's rooms.",
+    description: "Add the hotel's room types.",
   },
   localeFlag,
 ]);
@@ -382,7 +382,7 @@ const offersFlags = flagsOf(hotelOffersInput, [
   currencyFlag,
 ]);
 
-const bookFlags = flagsOf(createOrderInput, [
+const createFlags = flagsOf(createOrderInput, [
   {
     flag: "offer",
     field: "items.offerId",
@@ -432,7 +432,7 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     field: "close",
     type: "boolean",
     description:
-      "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
+      "Close an unpaid order, one whose Cancel line says it can be closed, only once the user says they no longer want it: nothing is charged, and it can no longer be paid. Nothing is sent for an order that can't be closed.",
   },
 ]);
 
@@ -467,8 +467,8 @@ const BODY_OPTION: OptionSpec = {
 };
 
 export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
-  { name: "hotels", summary: "Search hotels, get offers and order one" },
-  { name: "orders", summary: "Your orders, their status, paying and cancelling one" },
+  { name: "hotels", summary: "Search hotels, read one's details and get live offers" },
+  { name: "orders", summary: "Create an order from an offer; your orders, their status, paying and cancelling one" },
 ];
 
 export const COMMANDS: readonly CommandSpec[] = [
@@ -483,7 +483,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "hotels",
     name: "get",
-    summary: "Hotel details: description, policies, amenities and rooms",
+    summary: "Hotel details: description, policies, amenities and room types",
     tool: "get_hotel",
     flags: hotelFlags,
     positionals: [positional(getHotelInput, "hotelId")],
@@ -497,11 +497,11 @@ export const COMMANDS: readonly CommandSpec[] = [
     options: [BODY_OPTION],
   },
   {
-    group: "hotels",
-    name: "book",
-    summary: "Order an offer: an unpaid order with a payment link",
-    tool: "book_hotel",
-    flags: bookFlags,
+    group: "orders",
+    name: "create",
+    summary: "Create an unpaid order for an offer, with a payment link",
+    tool: "create_order",
+    flags: createFlags,
     options: [BODY_OPTION],
   },
   {

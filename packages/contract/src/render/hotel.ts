@@ -138,7 +138,7 @@ export function renderHotel(h: Hotel): string {
         ours`Address: ${h.address.line ? h.address.line.text : "not listed"}`,
         region && ours`${region.name} ${region.placeId}`,
         h.address.countryCode && oneLine(h.address.countryCode),
-        h.location ? ours`${h.location.lat}, ${h.location.lng}` : ours`location not listed`,
+        h.location ? ours`coordinates ${h.location.lat}, ${h.location.lng}` : ours`coordinates not listed`,
         ours`time zone ${h.timeZone ?? "not listed"}`,
       ],
       " · ",

@@ -16,17 +16,17 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `{
 
 ## Ranking
 
-1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in the offer's currency.
+1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's total covers the whole stay and every room, in the offer's currency.
 2. Keep only options with a live offer.
 3. Order by the user's stated main goal. Goals they didn't state don't count.
 4. Use other preferences only to break ties.
 
 Use the cheapest comparable offer as the baseline unless the user fixed the room type. Two or three plans usually suffice, each with its price difference from the baseline and what it trades off (meals, cancellation, location, confirmation). Keep hotel names as returned and dates in the user's notation.
 
-For a split stay or several destinations, price each leg with its own `fortrip:get_hotel_offers` call and add up the legs. Each leg is a separate `fortrip:book_hotel` call, with its own confirmation and its own payment link.
+For a split stay or several destinations, price each leg with its own `fortrip:get_hotel_offers` call and add up the legs. Each leg is a separate `fortrip:create_order` call, with its own confirmation and its own payment link.
 
 ## Stop and say so
 
 - `fortrip:get_hotel_offers` covers up to 15 hotels per call and takes about 15 seconds, and its offers expire after about 30 minutes. If the request needs more hotels or date combinations than a few calls can cover, narrow it with the user, or present the result as a comparison of the hotels you priced, not the best overall.
 - When a search is too broad to price, show its localities and ask the user which they prefer, unless the request already names one of them; never pick one yourself.
-- Urgency is not consent. Call `fortrip:book_hotel` only for the offer the user picked, and give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip:book_hotel` returned.
+- Urgency is not consent. Call `fortrip:create_order` only for the offer the user picked, and give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip:create_order` returned.

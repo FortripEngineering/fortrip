@@ -643,7 +643,7 @@ describe("hotelOffersInput", () => {
     const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.limitPerHotel?.description,
-      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way.",
+      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.",
     );
   });
 
@@ -1094,7 +1094,9 @@ describe("cancelOrderInput", () => {
     assert.equal(json.properties?.close?.const, true);
     assert.equal(
       json.properties?.maximumPenalty?.description,
-      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling (the order's cancel.penalty, exactly as returned). Send exactly one of close and maximumPenalty.",
+      // The concept first, for a model that reads the order as text; the
+      // path in parentheses, for a reader of the JSON.
+      "Send it to cancel a paid order: the penalty the user agreed to, as a ceiling. It is the penalty the order says a cancellation now keeps, exactly as the order gives it (cancel.penalty). Send exactly one of close and maximumPenalty.",
     );
     assert.deepEqual(json.required, ["orderId"]);
   });
@@ -1170,8 +1172,13 @@ describe("payOrderInput", () => {
     const json = z.toJSONSchema(payOrderInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.sharedPaymentToken?.description,
-      "The shared payment token (spt_…) the user approved for this order, requested with the limits of the order's stripe_shared_payment_token method.",
+      "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.token.usageLimits).",
     );
-    assert.doesNotMatch(JSON.stringify(json), /Exactly one of|instrument/);
+    assert.equal(
+      json.properties?.total?.description,
+      "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total).",
+    );
+    // Paid by token only: no other way to send one, and no method to name.
+    assert.doesNotMatch(JSON.stringify(json), /Exactly one of|instrument|method/);
   });
 });

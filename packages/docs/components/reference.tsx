@@ -11,7 +11,6 @@ import { CLI_COMMANDS } from "@/lib/reference/cli-commands.ts";
 import { FieldTable, inline } from "@/lib/reference/field-table.tsx";
 import { TOOL_INPUTS } from "@/lib/reference/input-docs.ts";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools.ts";
-import { responseDocFor } from "@/lib/reference/response-docs.ts";
 import { inputRows } from "@/lib/reference/schema-rows.ts";
 
 /** A table as Fumadocs renders one from Markdown: scrolls sideways when narrow. */
@@ -56,7 +55,6 @@ export function ToolPage({ name }: { name: ToolName }) {
   if (!tool) throw new Error(`${name} has no docs page`);
   const input = TOOL_INPUTS[tool.name];
   const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
-  const nextStep = responseDocFor(tool.name)?.mcpNextStep === true;
   return (
     <>
       <p className="text-sm text-fd-muted-foreground">
@@ -81,13 +79,7 @@ export function ToolPage({ name }: { name: ToolName }) {
       </Heading>
       <p>
         <code>structuredContent</code> is the{" "}
-        <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}
-        {nextStep && (
-          <>
-            {" "}
-            It also carries <code>nextStep</code>, the rule for sharing <code>payment.url</code>.
-          </>
-        )}{" "}
+        <Link href={tool.returns.href}>{tool.returns.title}</Link> object. {inline(contentSentence(tool.name))}{" "}
         Errors are described in the <Link href="/mcp#errors">overview</Link>.
       </p>
     </>

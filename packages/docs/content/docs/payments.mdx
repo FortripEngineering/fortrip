@@ -6,12 +6,12 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 ## The flow [#flow]
 
 1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `price.total` for the whole stay, in the request's `currency`, and its terms.
-2. **Order.** <code><Fact path="ROUTES.book_hotel" /></code> orders one offer and answers an order `awaiting_payment`. Nothing is charged.
+2. **Order.** <code><Fact path="ROUTES.create_order" /></code> orders one offer and answers an order `awaiting_payment`. Nothing is charged.
 3. **Confirm with the user** ([what to show](#confirm)).
 4. **Pay**, one way only: the payment link, or another way the order offers.
 5. **After payment**, read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
 
-The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `book_hotel`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip hotels book`, `fortrip orders pay` and `fortrip orders get`.
+The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create`, `fortrip orders pay` and `fortrip orders get`.
 
 ## Order [#order]
 

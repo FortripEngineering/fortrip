@@ -780,7 +780,7 @@ const PUBLIC_KEYS = new Set([
   "issuer", "issues", "items", "kind", "known", "label", "lastName", "lat", "line", "listed",
   "lng", "localCharge", "localCurrencyAtCheckout", "locale", "localities", "locality", "localityTotal", "location",
   "manageUrl", "mandatory", "matched", "max", "maxOccupancy", "meals", "members",
-  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor", "nextStep",
+  "message", "min", "mode", "more", "name", "nameAsText", "names", "nextCursor",
   "notes", "offer", "offerId", "offers", "omitted", "orderId", "otherMatches", "outcome",
   "payAtProperty", "payment", "penalties", "penalty", "perRoomNight", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous",

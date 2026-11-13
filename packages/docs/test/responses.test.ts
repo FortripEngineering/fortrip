@@ -43,7 +43,7 @@ describe("example responses", () => {
   });
 
   it("chain as the example requests do: search, offers, order, pay", () => {
-    const { search_hotels: search, get_hotel_offers: offers, book_hotel: created } = RESPONSES;
+    const { search_hotels: search, get_hotel_offers: offers, create_order: created } = RESPONSES;
     // The search answers the search request, and its first hotel is the one the offers ask for.
     assert.deepEqual(search.stay, body("search").stay);
     assert.equal(search.data[0]?.hotelId, EXAMPLE_IDS.hotelId);
@@ -76,11 +76,11 @@ describe("example responses", () => {
     const destination = RESPONSES.search_hotels.destination;
     assert.equal(destination.radiusSource, "default");
     assert.equal(destination.radiusMeters, LIMITS.radiusMetersDefault);
-    const { usageLimits } = RESPONSES.book_hotel.payment.token;
+    const { usageLimits } = RESPONSES.create_order.payment.token;
     // A token is offered: the total is under the token cap, in cents, until the time to pay ends.
-    assert.ok(Number(RESPONSES.book_hotel.total.amount) <= LIMITS.tokenPaymentMaxUsd);
-    assert.equal(usageLimits.max_amount, Math.round(Number(RESPONSES.book_hotel.total.amount) * 100));
-    assert.equal(usageLimits.expires_at, Date.parse(RESPONSES.book_hotel.payment.expiresAt) / 1000);
+    assert.ok(Number(RESPONSES.create_order.total.amount) <= LIMITS.tokenPaymentMaxUsd);
+    assert.equal(usageLimits.max_amount, Math.round(Number(RESPONSES.create_order.total.amount) * 100));
+    assert.equal(usageLimits.expires_at, Date.parse(RESPONSES.create_order.payment.expiresAt) / 1000);
   });
 });
 

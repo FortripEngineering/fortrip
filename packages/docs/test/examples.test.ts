@@ -48,7 +48,7 @@ const EXAMPLES: Example[] = [
   { name: "device-login", route: ACCOUNT_ROUTES.authConfig },
   { name: "search", route: HTTP_ROUTES.search_hotels, tool: "search_hotels", body: true },
   { name: "offers", route: HTTP_ROUTES.get_hotel_offers, tool: "get_hotel_offers", body: true },
-  { name: "order", route: HTTP_ROUTES.book_hotel, tool: "book_hotel", body: true },
+  { name: "order", route: HTTP_ROUTES.create_order, tool: "create_order", body: true },
   { name: "pay-token", route: HTTP_ROUTES.pay_order, tool: "pay_order", fromUrl: { orderId: ORDER }, body: true },
   { name: "get-order", route: HTTP_ROUTES.get_order, tool: "get_order", fromUrl: { orderId: ORDER } },
   { name: "list-orders", route: HTTP_ROUTES.list_orders, tool: "list_orders", fromUrl: { limit: 10 } },

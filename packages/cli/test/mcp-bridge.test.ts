@@ -504,9 +504,9 @@ describe("fortrip mcp bridge", () => {
       _meta: { "ai.fortrip/requestId": "req_fakebook", "ai.fortrip/replayed": true },
     };
     const notFound = hostedToolError(envelope("not_found", "No such hotel."));
-    api.toolResults = { book_hotel: booked, get_hotel: notFound };
+    api.toolResults = { create_order: booked, get_hotel: notFound };
 
-    assert.deepEqual((await bridge.request(callTool(2, "book_hotel"))).result, booked);
+    assert.deepEqual((await bridge.request(callTool(2, "create_order"))).result, booked);
     assert.deepEqual((await bridge.request(callTool(3, "get_hotel"))).result, notFound);
   });
 
@@ -688,9 +688,8 @@ describe("fortrip mcp bridge, signed out", () => {
       TOOLS.map((spec) => spec.name),
     );
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
-    // The MCP variant: book_hotel's nextStep. The service resolves limitPerHotel.
+    // The service resolves limitPerHotel.
     assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, undefined);
-    assert.ok(byName.get("book_hotel")?.outputSchema.properties.nextStep);
     assert.deepEqual(api.mcpRequests, []);
   });
 

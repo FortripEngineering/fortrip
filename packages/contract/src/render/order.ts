@@ -6,9 +6,12 @@ import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeT
 import { code, joined, oneLine, type Ours, ours } from "./third-party.ts";
 
 /*
- * `book_hotel`, `get_order` and `list_orders` (spec §10.2). Every line begins
- * with Fortrip's words, and every value of the order (names, the contact,
- * special requests, ids, links) is one line inside them.
+ * An order, as `create_order`, `get_order`, `list_orders`, `cancel_order`
+ * and `pay_order` answer it. Every line begins with Fortrip's words, and
+ * every value of the order (names, the contact, special requests, ids,
+ * links) is one line inside them. The labels that begin its lines ("Total",
+ * "Payment link", "Pay without the link", "Cancel") are what the rules after
+ * it, the tool descriptions and the guide name.
  */
 
 type Item = Order["items"][number];
@@ -55,11 +58,12 @@ export const CANCEL_BLOCKER_WORDS: Record<string, string> = {
   needs_attention: `Fortrip is looking into this order; ${SUPPORT}`,
 };
 
+/** Why a failed order booked nothing, and what to do next. */
 const FAILURE_WORDS: Record<string, string> = {
-  rate_unavailable: "the rate could no longer be booked when the hotel was asked; get offers again",
-  hotel_refused:
-    "the hotel's booking system refused this order; ordering the same again will be refused too",
-  unknown: "the reason is not on record",
+  rate_unavailable:
+    "the rate could no longer be booked when the hotel was asked; get offers again and let the user choose again",
+  hotel_refused: `the hotel's booking system refused this order, and would refuse the same order again; check the guest names with the user (as on the passport) before ordering again, and ${SUPPORT}`,
+  unknown: `the reason is not on record; read the order again later, or ${SUPPORT}`,
 };
 
 /** "Mary Smith, Tom Smith", or "none named yet". */
@@ -158,7 +162,7 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
     lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.token) lines.push(tokenLine(o, p.token, surface));
-  lines.push(ours`Cancel: ${cancelText(o.cancel, surface)}`);
+  lines.push(ours`Cancel: ${cancelText(o, surface)}`);
   lines.push(ours`Manage: ${o.manageUrl}`);
   return lines;
 }
@@ -189,13 +193,25 @@ export function cancelFigures(c: OrderCancel): Ours {
   return ours`penalty ${figure(c.penalty)}, refund ${figure(c.refund)}`;
 }
 
-/** What `cancel_order` can do to the order now: cancel it, with the penalty
- *  and the refund; close it, on the user's word; or what blocks both. */
-function cancelText(c: OrderCancel, surface: RenderSurface): Ours {
+/** The call that cancels a paid order for `penalty`, as `surface` makes it. */
+function cancelCall(orderId: string, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
+  return surface === "cli"
+    ? ours`run \`fortrip orders cancel ${orderId} --max-penalty ${penalty.amount}\``
+    : ours`call cancel_order with maximumPenalty { amount: "${penalty.amount}", currency: "${penalty.currency}" }`;
+}
+
+/** What `cancel_order` can do to the order now, and by which of its two
+ *  modes: cancel it (a paid order), with the penalty and the refund; close it
+ *  (an unpaid one), on the user's word; or what blocks both. */
+function cancelText(o: Order, surface: RenderSurface): Ours {
+  const c = o.cancel;
   if (c.action === "close") {
     return ours`can be closed now, nothing is charged; close it only if the user says they no longer want it (${CALLS[surface].close})`;
   }
-  if (c.action === "cancel") return ours`can cancel now: ${cancelFigures(c)}`;
+  if (c.action === "cancel") {
+    const now = ours`can cancel now: ${cancelFigures(c)}`;
+    return c.penalty ? ours`${now} (only after the user's yes: ${cancelCall(o.orderId, c.penalty, surface)})` : now;
+  }
   if (c.action !== null) return code(c.action, ours`an action not recognized`);
   return ours`not available: ${c.blockedBy === null ? "not stated" : label(CANCEL_BLOCKER_WORDS, c.blockedBy, ours`reason not recognized`)}`;
 }

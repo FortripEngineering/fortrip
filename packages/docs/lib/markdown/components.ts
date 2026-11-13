@@ -74,11 +74,6 @@ function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, s
   return [table(["Status", "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
 }
 
-/** The tools whose MCP answer carries `nextStep` (the response docs' flag,
- *  which response-docs.test.ts checks against the contract's MCP outputs). */
-const nextStepTools = () =>
-  TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep === true).map((tool) => tool.name);
-
 /** What a call answers when the rate limiter is down and refuses it. */
 const serviceUnavailable = (() => {
   const row = ERROR_ROWS.find((r) => r.code === ("service_unavailable" satisfies ErrorCode));
@@ -135,7 +130,7 @@ function signInScript(): string {
 /** One call of the quickstart in curl: its example's body and time limit,
  *  with the ids an earlier call gave as shell variables, and its answer
  *  saved to `file`. */
-function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "book_hotel", file: string): string {
+function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "create_order", file: string): string {
   const route = HTTP_ROUTES[op];
   const example = EXAMPLE_REQUESTS[op][0];
   const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
@@ -192,7 +187,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The API quickstart's five steps in curl, each step's answer abridged
    *  under it. */
   EndToEnd: () => {
-    const order = RESPONSES.book_hotel as { payment: { url: string } };
+    const order = RESPONSES.create_order as { payment: { url: string } };
     const { hotel, offer } = END_TO_END_IDS;
     return [
       heading(3, [text("1. Sign in")], "step-sign-in"),
@@ -228,7 +223,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       paragraph([
         text("Order the offer with the guests and a contact. Nothing is charged. It can take a couple of minutes, so allow at least three."),
       ]),
-      codeBlock("sh", endToEndCall("book_hotel", "order.json")),
+      codeBlock("sh", endToEndCall("create_order", "order.json")),
       ...abridged("order"),
       paragraph(
         inline(
@@ -455,17 +450,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       return [
         heading(2, [text(doc.title)], doc.id),
         paragraph(joined(where, " · ")),
-        ...(doc.mcpNextStep
-          ? [
-              paragraph([
-                text("Over MCP the object also carries "),
-                code("nextStep"),
-                text(": what to show the user and ask before giving them "),
-                code("payment.url"),
-                text("."),
-              ]),
-            ]
-          : []),
         ...responseBody(doc),
       ];
     }),
@@ -618,7 +602,6 @@ export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
     const others = CURRENCIES.filter((c) => c !== "USD");
     return [text(others.length > 1 ? `${others.slice(0, -1).join(", ")} or ${others.at(-1)}` : others.join(""))];
   },
-  NextStepTools: () => codeList(nextStepTools()),
   /** What to do after a pay call timed out, as the retry table says it. */
   PayAfterTimeout: () => inline(PAY_AFTER_TIMEOUT),
 };

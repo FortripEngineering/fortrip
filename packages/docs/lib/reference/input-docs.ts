@@ -14,7 +14,7 @@ export const TOOL_INPUTS: Record<ToolName, z.ZodType> = {
   search_hotels: inputOf("search_hotels"),
   get_hotel: inputOf("get_hotel"),
   get_hotel_offers: inputOf("get_hotel_offers"),
-  book_hotel: inputOf("book_hotel"),
+  create_order: inputOf("create_order"),
   get_order: inputOf("get_order"),
   list_orders: inputOf("list_orders"),
   cancel_order: inputOf("cancel_order"),

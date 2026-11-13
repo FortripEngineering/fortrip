@@ -9,7 +9,7 @@ import { contentSentence } from "../prose/mcp-content.ts";
 import { inputAnchor } from "../reference/api-docs.ts";
 import { CLI_COMMANDS } from "../reference/cli-commands.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
-import { responseDocFor, responseDocForCommand, schemaHref, schemaTitle } from "../reference/response-docs.ts";
+import { responseDocForCommand, schemaHref, schemaTitle } from "../reference/response-docs.ts";
 import {
   type Block,
   blockquote,
@@ -48,9 +48,6 @@ export function toolMarkdown(name: ToolName): string {
     link(tool.returns.href, text(tool.returns.title)),
     text(" object. "),
     ...inline(contentSentence(tool.name)),
-    ...(responseDocFor(tool.name)?.mcpNextStep
-      ? [text(" It also carries "), code("nextStep"), text(", the rule for sharing "), code("payment.url"), text(".")]
-      : []),
     text(" Errors are described in the "),
     link("/mcp#errors", text("overview")),
     text("."),
@@ -131,7 +128,7 @@ export function operationMarkdown(id: string): string {
           code(status),
           text(": "),
           response ? link(schemaHref(response), text(schemaTitle(response))) : text(endpoint.title),
-          ...(op.id === "book_hotel" && status === String(ORDER_HTTP.replayedStatus)
+          ...(op.id === "create_order" && status === String(ORDER_HTTP.replayedStatus)
             ? [text(", with "), code(`${ORDER_HTTP.replayedHeader}: true`)]
             : []),
         ];

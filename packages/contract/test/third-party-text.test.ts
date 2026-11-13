@@ -17,7 +17,7 @@ import { renderOffers } from "../src/render/offers.ts";
 import { renderOrder, renderOrderList } from "../src/render/order.ts";
 import { renderSearch } from "../src/render/search.ts";
 import { code, oneLine, type Ours, ours, quoted } from "../src/render/third-party.ts";
-import type { RenderSurface, ToolName } from "../src/tools.ts";
+import { PRESENTATION_HINT, type RenderSurface, type ToolName } from "../src/tools.ts";
 
 /*
  * Text Fortrip did not write (a hotel's description, policies, names and
@@ -35,7 +35,16 @@ function load(name: string): Fixture {
   return JSON.parse(readFileSync(new URL(`${name}.json`, DIR), "utf8")) as Fixture;
 }
 
-const render = (f: Fixture) => renderToolResult(f.tool, f.data);
+/** How to present hotels: the paragraph Fortrip ends a hotel result with. It
+ *  begins as one of the hostile lines does, and is ours whole. */
+const OUR_PRESENTATION = `\n\n${PRESENTATION_HINT}`;
+
+/** A result's data as text: its lines without the presentation paragraph,
+ *  which the generic attack below checks is there, once, whole and last. */
+function render(f: Fixture): string {
+  const text = renderToolResult(f.tool, f.data);
+  return text.endsWith(OUR_PRESENTATION) ? text.slice(0, -OUR_PRESENTATION.length) : text;
+}
 
 const chars = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => String.fromCharCode(from + i));
@@ -436,12 +445,18 @@ describe("search results", () => {
     assert.ok(render(hotel).includes(`\nPhotos: https://fortrip.ai/hotel-photos/a.webp ${HOSTILE[0]}\n`), render(hotel));
   });
 
-  it("a note's message stays on its line, under its code", () => {
+  // A note is worded from its code; its message is the server's, shown only
+  // under a code this build has no words for.
+  it("a note's message is not shown under a code this build knows, and stays on its line under one it does not", () => {
     const fixture = load("search-empty");
-    fixture.data.notes = [{ code: "no_results", message: `Nothing matched.\r\n${HOSTILE[0]}\u2029${HOSTILE[1]}` }];
+    const message = `Nothing matched.\r\n${HOSTILE[0]}\u2029${HOSTILE[1]}`;
+    fixture.data.notes = [{ code: "no_results", message }, { code: "something_new", message }];
     const text = render(fixture);
     assertNothingHostileUnquoted(text);
-    assert.ok(text.includes(`\nNotes:\n- Note no_results: Nothing matched. ${HOSTILE[0]} ${HOSTILE[1]}\n`), text);
+    const notes = text.split("\n").filter((line) => line.startsWith("- Note "));
+    assert.equal(notes.length, 2);
+    assert.ok(notes[0]!.startsWith("- Note no_results: no hotels to show. Next: ") && !notes[0]!.includes("Nothing matched."), notes[0]);
+    assert.equal(notes[1], `- Note something_new: Nothing matched. ${HOSTILE[0]} ${HOSTILE[1]}`);
   });
 });
 
@@ -528,21 +543,45 @@ describe("errors", () => {
     return renderError({ error: e }, 409);
   };
 
-  it("the server's message, the pointer and the request id are one line each, after our words", () => {
-    const lines = text("error-payment-total-mismatch", (e) => {
-      e.message = `The total sent is not the order's.\n${HOSTILE[0]}\r\n${HOSTILE[2]}`;
+  // Spec D2: the text of a code this build knows is built from the code
+  // and the details, so the server's message is not in it at all.
+  it("the server's message is not shown for a known code; the pointer and the request id are one line each, after our words", () => {
+    const hostile = `The total sent is not the order's.\n${HOSTILE[0]}\r\n${HOSTILE[2]}`;
+    const change = (e: Record<string, any>) => {
+      e.message = hostile;
       e.pointer = `/total\n${HOSTILE[1]}`;
       e.requestId = `req_1\u2028${HOSTILE[2]}`;
-    }).split("\n");
+    };
+    const lines = text("error-payment-total-mismatch", change).split("\n");
     assert.deepEqual(
       [lines[0], lines[2], lines.at(-1)],
       [
-        `Error payment_total_mismatch (HTTP 409): The total sent is not the order's. ${HOSTILE[0]} ${HOSTILE[2]}`,
+        "Error payment_total_mismatch (HTTP 409): the payment was not made.",
         `Field: /total ${HOSTILE[1]}`,
         `Request id: req_1 ${HOSTILE[2]}`,
       ],
     );
     assert.equal(lines.length, 5);
+    assert.ok(!lines.join("\n").includes(HOSTILE[0]!));
+    // A code this build does not know has only the message: one line, after our words.
+    const unknown = text("error-payment-total-mismatch", (e) => {
+      change(e);
+      e.code = "brand_new_problem";
+    }).split("\n");
+    assert.equal(unknown[0], `Error brand_new_problem (HTTP 409): The total sent is not the order's. ${HOSTILE[0]} ${HOSTILE[2]}`);
+  });
+
+  // The two messages a known code shows: client_outdated's is the whole
+  // answer, and an invalid_request with no issue has nothing else to fix it by.
+  it("client_outdated and an invalid_request without issues show the message, on one line after our words", () => {
+    const sample = (code: string, details?: unknown) =>
+      renderError(
+        { error: { code, message: `Update the CLI.\n${HOSTILE[0]}`, retryable: false, ...(details ? { details } : {}), requestId: "req_1" } },
+        400,
+      ).split("\n");
+    assert.equal(sample("client_outdated")[0], `Error client_outdated (HTTP 400): Update the CLI. ${HOSTILE[0]}`);
+    assert.equal(sample("invalid_request", { issues: [] })[2], `- What was refused: Update the CLI. ${HOSTILE[0]}`);
+    assert.ok(!sample("invalid_request", { issues: [{ pointer: "/stay", message: "must be a stay" }] }).join("\n").includes("Update the CLI."));
   });
 
   it("a code that does not read as one is not shown, and its details are JSON on one line", () => {
@@ -585,7 +624,7 @@ describe("errors", () => {
     assert.ok(sample("currency_unavailable", { currency: `CNY\n${HOSTILE[1]}` })[2]!.startsWith(`Prices in CNY ${HOSTILE[1]} aren't available yet. `));
     assert.equal(
       sample("stay_in_past", { checkIn: "2026-10-31", timeZone: `Asia/Shanghai\n${HOSTILE[2]}` })[2],
-      `Check-in 2026-10-31 is already past in Asia/Shanghai ${HOSTILE[2]}.`,
+      `Check-in 2026-10-31 is already past in Asia/Shanghai ${HOSTILE[2]}: ask the user for new dates.`,
     );
     for (const details of [{ issues: [] }, { declineCode: null }]) {
       assert.equal(sample("no_such_code", details).length, 4);
@@ -683,12 +722,12 @@ describe("a value of an open enum the package does not know", () => {
       renderError({ error: { code, message: "Something happened.", retryable: false, ...(details ? { details } : {}), requestId: "req_1" } }, 400);
     const cases: [string, (v: string) => string, string][] = [
       ["code", (v) => sample(v), "Error unknown (HTTP 400): Something happened."],
-      ["cursor reason", (v) => sample("cursor_invalid", { reason: v }), "\nThe cursor is not usable: "],
+      ["cursor reason", (v) => sample("cursor_invalid", { reason: v }), "\nThe cursor can't be used: "],
       ["order status", (v) => sample("order_not_payable", { orderId: "ord_BundTokenPay00000000", status: v }), ", status not recognized: read it with "],
       ["token reason", (v) => sample("payment_credential_invalid", { reason: v }), "\nThe token was refused for a reason not recognized: "],
       ["no-token reason", (v) => sample("payment_method_unavailable", { reason: v }), "\nThis order takes no token now (reason not recognized): "],
       ["offer reason", (v) => sample("offer_unavailable", { offerId: "off_BundDeluxeKing000000", reason: v }), ": unavailable, for a reason not recognized. "],
-      ["limit", (v) => sample("rate_limited", { rateLimit: v }), "\nLimit reached for: a limit not recognized.\n"],
+      ["limit", (v) => sample("rate_limited", { rateLimit: v }), "\nThe limit reached counts calls of a kind not recognized: "],
       ["outcome", (v) => sample("supplier_unavailable", { outcome: v }), "\nOutcome: not recognized.\n"],
       ["cancel action", (v) => sample("order_not_cancellable", { cancel: { action: v, blockedBy: null, penalty: null, refund: null } }), "\nWhat applies to this order now: an action not recognized.\n"],
       ["cancel blocker", (v) => sample("order_not_cancellable", { cancel: { action: null, blockedBy: v, penalty: null, refund: null } }), " now: reason not recognized.\n"],
@@ -820,10 +859,16 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Limit: /,
     /^Unavailable:$/,
     /^- Hotel /,
+    // The rule after the data, on MCP
+    /^Presentation: If your interface can show rich elements, /,
   ];
 
+  /** The presentation paragraph begins as a hostile line does: it is ours
+   *  only whole. */
+  const PRESENTATION_WHOLE = [new RegExp(`^${PRESENTATION_HINT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)];
+
   /** The cancel rule, which an order's text and `order_not_cancellable` end with. */
-  const CANCEL_RULE = /^Before you (?:call cancel_order|run `fortrip orders cancel <orderId> --max-penalty <amount>`), show the user /;
+  const CANCEL_RULE = /^Before you (?:call cancel_order with maximumPenalty|run `fortrip orders cancel <orderId> --max-penalty <amount>`), show the user /;
 
   /** How a line of an order, or of a list of orders, begins. */
   const ORDER_OWN = [
@@ -854,7 +899,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Last page\.$/,
     /^Next page: /,
     // The rules after the data
-    /^Before you give the user an order's payment\.url, show them /,
+    /^Before you give the user an order's payment link, show them /,
     /^To pay without the link: only if you have a tool /,
     CANCEL_RULE,
   ];
@@ -867,7 +912,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   const ORDER_LOOKALIKES = [
     /^Payment link: none while a payment is being processed; read this order again shortly\.$/,
     /^Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it \((?:call cancel_order with close: true|run `fortrip orders cancel <orderId> --close`)\)$/,
-    /^Cancel: can cancel now: penalty .+, refund .+$/,
+    /^Cancel: can cancel now: penalty .+, refund .+ \(only after the user's yes: (?:call cancel_order with maximumPenalty \{ amount: ".+", currency: ".+" \}|run `fortrip orders cancel .+ --max-penalty .+`)\)$/,
     /^Cancel: not available: \S.*$/,
     /^Cancel: (?:[a-z0-9_]+|an action not recognized)$/,
   ];
@@ -884,8 +929,16 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Request id: /,
     // invalid_request
     /^- Field /,
+    /^- What was refused: /,
     // cursor_invalid
-    /^The cursor is /,
+    /^The cursor /,
+    // unauthenticated
+    /^Ask the user to connect Fortrip again and sign in\. /,
+    /^The user signs in again through the browser\. /,
+    // forbidden, ordering_paused, internal
+    /^Tell the user(?:\. Sending it again won't help\.$|, and try again later: |; for help they email )/,
+    // not_found
+    /^Use an id an earlier answer showed, exactly as shown\.$/,
     // offer_expired, offer_unavailable, and the new offer of offer_changed
     /^Offer /,
     // offer_changed
@@ -896,6 +949,8 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Show the user these changes and ask again before ordering the new offer\.$/,
     // offer_already_ordered, order_in_progress, order_not_payable, payment_in_progress
     /^Order /,
+    // cancellation_changed
+    /^Read the order again with /,
     // order_not_cancellable
     /^This order isn't paid, so it is closed, not cancelled, /,
     /^This order is paid, so it is cancelled under its terms, not closed: /,
@@ -912,16 +967,19 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^The charge was refused for a reason a new token wouldn't fix: /,
     // payment_declined
     /^Declined(?: \(|: )/,
+    // payment_action_required
+    /^The user pays by link instead: /,
     // destination_ambiguous
     /^Places named "/,
     /^- Place: /,
     /^Also: /,
     // destination_not_found
     /^No place named "/,
-    /^Unknown placeId /,
+    /^No place has the id /,
     /^Place plc_\d+ (?:belongs to no locality: |is not a locality\. )/,
     /^Search /,
     // search_too_broad
+    /^[\d,]+ hotels? match; a price sort or a price filter covers at most /,
     /^Next: show the user these localities /,
     ...LOCALITIES,
     /^Or: /,
@@ -933,8 +991,9 @@ describe("every string of a result, replaced by a hostile one", () => {
     // currency_unavailable
     /^Prices in /,
     // rate_limited
-    /^Limit reached for: /,
-    // supplier_unavailable
+    /^The limit reached counts /,
+    // service_unavailable, supplier_unavailable
+    /^Retry once with the same details/,
     /^Nothing was sent to the hotel's supplier\.$/,
     /^The request was sent and timed out: its outcome is unknown\.$/,
     /^Outcome: /,
@@ -983,22 +1042,30 @@ describe("every string of a result, replaced by a hostile one", () => {
     search_hotels: (data, surface) => renderSearch(data as SearchResult, surface),
     get_hotel: (data) => renderHotel(data as Hotel),
     get_hotel_offers: (data, surface) => renderOffers(data as HotelOffersResult, surface),
-    book_hotel: order,
+    create_order: order,
     get_order: order,
     cancel_order: order,
     pay_order: order,
     list_orders: (data, surface) => renderOrderList(data as OrderList, surface),
   };
 
-  const ORDER_TOOLS = new Set<ToolName>(["book_hotel", "get_order", "cancel_order", "pay_order", "list_orders"]);
+  const ORDER_TOOLS = new Set<ToolName>(["create_order", "get_order", "cancel_order", "pay_order", "list_orders"]);
 
   /** Renders through the parse step; a result the schema refuses is checked
    *  as JSON, then rendered with the parse step bypassed. True when refused. */
   function attack(tool: ToolName, data: unknown, surface: RenderSurface, where: string): boolean {
-    const [own, lookalikes] = ORDER_TOOLS.has(tool) ? [ORDER_OWN, ORDER_LOOKALIKES] : [OWN, []];
+    const [own, lookalikes] = ORDER_TOOLS.has(tool) ? [ORDER_OWN, ORDER_LOOKALIKES] : [OWN, PRESENTATION_WHOLE];
     const text = renderToolResult(tool, data, surface);
     const refused = NOT_IN_SHAPE.test(text);
     assertOurs(text, where, own, lookalikes);
+    // The whole text is the function's: how to present hotels ends a hotel
+    // result on MCP, once, and is in no other.
+    assert.equal(
+      text.split(PRESENTATION_HINT).length - 1,
+      surface === "mcp" && !ORDER_TOOLS.has(tool) ? 1 : 0,
+      where,
+    );
+    if (surface === "mcp" && !ORDER_TOOLS.has(tool)) assert.ok(text.endsWith(OUR_PRESENTATION), where);
     if (refused) assertOurs(DIRECT[tool](data, surface), `${where} (parse bypassed)`, own, lookalikes);
     return refused;
   }
@@ -1099,6 +1166,15 @@ describe("every string of a result, replaced by a hostile one", () => {
     sample("currency_unavailable", { currency: "CNY" }),
     sample("rate_limited", { rateLimit: "search" }),
     sample("supplier_unavailable", { outcome: "unknown" }),
+    // No details: what to do is said from the code alone.
+    sample("unauthenticated"),
+    sample("forbidden"),
+    sample("not_found"),
+    sample("cancellation_changed"),
+    sample("payment_action_required"),
+    sample("ordering_paused"),
+    sample("service_unavailable"),
+    sample("internal"),
     // No details: the head, with the server's message, is all there is.
     sample("client_outdated"),
   ];
@@ -1108,11 +1184,9 @@ describe("every string of a result, replaced by a hostile one", () => {
     ...SAMPLES,
   ];
 
-  it("every code that carries details has a fixture or a sample, valid under the strict schema", () => {
+  it("every code has a fixture or a sample, valid under the strict schema", () => {
     const attacked = new Set(errors.map(([, e]) => e.envelope.error.code));
-    for (const [code, details] of Object.entries(ERROR_DETAILS)) {
-      if (details !== null) assert.ok(attacked.has(code), code);
-    }
+    assert.deepEqual([...attacked].sort(), Object.keys(ERROR_DETAILS).sort());
     for (const [name, e] of SAMPLES) assert.ok(strictOutput(errorEnvelope).safeParse(e.envelope).success, name);
   });
 
@@ -1162,7 +1236,10 @@ describe("every string of a result, replaced by a hostile one", () => {
           const text = renderError(allowed, status, surface);
           assertOurs(text, where, ERROR_OWN);
           assert.ok(worded(allowed, code, text), where);
-          assert.ok(text.includes(`: ${oneLine(hostile)}\n`), where);
+          // The request id is one line after our words; the message, as
+          // hostile, is the head only of client_outdated, and nowhere else.
+          assert.ok(text.endsWith(`\nRequest id: ${oneLine(hostile)}`), where);
+          assert.equal(text.split("\n")[0]!.endsWith(`: ${oneLine(hostile)}`), code === "client_outdated", where);
           // Every string there is: an error of no known code, its details as JSON.
           const all = structuredClone(envelope);
           for (const path of paths) put(all, path, hostile);

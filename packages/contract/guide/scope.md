@@ -5,25 +5,25 @@
 Fortrip: hotel search, live offers and orders with a payment link.{{#if claude-skill cli}} Not for flights, activities, or changing an existing order.{{/if}}
 
 {{#if mcp}}
-Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:hotels book}}`; after the user pays, `{{tool:orders get}}`; `{{tool:orders list}}` lists, `{{tool:orders cancel}}` cancels or closes an unpaid one, `{{tool:orders pay}}` pays by token.
+Call order: `{{tool:hotels search}}` → (optional) `{{tool:hotels get}}` → `{{tool:hotels offers}}` → `{{tool:orders create}}`; after the user pays, `{{tool:orders get}}`; `{{tool:orders list}}` lists, `{{tool:orders cancel}}` cancels a paid order or closes an unpaid one, `{{tool:orders pay}}` pays by token. Every result is text: follow the rules that end it.
 {{/if}}
 {{#if claude-skill}}
-The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip connector added on claude.ai can show under its own name). They're written `fortrip:<tool>` below:
+The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip connector added on claude.ai can show under its own name). They're written `fortrip:<tool>` below. Each answers in text, and the rules below name what that text shows:
 {{/if}}
 {{#if cli}}
-The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user and prints each answer as compact text (`--json` prints its JSON):
+The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user and prints each answer as compact text (`--json` prints its JSON). The rules below name what that text shows:
 {{/if}}
 {{#if claude-skill cli}}
 
 | {{#if claude-skill}}Tool{{/if}}{{#if cli}}Command{{/if}} | Returns |
 |---|---|
 | `{{tool:hotels search}}` | Hotels in a place, near a point or matching a name (`{{arg:text}}`), with indicative prices |
-| `{{tool:hotels get}}` | One hotel's address, check-in and check-out times, description, policies, amenities and rooms; no prices |
-| `{{tool:hotels offers}}` | Live offers (room, meals, total and currency, cancellation terms) for up to {{limit:offersHotels}} hotels |
-| `{{tool:hotels book}}` | An unpaid order for one offer, with its terms and a payment link |
+| `{{tool:hotels get}}` | One hotel's address, check-in and check-out times, description, policies, amenities and room types; no prices |
+| `{{tool:hotels offers}}` | Live offers (room type, meals, total and currency, cancellation terms) for up to {{limit:offersHotels}} hotels |
+| `{{tool:orders create}}` | An unpaid order for one offer, with its terms and a payment link |
 | `{{tool:orders get}}` | One order and its status, including whether the hotel confirmed it |
 | `{{tool:orders list}}` | The user's orders, newest first, including those made on the Fortrip website |
-| `{{tool:orders cancel}}` | Cancels an order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
+| `{{tool:orders cancel}}` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
 | `{{tool:orders pay}}` | Pays an order without its link, by a shared payment token from the user's wallet |
 
 For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.

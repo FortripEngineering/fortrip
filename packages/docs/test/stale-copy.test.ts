@@ -6,8 +6,6 @@ import { describe, it } from "node:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { MCP_OUTPUT } from "@fortrip/agent-contract";
-
 import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
@@ -37,14 +35,10 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /content\[1\]/);
   });
 
-  it("/mcp: nextStep only on the answers that declare it; blocks found by type", () => {
+  it("/mcp: no nextStep field, the consent rule ends the text; blocks found by type", () => {
     const text = pageText("/mcp");
-    const withNextStep = Object.entries(MCP_OUTPUT)
-      .filter(([, schema]) => "nextStep" in schema.shape)
-      .map(([tool]) => tool);
-    assert.ok(withNextStep.length > 0 && !withNextStep.includes("pay_order"));
-    const list = `${withNextStep.slice(0, -1).join(", ")} and ${withNextStep.at(-1)}`;
-    assert.ok(text.includes(`An answer of ${list} that holds a payment.url also carries nextStep`), list);
+    assert.doesNotMatch(text, /nextStep/);
+    assert.match(text, /The text of an answer that holds a payment link ends with the consent rule:/);
     assert.match(text, /by its type \(text, image\), not by its position/);
     assert.match(text, /unless the image couldn't be fetched/);
   });

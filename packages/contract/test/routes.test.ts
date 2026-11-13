@@ -28,7 +28,7 @@ describe("HTTP routes", () => {
       routePath(HTTP_ROUTES[tool], input);
     assert.equal(p("search_hotels", {}), API.hotelSearch);
     assert.equal(p("get_hotel_offers", {}), API.hotelOffers);
-    assert.equal(p("book_hotel", {}), API.orders);
+    assert.equal(p("create_order", {}), API.orders);
     assert.equal(p("get_hotel", { hotelId: id }), API.hotel(id));
     assert.equal(
       p("get_hotel", { hotelId: id, include: "roomTypes", locale: "zh" }),

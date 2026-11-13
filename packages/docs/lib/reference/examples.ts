@@ -36,7 +36,7 @@ export const EXAMPLE_REQUESTS: Record<OperationId, ExampleRequest[]> = {
   search_hotels: [{ name: "search", title: "Search hotels", body: searchBody }],
   get_hotel: [{ name: "get-hotel", title: "Hotel details", params: { hotelId: EXAMPLE_IDS.hotelId } }],
   get_hotel_offers: [{ name: "offers", title: "Live offers", body: offersBody }],
-  book_hotel: [{ name: "order", title: "Create order", body: orderBody }],
+  create_order: [{ name: "order", title: "Create order", body: orderBody }],
   get_order: [{ name: "get-order", title: "Get order", params: { orderId: EXAMPLE_IDS.orderId } }],
   list_orders: [{ name: "list-orders", title: "List orders", params: { limit: 10 } }],
   cancel_order: [{ name: "cancel", title: "Cancel order", params: { orderId: EXAMPLE_IDS.orderId }, body: cancelBody }],

@@ -20,8 +20,6 @@ export interface ResponseDoc {
   tools: ToolName[];
   /** The command that prints it, as its page slug. */
   cliSlugs: string[];
-  /** Over MCP the answer also carries `nextStep`, the consent rule. */
-  mcpNextStep?: boolean;
   /** The id of the object this answer is: its section only points there,
    *  and links to it go there. */
   sameAs?: string;
@@ -67,9 +65,8 @@ export const RESPONSE_DOCS: ResponseDoc[] = [
   doc({
     id: "order",
     title: "Order",
-    tools: ["book_hotel", "get_order"],
-    cliSlugs: ["hotels-book", "orders-get"],
-    mcpNextStep: true,
+    tools: ["create_order", "get_order"],
+    cliSlugs: ["orders-create", "orders-get"],
     schema: order,
   }),
   doc({
@@ -93,7 +90,6 @@ export const RESPONSE_DOCS: ResponseDoc[] = [
     title: "Order list",
     tools: ["list_orders"],
     cliSlugs: ["orders-list"],
-    mcpNextStep: true,
     schema: orderList,
     listOf: "order",
   }),
