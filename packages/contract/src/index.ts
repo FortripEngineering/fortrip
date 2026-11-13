@@ -155,9 +155,12 @@ export {
   indicativePrice,
   localities,
   SEARCH_NOTE_CODES,
+  SEARCH_NOTE_DETAILS,
+  searchNote,
   searchResult,
   type HotelSummary,
   type IndicativePrice,
+  type SearchNote,
   type SearchNoteCode,
   type SearchResult,
 } from "./outputs/search.ts";

@@ -91,7 +91,7 @@ const PLAIN_ENGLISH = new Set([
   "description", "details", "disclosure", "dominated", "environment", "error", "failure", "field", "from", "handler",
   "hotels", "id", "included", "includes", "issues", "known", "label", "line", "listed", "localities", "mandatory",
   "matched", "meals", "members", "message", "mode", "more", "names", "notes", "offer", "offers", "omitted",
-  "outcome", "payment", "penalties", "penalty", "photo", "photos", "pointer", "policies", "population", "previous",
+  "outcome", "payment", "penalties", "penalty", "photo", "photos", "places", "pointer", "policies", "population", "previous",
   "priced", "reason", "reference", "refund", "region", "required", "resolution", "retryable", "schema", "scope",
   "spec", "status", "token", "topic", "type", "unassigned", "unavailable", "unreadable", "until", "url", "version",
   "website", "window", "worse",

@@ -9411,44 +9411,355 @@
       "notes": {
         "type": "array",
         "items": {
-          "type": "object",
-          "properties": {
-            "code": {
-              "anyOf": [
-                {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "code": {
                   "type": "string",
-                  "enum": [
-                    "indicative_prices",
-                    "prices_unavailable",
-                    "pool_limited",
-                    "amenities_listed_only",
-                    "place_resolved_dominant",
-                    "area_absorbed",
-                    "broad_area",
-                    "island_radius",
-                    "area_retired",
-                    "more_outside_radius",
-                    "more_elsewhere",
-                    "few_hotels_in_scope",
-                    "party_split_required",
-                    "no_results",
-                    "locality_available"
-                  ]
+                  "const": "indicative_prices"
                 },
-                {
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "prices_unavailable"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "pool_limited"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "amenities_listed_only"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "place_resolved_dominant"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "area_absorbed"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "places": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "placeId": {
+                            "type": "string",
+                            "pattern": "^plc_\\d{1,12}$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "country",
+                                  "region",
+                                  "district",
+                                  "settlement",
+                                  "neighbourhood",
+                                  "island"
+                                ]
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "placeId",
+                          "name",
+                          "kind"
+                        ],
+                        "additionalProperties": {}
+                      },
+                      "description": "The smaller places of the same name that the searched area holds."
+                    }
+                  },
+                  "required": [
+                    "places"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "broad_area"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "island_radius"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "area_retired"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "more_outside_radius"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "more_elsewhere"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "few_hotels_in_scope"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "party_split_required"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "no_results"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "const": "locality_available"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "The note in words, for a reader of the JSON; the text of a tool result words a note from its code."
+                },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "localityTotal": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "How many matching hotels belong to the place as a locality."
+                    }
+                  },
+                  "required": [
+                    "localityTotal"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
                   "type": "string"
                 }
-              ]
-            },
-            "message": {
-              "type": "string"
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": {}
             }
-          },
-          "required": [
-            "code",
-            "message"
-          ],
-          "additionalProperties": {}
+          ]
         }
       }
     },

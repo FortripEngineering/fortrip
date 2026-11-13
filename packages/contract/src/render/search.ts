@@ -1,5 +1,5 @@
 import { LIMITS } from "../limits.ts";
-import type { HotelSummary, SearchNoteCode, SearchResult } from "../outputs/search.ts";
+import type { HotelSummary, SearchNote, SearchNoteCode, SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
 import { code, joined, type Ours, ours, theirs, token } from "./third-party.ts";
@@ -12,6 +12,8 @@ type Destination = NonNullable<SearchResult["destination"]>;
 type PlaceDestination = Extract<Destination, { kind: "place" }>;
 type PointDestination = Extract<Destination, { kind: "point" }>;
 type Localities = NonNullable<SearchResult["coverage"]["localities"]>;
+/** The note of a code that carries details. */
+type Note<C extends SearchNoteCode> = Extract<SearchNote, { code: C }>;
 
 const SORTS: Record<string, string> = {
   distance: "nearest first",
@@ -240,16 +242,17 @@ function nextSteps(r: SearchResult): Ours {
 }
 
 /**
- * A note in Fortrip's words, from its code and the search it is on: a note
- * carries no details, and its `message` is written for HTTP readers (it
- * names JSON paths). null for a code this build does not know, whose
- * message is then shown.
+ * A note in Fortrip's words, from its code, the search it is on and, for
+ * the two codes that carry them, its details (a count, a list of places):
+ * its `message` is written for HTTP readers (it names JSON paths). Without
+ * details the code's plain sentence stands. null for a code this build does
+ * not know, whose message is then shown.
  */
-function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ours | null {
+function noteText(note: SearchNote, r: SearchResult, surface: RenderSurface): Ours | null {
   const c = r.coverage;
   const p = placeOf(r);
   const d = r.destination?.kind === "place" ? (r.destination as PlaceDestination) : null;
-  switch (noteCode as SearchNoteCode) {
+  switch (note.code as SearchNoteCode) {
     case "indicative_prices":
       return ours`the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.`;
     case "prices_unavailable":
@@ -264,8 +267,15 @@ function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ou
       return d
         ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${token(d.place.placeId)}.`
         : ours`the name also belongs to other places; this is the most populous.`;
-    case "area_absorbed":
-      return ours`${p.name} is searched as the whole ${p.kind}: smaller places of the same name are inside it.`;
+    case "area_absorbed": {
+      const inside = (note as Note<"area_absorbed">).details?.places ?? [];
+      const whole = ours`${p.name} is searched as the whole ${p.kind}`;
+      if (inside.length === 0) return ours`${whole}: smaller places of the same name are inside it.`;
+      const places = inside.map(
+        (a) => ours`${theirs(a.name)} ${token(a.placeId)} (${code(a.kind, ours`kind not recognized`)})`,
+      );
+      return ours`${whole}, which includes ${plural(inside.length, "smaller place")} of the same name: ${joined(places, "; ")}.`;
+    }
     case "broad_area":
       return ours`${p.name} is a wide ${p.kind}, not one city: results run outward from its center. Search one of the localities listed above for one town.`;
     case "island_radius":
@@ -291,9 +301,14 @@ function noteText(noteCode: string, r: SearchResult, surface: RenderSurface): Ou
     case "no_results":
       return ours`no hotels to show. Next: ${nextSteps(r)}.`;
     case "locality_available": {
-      if (!d) return ours`this place is also a locality: search it as a locality for exactly its hotels instead of this circle.`;
+      const total = (note as Note<"locality_available">).details?.localityTotal;
+      const also =
+        total === undefined
+          ? ours`is also a locality`
+          : ours`is also a locality, with ${plural(total, "matching hotel")}`;
+      if (!d) return ours`this place ${also}: search it as a locality for exactly its hotels instead of this circle.`;
       const as = surface === "cli" ? ours`--locality ${token(d.place.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(d.place.placeId)} }`;
-      return ours`${p.name} is also a locality: search ${as} for exactly its hotels instead of this circle.`;
+      return ours`${p.name} ${also}: search ${as} for exactly its hotels instead of this circle.`;
     }
     default:
       return null;
@@ -347,11 +362,12 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
     lines.push(
       ours``,
       ours`Notes:`,
-      // Ours for a code this build knows; the server's message, after our
-      // words, only for one it does not.
-      ...r.notes.map(
-        (n) => ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${noteText(n.code, r, surface) ?? theirs(n.message)}`,
-      ),
+      // Ours for a code this build knows; the server's message, quoted
+      // after our words, only for one it does not.
+      ...r.notes.map((n) => {
+        const said = typeof n.message === "string" ? theirs(n.message) : ours`no words for it in this version.`;
+        return ours`- Note ${code(n.code, ours`of a kind not recognized`)}: ${noteText(n, r, surface) ?? said}`;
+      }),
     );
   }
   lines.push(

@@ -345,7 +345,16 @@
       },
       {
         "code": "area_absorbed",
-        "message": "Shanghai: the whole municipality, starting from the city center."
+        "message": "Shanghai: the whole municipality, starting from the city center.",
+        "details": {
+          "places": [
+            {
+              "placeId": "plc_9100002",
+              "name": "Shanghai",
+              "kind": "settlement"
+            }
+          ]
+        }
       }
     ]
   }

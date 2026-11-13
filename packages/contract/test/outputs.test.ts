@@ -19,7 +19,7 @@ import {
   orderList,
 } from "../src/outputs/order.ts";
 import { place } from "../src/outputs/place.ts";
-import { SEARCH_NOTE_CODES, searchResult } from "../src/outputs/search.ts";
+import { SEARCH_NOTE_CODES, SEARCH_NOTE_DETAILS, searchResult } from "../src/outputs/search.ts";
 import { jsonSchemaOf, OUTPUT_SCHEMAS, type JsonSchema } from "./output-schemas.ts";
 
 // ---------------------------------------------------------------------------
@@ -374,6 +374,44 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(searchResult, { ...searchFixture, text: null });
     assert.equal(searchResult.safeParse({ ...searchFixture, text: { value: "Hilton", match: "exact" } }).success, false);
   });
+  // A note is worded from its code. The two whose words need a fact the search does not hold
+  // carry it in details, which a server may leave out.
+  it("a search note's details: the facts its words need, by code, and optional", () => {
+    const withNotes = (...notes: unknown[]) => ({ ...searchFixture, notes });
+    const absorbed = { places: [{ placeId: "plc_1796236", name: "Shanghai", kind: "settlement" }] };
+    const available = { localityTotal: 6953 };
+    assert.deepEqual(Object.keys(SEARCH_NOTE_DETAILS).sort(), ["area_absorbed", "locality_available"]);
+    parsesBoth(searchResult, withNotes({ code: "area_absorbed", message: "m", details: absorbed }));
+    parsesBoth(searchResult, withNotes({ code: "locality_available", message: "m", details: available }));
+    // Without them a note still reads: the server fills them later.
+    for (const code of SEARCH_NOTE_CODES) parsesBoth(searchResult, withNotes({ code, message: "m" }));
+    // Details are open objects: a field this build does not know is kept, and closed in the strict copy.
+    const more = withNotes({ code: "locality_available", message: "m", details: { ...available, share: 0.4 } });
+    assert.ok(searchResult.safeParse(more).success);
+    assert.equal(strictOutput(searchResult).safeParse(more).success, false);
+    // A known code's details are that code's: malformed ones do not read.
+    for (const details of [{ localityTotal: "many" }, {}, { places: absorbed.places }, null]) {
+      assert.equal(searchResult.safeParse(withNotes({ code: "locality_available", message: "m", details })).success, false, JSON.stringify(details));
+    }
+    for (const details of [{ places: [] }, { places: [{ placeId: "plc_1", name: "Shanghai" }] }, { places: [{ placeId: "one", name: "Shanghai", kind: "settlement" }] }, available]) {
+      assert.equal(searchResult.safeParse(withNotes({ code: "area_absorbed", message: "m", details })).success, false, JSON.stringify(details));
+    }
+    // A kind of place this build does not know reads, as an open enum.
+    assert.ok(searchResult.safeParse(withNotes({ code: "area_absorbed", message: "m", details: { places: [{ ...absorbed.places[0], kind: "atoll" }] } })).success);
+    // A code with no details of its own: none in the strict copy.
+    const stray = withNotes({ code: "broad_area", message: "m", details: available });
+    assert.ok(searchResult.safeParse(stray).success);
+    assert.equal(strictOutput(searchResult).safeParse(stray).success, false);
+    // A code this build does not know reads with whatever it carries; every note has a message.
+    const later = withNotes({ code: "something_new", message: "m", details: { anything: [1, { at: "all" }] } });
+    assert.ok(searchResult.safeParse(later).success);
+    assert.equal(strictOutput(searchResult).safeParse(later).success, false);
+    for (const code of ["area_absorbed", "broad_area"]) {
+      assert.equal(searchResult.safeParse(withNotes({ code })).success, false, code);
+      assert.equal(searchResult.safeParse(withNotes({ code, message: 7 })).success, false, code);
+    }
+  });
+
   it("hotel, with and without room types", () => {
     parsesBoth(hotel, hotelFixture);
     // Absent unless asked for; asked for, null when the catalogue lists none.
@@ -846,6 +884,8 @@ const PUBLIC_KEYS = new Set([
   "withPrice", "withinMaxRadius", "withinMinutes", "worse", "zh",
   // Orders and errors in 6.0.
   "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "max_amount", "token", "usageLimits",
+  // A search note's details.
+  "places",
 ]);
 
 function propertyNames(node: JsonSchema, into = new Set<string>()): Set<string> {

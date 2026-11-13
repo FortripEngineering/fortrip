@@ -10,7 +10,7 @@ Only the nearest 3,000 matches were priced: "cheapest" here means cheapest withi
 Notes:
 - Note indicative_prices: the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.
 - Note pool_limited: more than 3,000 hotels match, so only the nearest were priced: the price order and the price filter cover those alone, and cheaper hotels farther out are not compared.
-- Note locality_available: "Shanghai" is also a locality: search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of this circle.
+- Note locality_available: "Shanghai" is also a locality, with 6,953 matching hotels: search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of this circle.
 
 Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_pool_page_2" }.
 

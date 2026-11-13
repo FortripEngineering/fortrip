@@ -15,6 +15,7 @@ const THE_FLAG = "The flag that says whether the source stated its siblings";
 export const UNKNOWN_IS_NOT_NO_EXEMPTIONS: Readonly<Record<string, string>> = {
   data: `${RESULT_LIST} (a page of hotels or orders).`,
   notes: `${RESULT_LIST} (the notes the search added).`,
+  "notes.details.places": `${RESULT_LIST} (the same-name places an area holds; a note without them has no details).`,
   offers: `${RESULT_LIST} (the offers left after selection).`,
   items: `${RESULT_LIST} (an order's items, a listed set's entries).`,
   issues: `${RESULT_LIST} (what was wrong with the request).`,

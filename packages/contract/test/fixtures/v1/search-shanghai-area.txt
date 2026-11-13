@@ -18,7 +18,7 @@ More: 112 more localities; name one with place_name.
 
 Notes:
 - Note indicative_prices: the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.
-- Note area_absorbed: "Shanghai" is searched as the whole region: smaller places of the same name are inside it.
+- Note area_absorbed: "Shanghai" is searched as the whole region, which includes 1 smaller place of the same name: "Shanghai" plc_9100002 (settlement).
 
 Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.
 

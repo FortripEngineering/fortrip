@@ -288,6 +288,48 @@ describe("search results", () => {
     assert.ok(cli.includes("a larger --radius-meters finds more."), cli);
   });
 
+  // A note's words need two facts the search does not hold: how many hotels the locality has,
+  // and which smaller places of the same name the area includes. They come in the note's details.
+  it("a note says the facts its details carry, and the code's plain sentence without them", () => {
+    const note = (name: "search-pool-limited" | "search-shanghai-area", code: string, details: unknown, surface: "mcp" | "cli" = "mcp") => {
+      const fixture = copy(load(name)) as ToolFixture;
+      fixture.data.notes = [{ code, message: "m", ...(details === undefined ? {} : { details }) }];
+      strictOutput(outputOf("search_hotels")).parse(fixture.data);
+      return renderToolResult("search_hotels", fixture.data, surface).split("\n").find((l) => l.startsWith("- Note "));
+    };
+    assert.equal(
+      note("search-pool-limited", "locality_available", { localityTotal: 6953 }),
+      '- Note locality_available: "Shanghai" is also a locality, with 6,953 matching hotels: search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of this circle.',
+    );
+    assert.equal(
+      note("search-pool-limited", "locality_available", { localityTotal: 1 }, "cli"),
+      '- Note locality_available: "Shanghai" is also a locality, with 1 matching hotel: search --locality plc_9100002 for exactly its hotels instead of this circle.',
+    );
+    assert.equal(
+      note("search-pool-limited", "locality_available", undefined),
+      '- Note locality_available: "Shanghai" is also a locality: search { kind: "locality", placeId: "plc_9100002" } for exactly its hotels instead of this circle.',
+    );
+    const places = [
+      { placeId: "plc_9100002", name: "Shanghai", kind: "settlement" },
+      { placeId: "plc_9100077", name: "上海", kind: "neighbourhood" },
+    ];
+    assert.equal(
+      note("search-shanghai-area", "area_absorbed", { places }),
+      '- Note area_absorbed: "Shanghai" is searched as the whole region, which includes 2 smaller places of the same name: "Shanghai" plc_9100002 (settlement); "上海" plc_9100077 (neighbourhood).',
+    );
+    assert.equal(
+      note("search-shanghai-area", "area_absorbed", { places: places.slice(0, 1) }),
+      '- Note area_absorbed: "Shanghai" is searched as the whole region, which includes 1 smaller place of the same name: "Shanghai" plc_9100002 (settlement).',
+    );
+    assert.equal(
+      note("search-shanghai-area", "area_absorbed", undefined),
+      '- Note area_absorbed: "Shanghai" is searched as the whole region: smaller places of the same name are inside it.',
+    );
+    // The goldens carry both.
+    assert.match(render(load("search-shanghai-area")), /^- Note area_absorbed: .* which includes 1 smaller place of the same name: "Shanghai" plc_9100002 \(settlement\)\.$/m);
+    assert.match(render(load("search-pool-limited")), /^- Note locality_available: .* with 6,953 matching hotels: /m);
+  });
+
   it("heads a locality search as 'Place: Phuket (locality) · 2,752 hotels'", () => {
     const text = render(load("search-locality-phuket"));
     assert.ok(text.split("\n")[0]!.startsWith('Place: "Phuket" (locality) · 2,752 hotels'), text);
@@ -366,6 +408,13 @@ describe("search results", () => {
     const text = render(load("search-empty"));
     assert.match(text, /No hotels on this page/);
     assert.match(text, /text "Ritz Carlton"/);
+  });
+
+  it("an unknown note code with no message says so, and never throws", () => {
+    const fixture = copy(load("search-locality-phuket")) as ToolFixture;
+    fixture.data.notes = [{ code: "new_kind_of_note", details: { count: 3 } }, { code: "another_one", message: 7 }];
+    const lines = render(fixture).split("\n").filter((l) => l.startsWith("- Note "));
+    assert.deepEqual(lines, ["- Note new_kind_of_note: no words for it in this version.", "- Note another_one: no words for it in this version."]);
   });
 
   it("renders an unknown note code with its message", () => {

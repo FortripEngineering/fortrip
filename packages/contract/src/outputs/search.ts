@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-import { hotelId } from "../conventions/ids.ts";
+import { hotelId, placeId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
-import { openEnum, openObject, openUnion } from "../conventions/open.ts";
+import { openEnum, type OpenFallback, openObject, openUnion } from "../conventions/open.ts";
 import { LIMITS } from "../limits.ts";
 import { knownLocaleText, latLng, names, photo, stayEcho } from "./common.ts";
-import { center, place, placeRef } from "./place.ts";
+import { center, place, PLACE_KINDS, placeRef } from "./place.ts";
 
 /* `POST /v1/hotels/search` (spec §7.8). */
 
@@ -28,6 +28,57 @@ export const SEARCH_NOTE_CODES = [
 ] as const;
 
 export type SearchNoteCode = (typeof SEARCH_NOTE_CODES)[number];
+
+/**
+ * The facts a note's words need that the search itself does not hold, by
+ * code. A note of a code listed here may carry them as `details`; a server
+ * may leave them out, and a note of any other code has none.
+ */
+export const SEARCH_NOTE_DETAILS = {
+  area_absorbed: openObject({
+    places: z
+      .array(openObject({ placeId, name: z.string(), kind: openEnum(PLACE_KINDS) }))
+      .min(1)
+      .describe("The smaller places of the same name that the searched area holds."),
+  }),
+  locality_available: openObject({
+    localityTotal: z
+      .number()
+      .int()
+      .describe("How many matching hotels belong to the place as a locality."),
+  }),
+} satisfies Partial<Record<SearchNoteCode, z.ZodObject>>;
+
+type DetailedNoteCode = keyof typeof SEARCH_NOTE_DETAILS;
+
+/** A note of a search: `details` only on the codes that carry them, and
+ *  optional there. */
+export type SearchNote =
+  | {
+      [C in SearchNoteCode]: { code: C; message: string } & (C extends DetailedNoteCode
+        ? { details?: z.output<(typeof SEARCH_NOTE_DETAILS)[C]> }
+        : unknown);
+    }[SearchNoteCode]
+  | OpenFallback<"code">;
+
+/**
+ * A note of a search, picked by `code`: `details` is that code's, and
+ * optional. A code this build does not know falls back, with whatever it
+ * carries.
+ */
+export const searchNote = openUnion(
+  "code",
+  SEARCH_NOTE_CODES.map((code) => {
+    const details = (SEARCH_NOTE_DETAILS as Partial<Record<SearchNoteCode, z.ZodObject>>)[code];
+    return openObject({
+      code: z.literal(code),
+      message: z
+        .string()
+        .describe("The note in words, for a reader of the JSON; the text of a tool result words a note from its code."),
+      ...(details ? { details: details.optional() } : {}),
+    });
+  }),
+) as unknown as z.ZodType<SearchNote>;
 
 /** An estimate from a price floor; only offers can be booked. */
 export const indicativePrice = openObject({
@@ -177,9 +228,7 @@ export const searchResult = openObject({
     .string()
     .nullable()
     .describe("Pass it back as cursor for the next page; null on the last page."),
-  notes: z.array(
-    openObject({ code: openEnum(SEARCH_NOTE_CODES), message: z.string() }),
-  ),
+  notes: z.array(searchNote),
 });
 
 export type SearchResult = z.infer<typeof searchResult>;

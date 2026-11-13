@@ -31,6 +31,7 @@ import {
 const EXEMPT_PATHS: Record<string, readonly string[]> = {
   data: ["searchResult.data", "orderList.data"],
   notes: ["searchResult.notes"],
+  "notes.details.places": ["searchResult.notes.details.places"],
   offers: ["hotelOffersResult.hotels.offers"],
   items: [
     "order.items",
@@ -184,6 +185,7 @@ describe("the exemption list", () => {
     assert.deepEqual(Object.keys(UNKNOWN_IS_NOT_NO_EXEMPTIONS), [
       "data",
       "notes",
+      "notes.details.places",
       "offers",
       "items",
       "issues",

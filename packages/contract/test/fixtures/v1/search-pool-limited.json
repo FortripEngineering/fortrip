@@ -174,7 +174,10 @@
       },
       {
         "code": "locality_available",
-        "message": "Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: \"locality\", placeId: \"plc_9100002\" } for exactly its hotels instead of a circle."
+        "message": "Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: \"locality\", placeId: \"plc_9100002\" } for exactly its hotels instead of a circle.",
+        "details": {
+          "localityTotal": 6953
+        }
       }
     ]
   }
