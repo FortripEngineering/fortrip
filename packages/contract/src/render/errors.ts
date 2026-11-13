@@ -58,7 +58,9 @@ const SUPPLIER_OUTCOME_WORDS: Record<string, string> = {
  *
  * An error that leads to a next call renders that call. Never throws: an
  * unknown code, or a body that does not parse, falls back to the HTTP
- * status, `retryable`, the message and the raw details. Every line begins
+ * status, `retryable`, the message and the raw details. A known code whose
+ * details do not parse still says what happened in Fortrip's words, from
+ * the code, and shows those details as JSON. Every line begins
  * with Fortrip's words. What someone else wrote (the server's message, an
  * issue's message, a place's name, the caller's own text) is in quotes; a
  * pointer, the request id, ids and codes are bare.
@@ -168,7 +170,7 @@ function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface):
       ? ours`${d.candidates.length} of ${d.candidatesTotal} shown`
       : ours`${d.candidatesTotal}`;
   const lines = [
-    ours`Places named ${theirs(d.name)} in ${token(d.countryCode)} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
+    ours`Places named ${theirs(d.name)} in ${token("country", d.countryCode)} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
   ];
   for (const c of d.candidates) {
     const hotels =
@@ -178,8 +180,8 @@ function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface):
     lines.push(
       joined(
         [
-          ours`- Place: ${named(c.name, c.names)} ${token(c.placeId)}`,
-          ours`${code(c.kind, ours`kind not recognized`)} in ${joined([c.region && ours`${theirs(c.region.name)} ${token(c.region.placeId)}`, token(c.countryCode)], ", ")}`,
+          ours`- Place: ${named(c.name, c.names)} ${token("id", c.placeId)}`,
+          ours`${code(c.kind, ours`kind not recognized`)} in ${joined([c.region && ours`${theirs(c.region.name)} ${token("id", c.region.placeId)}`, token("country", c.countryCode)], ", ")}`,
           c.population === null ? ours`population not recorded` : ours`population ${num(c.population)}`,
           hotels,
         ],
@@ -199,7 +201,7 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
   switch (d.reason) {
     case "no_match": {
       const m = d as Extract<typeof d, { reason: "no_match" }>;
-      const none = ours`No place named ${theirs(m.name)} in ${token(m.countryCode)}. Names match exactly, accents and periods included: check the spelling, or try another name for the place.`;
+      const none = ours`No place named ${theirs(m.name)} in ${token("country", m.countryCode)}. Names match exactly, accents and periods included: check the spelling, or try another name for the place.`;
       return [
         m.nameAsText === null
           ? none
@@ -207,20 +209,20 @@ function notFound(d: Details<"destination_not_found">, surface: RenderSurface): 
       ];
     }
     case "unknown_id":
-      return [ours`No place has the id ${token((d as { placeId: string }).placeId)}: use an id an earlier answer showed, exactly as shown.`];
+      return [ours`No place has the id ${token("id", (d as { placeId: string }).placeId)}: use an id an earlier answer showed, exactly as shown.`];
     case "not_a_locality": {
       const n = d as Extract<typeof d, { reason: "not_a_locality" }>;
       const town =
-        surface === "cli" ? ours`--place ${token(n.placeId)}` : ours`{ kind: "place", placeId: ${theirs(n.placeId)} }`;
+        surface === "cli" ? ours`--place ${token("id", n.placeId)}` : ours`{ kind: "place", placeId: ${theirs(n.placeId)} }`;
       if (n.locality === null) {
-        return [ours`Place ${token(n.placeId)} belongs to no locality: search ${town} for an 8 km circle around it.`];
+        return [ours`Place ${token("id", n.placeId)} belongs to no locality: search ${town} for an 8 km circle around it.`];
       }
-      const belongs = ours`Its hotels belong to the locality ${theirs(n.locality.name)} ${token(n.locality.placeId)}`;
+      const belongs = ours`Its hotels belong to the locality ${theirs(n.locality.name)} ${token("id", n.locality.placeId)}`;
       return [
         n.localityTotal === null
-          ? ours`Place ${token(n.placeId)} is not a locality. ${belongs}.`
-          : ours`Place ${token(n.placeId)} is not a locality. ${belongs} (${plural(n.localityTotal, "matching hotel")}).`,
-        ours`Search ${surface === "cli" ? ours`--locality ${token(n.locality.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(n.locality.placeId)} }`} for those, or ${town} for an 8 km circle around the town itself.`,
+          ? ours`Place ${token("id", n.placeId)} is not a locality. ${belongs}.`
+          : ours`Place ${token("id", n.placeId)} is not a locality. ${belongs} (${plural(n.localityTotal, "matching hotel")}).`,
+        ours`Search ${surface === "cli" ? ours`--locality ${token("id", n.locality.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(n.locality.placeId)} }`} for those, or ${town} for an 8 km circle around the town itself.`,
       ];
     }
     default:
@@ -263,7 +265,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
   const getOrder = (id: Ours) => (surface === "cli" ? ours`\`fortrip orders get ${id}\`` : ours`get_order`);
   switch (e.code) {
     case "invalid_request": {
-      const issues = e.details.issues.map((i) => ours`- Field ${token(i.pointer)}: ${theirs(i.message)}`);
+      const issues = e.details.issues.map((i) => ours`- Field ${token("pointer", i.pointer)}: ${theirs(i.message)}`);
       // With no issue to show, the message is all there is to fix it by.
       return issues.length > 0 ? issues : [ours`- What was refused: ${theirs(e.message)}`];
     }
@@ -283,7 +285,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       return [ours`Use an id an earlier answer showed, exactly as shown.`];
     case "offer_expired":
       return [
-        ours`Offer ${token(e.details.offerId)} expired at ${when(e.details.expiredAt, null)}: get offers again and let the user choose again.`,
+        ours`Offer ${token("id", e.details.offerId)} expired at ${when(e.details.expiredAt, null)}: get offers again and let the user choose again.`,
       ];
     case "offer_changed":
       return [
@@ -295,10 +297,10 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       ];
     case "offer_already_ordered":
       return [
-        ours`Order ${token(e.details.orderId)}: read it with ${getOrder(token(e.details.orderId))}. An offer is ordered once, even when its order failed or expired: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
+        ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))}. An offer is ordered once, even when its order failed or expired: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
       ];
     case "order_in_progress":
-      return [ours`Order ${token(e.details.orderId)}: wait, then send the same call again with the same details.`];
+      return [ours`Order ${token("id", e.details.orderId)}: wait, then send the same call again with the same details.`];
     case "cancellation_changed":
       return [
         ours`Read the order again with ${getOrder(ours`<orderId>`)}, show the user the penalty and the refund now on its Cancel line, and ask them again before cancelling.`,
@@ -307,17 +309,17 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       return notCancellable(e.details, surface);
     case "order_not_payable":
       return [
-        ours`Order ${token(e.details.orderId)}, ${label(ORDER_STATUS_WORDS, e.details.status, ours`status not recognized`)}: read it with ${getOrder(token(e.details.orderId))}; this call charged nothing.`,
+        ours`Order ${token("id", e.details.orderId)}, ${label(ORDER_STATUS_WORDS, e.details.status, ours`status not recognized`)}: read it with ${getOrder(token("id", e.details.orderId))}; this call charged nothing.`,
       ];
     case "payment_in_progress":
-      return [ours`Order ${token(e.details.orderId)}: read it with ${getOrder(token(e.details.orderId))} in a few seconds.`];
+      return [ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))} in a few seconds.`];
     case "payment_total_mismatch": {
       const again =
         surface === "cli"
-          ? ours`run the same \`fortrip orders pay ${token(e.details.orderId)}\` command again with \`--total ${token(e.details.total.amount)}\``
+          ? ours`run the same \`fortrip orders pay ${token("id", e.details.orderId)}\` command again with \`--total ${token("amount", e.details.total.amount)}\``
           : ours`call pay_order again with it and the same token`;
       return [
-        ours`The total sent is not the order's: order ${token(e.details.orderId)} totals ${money(e.details.total)}, and that has not changed. Confirm this total with the user, then ${again}. Nothing was charged.`,
+        ours`The total sent is not the order's: order ${token("id", e.details.orderId)} totals ${money(e.details.total)}, and that has not changed. Confirm this total with the user, then ${again}. Nothing was charged.`,
       ];
     }
     case "payment_credential_invalid":
@@ -331,7 +333,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       return [ours`${why}. Read the order with ${getOrder(ours`<orderId>`)}. This call charged nothing.`];
     }
     case "payment_declined": {
-      const declined = e.details.declineCode ? ours`Declined (${token(e.details.declineCode)})` : ours`Declined`;
+      const declined = e.details.declineCode ? ours`Declined (${token("id", e.details.declineCode)})` : ours`Declined`;
       return [
         ours`${declined}: the user picks another card in their Link wallet for a new token, or pays by link: read the order with ${getOrder(ours`<orderId>`)} and give its payment link.`,
       ];
@@ -357,16 +359,16 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
     case "stay_in_past":
       return [
         e.details.timeZone
-          ? ours`Check-in ${token(e.details.checkIn)} is already past in ${token(e.details.timeZone)}: ask the user for new dates.`
-          : ours`Check-in ${token(e.details.checkIn)} is already past: ask the user for new dates.`,
+          ? ours`Check-in ${token("date", e.details.checkIn)} is already past in ${token("timeZone", e.details.timeZone)}: ask the user for new dates.`
+          : ours`Check-in ${token("date", e.details.checkIn)} is already past: ask the user for new dates.`,
       ];
     case "offer_unavailable":
       return [
-        ours`Offer ${token(e.details.offerId)}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason, ours`unavailable, for a reason not recognized`)}. Other offers for the same room may be gone too: get offers again.`,
+        ours`Offer ${token("id", e.details.offerId)}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason, ours`unavailable, for a reason not recognized`)}. Other offers for the same room may be gone too: get offers again.`,
       ];
     case "currency_unavailable":
       return [
-        ours`Prices in ${token(e.details.currency)} aren't available yet. Tell the user, and ask whether to see USD prices.`,
+        ours`Prices in ${token("currency", e.details.currency)} aren't available yet. Tell the user, and ask whether to see USD prices.`,
       ];
     case "rate_limited":
       return [
@@ -439,8 +441,8 @@ export function renderError(
   const name = typeof body.code === "string" ? code(body.code, ours`unknown`) : ours`unknown`;
   const head = status === undefined ? ours`Error ${name}` : ours`Error ${name} (HTTP ${status})`;
   const happened =
-    known && known.code !== "client_outdated"
-      ? own(HAPPENED[known.code])
+    typeof body.code === "string" && Object.hasOwn(HAPPENED, body.code)
+      ? own(HAPPENED[body.code as keyof typeof HAPPENED])
       : typeof body.message === "string"
         ? theirs(body.message)
         : null;
@@ -448,9 +450,9 @@ export function renderError(
     happened === null ? head : ours`${head}: ${happened}`,
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
-  if (typeof body.pointer === "string") lines.push(ours`Field: ${token(body.pointer)}`);
+  if (typeof body.pointer === "string") lines.push(ours`Field: ${token("pointer", body.pointer)}`);
   if (known) lines.push(...detailLines(known, surface));
   else if (body.details !== undefined) lines.push(ours`Details: ${raw(body.details)}`);
-  if (typeof body.requestId === "string") lines.push(ours`Request id: ${token(body.requestId)}`);
+  if (typeof body.requestId === "string") lines.push(ours`Request id: ${token("id", body.requestId)}`);
   return lines.join("\n");
 }

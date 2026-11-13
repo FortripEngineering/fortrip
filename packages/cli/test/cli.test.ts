@@ -647,7 +647,8 @@ describe("errors", () => {
     reply = { status: 429, body: { error: { ...error("rate_limited", true).error, retryAfterSeconds: 7 } } };
     const limited = await cli(SEARCH);
     assert.equal(limited.code, 4);
-    assert.match(limited.stderr, /^Error rate_limited: "rate_limited happened"\nRetryable: retry after 7 s\./);
+    // The envelope here names no limit: the error is still worded from its code.
+    assert.match(limited.stderr, /^Error rate_limited: too many calls of this kind in a short time\.\nRetryable: retry after 7 s\./);
   });
 
   // Spec D6b: the service's message is complete, and the exit code is its own.

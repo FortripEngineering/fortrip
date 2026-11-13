@@ -244,6 +244,28 @@ const hotelItem = openObject({
   }),
 });
 
+/** What to request a shared payment token with, for `pay_order`. */
+export const paymentToken = openObject({
+  handler: paymentHandler.describe("The com.stripe.payments handler, which takes the token."),
+  usageLimits: tokenUsageLimits.describe(
+    "Stripe's usage limits for the token: copy these values as they are into the token request.",
+  ),
+});
+
+/** What a cancellation kept and returned. */
+export const orderCancelled = openObject({
+  at: instant.describe("When the order was cancelled."),
+  penalty: money.describe("What the cancellation kept, in the total's currency."),
+  refund: money.describe("What the cancellation returned; payment.status says whether it has been."),
+});
+
+/** Why a failed order booked no stay. */
+export const orderFailure = openObject({
+  reason: openEnum(FAILURE_REASONS).describe(
+    "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record.",
+  ),
+});
+
 export const order = openObject({
   orderId,
   reference: orderReference,
@@ -292,32 +314,19 @@ export const order = openObject({
       .describe(
         "What the card was charged in its own currency, when Stripe converted the total; otherwise null. Always null on a CNY order.",
       ),
-    token: openObject({
-      handler: paymentHandler.describe("The com.stripe.payments handler, which takes the token."),
-      usageLimits: tokenUsageLimits.describe(
-        "Stripe's usage limits for the token: copy these values as they are into the token request.",
-      ),
-    })
+    token: paymentToken
       .nullable()
       .describe(
         `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,
       ),
   }),
   cancel: orderCancel,
-  cancelled: openObject({
-    at: instant.describe("When the order was cancelled."),
-    penalty: money.describe("What the cancellation kept, in the total's currency."),
-    refund: money.describe("What the cancellation returned; payment.status says whether it has been."),
-  })
+  cancelled: orderCancelled
     .nullable()
     .describe(
       "What a cancellation kept and returned. null unless status is cancelled, and on a cancelled order whose figures are not on record.",
     ),
-  failure: openObject({
-    reason: openEnum(FAILURE_REASONS).describe(
-      "rate_unavailable: the rate could no longer be booked when the hotel was asked; read offers again. hotel_refused: the hotel's booking system refused this order; ordering the same again will be refused too. unknown: not on record.",
-    ),
-  })
+  failure: orderFailure
     .nullable()
     .describe(
       "Why no stay was booked: always set on a failed order, its reason unknown when not on record. null unless status is failed.",

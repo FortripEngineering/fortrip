@@ -1,5 +1,5 @@
 import { LIMITS } from "../limits.ts";
-import type { HotelSummary, SearchNote, SearchNoteCode, SearchResult } from "../outputs/search.ts";
+import { type HotelSummary, type SearchNote, type SearchNoteCode, searchNote, type SearchResult } from "../outputs/search.ts";
 import type { RenderSurface } from "../tools.ts";
 import { km, label, money, named, num, party, plural, stayLine } from "./format.ts";
 import { code, joined, type Ours, ours, theirs, token } from "./third-party.ts";
@@ -56,8 +56,8 @@ function placeHeader(d: PlaceDestination, matched: number): Ours {
     [
       ours`Place: ${theirs(p.name)} (${scope})`,
       plural(matched, "hotel"),
-      token(p.placeId),
-      joined([p.region && ours`${theirs(p.region.name)} ${token(p.region.placeId)}`, token(p.countryCode)], ", "),
+      token("id", p.placeId),
+      joined([p.region && ours`${theirs(p.region.name)} ${token("id", p.region.placeId)}`, token("country", p.countryCode)], ", "),
       other ? ours`also named ${theirs(other)}` : "",
     ],
     " · ",
@@ -84,7 +84,7 @@ function header(r: SearchResult): Ours {
 function centerLine(d: Destination | null): Ours | null {
   if (d === null || (d.kind !== "place" && d.kind !== "point")) return null;
   const c = (d as PlaceDestination | PointDestination).center;
-  const from = c.place ? ours`${theirs(c.place.name)} ${token(c.place.placeId)}` : ours`${c.location.lat}, ${c.location.lng}`;
+  const from = c.place ? ours`${theirs(c.place.name)} ${token("id", c.place.placeId)}` : ours`${c.location.lat}, ${c.location.lng}`;
   return ours`Distances from ${from} (${label(CENTER_BASES, c.basis, ours`basis not recognized`)}).`;
 }
 
@@ -105,7 +105,7 @@ function countsLine(r: SearchResult): Ours {
   const c = r.coverage;
   const country =
     r.destination?.kind === "place"
-      ? token((r.destination as PlaceDestination).place.countryCode)
+      ? token("country", (r.destination as PlaceDestination).place.countryCode)
       : ours`the country`;
   const parts = [ours`${num(c.matched)} matched`];
   if (c.priced !== null) parts.push(ours`${num(c.priced)} priced`);
@@ -142,7 +142,7 @@ export function localitiesLines(
     ours`Localities: pass one back as ${back}, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").`,
   ];
   for (const item of loc.items) {
-    let line = ours`- Locality: ${theirs(item.place.name)} ${token(item.place.placeId)} ${num(item.count)}`;
+    let line = ours`- Locality: ${theirs(item.place.name)} ${token("id", item.place.placeId)} ${num(item.count)}`;
     if (item.total !== item.count) line = ours`${line} here, ${num(item.total)} as a locality`;
     const sameName =
       areaName !== null &&
@@ -152,7 +152,7 @@ export function localitiesLines(
     if (sameName) line = ours`${line} — the locality, not the whole of ${theirs(areaName)}`;
     if (item.includes.length > 0) {
       const inc = item.includes.map(
-        (i) => ours`${theirs(i.place.name)} ${token(i.place.placeId)}, ${num(i.members)} hotels overall`,
+        (i) => ours`${theirs(i.place.name)} ${token("id", i.place.placeId)}, ${num(i.members)} hotels overall`,
       );
       line = ours`${line} (incl. ${joined(inc, "; ")})`;
     }
@@ -190,9 +190,9 @@ function hotelLine(h: HotelSummary, i: number, r: SearchResult): Ours {
           : km(h.distanceMeters),
       r.pricing.mode === "none" ? "" : priceWords(h, r.pricing.status),
       h.address.line ? theirs(h.address.line.text) : ours`address not listed`,
-      joined([region && theirs(region.name), h.address.countryCode && token(h.address.countryCode)], ", "),
-      h.photo ? ours`photo ${token(h.photo.url)}` : "",
-      token(h.hotelId),
+      joined([region && theirs(region.name), h.address.countryCode && token("country", h.address.countryCode)], ", "),
+      h.photo ? ours`photo ${token("url", h.photo.url)}` : "",
+      token("id", h.hotelId),
     ],
     " · ",
   );
@@ -221,7 +221,7 @@ function placeOf(r: SearchResult): { name: Ours; kind: Ours; countryCode: Ours }
   return {
     name: place ? theirs(place.name) : ours`This place`,
     kind: place ? code(place.kind, ours`area`) : ours`area`,
-    countryCode: place ? token(place.countryCode) : ours`the country`,
+    countryCode: place ? token("country", place.countryCode) : ours`the country`,
   };
 }
 
@@ -265,14 +265,14 @@ function noteText(note: SearchNote, r: SearchResult, surface: RenderSurface): Ou
         : ours`amenity filters match hotels that list the amenity; not listed is not absent. ${plural(c.excludedNoFacilityData, "hotel")} here list no facilities at all and were left out.`;
     case "place_resolved_dominant":
       return d
-        ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${token(d.place.placeId)}.`
+        ? ours`the name also belongs to ${plural(d.otherMatches, "other place")} in ${p.countryCode}; this is the most populous, ${p.name} ${token("id", d.place.placeId)}.`
         : ours`the name also belongs to other places; this is the most populous.`;
     case "area_absorbed": {
       const inside = (note as Note<"area_absorbed">).details?.places ?? [];
       const whole = ours`${p.name} is searched as the whole ${p.kind}`;
       if (inside.length === 0) return ours`${whole}: smaller places of the same name are inside it.`;
       const places = inside.map(
-        (a) => ours`${theirs(a.name)} ${token(a.placeId)} (${code(a.kind, ours`kind not recognized`)})`,
+        (a) => ours`${theirs(a.name)} ${token("id", a.placeId)} (${code(a.kind, ours`kind not recognized`)})`,
       );
       return ours`${whole}, which includes ${plural(inside.length, "smaller place")} of the same name: ${joined(places, "; ")}.`;
     }
@@ -307,12 +307,30 @@ function noteText(note: SearchNote, r: SearchResult, surface: RenderSurface): Ou
           ? ours`is also a locality`
           : ours`is also a locality, with ${plural(total, "matching hotel")}`;
       if (!d) return ours`this place ${also}: search it as a locality for exactly its hotels instead of this circle.`;
-      const as = surface === "cli" ? ours`--locality ${token(d.place.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(d.place.placeId)} }`;
+      const as = surface === "cli" ? ours`--locality ${token("id", d.place.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(d.place.placeId)} }`;
       return ours`${p.name} ${also}: search ${as} for exactly its hotels instead of this circle.`;
     }
     default:
       return null;
   }
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * A search as it came, the details of a note that do not parse left out, so
+ * that they do not cost the search its text: such a note is worded from its
+ * code alone, as one sent without details is.
+ */
+export function readableSearch(value: unknown): unknown {
+  if (!isObject(value) || !Array.isArray(value.notes)) return value;
+  const notes = value.notes.map((note: unknown) => {
+    if (!isObject(note) || !("details" in note) || searchNote.safeParse(note).success) return note;
+    const { details: _unread, ...coded } = note;
+    return coded;
+  });
+  return { ...value, notes };
 }
 
 export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): string {
@@ -375,7 +393,7 @@ export function renderSearch(r: SearchResult, surface: RenderSurface = "mcp"): s
     r.nextCursor === null
       ? ours`Last page.`
       : surface === "cli"
-        ? ours`Next page: run again with only --cursor ${token(r.nextCursor)} and, optionally, --limit.`
+        ? ours`Next page: run again with only --cursor ${token("cursor", r.nextCursor)} and, optionally, --limit.`
         : ours`Next page: call again with only the cursor and, optionally, limit: { cursor: ${theirs(r.nextCursor)} }.`,
   );
   if (r.currencyHint?.currency === "CNY") lines.push(ours``, currencyHintLine(r.currencyHint, surface));

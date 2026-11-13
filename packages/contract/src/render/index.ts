@@ -18,8 +18,8 @@ import {
 import { raw } from "./format.ts";
 import { renderHotel } from "./hotel.ts";
 import { renderOffers } from "./offers.ts";
-import { renderOrder, renderOrderList, UnreadableOrder } from "./order.ts";
-import { renderSearch } from "./search.ts";
+import { readableOrder, renderOrder, renderOrderList, UnreadableOrder } from "./order.ts";
+import { readableSearch, renderSearch } from "./search.ts";
 import { ours, own } from "./third-party.ts";
 
 export { renderError } from "./errors.ts";
@@ -46,7 +46,10 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  * ignored, and an unknown value is shown as it came only when it reads as a
  * code. A result that does not parse is shown as JSON, never thrown. A list
  * of orders degrades per order: one that does not parse is JSON on its one
- * line, and the others are shown in full.
+ * line, and the others are shown in full. An optional part that does not
+ * parse costs neither: a note's details, and what an order says of a
+ * cancellation, a failure or a token, are then read as not there
+ * (`readableSearch`, `readableOrder`).
  *
  * After the data come the rules it governs, each a paragraph, last:
  * - the cancel rule (`cancelNextStep`) when a `get_order` or `list_orders`
@@ -77,7 +80,8 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
   let parsed: unknown;
   try {
     if (!schema) throw new Error(`no output schema for ${tool}`);
-    parsed = parseOpen(schema, data);
+    const readable = READABLE[tool];
+    parsed = parseOpen(schema, readable ? readable(data) : data);
   } catch {
     const spec = COMMANDS.find((command) => command.tool === tool);
     const name = surface === "cli" && spec ? commandInvocation(spec) : tool;
@@ -104,7 +108,7 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
     case "list_orders": {
       const page = parsed as z.output<typeof orderPage>;
       const orders = page.data.map((value) => {
-        const read = orderSchema.safeParse(value);
+        const read = orderSchema.safeParse(readableOrder(value));
         return read.success ? read.data : new UnreadableOrder(value);
       });
       return withConsent(tool, surface, renderOrderList({ ...page, data: orders }, surface), orders);
@@ -114,6 +118,16 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
       return renderOrder(parsed as Order, surface);
   }
 }
+
+/** How a result is read before it is parsed: without the optional parts
+ *  that do not parse. A list's orders are read one by one, after. */
+const READABLE: Partial<Record<RenderedTool, (data: unknown) => unknown>> = {
+  search_hotels: readableSearch,
+  create_order: readableOrder,
+  get_order: readableOrder,
+  cancel_order: readableOrder,
+  pay_order: readableOrder,
+};
 
 const ORDER_TOOLS = new Set<RenderedTool>(["create_order", "get_order", "list_orders"]);
 

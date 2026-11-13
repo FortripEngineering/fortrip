@@ -130,7 +130,7 @@ export function roomTypeText(r: RoomType): Ours {
 export function offerLine(o: Offer): Ours {
   return joined(
     [
-      ours`Offer ${token(o.offerId)}`,
+      ours`Offer ${token("id", o.offerId)}`,
       ours`${plural(o.roomCount, "room")}: ${roomTypeText(o.roomType)}`,
       ours`${money(o.total)} total (average ${money(o.perRoomNight)} per room-night)`,
       mealsWithLabel(o.meals),
@@ -198,7 +198,7 @@ export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp
   ];
   if (r.hotels.length === 0) lines.push(ours``, ours`No hotel has offers for this stay.`);
   for (const h of r.hotels) {
-    lines.push(ours``, ours`Hotel: ${named(h.name, h.names)} · ${token(h.hotelId)} · ${plural(h.offers.length, "offer")}`);
+    lines.push(ours``, ours`Hotel: ${named(h.name, h.names)} · ${token("id", h.hotelId)} · ${plural(h.offers.length, "offer")}`);
     h.offers.forEach((o, i) => lines.push(ours`${i + 1}. ${offerLine(o)}`));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(ours`Not shown: ${omitted}.`);
@@ -210,7 +210,7 @@ export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp
   if (r.unavailable.length > 0) {
     lines.push(ours``, ours`Unavailable:`);
     for (const u of r.unavailable) {
-      const why = ours`- Hotel ${token(u.hotelId)}: ${label(UNAVAILABLE, u.reason, ours`reason not recognized`)}`;
+      const why = ours`- Hotel ${token("id", u.hotelId)}: ${label(UNAVAILABLE, u.reason, ours`reason not recognized`)}`;
       const omitted = u.omitted && joined([omittedText(u.omitted), limitText(u.omitted, surface)], "; ");
       lines.push(omitted ? ours`${why} (${omitted})` : why);
     }

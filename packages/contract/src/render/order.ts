@@ -1,5 +1,12 @@
 import { SUPPORT_EMAIL } from "../limits.ts";
-import { type Order, type OrderCancel, tokenUsageLimits } from "../outputs/order.ts";
+import {
+  type Order,
+  type OrderCancel,
+  orderCancelled,
+  orderFailure,
+  paymentToken,
+  tokenUsageLimits,
+} from "../outputs/order.ts";
 import type { RenderSurface } from "../tools.ts";
 import { label, money, named, party, raw, stayLine, when } from "./format.ts";
 import { cancellationText, confirmationText, feesText, mealsWithLabel, roomTypeText } from "./offers.ts";
@@ -105,10 +112,10 @@ function itemLines(item: Item): Ours[] {
     joined(
       [
         ours`Hotel: ${named(h.name, h.names)}`,
-        h.hotelId === null ? ours`not in the hotel catalogue` : token(h.hotelId),
+        h.hotelId === null ? ours`not in the hotel catalogue` : token("id", h.hotelId),
         stayLine(h.checkIn, h.checkOut),
         party(h.rooms),
-        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token(h.timeZone)}`,
+        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token("timeZone", h.timeZone)}`,
       ],
       " · ",
     ),
@@ -173,13 +180,13 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
       ],
       "; ",
     );
-    lines.push(ours`Payment link (${about}): ${token(p.url)}`);
+    lines.push(ours`Payment link (${about}): ${token("url", p.url)}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
     lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.token) lines.push(tokenLine(o, p.token, surface));
   lines.push(cancelLine(o.cancel, o.orderId, surface));
-  lines.push(ours`Manage: ${token(o.manageUrl)}`);
+  lines.push(ours`Manage: ${token("url", o.manageUrl)}`);
   return lines;
 }
 
@@ -197,14 +204,14 @@ function tokenLine(
   const { handler: h, usageLimits: u } = request;
   const pay =
     surface === "cli"
-      ? ours`\`fortrip orders pay ${token(o.orderId)} --token <spt_…> --total ${token(o.total.amount)}\``
+      ? ours`\`fortrip orders pay ${token("id", o.orderId)} --token <spt_…> --total ${token("amount", o.total.amount)}\``
       : ours`pay_order`;
   const unit = u.currency === "usd" ? "cents" : "the currency's minor unit";
-  const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${token(u.currency)}, expires_at ${u.expires_at}`;
+  const limits = ours`max_amount ${u.max_amount} (${unit}), currency ${token("currency", u.currency)}, expires_at ${u.expires_at}`;
   const until = tokenUsageLimits.shape.expires_at.safeParse(u.expires_at).success
     ? ours`${limits} (${when(new Date(u.expires_at * 1000).toISOString(), null)})`
     : limits;
-  return ours`Pay without the link: ${pay} with a shared payment token via ${token(h.type)} (handler ${token(h.id)}, business_profile ${token(h.config.business_profile)}); usage limits for the token request: ${until}.`;
+  return ours`Pay without the link: ${pay} with a shared payment token via ${token("handlerType", h.type)} (handler ${token("id", h.id)}, business_profile ${token("id", h.config.business_profile)}); usage limits for the token request: ${until}.`;
 }
 
 /** "penalty USD 120.00, refund USD 246.00": what cancelling now keeps and
@@ -218,14 +225,14 @@ function cancelFigures(c: OrderCancel): Ours {
  *  text has none to give (an error holds the order's cancel state, not its
  *  id). A tool call names no order in these words: the caller has its id. */
 function orderArgument(orderId: string | null): Ours {
-  return orderId === null ? ours`<orderId>` : token(orderId);
+  return orderId === null ? ours`<orderId>` : token("id", orderId);
 }
 
 /** The call that cancels a paid order for `penalty`, as `surface` makes it:
  *  the penalty is the order's own, as the call takes it. */
 function cancelCall(orderId: string | null, penalty: NonNullable<OrderCancel["penalty"]>, surface: RenderSurface): Ours {
   return surface === "cli"
-    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --max-penalty ${token(penalty.amount)}\``
+    ? ours`run \`fortrip orders cancel ${orderArgument(orderId)} --max-penalty ${token("amount", penalty.amount)}\``
     : ours`call cancel_order with maximumPenalty { amount: ${theirs(penalty.amount)}, currency: ${theirs(penalty.currency)} }`;
 }
 
@@ -263,6 +270,31 @@ export function blockerText(c: OrderCancel): Ours {
   return label(CANCEL_BLOCKER_WORDS, c.blockedBy ?? "", ours`reason not recognized`);
 }
 
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * An order as it came, each optional part of it that does not parse read as
+ * not there, so that one such part does not cost the order its text: what a
+ * cancellation kept is then not on record, why the order failed is unknown
+ * (a failed order always says), and no token is requested, which leaves the
+ * payment link. Each is what the text says of the part when it is absent,
+ * and none is a fact about the stay, the money or what can be done now:
+ * an order that does not parse there is still shown as JSON.
+ */
+export function readableOrder(value: unknown): unknown {
+  if (!isObject(value)) return value;
+  const order = { ...value };
+  if (!orderCancelled.nullable().safeParse(order.cancelled).success) order.cancelled = null;
+  if (!orderFailure.nullable().safeParse(order.failure).success) {
+    order.failure = order.status === "failed" ? { reason: "unknown" } : null;
+  }
+  if (isObject(order.payment) && !paymentToken.nullable().safeParse(order.payment.token).success) {
+    order.payment = { ...order.payment, token: null };
+  }
+  return order;
+}
+
 /** An order of a list that this build can't read: kept as it came, and
  *  shown as JSON on one line, so the orders around it still show in full. */
 export class UnreadableOrder {
@@ -271,7 +303,7 @@ export class UnreadableOrder {
 
 export function orderLines(o: Order, surface: RenderSurface = "mcp"): Ours[] {
   return [
-    ours`Order ${token(o.orderId)} · reference ${token(o.reference)} · ${label(ORDER_STATUS_WORDS, o.status, ours`status not recognized`)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
+    ours`Order ${token("id", o.orderId)} · reference ${token("id", o.reference)} · ${label(ORDER_STATUS_WORDS, o.status, ours`status not recognized`)} · created ${when(o.createdAt, null)} · updated ${when(o.updatedAt, null)}`,
     ...outcomeLines(o),
     ...o.items.flatMap(itemLines),
     contactLine(o.contact),
@@ -305,7 +337,7 @@ export function renderOrderList(
     list.nextCursor === null
       ? ours`Last page.`
       : surface === "cli"
-        ? ours`Next page: run again with --cursor ${token(list.nextCursor)}.`
+        ? ours`Next page: run again with --cursor ${token("cursor", list.nextCursor)}.`
         : ours`Next page: call again with { cursor: ${theirs(list.nextCursor)} }.`,
   );
   return lines.join("\n");

@@ -23,7 +23,7 @@ export function km(meters: number): Ours {
 }
 
 export function money(m: Money): Ours {
-  return ours`${token(m.currency)} ${token(m.amount)}`;
+  return ours`${token("currency", m.currency)} ${token("amount", m.amount)}`;
 }
 
 /** A count of things Fortrip names: `one` and `many` are words of ours. */
@@ -50,7 +50,7 @@ export function label(
 
 export function stayLine(checkIn: string, checkOut: string): Ours {
   const nights = countIsoDateDays(checkIn, checkOut);
-  return ours`${token(checkIn)} → ${token(checkOut)} (${plural(nights, "night")})`;
+  return ours`${token("date", checkIn)} → ${token("date", checkOut)} (${plural(nights, "night")})`;
 }
 
 function partyOf(room: Room): Ours {
@@ -76,9 +76,10 @@ export function party(rooms: Room[]): Ours {
  * "2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai)".
  */
 export function when(instant: string, timeZone: string | null): Ours {
-  // The date and the minute of an RFC 3339 instant; anything else is shown whole.
+  // The date and the minute of an RFC 3339 instant; anything else is shown
+  // whole, in quotes: it is not an instant of ours.
   const read = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(instant);
-  if (!read) return token(instant);
+  if (!read) return theirs(instant);
   const utc = ours`${own(read[1]!)} ${own(read[2]!)} UTC`;
   if (!timeZone) return utc;
   try {
@@ -93,7 +94,7 @@ export function when(instant: string, timeZone: string | null): Ours {
     }).formatToParts(new Date(instant));
     // The formatter's own digits.
     const part = (type: string) => own(String(parts.find((p) => p.type === type)?.value));
-    return ours`${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${token(timeZone)})`;
+    return ours`${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${token("timeZone", timeZone)})`;
   } catch {
     return utc;
   }

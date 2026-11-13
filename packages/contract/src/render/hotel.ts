@@ -14,7 +14,7 @@ type Policy = Hotel["policies"]["items"][number];
 
 function times(what: "Check-in" | "Check-out", range: Times): Ours {
   if (range.from === null && range.until === null) return ours`${what}: not listed`;
-  const time = (value: string | null) => (value === null ? ours`not listed` : token(value));
+  const time = (value: string | null) => (value === null ? ours`not listed` : token("time", value));
   return ours`${what} from ${time(range.from)}, until ${time(range.until)}`;
 }
 
@@ -44,7 +44,7 @@ function website(value: string | null): Ours | null {
     const url = new URL(text);
     const web = url.protocol === "http:" || url.protocol === "https:";
     const plain = !url.username && !url.password;
-    return web && plain && url.href.length <= WEBSITE_MAX ? token(url.href) : null;
+    return web && plain && url.href.length <= WEBSITE_MAX ? token("url", url.href) : null;
   } catch {
     return null;
   }
@@ -131,7 +131,7 @@ export function renderHotel(h: Hotel): string {
       [
         ours`Hotel: ${named(h.name, h.names)}`,
         h.stars === null ? ours`stars not listed` : ours`${h.stars}★`,
-        token(h.hotelId),
+        token("id", h.hotelId),
         !h.bookable && ours`no longer bookable (it has left the catalogue)`,
       ],
       " · ",
@@ -139,10 +139,10 @@ export function renderHotel(h: Hotel): string {
     joined(
       [
         h.address.line ? ours`Address: ${theirs(h.address.line.text)}` : ours`Address: not listed`,
-        region && ours`${theirs(region.name)} ${token(region.placeId)}`,
-        h.address.countryCode && token(h.address.countryCode),
+        region && ours`${theirs(region.name)} ${token("id", region.placeId)}`,
+        h.address.countryCode && token("country", h.address.countryCode),
         h.location ? ours`coordinates ${h.location.lat}, ${h.location.lng}` : ours`coordinates not listed`,
-        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token(h.timeZone)}`,
+        h.timeZone === null ? ours`time zone not listed` : ours`time zone ${token("timeZone", h.timeZone)}`,
       ],
       " · ",
     ),
@@ -152,7 +152,7 @@ export function renderHotel(h: Hotel): string {
     ours`Phone: ${h.contact.phone === null ? "not listed" : theirs(h.contact.phone)} · Website: ${website(h.contact.website) ?? "not listed"}`,
   ];
   if (h.photos?.length) {
-    const shown = joined(h.photos.slice(0, PHOTOS_SHOWN).map((p) => token(p.url)), " · ");
+    const shown = joined(h.photos.slice(0, PHOTOS_SHOWN).map((p) => token("url", p.url)), " · ");
     const more = h.photos.length - PHOTOS_SHOWN;
     lines.push(more > 0 ? ours`Photos: ${shown} (+${more} more)` : ours`Photos: ${shown}`);
   }
@@ -185,7 +185,7 @@ export function renderHotel(h: Hotel): string {
   if (h.description === null) {
     lines.push(ours`Description: not listed`);
   } else {
-    lines.push(ours`Description (${token(h.description.locale)}; ${FROM_THE_HOTEL}):`, ...quoted(h.description.text));
+    lines.push(ours`Description (${token("locale", h.description.locale)}; ${FROM_THE_HOTEL}):`, ...quoted(h.description.text));
   }
   return lines.join("\n");
 }

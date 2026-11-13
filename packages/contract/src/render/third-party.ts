@@ -1,5 +1,5 @@
 /*
- * Text Fortrip did not write (spec D4): a hotel's description and policies,
+ * Text Fortrip did not write: a hotel's description and policies,
  * hotel, room and place names, addresses, guest names, the contact, special
  * requests, the caller's own words echoed back, a server message. It is
  * data, so it never passes for Fortrip's own text, at the start of a line or
@@ -8,13 +8,14 @@
  * - a one-line value someone else wrote is a JSON string (`theirs`): in
  *   double quotes, its whitespace collapsed, `"` and `\` escaped, so nothing
  *   in it can close the quote and no word of it stands outside the quotes;
- * - a value Fortrip generates (an id, a code, a date, an amount, a URL, a
- *   cursor) is bare while it is one token, and a JSON string otherwise
- *   (`token`, `code`);
+ * - a value Fortrip generates (an id, a date, an amount, a currency, a time
+ *   zone, a URL, a cursor) is bare only when it is written as such a value
+ *   is, in printable ASCII, and a JSON string otherwise (`token`, `code`);
  * - longer text is a quoted block under a label that says whose it is
  *   (`quoted`);
  * - every line begins with words Fortrip wrote, and characters a reader does
- *   not see are removed.
+ *   not see are removed, a lone surrogate first: two of them left side by
+ *   side would read as one character, an invisible one included.
  *
  * One rule for free values, JSON's, because a model already reads it, it is
  * the rule of the raw JSON a result falls back to, and a quoted name still
@@ -44,11 +45,22 @@ const INVISIBLE = /[\p{Default_Ignorable_Code_Point}\ufff9-\ufffb]/gu;
  *  what a reader or a terminal could take as a line break or a control. */
 const BLANK = /[\s\u0000-\u001f\u007f-\u009f]+/g;
 
-/** A value on one line: invisible characters are removed, and every run of
- *  whitespace or controls, line breaks included, is one space. Not yet safe
- *  to print: `theirs` and `token` delimit it. */
+/** A surrogate with no partner. The `u` flag reads a pair as one character,
+ *  so only a lone one matches. */
+const LONE_SURROGATE = /\p{Surrogate}/gu;
+
+/** Text with every lone surrogate replaced (U+FFFD), as `toWellFormed`
+ *  does. It comes before any removal: with what stood between them removed,
+ *  two lone surrogates are one character, which may be an invisible one. */
+export function wellFormed(text: string): string {
+  return text.replace(LONE_SURROGATE, "\ufffd");
+}
+
+/** A value on one line: lone surrogates are replaced, invisible characters
+ *  removed, and every run of whitespace or controls, line breaks included,
+ *  is one space. Not yet safe to print: `theirs` and `token` delimit it. */
 export function oneLine(text: string): string {
-  return text.replace(INVISIBLE, "").replace(BLANK, " ").trim();
+  return wellFormed(text).replace(INVISIBLE, "").replace(BLANK, " ").trim();
 }
 
 /**
@@ -61,15 +73,54 @@ export function theirs(text: string): Ours {
 }
 
 /**
- * A value Fortrip generates: an id, a date, an amount, a URL, a cursor, a
- * time zone. Bare while it is one token: no space, quote or backslash in
- * it, and no colon at its end, so it cannot read as a label before the
- * words that follow it. Anything else is not what Fortrip generates, and is
- * shown as `theirs`.
+ * How each kind of value Fortrip generates is written: printable ASCII, and
+ * nothing a label, a separator or a second value could be made of. A value
+ * is bare only when it is written as its own kind is.
  */
-export function token(text: string): Ours {
+const BARE = {
+  /** `ord_…`, `htl_…`, `plc_…`, `req_…`, a reference (`FT-…`), a decline
+   *  code, a payment handler's id and business profile. */
+  id: /^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$/,
+  /** A JSON Pointer into a request: `/items/0/offerId`. */
+  pointer: /^(?:\/[A-Za-z0-9_~-]+)+$/,
+  /** ISO 4217, upper case, or lower case as Stripe takes it. */
+  currency: /^(?:[A-Z]{3}|[a-z]{3})$/,
+  /** ISO 3166-1 alpha-2. */
+  country: /^[A-Z]{2}$/,
+  amount: /^\d+(?:\.\d+)?$/,
+  date: /^\d{4}-\d{2}-\d{2}$/,
+  /** A local time of day: `14:00`. */
+  time: /^\d{2}:\d{2}$/,
+  /** An IANA time zone: `Asia/Shanghai`, `Etc/GMT+8`. */
+  timeZone: /^[A-Za-z]+(?:[/_+-][A-Za-z0-9]+)*$/,
+  /** `en`, `zh`, `zh-Hans`. */
+  locale: /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/,
+  /** A payment handler's type: `com.stripe.payments`. */
+  handlerType: /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/,
+  /** An `http(s)` URL: a host, then a path, query and fragment with no
+   *  colon, bracket or quote in them. */
+  url: /^https?:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:[/?#][A-Za-z0-9/?#&=%._~+@-]*)?$/,
+  /** An opaque cursor. */
+  cursor: /^[A-Za-z0-9_.~+/=-]+$/,
+} as const;
+
+/** The kinds of value `token` shows bare. */
+export type TokenKind = keyof typeof BARE;
+
+/** The longest value shown bare. */
+const BARE_MAX = 2048;
+
+/**
+ * A value Fortrip generates, of `kind`: an id, a date, an amount, a
+ * currency, a time zone, a URL, a cursor. Bare only when it is written as
+ * that kind is (`BARE`): any other value is not what Fortrip generates,
+ * whatever it holds, and is shown as `theirs`. No space is needed to imitate
+ * a line of ours (a braille blank or a middle dot separates words as well),
+ * so the test is what the value is, never what it lacks.
+ */
+export function token(kind: TokenKind, text: string): Ours {
   const line = oneLine(text);
-  return /^[^\s"\\]*[^\s"\\:]$/.test(line) ? (line as Ours) : theirs(line);
+  return line.length <= BARE_MAX && BARE[kind].test(line) ? (line as Ours) : theirs(line);
 }
 
 /** An open enum's value the package has no words for: shown as it came only
@@ -126,12 +177,12 @@ const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
 
 /**
  * Longer text as a quoted block: every line starts with "> ", and a run of
- * blank lines is one ">". Controls and invisible characters are removed (a
- * tab becomes a space); nothing else is cut.
+ * blank lines is one ">". Lone surrogates are replaced, controls and
+ * invisible characters removed (a tab becomes a space); nothing else is cut.
  */
 export function quoted(text: string): Ours[] {
   const lines: string[] = [];
-  for (const raw of text.split(LINE_BREAK)) {
+  for (const raw of wellFormed(text).split(LINE_BREAK)) {
     const line = raw.replace(/\t/g, " ").replace(CONTROL, "").replace(INVISIBLE, "").trimEnd();
     if (line.trim()) lines.push(`> ${line}`);
     else if (lines.length > 0 && lines.at(-1) !== ">") lines.push(">");

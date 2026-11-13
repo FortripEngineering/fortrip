@@ -331,6 +331,38 @@ describe("search results", () => {
     assert.match(render(load("search-pool-limited")), /^- Note locality_available: .* with 6,953 matching hotels: /m);
   });
 
+  // A note's details are an extra: when they do not parse, the note is worded from its code
+  // alone, and the search around it is shown in full, never as one line of JSON.
+  it("a note whose details do not parse is worded from its code alone, the rest of the search in full", () => {
+    const cases: [Golden, string, unknown][] = [
+      ["search-shanghai-area", "area_absorbed", { places: [] }],
+      ["search-shanghai-area", "area_absorbed", { places: [{ placeId: "plc_9100002", name: 7, kind: "settlement" }] }],
+      ["search-shanghai-area", "area_absorbed", "three places"],
+      ["search-pool-limited", "locality_available", { localityTotal: "6953" }],
+      ["search-pool-limited", "locality_available", { localityTotal: 12.5 }],
+      ["search-pool-limited", "locality_available", null],
+    ];
+    for (const [name, code, details] of cases) {
+      for (const surface of ["mcp", "cli"] as const) {
+        const fixture = copy(load(name)) as ToolFixture;
+        const notes = fixture.data.notes as Record<string, unknown>[];
+        const at = notes.findIndex((n) => n.code === code);
+        assert.ok(at >= 0 && notes[at]!.details !== undefined, name);
+        const without = copy(fixture.data);
+        delete (without.notes as Record<string, unknown>[])[at]!.details;
+        notes[at]!.details = details;
+        const text = renderToolResult("search_hotels", fixture.data, surface);
+        assert.doesNotMatch(text, /not in the expected shape/, JSON.stringify(details));
+        assert.equal(text, renderToolResult("search_hotels", without, surface), JSON.stringify(details));
+        assert.match(text, /^1\. Hotel: /m);
+      }
+    }
+    // A note that does not parse for another reason is not one this reads around.
+    const broken = copy(load("search-shanghai-area")) as ToolFixture;
+    (broken.data.notes as Record<string, unknown>[])[1] = { code: "area_absorbed", details: { places: [] } };
+    assert.match(renderToolResult("search_hotels", broken.data), /^This search_hotels result is not in the expected shape; as JSON: /);
+  });
+
   it("heads a locality search as 'Place: Phuket (locality) · 2,752 hotels'", () => {
     const text = render(load("search-locality-phuket"));
     assert.ok(text.split("\n")[0]!.startsWith('Place: "Phuket" (locality) · 2,752 hotels'), text);
@@ -608,14 +640,30 @@ describe("other errors", () => {
     assert.doesNotThrow(() => renderError(undefined));
   });
 
-  it("a known code with malformed details still renders its message", () => {
-    const text = renderError(
-      envelope({ code: "search_too_broad", retryable: false, details: { matched: "lots" } }),
-      422,
+  // Details that do not parse do not make the error an unknown one: what happened is still
+  // said in our words, from the code, and the details are JSON on their own line.
+  it("a known code with details that do not parse is still worded from its code, the details as JSON", () => {
+    for (const surface of ["mcp", "cli"] as const) {
+      const text = renderError(
+        envelope({ code: "search_too_broad", retryable: false, details: { matched: "lots" } }),
+        422,
+        surface,
+      );
+      assert.deepEqual(text.split("\n"), [
+        "Error search_too_broad (HTTP 422): too many hotels match to sort or filter them by price.",
+        "Not retryable.",
+        'Details: {"matched":"lots"}',
+        "Request id: req_1",
+      ]);
+    }
+    // The same when another field of the envelope is what does not parse.
+    const text = renderError({ error: { code: "not_found", message: "Something happened.", retryable: "no" } }, 404);
+    assert.deepEqual(text.split("\n"), ["Error not_found (HTTP 404): no such hotel, or no such order for this user.", "Retryable: unknown."]);
+    // client_outdated has no words of ours: the service's message is its answer.
+    assert.equal(
+      renderError({ error: { code: "client_outdated", message: "Update the CLI.", retryable: "no" } }, 426).split("\n")[0],
+      'Error client_outdated (HTTP 426): "Update the CLI."',
     );
-    assert.match(text, /search_too_broad/);
-    assert.match(text, /Something happened\./);
-    assertClean(text);
   });
 
   it("an unknown reason of a known code renders the raw reason", () => {
@@ -1485,7 +1533,9 @@ describe("orders and the consent rule", () => {
     }
     // Zero, milliseconds, a value no date can hold, and no number at all.
     for (const bad of [0, 999_999_999, 10_000_000_000, 1793537400000, 8.7e15, 1e21, Number.NaN, Number.POSITIVE_INFINITY, 1793537400.5]) {
-      assert.match(tokenLine(bad, parsed), /^This get_order result is not in the expected shape; as JSON: /, String(bad));
+      // Read through the schema, such a token request is read as none: the order stands, with its link.
+      assert.doesNotMatch(tokenLine(bad, parsed), /Pay without the link|not in the expected shape/, String(bad));
+      assert.match(tokenLine(bad, parsed), /^Payment link \(/m, String(bad));
       const line = tokenLine(bad, direct);
       assert.ok(line.endsWith(`, expires_at ${bad}.`), `${bad}: ${line}`);
       assert.doesNotMatch(line, /UTC|Invalid/, String(bad));
@@ -1533,6 +1583,117 @@ describe("orders and the consent rule", () => {
     assert.match(text, /teleported/);
     assert.match(text, /car/);
     assertClean(text);
+  });
+
+  // An item of a type this build does not know is one line, and the order around it is whole.
+  it("an item of an unknown type is one line of the order, which is shown in full around it", () => {
+    for (const surface of ["mcp", "cli"] as const) {
+      const whole = renderToolResult("get_order", (load("order-confirmed") as ToolFixture).data, surface).split("\n");
+      const car = { type: "car", car: { model: "x", pickUp: "PVG" } };
+      const line = `Item of type car: not shown in this text. ${JSON.stringify(car)}`;
+      const added = copy((load("order-confirmed") as ToolFixture).data) as Record<string, any>;
+      added.items.push(car);
+      const text = renderToolResult("get_order", added, surface).split("\n");
+      assert.deepEqual(text.filter((l) => l !== line), whole);
+      assert.equal(text.indexOf(line), whole.findIndex((l) => l.startsWith("Contact: ")));
+      // An order of that item alone still has every line of its own.
+      const only = copy((load("order-confirmed") as ToolFixture).data) as Record<string, any>;
+      only.items = [car];
+      const alone = renderToolResult("get_order", only, surface).split("\n");
+      assert.deepEqual(alone.slice(0, 2), [whole[0], line]);
+      assert.deepEqual(alone.slice(2), whole.slice(whole.findIndex((l) => l.startsWith("Contact: "))));
+    }
+  });
+
+  /*
+   * What an order holds beside its stay (what a cancellation kept, why it failed, what a token
+   * is requested with) is read on its own: a part that does not parse is read as not there, and
+   * the order is shown in full, never as one line of JSON.
+   */
+  describe("an optional part of an order that does not parse is read as absent, the order in full", () => {
+    const TOOLS_OF_ONE = ["create_order", "get_order", "cancel_order", "pay_order"] as const;
+
+    function assertReadAs(name: Golden, change: (order: Record<string, any>) => void, absent: (order: Record<string, any>) => void) {
+      for (const surface of ["mcp", "cli"] as const) {
+        const broken = copy((load(name) as ToolFixture).data) as Record<string, any>;
+        change(broken);
+        const expected = copy((load(name) as ToolFixture).data) as Record<string, any>;
+        absent(expected);
+        strictOutput(outputOf("get_order")).parse(expected);
+        for (const tool of TOOLS_OF_ONE) {
+          const text = renderToolResult(tool, broken, surface);
+          assert.doesNotMatch(text, /not in the expected shape/, `${name} ${tool}`);
+          assert.equal(text, renderToolResult(tool, expected, surface), `${name} ${tool}`);
+        }
+        // In a list too: the order is one of the page's, not its one line of JSON.
+        const page = { data: [(load("order-confirmed") as ToolFixture).data, broken], nextCursor: null };
+        const text = renderToolResult("list_orders", page, surface);
+        assert.doesNotMatch(text, /not in the expected shape/, name);
+        assert.equal(text, renderToolResult("list_orders", { ...page, data: [page.data[0], expected] }, surface), name);
+      }
+    }
+
+    it("what a cancellation kept: the figures are then not on record", () => {
+      for (const cancelled of [
+        { at: "yesterday", penalty: { amount: "120.00", currency: "USD" }, refund: { amount: "246.00", currency: "USD" } },
+        { at: "2026-11-03T10:00:00Z", penalty: "120.00", refund: "246.00" },
+        { at: "2026-11-03T10:00:00Z", penalty: { amount: 120, currency: "USD" }, refund: null },
+        "kept 120.00",
+        7,
+      ]) {
+        assertReadAs("order-cancelled", (o) => (o.cancelled = cancelled), (o) => (o.cancelled = null));
+      }
+      const text = renderToolResult("get_order", { ...(load("order-cancelled") as ToolFixture).data, cancelled: 7 });
+      assert.match(text, /^Cancelled: the penalty kept and the refund are not on record$/m);
+      assert.match(text, /^Order ord_/);
+      // On an order that is not cancelled, they are nothing at all.
+      assertReadAs("order-confirmed", (o) => (o.cancelled = { at: 1 }), () => {});
+    });
+
+    it("why an order failed: the reason is then unknown, and on an order that did not fail there is none", () => {
+      for (const failure of ["sold out", { reason: 5 }, { why: "rate_unavailable" }, [], 0]) {
+        assertReadAs("order-failed", (o) => (o.failure = failure), (o) => (o.failure = { reason: "unknown" }));
+        assertReadAs("order-confirmed", (o) => (o.failure = failure), () => {});
+      }
+      const text = renderToolResult("get_order", { ...(load("order-failed") as ToolFixture).data, failure: "sold out" });
+      assert.match(text, /^Why it failed: the reason is not on record; /m);
+    });
+
+    it("what a token is requested with: the order then takes none, and is paid by its link", () => {
+      const request = () => copy((load("order-payable-by-token") as ToolFixture).data as Record<string, any>).payment.token;
+      for (const token of [
+        { ...request(), usageLimits: { max_amount: "36500", currency: "usd", expires_at: 1793537400 } },
+        { ...request(), usageLimits: { ...request().usageLimits, expires_at: 1793537400000 } },
+        { ...request(), handler: "com.stripe.payments" },
+        { usageLimits: request().usageLimits },
+        "spt",
+        true,
+      ]) {
+        assertReadAs("order-payable-by-token", (o) => (o.payment.token = token), (o) => (o.payment.token = null));
+      }
+      const data = copy((load("order-payable-by-token") as ToolFixture).data) as Record<string, any>;
+      data.payment.token = true;
+      const text = renderToolResult("get_order", data);
+      // No line to pay without the link, and no rule for it: the link, and its rule, stand.
+      assert.doesNotMatch(text, /Pay without the link|pay_order/);
+      assert.match(text, /^Payment link \(/m);
+      assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`));
+    });
+
+    it("what the order itself is made of is not optional: an order without it is still JSON", () => {
+      for (const change of [
+        (o: Record<string, any>) => (o.total = "365.00"),
+        (o: Record<string, any>) => (o.cancel = { action: "cancel" }),
+        (o: Record<string, any>) => (o.payment = "unpaid"),
+        (o: Record<string, any>) => (o.items[0].hotel.checkIn = "tomorrow"),
+        // A failed order that says nothing of why: there is no part to read around.
+        (o: Record<string, any>) => Object.assign(o, { status: "failed", failure: null }),
+      ]) {
+        const data = copy((load("order-confirmed") as ToolFixture).data) as Record<string, any>;
+        change(data);
+        assert.match(renderToolResult("get_order", data), /^This get_order result is not in the expected shape; as JSON: /);
+      }
+    });
   });
 });
 
