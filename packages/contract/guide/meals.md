@@ -11,6 +11,8 @@ Give the user, for each offer, what its line shows:
 
 An offer expires at the time its line gives, about 30 minutes after it was made; after that, get offers again.
 
+`{{tool:hotels offers}}` shows a bounded number of offers: up to {{limit:offersPerHotelDefault}} per hotel, and fewer each when the call's hotels share its {{limit:offersPerCallDefault}} offers. Each hotel says how many more a call for it alone would show: to see more for one hotel, get offers for that hotel alone, with `{{arg:limitPerHotel}}` up to {{limit:offersPerHotelMax}} if needed. Offers not shown still exist: don't conclude they don't.
+
 "Not listed" is not "no": "not listed", "not stated" and "unknown" mean the source didn't say. Tell the user it's unknown instead of turning it into "no".
 {{/if}}
 {{#if mcp}}

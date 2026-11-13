@@ -574,6 +574,51 @@ describe("renderText", () => {
     assert.equal(renderText("{{support}}", "mcp"), SUPPORT_EMAIL);
   });
 
+  it("renders a distance in meters as kilometres, and nothing else that way", () => {
+    assert.equal(renderText("{{km:radiusMetersDefault}}", "cli"), `${LIMITS.radiusMetersDefault / 1000} km`);
+    assert.equal(renderText("{{km:radiusMetersMax}}", "mcp"), "80 km");
+    for (const text of ["{{km:nightsSupplier}}", "{{km:radiusMeters}}", "{{km:rooms}}"]) {
+      assert.throws(() => renderText(text, "cli"), /guide/i, text);
+    }
+  });
+
+  // A radius reads as a distance; the number the field takes stands beside it.
+  it("the skills give the search radii with a unit, and the field's own number", () => {
+    for (const surface of ["claude-skill", "cli"] as const) {
+      const text = renderGuide(surface, "main");
+      const field = renderText("{{arg:destination.radiusMeters}}", surface);
+      assert.ok(
+        text.includes(`cover a circle of 8 km; \`${field}\` sets another, in meters (8000 for 8 km), up to 80000 (80 km), and narrows an area to a circle around its center.`),
+        surface,
+      );
+      assert.doesNotMatch(text, /\b80?000 meters\b/, surface);
+    }
+  });
+
+  // The tool description says it over MCP; a skill is read without one.
+  it("the skills say an offers call is bounded, and how to see more for one hotel", () => {
+    for (const surface of ["claude-skill", "cli"] as const) {
+      const text = renderGuide(surface, "main");
+      const offers = renderText("{{tool:hotels offers}}", surface);
+      const limit = renderText("{{arg:limitPerHotel}}", surface);
+      assert.ok(
+        text.includes(
+          `\`${offers}\` shows a bounded number of offers: up to ${LIMITS.offersPerHotelDefault} per hotel, and fewer each when the call's hotels share its ${LIMITS.offersPerCallDefault} offers. Each hotel says how many more a call for it alone would show: to see more for one hotel, get offers for that hotel alone, with \`${limit}\` up to ${LIMITS.offersPerHotelMax} if needed. Offers not shown still exist: don't conclude they don't.`,
+        ),
+        surface,
+      );
+    }
+    // Not in the server instructions, which have a budget: the tool's description says it there.
+    assert.doesNotMatch(renderGuide("mcp", "main"), /bounded number of offers/);
+    assert.match(TOOLS.find((tool) => tool.name === "get_hotel_offers")!.description, /how many more a call for that hotel alone would show/);
+  });
+
+  it("the CLI skill lists every exit code the CLI has, the one for an outdated CLI included", () => {
+    const text = renderGuide("cli", "main");
+    assert.match(text, /^\| 5 \| This version of the CLI is too old for Fortrip \(`client_outdated`\) \| Run the update command the error gives, then rerun the same command \|$/m);
+    for (const code of [0, 1, 2, 3, 4, 5]) assert.match(text, new RegExp(`^\\| ${code} \\| `, "m"), String(code));
+  });
+
   it("keeps what a condition names for this surface", () => {
     const text = "a{{#if cli}} b{{/if}}{{#if mcp claude-skill}} c{{/if}} d";
     assert.equal(renderText(text, "cli"), "a b d");
@@ -611,6 +656,7 @@ describe("renderText", () => {
       "{{tool:hotels search extra}}",
       "{{arg:adutls}}",
       "{{limit:nigths}}",
+      "{{km:radiusMetersDefalt}}",
       "{{suport}}",
       "{{ support }}",
       "{{tools:search}}",

@@ -35,6 +35,7 @@ In a remote agent environment or a CI run without a browser, the user can set `F
 | 2 | Invalid arguments, or `invalid_request` from Fortrip | Fix the flags; the error lists each bad field with a message |
 | 3 | Not signed in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait as long as the error says, then retry once |
+| 5 | This version of the CLI is too old for Fortrip (`client_outdated`) | Run the update command the error gives, then rerun the same command |
 
 Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-in couldn't be saved): pass it on to the user.
 {{/if}}

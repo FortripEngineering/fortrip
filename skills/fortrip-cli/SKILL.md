@@ -49,6 +49,7 @@ In a remote agent environment or a CI run without a browser, the user can set `F
 | 2 | Invalid arguments, or `invalid_request` from Fortrip | Fix the flags; the error lists each bad field with a message |
 | 3 | Not signed in | Show `loginUrl` to the user, then rerun (above) |
 | 4 | Rate limited | Wait as long as the error says, then retry once |
+| 5 | This version of the CLI is too old for Fortrip (`client_outdated`) | Run the update command the error gives, then rerun the same command |
 
 Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-in couldn't be saved): pass it on to the user.
 
@@ -95,7 +96,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 - **A place from an earlier answer:** `--place <placeId>`.
 - **Near a point:** `--point <lat,lng>`, for "near X" when you know where X is.
 - **A whole country:** `--country-only <CC>`, as for the Maldives.
-- Countries, regions (states, provinces), prefecture-level cities in China and main islands cover their whole area. Towns, neighbourhoods, districts, small islands and points cover a circle of 8000 meters; `--radius-meters` sets another, up to 80000 meters, and narrows an area to a circle around its center.
+- Countries, regions (states, provinces), prefecture-level cities in China and main islands cover their whole area. Towns, neighbourhoods, districts, small islands and points cover a circle of 8 km; `--radius-meters` sets another, in meters (8000 for 8 km), up to 80000 (80 km), and narrows an area to a circle around its center.
 - **Localities:** an area search lists its localities, the towns its hotels belong to, each with its id, its matching hotels and the places inside it (Patong is part of Phuket). To search one, pass it as `--locality <placeId>`. A town that isn't a locality answers `destination_not_found`, which names the locality its hotels belong to: search that locality, or the town itself with `--place` for a circle around it.
 - A price sort or price filter over more than 3000 hotels (in an area, or for text alone) answers `search_too_broad` with how many hotels match and the top localities: show them and ask the user which they prefer, unless the request already names one of them; search that one by its id as a locality, never by its name.
 
@@ -149,6 +150,8 @@ Give the user, for each offer, what its line shows:
 - fees payable at the property ("fees not in the total"), in the property's currency. "Fees not fully disclosed" means there can be fees not listed: say so.
 
 An offer expires at the time its line gives, about 30 minutes after it was made; after that, get offers again.
+
+`fortrip hotels offers` shows a bounded number of offers: up to 15 per hotel, and fewer each when the call's hotels share its 45 offers. Each hotel says how many more a call for it alone would show: to see more for one hotel, get offers for that hotel alone, with `--limit-per-hotel` up to 30 if needed. Offers not shown still exist: don't conclude they don't.
 
 "Not listed" is not "no": "not listed", "not stated" and "unknown" mean the source didn't say. Tell the user it's unknown instead of turning it into "no".
 
