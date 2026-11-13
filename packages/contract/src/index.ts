@@ -65,6 +65,7 @@ export {
   type Stay,
 } from "./inputs.ts";
 export { CURRENCIES, type Currency, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
+export { misplacedKeys, type MisplacedKey } from "./misplaced-keys.ts";
 export {
   authConfig,
   meResult,

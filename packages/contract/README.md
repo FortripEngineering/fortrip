@@ -26,7 +26,8 @@ It exports:
   `createOrderInput`, `getOrderInput`, `listOrdersInput`,
   `cancelOrderInput` and `payOrderInput`, the zod schemas of the requests,
   with `offersPerHotel(limitPerHotel, hotelsWithOffers)`, the offers each
-  hotel of an offers call gets, and `searchResult`, `hotel`,
+  hotel of an offers call gets, and `misplacedKeys(schema, issues)`, where a
+  key sent at the wrong depth belongs, and `searchResult`, `hotel`,
   `hotelOffersResult`, `order`,
   `orderList`, `paymentHandler` and `errorEnvelope`, the open schemas of the
   responses, with `ERROR_DETAILS`, each error code's `details`, and
