@@ -9,21 +9,9 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 ## 6.0.0
 
-Not released yet.
+Released 2026-11-14.
 
 A major release, with no compatibility with 5.x. An MCP tool answers in text only, `book_hotel` is `create_order`, and each concept has one name and one place across requests, answers and errors. An agent no longer opens an Alipay or WeChat Pay payment: the user pays that way on the order's payment page.
-
-### 6.0.0-rc.1
-
-What changed since 6.0.0-rc.0: the text a model reads and the messages of refused requests. No request or answer changes shape.
-
-- **A search's estimates are for the searched dates.** The search text says so, and that what may be days old is when the price was read.
-- **A failed order says what became of the money.** A `Money:` line after "Why it failed" says it as the payment status does: charged and refunded, a refund under way, held and released, or nothing paid. A `hotel_refused` order tells the model to give the user the support address and the order's reference now, before any new order.
-- **Each currency sentence names the way of paying it is about.** The order's Total line says the card may pay in its local currency on the payment link's page; the pay paragraph says a payment by token with `pay_order` is charged in USD.
-- **After `offer_changed`, the reply ends by asking.** The error's text tells the model to end its reply by asking whether to order the new offer, and to wait for the answer.
-- **The consent rules are in the order's text only.** The descriptions of `cancel_order` and `pay_order` no longer repeat them; the cancel and pay paragraphs of the order's text still carry them.
-- **`create_order` says how many rooms and guests to send.** `items[].hotel.rooms` is one entry per room of the offer, not one per adult, and `guests` lists only the guests the user named. A blank guest name, or a room without guests, is refused with what to send instead.
-- **Two refusals say what to send.** A room without `childrenAges` is told to send an empty list when it has no children, and `get_hotel`'s `include` sent as a list is told it takes the value itself.
 
 ### Breaking changes
 
