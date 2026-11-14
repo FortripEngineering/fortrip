@@ -1,7 +1,7 @@
 {{#if claude-skill cli}}
 ## Prices and currency
 
-- A search price (shown as "estimate from … /room-night") is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night, for any party and often any date, and it can be well above or below the offers. Call it an estimate, quote `{{tool:hotels offers}}` prices, and never call a search result available or bookable. A hotel with "no indicative price" isn't full; about half the hotels have none for given dates.
+- A search price (shown as "estimate from … /room-night") is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night on the searched dates, for any party and possibly read days ago, and it can be well above or below the offers. Call it an estimate, quote `{{tool:hotels offers}}` prices, and never call a search result available or bookable. A hotel with "no indicative price" isn't full; about half the hotels have none for given dates.
 {{/if}}
 - {{#if claude-skill cli}}In an offer or order, the total is the whole stay for all rooms and is what is charged, in the request's `{{arg:currency}}` (`USD` by default); an{{/if}}{{#if mcp}}An{{/if}} order is in the currency of the offer it was made from.{{#if claude-skill cli}} An offer's "average per room-night" is its total divided by the rooms and the nights, for comparison only.{{/if}} On a USD order, Stripe's page may let the user pay in their card's local currency at Stripe's rate{{#if claude-skill cli}} (Adaptive Pricing): say so plainly, and that the total in that currency is the price{{/if}}.
 {{#if claude-skill cli}}
