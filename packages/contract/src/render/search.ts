@@ -95,7 +95,7 @@ function pricingWords(r: SearchResult): Ours {
     return ours`indicative prices unavailable this time`;
   }
   if (mode === "indicative") {
-    return ours`indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are)`;
+    return ours`indicative prices per room-night for these dates: estimates from a price floor, not for this party, possibly a bed in a shared room, the price possibly read days ago; not bookable (only offers are)`;
   }
   const unknown = ours`not recognized`;
   return ours`prices ${joined([code(mode, unknown), covers && code(covers, unknown), status && code(status, unknown)], ", ")}`;

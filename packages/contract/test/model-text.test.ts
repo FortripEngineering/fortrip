@@ -268,11 +268,13 @@ describe("no model-facing text names a JSON path of an answer", () => {
 });
 
 /*
- * Paired evals pinned three behaviour rules in tool descriptions.
- * Each is also in the result text it governs, so that a later release can
- * cut the description's sentence once an eval covers the text alone.
+ * Paired evals pinned three behaviour rules in tool descriptions. Each is
+ * also in the result text it governs. The consent rules of cancelling and
+ * paying are now in that text alone: an eval measures whether they hold
+ * without the description's sentence. Asking again after an offer changed
+ * stays in create_order's description too.
  */
-describe("the three pinned rules are in the description and in the result they govern", () => {
+describe("the three pinned rules are in the result they govern", () => {
   const description = (name: ToolName) => TOOLS.find((spec) => spec.name === name)!.description;
   const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/v1/${name}.json`, import.meta.url), "utf8"));
   const offer = fixture("offers-two-hotels-one-unavailable").data.hotels[0].offers[0];
@@ -292,18 +294,17 @@ describe("the three pinned rules are in the description and in the result they g
     };
     for (const surface of RENDER_SURFACES) {
       const lines = renderError({ error }, 409, surface).split("\n");
-      assert.ok(lines.includes("Show the user these changes and ask again before ordering the new offer."), surface);
+      assert.ok(lines.includes("Show the user these changes, then end your reply by asking them whether to order the new offer, and wait for their answer before ordering it."), surface);
       // After the changes and the new offer: the rule comes after its data.
-      assert.ok(lines.indexOf("Show the user these changes and ask again before ordering the new offer.") > lines.indexOf("New offer, held for ordering:"), surface);
+      assert.ok(lines.indexOf("Show the user these changes, then end your reply by asking them whether to order the new offer, and wait for their answer before ordering it.") > lines.indexOf("New offer, held for ordering:"), surface);
     }
   });
 
-  it("consent before cancelling: cancel_order's description, and the cancel paragraph of the order's text", () => {
-    assert.ok(
-      description("cancel_order").includes(
-        "only after the user confirmed the penalty and the refund on that line with a clear yes, pass maximumPenalty, that penalty exactly as shown.",
-      ),
-    );
+  // The rule is in the results that govern it, not in the tool's description: an
+  // eval rerun on 6.0.0-rc.1 measures whether it holds there alone.
+  it("consent before cancelling: the cancel paragraph of the order's text, and not cancel_order's description", () => {
+    assert.doesNotMatch(description("cancel_order"), /clear yes|only after the user/);
+    assert.ok(description("cancel_order").includes("Paid (the order's Cancel line says it can be cancelled): pass maximumPenalty, the penalty on that line exactly as shown."));
     const RULE = "show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes.";
     const confirmed = fixture("order-confirmed").data;
     for (const surface of RENDER_SURFACES) {
@@ -321,12 +322,8 @@ describe("the three pinned rules are in the description and in the result they g
     }
   });
 
-  it("consent before paying: pay_order's description, and the pay paragraph of the order's text", () => {
-    assert.ok(
-      description("pay_order").includes(
-        "Call it only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes.",
-      ),
-    );
+  it("consent before paying: the pay paragraph of the order's text, and not pay_order's description", () => {
+    assert.doesNotMatch(description("pay_order"), /clear yes|only after the user/);
     const RULE = /Before you (?:call pay_order|run `fortrip orders pay`), show the user the order's total and currency, the stay \(hotel, room, dates, and each room's party and guest names\), the contact \(name, email, phone\), any special requests and every term \(meals, cancellation, fees payable at the property\), then end your reply by asking them to confirm, and wait for a clear yes\./;
     const payable = fixture("order-payable-by-token").data;
     for (const surface of RENDER_SURFACES) {

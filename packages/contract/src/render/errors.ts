@@ -292,7 +292,7 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
         ...e.details.changes.map(changeLine),
         ours`New offer, held for ordering:`,
         offerLine(e.details.offer),
-        ours`Show the user these changes and ask again before ordering the new offer.`,
+        ours`Show the user these changes, then end your reply by asking them whether to order the new offer, and wait for their answer before ordering it.`,
       ];
     case "offer_already_ordered":
       return [

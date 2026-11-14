@@ -61,7 +61,7 @@ export const stay = strictInput({
         ),
         childrenAges: z
           .array(wholeNumber("Each child's age", 0, LIMITS.childAgeMax), {
-            error: `childrenAges must list each child's age (0 to ${LIMITS.childAgeMax}) in this room, at most ${LIMITS.childrenPerRoom}`,
+            error: `childrenAges must list each child's age (0 to ${LIMITS.childAgeMax}) in this room, at most ${LIMITS.childrenPerRoom}; with no children in the room, send an empty list: []`,
           })
           .max(LIMITS.childrenPerRoom, {
             error: `childrenAges must list each child's age (0 to ${LIMITS.childAgeMax}) in this room, at most ${LIMITS.childrenPerRoom}`,
@@ -368,7 +368,10 @@ export type SearchHotelsInput = z.input<typeof searchHotelsInput>;
 /** `GET /v1/hotels/{hotelId}` and the MCP `get_hotel` arguments. */
 export const getHotelInput = strictInput({
   hotelId: hotelId.describe("hotelId from a search response."),
-  include: oneOf("include", ["roomTypes"] as const)
+  include: z
+    .enum(["roomTypes"], {
+      error: 'include must be one of: roomTypes, sent as the value itself ("roomTypes"), not a list',
+    })
     .optional()
     .describe("`roomTypes` adds the hotel's room types."),
   locale: locale.optional(),
@@ -463,7 +466,7 @@ function cardFreeText(
 function guestName(name: string) {
   return cardFreeText(name, 1, LIMITS.guestName)
     .refine((value) => normalizeGuestName(value) !== "", {
-      error: `${name} must not be blank`,
+      error: `${name} must not be blank: list only the guests the user named, as they gave the names; one guest per room is enough`,
     })
     .refine(
       (value) => {
@@ -493,7 +496,8 @@ const contactName = z
   });
 
 const emailError = "email must be an email address";
-const guestsError = "guests must list at least one guest per room";
+const guestsError =
+  "guests must list at least one guest per room, and rooms one entry per room of the offer, not one per adult";
 const maxGuestsPerRoom = LIMITS.adultsPerRoom + LIMITS.childrenPerRoom;
 
 /** `POST /v1/orders` and the MCP `create_order` arguments. `items` comes
@@ -527,7 +531,7 @@ export const createOrderInput = strictInput({
                     error: `guests must list at most ${maxGuestsPerRoom} guests per room`,
                   })
                   .describe(
-                    "Guests staying in this room: at least one, no more than the room sleeps.",
+                    "Guests staying in this room: at least one, no more than the room sleeps. List only the guests the user named; one is enough, even when more adults share the room.",
                   ),
               }),
               { error: `rooms must list 1 to ${LIMITS.rooms} rooms` },
@@ -536,7 +540,9 @@ export const createOrderInput = strictInput({
             .max(LIMITS.rooms, {
               error: `rooms must list 1 to ${LIMITS.rooms} rooms`,
             })
-            .describe("One entry per room of the offer, in order."),
+            .describe(
+              "One entry per room of the offer, in order: as many entries as the offer has rooms, not one per adult.",
+            ),
           specialRequests: cardFreeText(
             "specialRequests",
             0,

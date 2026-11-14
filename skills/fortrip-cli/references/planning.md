@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply; this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@6.0.0-rc.0`.
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply; this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@6.0.0-rc.1`.
 
 ## What to collect
 

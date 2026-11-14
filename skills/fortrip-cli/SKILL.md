@@ -26,7 +26,7 @@ For flexible dates, a budget, split stays, several destinations or "find me the 
 
 ## Setup
 
-Run every command as `npx -y fortrip@6.0.0-rc.0 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@6.0.0-rc.1 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 Running `fortrip whoami` when the user first asks about hotels lets the sign-in happen while they answer your follow-up questions.
 
@@ -131,7 +131,7 @@ Output on stdout or stderr can carry `warning` (with `recoveryFile` when a sign-
 
 ## Prices and currency
 
-- A search price (shown as "estimate from … /room-night") is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night, for any party and often any date, and it can be well above or below the offers. Call it an estimate, quote `fortrip hotels offers` prices, and never call a search result available or bookable. A hotel with "no indicative price" isn't full; about half the hotels have none for given dates.
+- A search price (shown as "estimate from … /room-night") is indicative and not bookable: the lowest price of one unit (a room or, at a hostel, possibly a bed) per night on the searched dates, for any party and possibly read days ago, and it can be well above or below the offers. Call it an estimate, quote `fortrip hotels offers` prices, and never call a search result available or bookable. A hotel with "no indicative price" isn't full; about half the hotels have none for given dates.
 - In an offer or order, the total is the whole stay for all rooms and is what is charged, in the request's `--currency` (`USD` by default); an order is in the currency of the offer it was made from. An offer's "average per room-night" is its total divided by the rooms and the nights, for comparison only. On a USD order, Stripe's page may let the user pay in their card's local currency at Stripe's rate (Adaptive Pricing): say so plainly, and that the total in that currency is the price.
 - Every price of an answer is in that one currency; don't convert it. `--currency` (or `FORTRIP_CURRENCY`) is `USD` (the default) or `CNY`.
 - Each currency is paid through its own channel, with its own payment methods; the order's payment page shows them. CNY is paid through payment channels in mainland China and suits a user who pays that way.

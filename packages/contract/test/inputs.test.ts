@@ -210,6 +210,18 @@ describe("stay", () => {
     );
   });
 
+  it("asks for an empty childrenAges when a room has no children", () => {
+    const missing = refusalOf(stay, { ...goodStay, rooms: [{ adults: 2 }] });
+    assert.deepEqual(missing, [
+      {
+        path: "rooms.0.childrenAges",
+        message: "childrenAges must list each child's age (0 to 17) in this room, at most 4; with no children in the room, send an empty list: []",
+      },
+    ]);
+    assert.deepEqual(refusalOf(stay, { ...goodStay, rooms: [{ adults: 2, childrenAges: 0 }] }), missing);
+    assertAccepted(stay, { ...goodStay, rooms: [{ adults: 2, childrenAges: [] }] });
+  });
+
   it("refuses 0 and 31 nights, and a date that is not a date", () => {
     assertRefusedAt(stay, { ...goodStay, checkOut: checkIn }, "checkOut");
     assertRefusedAt(
@@ -587,8 +599,13 @@ describe("getHotelInput", () => {
     });
     assertRefusedAt(getHotelInput, { hotelId: "12345" }, "hotelId");
     // `rooms` is a stay's rooms; a hotel's list is its room types.
+    const includeMessage = 'include must be one of: roomTypes, sent as the value itself ("roomTypes"), not a list';
     assert.deepEqual(refusalOf(getHotelInput, { hotelId: hotel, include: "rooms" }), [
-      { path: "include", message: "include must be one of: roomTypes" },
+      { path: "include", message: includeMessage },
+    ]);
+    // It takes the value, not a list of values: the refusal says so.
+    assert.deepEqual(refusalOf(getHotelInput, { hotelId: hotel, include: ["roomTypes"] }), [
+      { path: "include", message: includeMessage },
     ]);
     assertRefusedAt(
       getHotelInput,
@@ -765,6 +782,36 @@ describe("offersPerHotel", () => {
 
 describe("createOrderInput", () => {
   const guest = { firstName: "Wei", lastName: "Zhang" };
+  // A party of two adults with one guest named: a model invented an
+  // unnamed second guest, or a second room. The refusal says what to send.
+  it("tells a caller that invented a guest or a room to list only the named guests, in the offer's rooms", () => {
+    const rooms = (r: object[]) => ({ ...order, items: [{ ...item, hotel: { rooms: r } }] });
+    const blank = refusalOf(createOrderInput, rooms([{ guests: [guest, { firstName: "", lastName: "" }] }]));
+    for (const name of ["firstName", "lastName"]) {
+      assert.ok(
+        blank.some(
+          (i) =>
+            i.path === `items.0.hotel.rooms.0.guests.1.${name}` &&
+            i.message === `${name} must not be blank: list only the guests the user named, as they gave the names; one guest per room is enough`,
+        ),
+        name,
+      );
+    }
+    assert.deepEqual(refusalOf(createOrderInput, rooms([{ guests: [guest] }, { guests: [] }])), [
+      {
+        path: "items.0.hotel.rooms.1.guests",
+        message: "guests must list at least one guest per room, and rooms one entry per room of the offer, not one per adult",
+      },
+    ]);
+    const shape = z.toJSONSchema(createOrderInput, { io: "input" }) as any;
+    const hotelRooms = shape.properties.items.items.properties.hotel.properties.rooms;
+    assert.equal(hotelRooms.description, "One entry per room of the offer, in order: as many entries as the offer has rooms, not one per adult.");
+    assert.equal(
+      hotelRooms.items.properties.guests.description,
+      "Guests staying in this room: at least one, no more than the room sleeps. List only the guests the user named; one is enough, even when more adults share the room.",
+    );
+  });
+
   const item = {
     offerId: offer,
     hotel: { rooms: [{ guests: [guest] }] },

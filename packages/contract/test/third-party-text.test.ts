@@ -1208,6 +1208,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     // The order
     /^Order /,
     /^Why it failed: /,
+    /^Money: /,
     /^Cancelled(?: |: the penalty kept and the refund are not on record$)/,
     /^Hotel: /,
     /^Item of type /,
@@ -1281,7 +1282,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^- (?:total|meals|cancellation|confirmation|fees not in the total): /,
     /^- Change to /,
     /^New offer, held for ordering:$/,
-    /^Show the user these changes and ask again before ordering the new offer\.$/,
+    /^Show the user these changes, then end your reply by asking them whether to order the new offer, and wait for their answer before ordering it\.$/,
     // offer_already_ordered, order_in_progress, order_not_payable, payment_in_progress
     /^Order /,
     // cancellation_changed
