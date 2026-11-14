@@ -26,7 +26,7 @@ For flexible dates, a budget, split stays, several destinations or "find me the 
 
 ## Setup
 
-Run every command as `npx -y fortrip@6.0.0-rc.0 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@6.0.0-rc.1 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 Running `fortrip whoami` when the user first asks about hotels lets the sign-in happen while they answer your follow-up questions.
 
