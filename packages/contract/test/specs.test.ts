@@ -284,8 +284,8 @@ describe("TOOLS", () => {
     assert.match(pay, /It takes the orderId, the token as sharedPaymentToken and the order's total; a token pays one order\./);
     // Paid by token only: no trace of a method to choose, or of the wallets that left.
     assert.doesNotMatch(pay, /Alipay|WeChat|method/i);
-    // Pinned by a paired eval (R4, pay consent): cut only once the eval covers the result text.
-    assert.match(pay, /Call it only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes\./);
+    // The consent rule is the pay paragraph's, in the order's text: the description leaves it out.
+    assert.doesNotMatch(pay, /clear yes|only after the user/);
     assert.match(TOOLS.find((t) => t.name === "create_order")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
   });
 
@@ -427,12 +427,12 @@ describe("TOOLS", () => {
     );
   });
 
-  it("cancel_order carries the consent rule, says what it takes and what it answers", () => {
+  it("cancel_order says what it takes and what it answers, and leaves the consent rule to the order's text", () => {
     const { description } = tool("cancel_order");
-    // Pinned by a paired eval (R2, cancel consent): cut only once the eval
-    // covers the result text. It names the order's Cancel line, which the
-    // model reads, not a field of the JSON it doesn't.
-    assert.match(description, /only after the user confirmed the penalty and the refund on that line with a clear yes, pass maximumPenalty, that penalty exactly as shown\./);
+    // It names the order's Cancel line, which the model reads, not a field
+    // of the JSON it doesn't.
+    assert.match(description, /Paid \(the order's Cancel line says it can be cancelled\): pass maximumPenalty, the penalty on that line exactly as shown\./);
+    assert.doesNotMatch(description, /clear yes|only after the user/);
     assert.match(description, /It takes the orderId and exactly one of maximumPenalty \(a paid order\) and close: true \(an unpaid one\)\./);
     assert.match(description, /The order becomes cancelling, then cancelled with the refund on its way, or confirmed again if the hotel refuses\./);
     assert.match(description, /the answer is cancellation_changed and nothing changed\./);

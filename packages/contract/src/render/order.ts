@@ -77,8 +77,18 @@ const FAILURE_WORDS: Record<string, string> = {
     "the rate could no longer be booked when the hotel was asked; get offers again and let the user choose again",
   // A cause is offered, never asserted, and a real name is never to be
   // altered to get past the hotel's system: that is for support.
-  hotel_refused: `the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them: ${SUPPORT}`,
+  hotel_refused: `the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them. Give the user ${SUPPORT_EMAIL} and this order's reference now, before any new order: for help, the user emails that address with the reference`,
   unknown: `the reason is not on record; read the order again later, or ${SUPPORT}`,
+};
+
+/** What became of a failed order's money, by its payment status. */
+const FAILED_MONEY_WORDS: Record<string, string> = {
+  unpaid: "nothing was paid",
+  authorized: "the payment is held, not charged",
+  paid: "the user was charged, and no refund is on record yet",
+  released: "the payment was only held, never charged, and the hold was released",
+  refund_pending: "the user was charged, and the refund is under way",
+  refunded: "the user was charged, and the charge was refunded",
 };
 
 /** Each guest's name in quotes ("Mary Smith", "Tom Smith"), or: none named yet. */
@@ -149,6 +159,10 @@ function outcomeLines(o: Order): Ours[] {
   const lines: Ours[] = [];
   if (o.failure) {
     lines.push(ours`Why it failed: ${label(FAILURE_WORDS, o.failure.reason, ours`the reason is not recognized`)}`);
+    // A status not recognized says nothing here: the Total line shows it.
+    if (Object.hasOwn(FAILED_MONEY_WORDS, o.payment.status)) {
+      lines.push(ours`Money: ${label(FAILED_MONEY_WORDS, o.payment.status)}`);
+    }
   }
   if (o.status === "cancelled") {
     lines.push(
@@ -167,8 +181,8 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
       [
         ours`Total: ${money(o.total)}`,
         ours`payment ${label(PAYMENT_WORDS, p.status, ours`status not recognized`)}`,
-        // Checkout is the payment link's page: said only while there is a link.
-        p.url !== null && p.localCurrencyAtCheckout && ours`the user's card may pay in its local currency at checkout`,
+        // About the payment link's page, so said only while there is a link.
+        p.url !== null && p.localCurrencyAtCheckout && ours`on the payment link's page, the user's card may pay in its local currency`,
         p.localCharge && ours`card charged ${money(p.localCharge)}`,
       ],
       " · ",

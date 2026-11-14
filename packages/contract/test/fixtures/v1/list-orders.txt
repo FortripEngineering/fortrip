@@ -33,7 +33,7 @@ Special requests: none
 Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
 Hotel confirmation number: none yet
 Contact: "Kenji Sato" · "kenji.sato@example.com" · "+81 90 1234 5678"
-Total: USD 365.00 · payment unpaid · the user's card may pay in its local currency at checkout
+Total: USD 365.00 · payment unpaid · on the payment link's page, the user's card may pay in its local currency
 Payment link (expires 2026-11-01 12:50 UTC; no sign-in needed): https://fortrip.ai/pay/ord_BundAwaiting00000000?s=cs_test_a1B2c3D4
 Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (call cancel_order { orderId: "ord_BundAwaiting00000000", close: true })
 Manage: https://fortrip.ai/orders/ord_BundAwaiting00000000

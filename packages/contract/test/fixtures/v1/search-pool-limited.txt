@@ -1,5 +1,5 @@
 Place: "Shanghai" (settlement, within 20.0 km) · 8,412 hotels · plc_9100002 · "Shanghai" plc_9100001, CN · also named "上海"
-Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are) · sort: cheapest first
+Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night for these dates: estimates from a price floor, not for this party, possibly a bed in a shared room, the price possibly read days ago; not bookable (only offers are) · sort: cheapest first
 Distances from "Shanghai" plc_9100002 (its location).
 Counts: 8,412 matched, 3,000 priced, 1,650 with a price, 1,350 left out for having no indicative price, 14,980 within 80 km.
 Only the nearest 3,000 matches were priced: "cheapest" here means cheapest within 9.0 km of "Shanghai".

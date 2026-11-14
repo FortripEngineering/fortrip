@@ -503,6 +503,12 @@ describe("search results", () => {
     assertClean(text);
   });
 
+  it("says the estimates are for the searched dates, and that what may be days old is when the price was read", () => {
+    const line = render(load("search-shanghai-area")).split("\n")[1]!;
+    assert.match(line, / · indicative prices per room-night for these dates: estimates from a price floor, not for this party, possibly a bed in a shared room, the price possibly read days ago; not bookable \(only offers are\) · /);
+    assert.doesNotMatch(line, /possibly days old/);
+  });
+
   it("says prices are unavailable when the lookup failed", () => {
     const fixture = copy(load("search-shanghai-area")) as ToolFixture;
     const data = fixture.data as Record<string, any>;
@@ -876,7 +882,7 @@ describe("other errors", () => {
     assert.match(text, /meals: breakfast for 2 guests per room → room only \(worse\)/);
     assert.match(text, /parking/);
     assert.ok(text.includes(offer.offerId as string));
-    assert.ok(text.includes("Show the user these changes and ask again before ordering the new offer."));
+    assert.ok(text.includes("Show the user these changes, then end your reply by asking them whether to order the new offer, and wait for their answer before ordering it."));
     assertClean(text);
   });
 });
@@ -1240,10 +1246,10 @@ describe("orders and the consent rule", () => {
     assert.match(render(load("order-website-checkout")), /^Total: EUR 410\.00 · payment unpaid$/m);
   });
 
-  // "At checkout" is the payment link's page: with no link to give there is no checkout to speak of.
-  it("says the card may pay in its local currency at checkout only while there is a payment link", () => {
-    const LOCAL = "the user's card may pay in its local currency at checkout";
-    assert.match(render(load("order-awaiting-payment")), /^Total: USD 365\.00 · payment unpaid · the user's card may pay in its local currency at checkout$/m);
+  // It names the payment link's page, so it is said only while there is a link, and is not read as true of a token payment.
+  it("says the card may pay in its local currency on the payment link's page only while there is a payment link", () => {
+    const LOCAL = "on the payment link's page, the user's card may pay in its local currency";
+    assert.match(render(load("order-awaiting-payment")), /^Total: USD 365\.00 · payment unpaid · on the payment link's page, the user's card may pay in its local currency$/m);
     for (const name of GOLDENS) {
       const fixture = load(name);
       if (!("tool" in fixture) || ["search_hotels", "get_hotel", "get_hotel_offers"].includes(fixture.tool)) continue;
@@ -1292,7 +1298,7 @@ describe("orders and the consent rule", () => {
     // Refused by the hotel's system: a cause is offered, not asserted, and a real name is never to be altered.
     assert.equal(
       why("hotel_refused"),
-      "Why it failed: the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them: for help, the user emails info@fortrip.ai with the order's reference",
+      "Why it failed: the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them. Give the user info@fortrip.ai and this order's reference now, before any new order: for help, the user emails that address with the reference",
     );
     assert.doesNotMatch(why("hotel_refused"), /check the guest names|because|correct the/);
     assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails info@fortrip\.ai with the order's reference$/);
@@ -1306,6 +1312,32 @@ describe("orders and the consent rule", () => {
     assertClean(render(fixture));
     // An order that didn't fail has no such line.
     assert.doesNotMatch(render(load("order-confirmed")), /Why it failed/);
+  });
+
+  it("a failed order says what became of its money, as its payment status says", () => {
+    const fixture = copy(load("order-failed")) as ToolFixture;
+    const data = fixture.data as Record<string, any>;
+    const money = (status: string) => {
+      data.payment.status = status;
+      return render(fixture).split("\n").filter((l) => l.startsWith("Money: "));
+    };
+    // Right after why it failed, before the stay.
+    assert.equal(render(fixture).split("\n")[2], "Money: the payment was only held, never charged, and the hold was released");
+    assert.deepEqual(money("refunded"), ["Money: the user was charged, and the charge was refunded"]);
+    assert.deepEqual(money("refund_pending"), ["Money: the user was charged, and the refund is under way"]);
+    assert.deepEqual(money("paid"), ["Money: the user was charged, and no refund is on record yet"]);
+    assert.deepEqual(money("authorized"), ["Money: the payment is held, not charged"]);
+    assert.deepEqual(money("unpaid"), ["Money: nothing was paid"]);
+    // A status not recognized has no such line: the Total line says it is not recognized.
+    assert.deepEqual(money("struck_by_lightning"), []);
+    assert.deepEqual(money("constructor"), []);
+    // Only a failed order has it.
+    for (const name of GOLDENS) {
+      const f = load(name);
+      if (!("tool" in f) || f.tool === "list_orders" || !String(f.tool).includes("order")) continue;
+      const failed = (f.data as Record<string, any>).status === "failed";
+      assert.equal(render(f).split("\n").some((l) => l.startsWith("Money: ")), failed, name);
+    }
   });
 
   it("a cancelled order says what the cancellation kept and returned", () => {
@@ -1645,6 +1677,13 @@ describe("orders and the consent rule", () => {
     assert.match(PAY_NEXT_STEP, /with the business_profile and the usage limits on that line \(max_amount in cents, currency, expires_at\), and make the pay_order call that line gives, exactly as shown, with the token in place of <spt_…>: its total is the order's Total, never a figure from anywhere else\./);
     assert.match(PAY_NEXT_STEP, /Once pay_order succeeds, the payment link stops working; a failed payment leaves it open\.$/);
     assert.doesNotMatch(PAY_NEXT_STEP, /method|Alipay|WeChat/i);
+    // Each sentence about a currency names the way of paying it is about: the fee is a token
+    // payment's, the card's local currency the payment link page's (on the order's Total line).
+    assert.match(payNextStep("mcp"), / A payment by token with pay_order is charged in USD: a card in another currency may add a foreign transaction fee\. /);
+    assert.match(payNextStep("cli"), / A payment by token with `fortrip orders pay` is charged in USD: a card in another currency may add a foreign transaction fee\. /);
+    for (const rule of [PAY_NEXT_STEP, payNextStep("cli"), ORDER_NEXT_STEP]) assert.doesNotMatch(rule, /local currency|The charge is in USD/);
+    assert.doesNotMatch(ORDER_NEXT_STEP, /foreign transaction/);
+    assert.doesNotMatch(renderOrder(withToken() as Order), /foreign transaction/);
     // An order with no token: the link alone, and only its rule.
     const unpayable = load("order-awaiting-payment") as ToolFixture;
     assert.equal((unpayable.data as Record<string, any>).payment.tokenRequest, null);
