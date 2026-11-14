@@ -561,7 +561,7 @@ describe("a rule that tells the model to copy what the text shows says what the 
     }
     // Each skill says it once for every value, and again where an order is shown before paying.
     const QUOTES =
-      'In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \\" is a "): give it to the user without the quotes, exactly as written inside them. Ids, links, amounts and dates are not in quotes: copy them exactly as shown.';
+      'In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \\" is a "): give it to the user without the quotes, exactly as written inside them. Ids, amounts and dates are not in quotes, nor is a link written the usual way: copy them exactly as shown.';
     for (const file of ["skills/fortrip-cli/SKILL.md", "plugins/claude/skills/fortrip/SKILL.md"]) {
       const skill = (sources.skills as Text[]).concat(sources.plugins as Text[]).filter(({ where }) => where.startsWith(file)).map(({ text }) => text).join("\n");
       assert.ok(skill.includes(QUOTES), file);

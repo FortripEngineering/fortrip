@@ -55,7 +55,7 @@ const DOCS: Record<string, { title: string; group: string; output?: string; how?
       group: "Orders",
       how: [
         "Give exactly one of `--max-penalty` and `--close`. With neither, the command is refused with exit 2: nothing is read and nothing is sent. `fortrip orders get <orderId>` shows which applies, on the order's Cancel line, with the command to run.",
-        "With one of them, the CLI reads the order once, then cancels or closes it. A flag that doesn't fit the order (`--close` on a paid order, `--max-penalty` on an unpaid one, `--close` on an order that can be neither closed nor cancelled) is not sent: the command answers as the service does, `order_not_cancellable` with the order's Cancel line, and exits 1. `--close` on an order already `closed` or `expired` prints it and exits 0.",
+        "With one of them, the CLI reads the order once, then cancels or closes it. The other flag's order (`--close` on an order that can be cancelled, `--max-penalty` on one that can be closed) is not sent: the command answers as the service does, `order_not_cancellable` with the order's Cancel line, and exits 1. Any other order is sent, and the service answers for it. `--close` on an order already `closed` or `expired` prints it and exits 0.",
         "`--max-penalty` takes the amount alone: the CLI sends it in the currency of the order's penalty.",
       ],
     },

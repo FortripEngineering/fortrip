@@ -126,7 +126,7 @@ Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`
 | Effect | The hotel booking is cancelled. The penalty is kept and the rest refunded. | Nothing is charged. The order is `closed` and can no longer be paid. |
 | Ask the user | Show the penalty and the refund, and wait for a clear yes. | Close it only once the user says they no longer want it. |
 
-Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now. The same mode sent again answers the order it already cancelled or closed.
+Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now. The same mode sent again answers the order it already cancelled or closed, and `close` on an order that already `expired` answers that order as it is.
 
 ### What `cancel` shows [#cancel-state]
 

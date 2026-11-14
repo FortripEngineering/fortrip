@@ -656,6 +656,9 @@ export type PayWay = (typeof PAY_WAYS)[number];
  *  order, the Stripe shared payment token granted for it, and the total the
  *  user approved. A total other than the order's answers
  *  `payment_total_mismatch` and charges nothing. */
+const PAY_OTHER_CURRENCY =
+  "a token pays a USD order only. An order in another currency is paid by the user at its payment link: give them the link, and never convert or relabel the total";
+
 export const payOrderInput = strictInput({
   orderId: orderId.describe("The orderId of the order to pay."),
   sharedPaymentToken: z
@@ -664,8 +667,10 @@ export const payOrderInput = strictInput({
     .describe(
       "The shared payment token (spt_…) the user approved for this order, requested with the usage limits the order gives for a token (payment.tokenRequest.usageLimits).",
     ),
-  // USD alone: an order offers a token request only when it is in USD.
-  total: requestMoney("total", ["USD"]).describe(
+  // USD alone: an order offers a token request only when it is in USD. A
+  // total in another currency is not a field to correct: relabelled or
+  // converted it would be a total the user never approved.
+  total: requestMoney("total", ["USD"], PAY_OTHER_CURRENCY).describe(
     "The total the user approved: the order's total, amount and currency, exactly as the order gives it (total). In USD: a token pays a USD order only, and any other order is paid by its payment link.",
   ),
 });

@@ -170,8 +170,11 @@ type ReadOrder = {
  * `orders cancel` with its mode, after one read of the order. `--close`
  * closes an unpaid order, and answers one already closed, or expired, as it
  * is. `--max-penalty` cancels in the currency of the order's penalty, else
- * of its total. A mode that does not fit the order read is not sent: it is
- * refused here as the service refuses it (`modeRefused`).
+ * of its total. The other mode's order (`--close` on one that can be
+ * cancelled, `--max-penalty` on one that can be closed) is not sent: it is
+ * refused here as the service refuses it (`modeRefused`). Any other order is
+ * sent, and the service answers for it: what blocks an order can pass, and
+ * an action this version does not know is not guessed at.
  */
 async function cancelOrder(
   apiUrl: string,
@@ -181,18 +184,18 @@ async function cancelOrder(
   const { orderId, close, request } = mode;
   const order = unwrap(await authorizedRequest(apiUrl, mode.path, { method: mode.method }));
   const read = order as ReadOrder;
-  const closable = read?.cancel?.action === "close";
+  const action = read?.cancel?.action;
   if (close) {
     if (read?.status === "closed" || read?.status === "expired") {
       return { data: order, text: renderToolResult("cancel_order", order, "cli") };
     }
-    if (!closable) throw modeRefused(orderId, order);
+    if (action === "cancel") throw modeRefused(orderId, order);
     // A close that is answered closed the order: one paid meanwhile is
     // refused with `order_not_cancellable`, never answered as it is.
     const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body: request.body }));
     return { data, text: renderToolResult("cancel_order", data, "cli") };
   }
-  if (closable) throw modeRefused(orderId, order);
+  if (action === "close") throw modeRefused(orderId, order);
   const penalty = read?.cancel?.penalty?.currency;
   const currency = typeof penalty === "string" ? penalty : read?.total?.currency;
   if (typeof currency !== "string") {
@@ -206,7 +209,7 @@ async function cancelOrder(
 }
 
 /**
- * The refusal of a mode that does not fit the order just read: what the
+ * The refusal of the other mode's order, as just read: what the
  * service answers such a call, `order_not_cancellable` with the order's
  * cancel state, made here so that nothing is sent. So it reads as the
  * service's does, as text (the order's Cancel line, with the command for

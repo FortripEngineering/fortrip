@@ -435,7 +435,7 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     field: "close",
     type: "boolean",
     description:
-      "Close an unpaid order, one whose Cancel line says it can be closed, only once the user says they no longer want it: nothing is charged, and it can no longer be paid. Nothing is sent for an order that can't be closed.",
+      "Close an unpaid order, one whose Cancel line says it can be closed, only once the user says they no longer want it: nothing is charged, and it can no longer be paid. Nothing is sent for a paid order, which is cancelled with --max-penalty.",
   },
 ]);
 

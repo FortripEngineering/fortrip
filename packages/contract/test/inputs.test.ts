@@ -1140,9 +1140,15 @@ describe("payOrderInput", () => {
       "total.currency",
     );
     assertRefusedAt(payOrderInput, { orderId, sharedPaymentToken: token, total: 132.4 }, "total");
-    // No token pays a CNY order (it offers none to request), so the schema names no CNY.
+    // No token pays a CNY order (it offers none to request), so the schema names no CNY. The
+    // refusal is not "send USD", which a caller could obey by relabelling or converting the
+    // total: it says how such an order is paid.
     assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total: { amount: "880.00", currency: "CNY" } }), [
-      { path: "total.currency", message: "currency must be USD" },
+      {
+        path: "total.currency",
+        message:
+          "a token pays a USD order only. An order in another currency is paid by the user at its payment link: give them the link, and never convert or relabel the total",
+      },
     ]);
     assert.deepEqual(refusalOf(payOrderInput, { orderId, sharedPaymentToken: token, total: "132.40" }), [
       { path: "total", message: 'total must be Money: { amount: "132.40", currency: "USD" }' },

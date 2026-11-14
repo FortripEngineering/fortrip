@@ -234,15 +234,15 @@ describe("requests", () => {
   });
 
   /*
-   * A mode that does not fit the order read is refused as the service refuses it
-   * (order_not_cancellable, exit 1), from the order's own cancel state and without sending:
-   * the same error as text and in --json, with the command for the mode that applies.
+   * The other mode's order (--max-penalty on one that can be closed, --close on one that can
+   * be cancelled) is refused as the service refuses it (order_not_cancellable, exit 1), from
+   * the order's own cancel state and without sending: the same error as text and in --json,
+   * with the command for the mode that applies.
    */
-  it("a mode that does not fit the order is refused as order_not_cancellable: exit 1, nothing posted, text and --json alike", async () => {
+  it("the other mode's order is refused as order_not_cancellable: exit 1, nothing posted, text and --json alike", async () => {
     const cases: [string, string[], RegExp][] = [
       ["order-awaiting-payment", ["--max-penalty", "0.00"], new RegExp(`^Cancel: can be closed now, .* \\(run \`fortrip orders cancel ${ORDER} --close\`\\)$`, "m")],
       ["order-confirmed", ["--close"], new RegExp(`^Cancel: can cancel now: penalty USD 120\\.00, refund USD 246\\.00 \\(only after the user's yes: run \`fortrip orders cancel ${ORDER} --max-penalty 120\\.00\`\\)$`, "m")],
-      ["order-stay-started", ["--close"], /^This order can be neither cancelled nor closed now: the stay has started; /m],
     ];
     for (const [name, mode, says] of cases) {
       requests = [];
@@ -265,8 +265,8 @@ describe("requests", () => {
     }
   });
 
-  it("a mode on an order that does not say what can be done to it is not sent: exit 1", async () => {
-    const { cancel: _gone, ...order } = (await fixture("order-awaiting-payment")).data as Record<string, unknown>;
+  it("the other mode's order whose cancel state doesn't read whole is not sent: exit 1", async () => {
+    const order = { ...((await fixture("order-awaiting-payment")).data as Record<string, unknown>), cancel: { action: "cancel" } };
     reply = { status: 200, body: order };
     const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 1);
@@ -327,24 +327,37 @@ describe("requests", () => {
     }
   });
 
-  it("orders cancel --close on an unpaid order it can't close says what blocks it and exits 1", async () => {
+  // Only the other mode's order is refused here. What blocks an order can
+  // pass between the read and the close, and an action this version does not
+  // know is not guessed at: such an order is sent, and the service answers.
+  it("orders cancel --close on an order that shows no action, or one this version doesn't know, is sent and the service answers", async () => {
     const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    for (const [blockedBy, why] of [
-      ["website_checkout", "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there"],
-      ["payment_in_progress", "a payment is under way; read the order again shortly"],
-      ["cancellation_not_allowed", "the hotel takes no cancellation for this order, even one that keeps the whole total; the booking stands"],
+    for (const [action, blockedBy, why] of [
+      [null, "website_checkout", "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there"],
+      [null, "payment_in_progress", "a payment is under way; read the order again shortly"],
+      ["a_later_action", null, null],
     ] as const) {
       requests = [];
-      order.cancel = { action: null, blockedBy, penalty: null, refund: null };
+      order.cancel = { action, blockedBy, penalty: null, refund: null };
       order.payment.requiresSignIn = blockedBy === "website_checkout";
-      reply = { status: 200, body: order };
+      const envelope = {
+        error: {
+          code: "order_not_cancellable",
+          message: "This order can be neither cancelled nor closed now.",
+          retryable: false,
+          requestId: "req_1",
+          details: { orderId: ORDER, cancel: { action: null, blockedBy: blockedBy ?? "needs_attention", penalty: null, refund: null } },
+        },
+      };
+      strictOutput(errorEnvelope).parse(envelope);
+      replies = [{ status: 200, body: order }, { status: 409, body: envelope }];
       const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-      assert.equal(code, 1, blockedBy);
+      assert.equal(code, 1, String(blockedBy));
       assert.equal(stdout, "");
-      assert.match(stderr, /^Error order_not_cancellable: /);
-      assert.ok(stderr.includes(`\nThis order can be neither cancelled nor closed now: ${why}.\n`), stderr);
-      assert.doesNotMatch(stderr, /--max-penalty/);
-      assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+      assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`);
+      if (why) assert.ok(stderr.includes(`\nThis order can be neither cancelled nor closed now: ${why}.\n`), stderr);
+      assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+      assert.deepEqual(requests[1]?.body, { close: true });
     }
   });
 
@@ -495,17 +508,20 @@ describe("requests", () => {
   // names what the order's text shows (its Total, its payment link), never a JSON path.
   it("orders pay on an order that is not in USD exits 1, posts nothing, and points at the payment link", async () => {
     const { data } = await fixture("order-awaiting-payment");
-    const order = structuredClone(data) as { total: Record<string, unknown> };
-    order.total = { amount: "880.00", currency: "CNY" };
-    replies = [{ status: 200, body: order }, { status: 200, body: {} }];
-    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
-    assert.equal(code, 1);
-    assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      `Error: Not sent: order ${ORDER} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: \`fortrip orders get ${ORDER}\` shows it.\n`,
-    );
-    assert.deepEqual(requests.map((request) => request.method), ["GET"]);
+    for (const currency of ["CNY", "EUR"]) {
+      requests = [];
+      const order = structuredClone(data) as { total: Record<string, unknown> };
+      order.total = { amount: "880.00", currency };
+      replies = [{ status: 200, body: order }, { status: 200, body: {} }];
+      const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+      assert.equal(code, 1, currency);
+      assert.equal(stdout, "");
+      assert.equal(
+        stderr,
+        `Error: Not sent: order ${ORDER} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: \`fortrip orders get ${ORDER}\` shows it.\n`,
+      );
+      assert.deepEqual(requests.map((request) => request.method), ["GET"], currency);
+    }
   });
 
   it("orders pay with a bad --token exits 2 before reading the order", async () => {
