@@ -18,7 +18,7 @@ describe("guide", () => {
 
   it("no guide or help text names the supplier", async () => {
     const texts = [renderGuide("cli", "main"), renderGuide("cli", "planning")];
-    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "offers", "--help"], ["orders", "--help"], ["hotels", "book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "--help"], ["hotels", "offers", "--help"], ["orders", "--help"], ["orders", "create", "--help"]]) {
       texts.push((await cli(...args)).stdout);
     }
     // Assembled, so that this file doesn't name the supplier either.

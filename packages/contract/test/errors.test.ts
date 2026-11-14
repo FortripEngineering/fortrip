@@ -28,7 +28,7 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   order_not_cancellable: [[409], false],
   order_not_payable: [[409], false],
   payment_in_progress: [[409], true],
-  payment_total_changed: [[409], false],
+  payment_total_mismatch: [[409], false],
   payment_credential_invalid: [[422], false],
   payment_declined: [[402], false],
   payment_action_required: [[402], false],
@@ -44,6 +44,7 @@ const SPEC: Record<ErrorCode, [number[], boolean]> = {
   ordering_paused: [[503], true],
   service_unavailable: [[503], true],
   supplier_unavailable: [[503, 504], true],
+  client_outdated: [[426], false],
   internal: [[500], false],
 };
 
@@ -67,6 +68,21 @@ describe("currency_unavailable", () => {
     assert.deepEqual(Object.keys(ERROR_DETAILS.currency_unavailable.shape), ["currency"]);
     assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "CNY" }).success);
     assert.ok(ERROR_DETAILS.currency_unavailable.safeParse({ currency: "EUR" }).success);
+  });
+});
+
+describe("client_outdated", () => {
+  it("is a 426 no retry can fix, with no details: its message is the whole of it", () => {
+    assert.deepEqual(ERROR_CODES.client_outdated, { status: [426], retryable: false });
+    assert.equal(ERROR_DETAILS.client_outdated, null);
+  });
+});
+
+describe("payment_total_mismatch", () => {
+  it("replaces payment_total_changed: the total sent is not the order's, which has not changed", () => {
+    assert.ok(!("payment_total_changed" in ERROR_CODES));
+    assert.deepEqual(ERROR_CODES.payment_total_mismatch, { status: [409], retryable: false });
+    assert.deepEqual(Object.keys(ERROR_DETAILS.payment_total_mismatch.shape), ["orderId", "total"]);
   });
 });
 
@@ -98,6 +114,8 @@ describe("LIMITS and friends", () => {
       offersHotels: 15,
       offersPerHotelDefault: 15,
       offersPerHotelMax: 30,
+      offersPerCallDefault: 45,
+      offersPerCallMax: 100,
       pageSizeDefault: 20,
       pageSizeMax: 50,
       textLength: 128,
@@ -105,8 +123,7 @@ describe("LIMITS and friends", () => {
       radiusMetersDefault: 8000,
       amenityFilters: 9,
       guestName: 60,
-      contactFirstName: 59,
-      contactLastName: 59,
+      contactName: 119,
       contactPhoneMin: 3,
       contactPhoneMax: 40,
       specialRequests: 500,
@@ -118,7 +135,6 @@ describe("LIMITS and friends", () => {
       payMinMinutesLeft: 15,
       payCutoffMinutes: 2,
       tokensPerOrder: 5,
-      wechatCodeMinutes: 120,
     });
     assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
     assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");
@@ -142,10 +158,10 @@ describe("v1 paths", () => {
   it("builds a hotel's and an order's path with optional query", () => {
     assert.equal(API.hotel("htl_x"), "/v1/hotels/htl_x");
     assert.equal(
-      API.hotel("htl_x", { rooms: true, locale: "zh" }),
-      "/v1/hotels/htl_x?include=rooms&locale=zh",
+      API.hotel("htl_x", { roomTypes: true, locale: "zh" }),
+      "/v1/hotels/htl_x?include=roomTypes&locale=zh",
     );
-    assert.equal(API.hotel("htl_x", { rooms: true }), "/v1/hotels/htl_x?include=rooms");
+    assert.equal(API.hotel("htl_x", { roomTypes: true }), "/v1/hotels/htl_x?include=roomTypes");
     assert.equal(API.hotel("htl_x", { locale: "en" }), "/v1/hotels/htl_x?locale=en");
     assert.equal(API.order("ord_x"), "/v1/orders/ord_x");
     assert.equal(API.order("ord_x", { locale: "zh" }), "/v1/orders/ord_x?locale=zh");
@@ -158,7 +174,7 @@ describe("v1 paths", () => {
       ...Object.values(PUBLIC_ORIGINS),
       MCP_PATH,
       ...Object.values(API).filter((v) => typeof v === "string"),
-      API.hotel("htl_x", { rooms: true, locale: "zh" }),
+      API.hotel("htl_x", { roomTypes: true, locale: "zh" }),
       API.order("ord_x", { locale: "en" }),
       API.orderCancel("ord_x"),
     ];

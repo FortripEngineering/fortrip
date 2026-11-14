@@ -2,7 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { API, type AuthConfig, authConfig, SUPPORT_EMAIL } from "@fortrip/agent-contract";
 
-import { type ApiResponse, isEnvelope, postForm, request, unwrap } from "./api.ts";
+import { type ApiResponse, isEnvelope, isUnreachable, postForm, request, unwrap } from "./api.ts";
 import { openBrowser } from "./browser.ts";
 import {
   addPendingLogin,
@@ -560,17 +560,43 @@ function loginRequired(
   );
 }
 
+/** Whether the service can't be asked to revoke a session at all: it could
+ *  not be reached, or it no longer takes this version of the CLI. Any other
+ *  failure is an answer, and worth another try. */
+function cannotAsk(error: unknown): boolean {
+  return (
+    isUnreachable(error) ||
+    (error instanceof CliError && error.envelope?.error.code === "client_outdated")
+  );
+}
+
 /**
  * Revokes the refresh token of every session saved for this API URL (also
  * those kept in recovery files), then forgets them. It holds the login lock
  * and re-reads, so a session another command refreshes meanwhile is the one
- * revoked. A revocation that fails keeps everything, so logout can be rerun.
+ * revoked. A revocation the service answers and refuses keeps everything, so
+ * logout can be rerun.
+ *
+ * Forgetting a session here does not need the service: when it can't be
+ * reached, or no longer takes this CLI (`client_outdated`), the sessions are
+ * forgotten all the same, the answer says `revoked: false`, and a warning
+ * says why, with the service's own message (how to update).
  */
 export async function logout(apiUrl: string): Promise<unknown> {
   if (!(await loadSession(apiUrl))) {
     throw new CliError(`Not logged in to ${apiUrl}.`, EXIT.unauthenticated);
   }
-  const config = await loadAuthConfig(apiUrl);
+  let notAsked: Error | undefined;
+  const asked = async <T>(ask: () => Promise<T>): Promise<T | undefined> => {
+    try {
+      return await ask();
+    } catch (error) {
+      if (!cannotAsk(error)) throw error;
+      notAsked = error as Error;
+      return undefined;
+    }
+  };
+  const config = await asked(() => loadAuthConfig(apiUrl));
   const release = await takeLoginLock<never>(LOGIN_WAIT_MS, async () => null, () => busy(apiUrl));
   try {
     const sessions = [await loadSession(apiUrl), ...(await loadRecoveredSessions(apiUrl))].filter(
@@ -578,8 +604,8 @@ export async function logout(apiUrl: string): Promise<unknown> {
     );
     const revoked = new Set<string>();
     for (const session of sessions) {
-      if (revoked.has(session.refreshToken)) continue;
-      await revoke(config, session);
+      if (!config || notAsked || revoked.has(session.refreshToken)) continue;
+      await asked(() => revoke(config, session));
       revoked.add(session.refreshToken);
     }
     // Also merges the recovery files back and removes them.
@@ -591,7 +617,9 @@ export async function logout(apiUrl: string): Promise<unknown> {
   } finally {
     await release();
   }
-  return { loggedOut: true, apiUrl };
+  if (notAsked === undefined) return { loggedOut: true, apiUrl };
+  notices.warning = `The sign-in was removed from this machine, but Fortrip was not told to revoke it: ${(notAsked as Error).message}`;
+  return { loggedOut: true, apiUrl, revoked: false };
 }
 
 /** RFC 7009: 200 for a revoked or unknown token. A 400 or 401 counts as

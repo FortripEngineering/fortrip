@@ -14,7 +14,7 @@ test("every tool that answers an object has its response documented once", () =>
   }
 });
 
-test("a documented response is the contract's schema, or the MCP one less nextStep", () => {
+test("a documented response is the contract's schema", () => {
   for (const doc of RESPONSE_DOCS) {
     assert.ok(doc.rows.length > 0, doc.id);
     assert.deepEqual(
@@ -24,17 +24,8 @@ test("a documented response is the contract's schema, or the MCP one less nextSt
     );
     for (const name of doc.tools) {
       const tool = TOOLS.find((candidate) => candidate.name === name);
-      assert.ok(tool?.output, name);
-      if (tool.output === doc.schema) continue;
-      // The MCP answer adds `nextStep` (the consent rule) and nothing else.
-      const mcp = outputRows(tool.output).map((row) => row.key);
-      assert.deepEqual(
-        mcp.filter((key) => key !== "nextStep"),
-        doc.rows.map((row) => row.key),
-        name,
-      );
-      assert.ok(mcp.includes("nextStep"), name);
-      assert.equal(doc.mcpNextStep, true, name);
+      // An MCP result is text only: a tool's output is its HTTP answer.
+      assert.equal(tool?.output, doc.schema, name);
     }
   }
 });

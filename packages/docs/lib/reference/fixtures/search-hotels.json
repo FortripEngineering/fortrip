@@ -9,7 +9,6 @@
         "zh": "京都"
       },
       "kind": "settlement",
-      "scope": "radius",
       "cityLike": true,
       "population": 1459640,
       "region": null,
@@ -53,7 +52,7 @@
   },
   "pricing": {
     "mode": "indicative",
-    "scope": "pool",
+    "covers": "pool",
     "status": "ok"
   },
   "sort": "price_asc",
@@ -69,6 +68,7 @@
     "localities": null,
     "nameAsText": null
   },
+  "currencyHint": null,
   "data": [
     {
       "hotelId": "htl_Qm3xK9vT2pLw7Hn4Rb8Z",
@@ -92,9 +92,7 @@
       },
       "timeZone": "Asia/Tokyo",
       "distanceMeters": 2770,
-      "price": {
-        "kind": "indicative",
-        "basis": "lowest_unit",
+      "indicativePrice": {
         "fromPerRoomNight": {
           "amount": "61.50",
           "currency": "USD"
@@ -128,9 +126,7 @@
       },
       "timeZone": "Asia/Tokyo",
       "distanceMeters": 1880,
-      "price": {
-        "kind": "indicative",
-        "basis": "lowest_unit",
+      "indicativePrice": {
         "fromPerRoomNight": {
           "amount": "64.80",
           "currency": "USD"

@@ -1,0 +1,11 @@
+Order ord_CanalTermsUnknown000 · reference FT-U3K6ZM · confirmed · created 2026-10-30 15:20 UTC · updated 2026-10-30 15:31 UTC
+Hotel: "Canal House Lisbon" · not in the hotel catalogue · 2026-12-03 → 2026-12-05 (2 nights) · 1 room: 2 adults · time zone Europe/Lisbon
+Room: "Classic Double", beds: "1 double bed", 18–22 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Bed and breakfast")
+Guests: "Mateus Lima", "Clara Lima"
+Special requests: none
+Terms: cancellation terms unknown · confirmation mode not on record · fees not fully disclosed (fees or amounts may be missing)
+Hotel confirmation number: "CHL-20944"
+Contact: "Mateus Lima" · "mateus.lima@example.com" · "+55 11 95555 0111"
+Total: EUR 236.00 · payment paid
+Cancel: not available: its cancellation terms are not on record; for help, the user emails info@fortrip.ai with the order's reference
+Manage: https://fortrip.ai/stays/orders/so_7m2Pq9d

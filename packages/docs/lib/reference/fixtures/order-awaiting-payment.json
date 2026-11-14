@@ -35,34 +35,40 @@
                 "firstName": "Jun",
                 "lastName": "Wang"
               }
-            ]
+            ],
+            "roomType": {
+              "name": {
+                "text": "Standard Double Room",
+                "locale": null
+              },
+              "beds": {
+                "text": "1 double bed",
+                "locale": null
+              },
+              "areaSqm": {
+                "min": 18,
+                "max": 18
+              },
+              "maxOccupancy": 2,
+              "window": "yes"
+            },
+            "meals": {
+              "known": true,
+              "included": [],
+              "unspecifiedMainMeals": 0,
+              "allInclusive": false,
+              "guestsCoveredPerRoom": null,
+              "label": {
+                "text": "Room only",
+                "locale": "en"
+              }
+            }
           }
         ],
         "specialRequests": null,
-        "room": {
-          "name": {
-            "text": "Standard Double Room",
-            "locale": null
-          },
-          "beds": {
-            "text": "1 double bed",
-            "locale": null
-          }
-        },
-        "meals": {
-          "known": true,
-          "included": [],
-          "unspecifiedMainMeals": 0,
-          "allInclusive": false,
-          "guestsCoveredPerRoom": null,
-          "label": {
-            "text": "Room only",
-            "locale": "en"
-          }
-        },
         "cancellation": {
           "status": "free",
-          "asOf": "2027-02-20T08:04:12Z",
+          "readAt": "2027-02-20T08:04:12Z",
           "freeCancellationEndsAt": "2027-03-08T15:00:00Z",
           "penalties": [
             {
@@ -75,21 +81,21 @@
           ],
           "timeZone": "Asia/Tokyo"
         },
+        "confirmation": {
+          "mode": "instant",
+          "withinMinutes": null
+        },
         "payAtProperty": {
           "disclosure": "complete",
           "items": [
             {
-              "label": {
-                "text": "Accommodation tax",
-                "locale": "en"
-              },
+              "kind": "tax",
               "amount": {
                 "amount": "200",
                 "currency": "JPY"
               },
               "mandatory": true,
-              "basis": "per_person_per_night",
-              "collectedAt": "property"
+              "basis": "per_person_per_night"
             }
           ]
         },
@@ -97,65 +103,54 @@
       }
     }
   ],
-  "price": {
-    "total": {
-      "amount": "132.40",
-      "currency": "USD"
-    }
+  "total": {
+    "amount": "132.40",
+    "currency": "USD"
   },
   "payment": {
     "status": "unpaid",
     "url": "https://fortrip.ai/pay/ord_Wr4tY7uI0oPa3SdF6gHj?s=cs_live_b1Q9xT4mK7pW2rZ8vN3c",
     "requiresSignIn": false,
     "expiresAt": "2027-02-20T11:49:12Z",
-    "chargeCurrency": "USD",
     "localCurrencyAtCheckout": true,
     "localCharge": null,
-    "methods": [
-      {
-        "id": "stripe_shared_payment_token",
-        "handler": {
-          "id": "stripe_payments",
-          "type": "com.stripe.payments",
-          "version": "2026-06-25",
-          "spec": "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
-          "schema": "https://ucp.stripe.com/payments/2026-06-25/schema.json",
-          "available_instruments": [
-            {
-              "type": "card"
-            },
-            {
-              "type": "link",
-              "config": {
-                "business_profile": "profile_61TqZ3vWbXk8RmNc4Hd2"
-              }
+    "tokenRequest": {
+      "handler": {
+        "id": "stripe_payments",
+        "type": "com.stripe.payments",
+        "version": "2026-06-25",
+        "spec": "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+        "schema": "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+        "available_instruments": [
+          {
+            "type": "card"
+          },
+          {
+            "type": "link",
+            "config": {
+              "business_profile": "profile_61TqZ3vWbXk8RmNc4Hd2"
             }
-          ],
-          "config": {
-            "environment": "livemode",
-            "business_profile": "profile_61TqZ3vWbXk8RmNc4Hd2"
           }
-        },
-        "limits": {
-          "maxAmount": 13240,
-          "currency": "usd",
-          "expiresAt": "2027-02-20T11:49:12Z"
+        ],
+        "config": {
+          "environment": "livemode",
+          "business_profile": "profile_61TqZ3vWbXk8RmNc4Hd2"
         }
       },
-      {
-        "id": "stripe_alipay_wechat_pay",
-        "open": false,
-        "current": null,
-        "wechatPay": null,
-        "alipay": null
+      "usageLimits": {
+        "max_amount": 13240,
+        "currency": "usd",
+        "expires_at": 1803124152
       }
-    ]
+    }
   },
   "cancel": {
-    "available": true,
-    "reason": "unpaid",
+    "action": "close",
+    "blockedBy": null,
     "penalty": null,
     "refund": null
   },
+  "cancelled": null,
+  "failure": null,
   "manageUrl": "https://fortrip.ai/orders/ord_Wr4tY7uI0oPa3SdF6gHj"
 }

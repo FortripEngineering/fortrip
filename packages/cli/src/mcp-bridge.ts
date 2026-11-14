@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "node:stream";
 
-import { CONTRACT_VERSION, renderError, renderGuide, TOOLS } from "@fortrip/agent-contract";
+import { CONTRACT_VERSION, META_KEYS, renderError, renderGuide, SERVER_INFO, TOOLS } from "@fortrip/agent-contract";
 import {
   type FetchLike,
   isJSONRPCErrorResponse,
@@ -27,6 +27,7 @@ import { isEnvelope } from "./api.ts";
 import { refreshSession, requireToken } from "./auth.ts";
 import { loadSession } from "./credentials.ts";
 import { CliError, EXIT, localRequestId } from "./errors.ts";
+import { USER_AGENT } from "./version.ts";
 
 /** JSON-RPC error codes of the bridge's own answers: the user has to sign in,
  *  or Fortrip couldn't be reached or failed (the standard internal error). */
@@ -36,11 +37,14 @@ const LOGIN_COMMAND = "npx -y fortrip login";
 
 type RpcError = { code: number; message: string; data?: unknown };
 
-/** What the bridge's fetch throws when only the user can fix the sign-in. */
+/** What the bridge's fetch throws when only the user can fix the sign-in.
+ *  `advice` is what to do about it, the part of the message a tool error's
+ *  text adds to the contract's own words for a sign-in. */
 class SignInRequired extends Error {
   constructor(
     message: string,
     readonly data: Record<string, unknown> = {},
+    readonly advice = message,
   ) {
     super(message);
   }
@@ -61,11 +65,11 @@ async function signedIn<T>(run: () => Promise<T>): Promise<T> {
       // A FORTRIP_TOKEN that can't be sent: its message is the whole answer.
       if (error.details.tokenSource === "FORTRIP_TOKEN") throw new SignInRequired(error.message);
       const { loginUrl, userCode, expiresInSeconds } = error.details;
+      const advice = signInAdvice(loginUrl ? `, or open ${loginUrl} and approve` : "");
       throw new SignInRequired(
-        `Not signed in to Fortrip, or the saved sign-in no longer works. ${signInAdvice(
-          loginUrl ? `, or open ${loginUrl} and approve` : "",
-        )}`,
+        `Not signed in to Fortrip, or the saved sign-in no longer works. ${advice}`,
         { loginUrl, userCode, expiresInSeconds },
+        advice,
       );
     }
     throw error;
@@ -74,11 +78,12 @@ async function signedIn<T>(run: () => Promise<T>): Promise<T> {
 
 /**
  * `fetch` for the hosted server at `mcpUrl`, signed in as for `apiUrl`
- * (`resolveMcpUrl` pairs them): every request carries the user's token, and
- * a 401 gets one refresh and one replay with the new token, as in
- * `authorizedRequest`. A token the server still turns down is the user's to
- * fix: `SignInRequired`. Any other answer, a 503 included, goes on to the
- * transport, which makes it an error for that request.
+ * (`resolveMcpUrl` pairs them): every request carries the user's token and
+ * the CLI's user agent, as its HTTP calls do, and a 401 gets one refresh and
+ * one replay with the new token, as in `authorizedRequest`. A token the
+ * server still turns down is the user's to fix: `SignInRequired`. Any other
+ * answer, a 503 included, goes on to the transport, which makes it an error
+ * for that request.
  */
 function authorizedFetch(mcpUrl: string, apiUrl: string): FetchLike {
   const attempt: FetchLike = async (url, init) => {
@@ -99,6 +104,7 @@ function authorizedFetch(mcpUrl: string, apiUrl: string): FetchLike {
     const withToken = (token: string) => {
       const headers = new Headers(init?.headers);
       headers.set("authorization", `Bearer ${token}`);
+      headers.set("user-agent", USER_AGENT);
       return attempt(url, { ...init, headers });
     };
     const started = turn.then(async () => {
@@ -193,18 +199,22 @@ function rpcErrorOf(error: unknown): RpcError {
 
 /**
  * A tool call that failed with a v1 envelope, answered as the hosted server
- * answers a tool's error (spec §6): `isError`, the rendered error and the
- * envelope as JSON text, the envelope in `_meta`, and no
- * `structuredContent`. The envelope is the hosted server's own when it
- * turned the HTTP request down with one, Fortrip's when the API refused a
- * step of the sign-in with one (`/v1/auth/config` answering 503, say), and
- * the bridge's for a sign-in it couldn't make: `unauthenticated`, as the hosted server answers a request
- * without a token it takes, with no `details` (§11) and a request id of
+ * answers a tool's error: `isError`, one text block (the error as the
+ * contract renders it, which is all a model reads), the envelope in `_meta`,
+ * and no `structuredContent`. The envelope is the hosted server's own when
+ * it turned the HTTP request down with one (`client_outdated`, say, whose
+ * text is the service's message with the update command), Fortrip's when the
+ * API refused a step of the sign-in with one (`/v1/auth/config` answering
+ * 503, or 426 to a CLI that is too old), and the bridge's for a sign-in it
+ * couldn't make: `unauthenticated`, with no `details` and a request id of
  * the bridge's own (`local_…`): that answer is the bridge's, not Fortrip's.
- * Any other failure has no envelope: undefined.
+ * Its text is the contract's words for a sign-in on the CLI, then what to do
+ * here (`LOGIN_COMMAND`, the sign-in link), in the same block. Any other
+ * failure has no envelope: undefined.
  */
 function toolErrorOf(error: unknown) {
   let envelope: unknown;
+  let text: string | undefined;
   if (error instanceof SignInRequired) {
     envelope = {
       error: {
@@ -214,6 +224,7 @@ function toolErrorOf(error: unknown) {
         requestId: localRequestId(),
       },
     };
+    text = `${renderError(envelope, undefined, "cli")}\n${error.advice}`;
   } else if (error instanceof SdkHttpError) {
     envelope = bodyOf(error);
   } else if (error instanceof CliError) {
@@ -222,11 +233,8 @@ function toolErrorOf(error: unknown) {
   if (!isEnvelope(envelope)) return undefined;
   return {
     isError: true,
-    content: [
-      { type: "text", text: renderError(envelope) },
-      { type: "text", text: JSON.stringify(envelope) },
-    ],
-    _meta: { "ai.fortrip/error": envelope },
+    content: [{ type: "text", text: text ?? renderError(envelope) }],
+    _meta: { [META_KEYS.error]: envelope },
   };
 }
 
@@ -271,31 +279,30 @@ function passThrough(schema: z.ZodType): StandardSchemaWithJSON {
 
 /**
  * What answers the client while it isn't signed in: an MCP SDK server set up
- * as the hosted one is (its `serverInfo`, `instructions` and the contract's
- * tools, registered as the hosted server registers them: pass-through
- * schemas, an output schema on every tool), so `initialize`,
- * `tools/list`, `ping` and a method it lacks get the answers the hosted
- * server would give. Its tools are never called: the bridge takes a
- * `tools/call` to the hosted server.
+ * as the hosted one is (the contract's `SERVER_INFO`, `instructions` and
+ * tools, registered as the hosted server registers them: a pass-through
+ * input schema and no output schema, since a result is text only), so
+ * `initialize`, `tools/list`, `ping` and a method it lacks get the answers
+ * the hosted server would give. Its tools are never called: the bridge takes
+ * a `tools/call` to the hosted server.
  */
 function localServer(): McpServer {
   const server = new McpServer(
-    { name: "fortrip", version: CONTRACT_VERSION },
+    { ...SERVER_INFO, version: CONTRACT_VERSION },
     { instructions: renderGuide("mcp", "main") },
   );
   const handler = (): never => {
     throw new Error("Fortrip's tools run on the hosted server.");
   };
   for (const spec of TOOLS) {
-    const config = {
-      title: spec.title,
-      description: spec.description,
-      annotations: spec.annotations,
-      outputSchema: passThrough(spec.output),
-    };
     server.registerTool(
       spec.name,
-      { ...config, inputSchema: passThrough(spec.input) },
+      {
+        title: spec.title,
+        description: spec.description,
+        annotations: spec.annotations,
+        inputSchema: passThrough(spec.input),
+      },
       handler as ToolCallback<StandardSchemaWithJSON>,
     );
   }
@@ -317,8 +324,9 @@ function localServer(): McpServer {
  * has signed in. A tool call while local checks the sign-in the way the
  * commands do. Still signed out, the call is answered as the hosted server
  * answers a tool's error, with `unauthenticated` (`toolErrorOf`), whose
- * message names `LOGIN_COMMAND` and the sign-in link it starts. Signed in
- * by now (the link approved, or `LOGIN_COMMAND` run), the
+ * text names `LOGIN_COMMAND` and the sign-in link it starts. A CLI too old
+ * for the service gets `client_outdated` the same way, and nothing retries.
+ * Signed in by now (the link approved, or `LOGIN_COMMAND` run), the
  * bridge sends the client's `initialize` on to the hosted server and is
  * remote from that call on, no restart needed; it then tells the client the
  * tool list may have changed, so that it lists the hosted server's. A switch

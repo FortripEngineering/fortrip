@@ -31,23 +31,27 @@ test("details are listed field by field, as the contract's shapes", () => {
   assert.deepEqual(details("payment_in_progress"), ["`orderId`: `string`"]);
   assert.deepEqual(details("supplier_unavailable"), ['`outcome`: `"not_started" | "unknown"`']);
   assert.deepEqual(details("stay_in_past"), ["`checkIn`: `string`", "`timeZone`: `string | null`"]);
-  assert.deepEqual(details("payment_total_changed"), ["`orderId`: `string`", "`total`: `{ amount: string; currency: string }`"]);
+  assert.deepEqual(details("payment_total_mismatch"), ["`orderId`: `string`", "`total`: `{ amount: string; currency: string }`"]);
   // A union lists each of its branches whole.
   assert.deepEqual(details("stay_unsupported"), ['`{ reason: "mixed_occupancy" }`', '`{ reason: "max_nights"; max: number }`']);
   assert.equal(details("destination_not_found")?.length, 3);
-  assert.match(details("destination_not_found")?.[2] ?? "", /^`\{ reason: "not_a_locality"; placeId: string; hub: \{ placeId; name; names \} \| null; hubTotal: number \| null \}`$/);
+  assert.match(details("destination_not_found")?.[2] ?? "", /^`\{ reason: "not_a_locality"; placeId: string; locality: \{ placeId; name; names \} \| null; localityTotal: number \| null \}`$/);
   // offer_changed: each change's fields, and the new offer linked to its schema.
   assert.deepEqual(details("offer_changed"), [
-    '`changes[]`: `{ field: "price" | "meals" | "cancellation" | "confirmation" | "pay_at_property"; previous; current; worse: boolean }`',
+    '`changes[]`: `{ field: "total" | "meals" | "cancellation" | "confirmation" | "payAtProperty"; previous; current; worse: boolean }`',
     "`offer`: [Offer](/schemas#offers)",
   ]);
   // Objects the schemas page describes link there; other nested objects name their fields.
   assert.ok(details("search_too_broad")?.includes("`localities`: [`coverage.localities`](/schemas#search-result)"));
   assert.ok(details("search_too_broad")?.includes("`center`: [`destination.center`](/schemas#search-result) or `null`"));
   assert.match(details("destination_ambiguous")?.find((line) => line.startsWith("`candidates[]`")) ?? "", /\{ placeId; name; names; .*; hotels \}/);
-  assert.ok(details("invalid_request")?.includes("`issues[]`: `{ pointer: string; message: string }`"));
-  assert.match(details("invalid_request")?.[1] ?? "", /^`filterable\[\]` \(optional\): `"parking" \| /);
-  assert.ok(details("invalid_request")?.includes("`share` (optional): `{ code: string; listedShare: number }`"));
+  assert.deepEqual(details("invalid_request"), ["`issues[]`: `{ pointer: string; message: string }`"]);
+  // order_not_cancellable carries the order's cancel, by its fields' names.
+  assert.deepEqual(details("order_not_cancellable"), ["`orderId`: `string`", "`cancel`: `{ action; blockedBy; penalty; refund }`"]);
+  assert.deepEqual(details("payment_method_unavailable"), [
+    '`reason`: `"payment_open_on_page" | "token_not_offered" | "charge_refused"`',
+  ]);
+  assert.equal(details("client_outdated"), null);
   for (const row of ERROR_ROWS) {
     for (const line of row.details ?? []) assert.doesNotMatch(line, /\bobject\b/, `${row.code}: ${line}`);
   }
@@ -57,16 +61,15 @@ test("details are listed field by field, as the contract's shapes", () => {
 test("the meanings say what the contract and its guide say", () => {
   const meaning = (code: keyof typeof ERROR_CODES) =>
     ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
-  assert.match(
-    meaning("invalid_request"),
-    /`listedShare` is the fraction, from 0 to 1, of hotels with a facility list that include the requested `code`/,
-  );
+  assert.match(meaning("invalid_request"), /`issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`\.$/);
+  assert.match(meaning("order_not_cancellable"), /`cancel` is the order's `cancel` as it is now/);
+  assert.match(meaning("client_outdated"), /`message` says so and gives the command that updates it/);
   assert.match(
     meaning("destination_ambiguous"),
     new RegExp(`lists up to ${LIMITS.candidatesShown} with`),
   );
   // One offer, one order (the guide's offer_already_ordered row).
-  assert.match(meaning("offer_already_ordered"), /An offer is ordered once, even when its order failed or expired/);
+  assert.match(meaning("offer_already_ordered"), /An offer is ordered once, even when its order failed, expired or was closed/);
 });
 
 test("the pay cutoff and supplier_unavailable's statuses come from the contract", () => {

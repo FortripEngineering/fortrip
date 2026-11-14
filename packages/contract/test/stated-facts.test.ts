@@ -17,7 +17,7 @@ describe("stated facts", () => {
       largeSettlementPopulation: 50_000,
       dominanceRatio: 100,
       nearDuplicateMeters: 5_000,
-      hubIncludes: 3,
+      localityIncludes: 3,
     });
   });
   it("states how order creation answers", () => {

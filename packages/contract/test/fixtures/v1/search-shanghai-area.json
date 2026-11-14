@@ -11,7 +11,6 @@
           "zh": "上海"
         },
         "kind": "region",
-        "scope": "area",
         "cityLike": true,
         "population": 24874500,
         "region": null,
@@ -55,7 +54,7 @@
     },
     "pricing": {
       "mode": "indicative",
-      "scope": "page",
+      "covers": "page",
       "status": "ok"
     },
     "sort": "distance",
@@ -80,7 +79,7 @@
               }
             },
             "count": 6953,
-            "total": 6953,
+            "localityTotal": 6953,
             "includes": [
               {
                 "place": {
@@ -127,7 +126,7 @@
               }
             },
             "count": 4120,
-            "total": 4120,
+            "localityTotal": 4120,
             "includes": [
               {
                 "place": {
@@ -152,7 +151,7 @@
               }
             },
             "count": 2210,
-            "total": 2210,
+            "localityTotal": 2210,
             "includes": []
           },
           {
@@ -165,7 +164,7 @@
               }
             },
             "count": 1306,
-            "total": 1306,
+            "localityTotal": 1306,
             "includes": [
               {
                 "place": {
@@ -185,6 +184,10 @@
         "more": 112
       },
       "nameAsText": null
+    },
+    "currencyHint": {
+      "currency": "CNY",
+      "reason": "request_location"
     },
     "data": [
       {
@@ -216,9 +219,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 640,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "182.50",
             "currency": "USD"
@@ -228,7 +229,10 @@
             "currency": "USD"
           }
         },
-        "photo": null
+        "photo": {
+          "url": "https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp",
+          "caption": null
+        }
       },
       {
         "hotelId": "htl_JinganCourt000000000",
@@ -259,9 +263,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 1830,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "96.10",
             "currency": "USD"
@@ -296,7 +298,7 @@
         "location": null,
         "timeZone": "Asia/Shanghai",
         "distanceMeters": null,
-        "price": null,
+        "indicativePrice": null,
         "photo": null
       },
       {
@@ -328,9 +330,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 2410,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "41.00",
             "currency": "USD"
@@ -351,7 +351,16 @@
       },
       {
         "code": "area_absorbed",
-        "message": "Shanghai: the whole municipality, starting from the city center."
+        "message": "Shanghai: the whole municipality, starting from the city center.",
+        "details": {
+          "places": [
+            {
+              "placeId": "plc_9100002",
+              "name": "Shanghai",
+              "kind": "settlement"
+            }
+          ]
+        }
       }
     ]
   }

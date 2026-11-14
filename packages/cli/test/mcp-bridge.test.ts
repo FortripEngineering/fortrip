@@ -15,6 +15,7 @@ import {
   parseOpen,
   renderError,
   renderGuide,
+  SERVER_INFO,
   TOOLS,
 } from "@fortrip/agent-contract";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
@@ -31,7 +32,16 @@ import { z } from "zod";
 
 import { loadSession, saveSession, tryLoginLock } from "../src/credentials.ts";
 import { runMcpBridge } from "../src/mcp-bridge.ts";
-import { envelope, type FakeApi, MCP_CALL_RESULT, MCP_TOOLS, startFakeApi } from "./helpers/fake-api.ts";
+import { USER_AGENT, VERSION } from "../src/version.ts";
+import {
+  CLIENT_OUTDATED,
+  envelope,
+  type FakeApi,
+  MCP_CALL_RESULT,
+  MCP_TOOLS,
+  mcpToolError as hostedToolError,
+  startFakeApi,
+} from "./helpers/fake-api.ts";
 
 let api: FakeApi;
 let apiUrl: string;
@@ -85,60 +95,69 @@ function hostedPassThrough(schema: StandardSchemaWithJSON): StandardSchemaWithJS
 }
 
 /**
- * The hosted MCP server as its route registers it (`serverInfo`,
- * `instructions`, then each contract tool with its title, description,
- * annotations and wrapped schemas: an input and an output schema on every
- * tool), with handlers that are never called.
+ * The hosted MCP server as its route registers it in 6.0 (the contract's
+ * `SERVER_INFO` with its version, `instructions`, then each contract tool
+ * with its title, description, annotations and wrapped input schema, and no
+ * output schema: a result is text only), with handlers that are never
+ * called.
  */
 function hostedServer(): McpServer {
   const server = new McpServer(
-    { name: "fortrip", version: CONTRACT_VERSION },
+    { ...SERVER_INFO, version: CONTRACT_VERSION },
     { instructions: renderGuide("mcp", "main") },
   );
   const handler = () => ({ content: [] });
   for (const spec of TOOLS) {
-    const config = {
-      title: spec.title,
-      description: spec.description,
-      annotations: spec.annotations,
-      outputSchema: hostedPassThrough(spec.output as unknown as StandardSchemaWithJSON),
-    };
     server.registerTool(
       spec.name,
-      { ...config, inputSchema: hostedPassThrough(spec.input as unknown as StandardSchemaWithJSON) },
+      {
+        title: spec.title,
+        description: spec.description,
+        annotations: spec.annotations,
+        inputSchema: hostedPassThrough(spec.input as unknown as StandardSchemaWithJSON),
+      },
       handler as ToolCallback<StandardSchemaWithJSON>,
     );
   }
   return server;
 }
 
-/** The hosted server's answer to a tool call that failed with `envelope`. */
-function hostedToolError(envelope: unknown) {
-  return {
-    isError: true,
-    content: [
-      { type: "text", text: renderError(envelope) },
-      { type: "text", text: JSON.stringify(envelope) },
-    ],
-    _meta: { "ai.fortrip/error": envelope },
-  };
+/** A tool error in the hosted server's 6.0 shape: `isError`, ONE text block,
+ *  the envelope in `_meta`, and nothing else (no second block with the
+ *  envelope as JSON, no `structuredContent`). Returns the text and the
+ *  envelope. */
+function toolError(reply: Message): { text: string; sent: { error: Record<string, unknown> } } {
+  assert.equal(reply.error, undefined, JSON.stringify(reply.error));
+  const result = reply.result as { content: { type: string; text: string }[]; _meta: Record<string, unknown> };
+  assert.deepEqual(Object.keys(result).sort(), ["_meta", "content", "isError"]);
+  assert.equal((result as { isError?: unknown }).isError, true);
+  assert.equal(result.content.length, 1);
+  assert.deepEqual(Object.keys(result.content[0] as object).sort(), ["text", "type"]);
+  assert.equal(result.content[0]?.type, "text");
+  assert.deepEqual(Object.keys(result._meta), ["ai.fortrip/error"]);
+  const sent = result._meta["ai.fortrip/error"] as { error: Record<string, unknown> };
+  assert.doesNotThrow(() => parseOpen(errorEnvelope, sent));
+  return { text: result.content[0]?.text as string, sent };
 }
 
 /** The `unauthenticated` error a tool call was answered with, after
- *  checking that it has the hosted server's error shape (`isError`, no
- *  `structuredContent`, the rendered error, the envelope as JSON and in
- *  `_meta`) and is a v1 envelope with no `details` (spec §11). */
-function signInRefusal(reply: Message): { message: string; requestId: string } {
-  assert.equal(reply.error, undefined, JSON.stringify(reply.error));
-  const result = reply.result as { _meta?: Record<string, unknown> } | undefined;
-  const sent = result?._meta?.["ai.fortrip/error"] as { error: Record<string, unknown> };
-  assert.deepEqual(result, hostedToolError(sent));
-  assert.doesNotThrow(() => parseOpen(errorEnvelope, sent));
+ *  checking that it has the hosted server's error shape and is a v1
+ *  envelope with no `details`. Its one text block is the contract's words
+ *  for a sign-in on the CLI, then the bridge's advice: returned as `advice`,
+ *  it is what a model reads of what to do, and the end of the envelope's
+ *  message. */
+function signInRefusal(reply: Message): { advice: string; requestId: string } {
+  const { text, sent } = toolError(reply);
   assert.deepEqual(Object.keys(sent).sort(), ["error"]);
   assert.deepEqual(Object.keys(sent.error).sort(), ["code", "message", "requestId", "retryable"]);
   assert.equal(sent.error.code, "unauthenticated");
   assert.equal(sent.error.retryable, false);
-  return sent.error as { message: string; requestId: string };
+  const rendered = `${renderError(sent, undefined, "cli")}\n`;
+  assert.ok(text.startsWith(rendered), text);
+  const advice = text.slice(rendered.length);
+  assert.ok(advice.length > 0 && !advice.includes("\n"), text);
+  assert.ok((sent.error.message as string).endsWith(advice), text);
+  return { advice, requestId: sent.error.requestId as string };
 }
 
 /** What a fresh `hostedServer()` answers each of `requests` with, in order. */
@@ -159,8 +178,8 @@ async function hostedAnswers(...requests: Message[]): Promise<Message[]> {
 /**
  * The tools the hosted server lists, built from the contract alone (the
  * hosted route test's oracle): each tool's title, description and
- * annotations, its input as `z.toJSONSchema(input, { io: "input" })` and
- * its output as `{ io: "output" }`.
+ * annotations, and its input as `z.toJSONSchema(input, { io: "input" })`.
+ * No tool has an output schema.
  */
 function contractTools(): unknown[] {
   return TOOLS.map((spec) => ({
@@ -168,7 +187,6 @@ function contractTools(): unknown[] {
     title: spec.title,
     description: spec.description,
     inputSchema: z.toJSONSchema(spec.input, { io: "input" }),
-    outputSchema: z.toJSONSchema(spec.output, { io: "output" }),
     annotations: spec.annotations,
   }));
 }
@@ -442,9 +460,9 @@ describe("fortrip mcp bridge", () => {
     const bridge = startBridge();
 
     assert.deepEqual(await bridge.request(initialize()), (await hostedAnswers(initialize()))[0]);
-    const { message } = signInRefusal(await bridge.request(callTool(2)));
+    const { advice } = signInRefusal(await bridge.request(callTool(2)));
 
-    assert.match(message, /FORTRIP_TOKEN/);
+    assert.match(advice, /FORTRIP_TOKEN/);
     assert.equal(api.counts.refreshes, 0);
     // Tried at `initialize`, and again at the tool call.
     assert.deepEqual(
@@ -464,9 +482,9 @@ describe("fortrip mcp bridge", () => {
     assert.ok((await bridge.request(initialize())).result);
     const reply = await bridge.request(callTool(2));
 
-    const { message } = signInRefusal(reply);
-    assert.match(message, /FORTRIP_TOKEN/);
-    assert.match(message, /line break/);
+    const { advice } = signInRefusal(reply);
+    assert.match(advice, /FORTRIP_TOKEN/);
+    assert.match(advice, /line break/);
     assert.ok(!JSON.stringify(reply).includes("SECRETPART"));
     assert.ok(!bridge.lines.join("\n").includes("SECRETPART"));
     // Nothing was sent, and nothing was refreshed.
@@ -497,16 +515,14 @@ describe("fortrip mcp bridge", () => {
     await signIn();
     const bridge = startBridge();
     await bridge.request(initialize());
-    const order = { orderId: "ord_00000000000000000001", payment: { url: "https://fortrip.ai/pay/x" } };
     const booked = {
-      content: [{ type: "text", text: "Order ord_00000000000000000001" }],
-      structuredContent: { ...order, nextStep: "Ask first." },
+      content: [{ type: "text", text: "Order ord_00000000000000000001\n\nAsk first." }],
       _meta: { "ai.fortrip/requestId": "req_fakebook", "ai.fortrip/replayed": true },
     };
     const notFound = hostedToolError(envelope("not_found", "No such hotel."));
-    api.toolResults = { book_hotel: booked, get_hotel: notFound };
+    api.toolResults = { create_order: booked, get_hotel: notFound };
 
-    assert.deepEqual((await bridge.request(callTool(2, "book_hotel"))).result, booked);
+    assert.deepEqual((await bridge.request(callTool(2, "create_order"))).result, booked);
     assert.deepEqual((await bridge.request(callTool(3, "get_hotel"))).result, notFound);
   });
 
@@ -514,10 +530,10 @@ describe("fortrip mcp bridge", () => {
     const { bridge } = await bridgeWithRevokedToken();
     api.options.rejectAll = true;
 
-    const { message } = signInRefusal(await bridge.request(callTool(2)));
+    const { advice } = signInRefusal(await bridge.request(callTool(2)));
     const list = await bridge.request(listTools(3));
 
-    assert.match(message, /npx -y fortrip login/);
+    assert.match(advice, /npx -y fortrip login/);
     assert.equal(list.error?.code, -32001);
     assert.match(list.error?.message ?? "", /npx -y fortrip login/);
   });
@@ -549,6 +565,71 @@ describe("fortrip mcp bridge", () => {
     );
     assert.deepEqual(list.error?.data, { status: 503, retryable: true, retryAfterSeconds: 5 });
     assert.equal(api.counts.refreshes, 0);
+  });
+
+  it("every request carries the CLI's user agent: to the hosted server, and the sign-in's to the API", async () => {
+    assert.equal(USER_AGENT, `fortrip-cli/${VERSION}`);
+    const { bridge } = await bridgeWithRevokedToken();
+    bridge.send(initialized);
+
+    // A 401, the refresh it leads to and the replay; then a tool call.
+    assert.deepEqual((await bridge.request(listTools(2))).result, { tools: MCP_TOOLS });
+    assert.deepEqual((await bridge.request(callTool(3))).result, MCP_CALL_RESULT);
+
+    const paths = new Set(api.requests.map((request) => request.path));
+    for (const path of [new URL(mcpUrl).pathname, "/v1/auth/config", "/oauth/token"]) {
+      assert.ok(paths.has(path), path);
+    }
+    assert.ok(api.mcpRequests.length >= 5, String(api.mcpRequests.length));
+    for (const { method, path, userAgent } of api.requests) {
+      assert.equal(userAgent, USER_AGENT, `${method} ${path}`);
+    }
+    for (const request of api.mcpRequests) assert.equal(request.userAgent, USER_AGENT);
+  });
+
+  it("client_outdated from the hosted server reaches the client as its tool error, and nothing retries", async () => {
+    await signIn();
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    const outdated = hostedToolError(CLIENT_OUTDATED.body);
+    api.toolResults = { search_hotels: outdated };
+    const sent = api.mcpRequests.length;
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.deepEqual(reply.result, outdated);
+    // The one text block says what happened and the command that updates the CLI.
+    assert.ok(toolError(reply).text.includes(CLIENT_OUTDATED.body.error.message));
+    assert.equal(api.mcpRequests.length - sent, 1);
+    assert.equal(api.counts.refreshes, 0);
+  });
+
+  it("an HTTP 426 from the hosted server is the client_outdated tool error for a tool call, sent once", async () => {
+    await signIn();
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    api.scripts.mcp = [CLIENT_OUTDATED];
+    const sent = api.mcpRequests.length;
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: hostedToolError(CLIENT_OUTDATED.body) });
+    assert.equal(
+      toolError(reply).text,
+      // The service's message is its text, not the contract's: a JSON string.
+      `Error client_outdated: ${JSON.stringify(CLIENT_OUTDATED.body.error.message)}\nNot retryable.\nRequest id: req_fakeoutdated`,
+    );
+    assert.equal(api.mcpRequests.length - sent, 1);
+    assert.equal(api.counts.refreshes, 0);
+    assert.equal(api.counts.deviceStarts, 0);
+
+    // A request that isn't a tool call can only get a JSON-RPC error: it
+    // carries the message too.
+    api.scripts.mcp = [CLIENT_OUTDATED];
+    const list = await bridge.request(listTools(3));
+    assert.equal(list.error?.code, -32603);
+    assert.ok(list.error?.message.includes(CLIENT_OUTDATED.body.error.message), list.error?.message);
+    assert.equal(api.mcpRequests.length - sent, 2);
   });
 
   it("a redirect to another origin isn't followed: the token goes nowhere else", async () => {
@@ -667,7 +748,7 @@ describe("fortrip mcp bridge, signed out", () => {
     assert.deepEqual(first.result, {
       protocolVersion: "2025-06-18",
       capabilities: { tools: { listChanged: true } },
-      serverInfo: { name: "fortrip", version: CONTRACT_VERSION },
+      serverInfo: { ...SERVER_INFO, version: CONTRACT_VERSION },
       instructions: renderGuide("mcp", "main"),
     });
     assert.deepEqual(api.mcpRequests, []);
@@ -688,13 +769,12 @@ describe("fortrip mcp bridge, signed out", () => {
       TOOLS.map((spec) => spec.name),
     );
     const byName = new Map(tools.map((tool) => [tool.name, tool]));
-    // The MCP variants: get_hotel_offers' own default, book_hotel's nextStep.
-    assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, 15);
-    assert.ok(byName.get("book_hotel")?.outputSchema.properties.nextStep);
+    // The service resolves limitPerHotel.
+    assert.equal(byName.get("get_hotel_offers")?.inputSchema.properties.limitPerHotel.default, undefined);
     assert.deepEqual(api.mcpRequests, []);
   });
 
-  it("registers each tool as the hosted server does: pass-through schemas, an output schema on every tool", async () => {
+  it("registers each tool as the hosted server does: a pass-through input schema, and no output schema", async () => {
     const register = mock.method(McpServer.prototype, "registerTool");
     const bridge = startBridge();
     await bridge.request(initialize());
@@ -717,14 +797,11 @@ describe("fortrip mcp bridge, signed out", () => {
     for (const [name, config] of local) {
       const spec = TOOLS.find((tool) => tool.name === name);
       assert.ok(spec);
-      for (const [schema, published] of [
-        [config.inputSchema, spec.input],
-        [config.outputSchema, spec.output],
-      ] as const) {
-        // Never enforced: any value passes through, as on the hosted server.
-        assert.deepEqual(schema["~standard"].validate(notTheInput), { value: notTheInput }, name);
-        assert.deepEqual(json(schema), json(published), name);
-      }
+      // A result is text only: no tool publishes an output schema.
+      assert.deepEqual(Object.keys(config).sort(), ["annotations", "description", "inputSchema", "title"], name);
+      // Never enforced: any value passes through, as on the hosted server.
+      assert.deepEqual(config.inputSchema["~standard"].validate(notTheInput), { value: notTheInput }, name);
+      assert.deepEqual(json(config.inputSchema), json(spec.input), name);
     }
   });
 
@@ -741,7 +818,7 @@ describe("fortrip mcp bridge, signed out", () => {
     const refusals = [];
     for (const call of calls) refusals.push(signInRefusal(await bridge.request(call)));
 
-    for (const { message } of refusals) assert.ok(message.includes(loginUrl()), message);
+    for (const { advice } of refusals) assert.ok(advice.includes(loginUrl()), advice);
     // Each answer has its own request id, which says it never reached Fortrip.
     const ids = refusals.map(({ requestId }) => requestId);
     assert.equal(new Set(ids).size, ids.length);
@@ -768,10 +845,10 @@ describe("fortrip mcp bridge, signed out", () => {
     await bridge.request(initialize());
     bridge.send(initialized);
 
-    const { message } = signInRefusal(await bridge.request(callTool(2)));
+    const { advice } = signInRefusal(await bridge.request(callTool(2)));
 
-    assert.match(message, /npx -y fortrip login/);
-    assert.ok(message.includes(loginUrl()));
+    assert.match(advice, /npx -y fortrip login/);
+    assert.ok(advice.includes(loginUrl()));
     assert.deepEqual(api.mcpRequests, []);
     assert.deepEqual((await bridge.request(listTools(3))).result, { tools: contractTools() });
   });
@@ -792,6 +869,24 @@ describe("fortrip mcp bridge, signed out", () => {
     assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: hostedToolError(unavailable) });
     assert.equal(api.counts.config, 1);
     assert.deepEqual(api.mcpRequests, []);
+  });
+
+  it("a CLI too old for the service: a tool call is answered client_outdated before any sign-in starts", async () => {
+    const bridge = startBridge();
+    await bridge.request(initialize());
+    bridge.send(initialized);
+    // The endpoint the CLI reads before it signs in.
+    api.scripts.config = [CLIENT_OUTDATED];
+
+    const reply = await bridge.request(callTool(2));
+
+    assert.deepEqual(reply, { jsonrpc: "2.0", id: 2, result: hostedToolError(CLIENT_OUTDATED.body) });
+    assert.ok(toolError(reply).text.includes("npm install -g fortrip@latest"));
+    assert.equal(api.counts.config, 1);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(api.mcpRequests, []);
+    // It keeps serving, as for any tool error.
+    assert.deepEqual((await bridge.request(listTools(3))).result, { tools: contractTools() });
   });
 
   it("a tool call whose sign-in can't start, with no envelope, gets a retryable JSON-RPC error", async () => {
@@ -1009,8 +1104,8 @@ describe("fortrip mcp bridge, signed out", () => {
 
     assert.deepEqual(reply, (await hostedAnswers(initialize()))[0]);
     assert.equal(api.counts.refreshes, 1);
-    const { message } = signInRefusal(await bridge.request(callTool(2)));
-    assert.ok(message.includes(loginUrl()));
+    const { advice } = signInRefusal(await bridge.request(callTool(2)));
+    assert.ok(advice.includes(loginUrl()));
   });
 });
 
@@ -1087,7 +1182,7 @@ describe("fortrip mcp", () => {
     const reply = await bridge.request(callTool(3));
     bridge.child.stdin.end();
 
-    assert.match(signInRefusal(reply).message, /npx -y fortrip login/);
+    assert.match(signInRefusal(reply).advice, /npx -y fortrip login/);
     assert.deepEqual(await bridge.exit, { code: 0, signal: null });
     // stdout held the three replies; the diagnosis went to stderr.
     assert.equal(bridge.messages().length, 3);
@@ -1152,7 +1247,7 @@ describe("fortrip mcp", () => {
     const reply = await bridge.request(callTool(2));
     bridge.child.stdin.end();
 
-    assert.match(signInRefusal(reply).message, /FORTRIP_TOKEN/);
+    assert.match(signInRefusal(reply).advice, /FORTRIP_TOKEN/);
     assert.deepEqual(await bridge.exit, { code: 0, signal: null });
     assert.ok(!JSON.stringify(bridge.messages()).includes("SECRETPART"));
     assert.ok(!bridge.stderr().includes("SECRETPART"));

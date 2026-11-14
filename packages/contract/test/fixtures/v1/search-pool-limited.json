@@ -11,7 +11,6 @@
           "zh": "上海"
         },
         "kind": "settlement",
-        "scope": "radius",
         "cityLike": null,
         "population": 22315474,
         "region": {
@@ -62,7 +61,7 @@
     },
     "pricing": {
       "mode": "indicative",
-      "scope": "pool",
+      "covers": "pool",
       "status": "ok"
     },
     "sort": "price_asc",
@@ -78,6 +77,7 @@
       "localities": null,
       "nameAsText": null
     },
+    "currencyHint": null,
     "data": [
       {
         "hotelId": "htl_ZhOnlyName0000000000",
@@ -108,9 +108,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 1620,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "41.00",
             "currency": "USD"
@@ -151,9 +149,7 @@
         },
         "timeZone": "Asia/Shanghai",
         "distanceMeters": 890,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "96.10",
             "currency": "USD"
@@ -178,7 +174,10 @@
       },
       {
         "code": "locality_available",
-        "message": "Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: \"locality\", placeId: \"plc_9100002\" } for exactly its hotels instead of a circle."
+        "message": "Shanghai is itself a locality (plc_9100002, 6,953 hotels): search { kind: \"locality\", placeId: \"plc_9100002\" } for exactly its hotels instead of a circle.",
+        "details": {
+          "localityTotal": 6953
+        }
       }
     ]
   }

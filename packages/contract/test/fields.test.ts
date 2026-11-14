@@ -27,10 +27,10 @@ describe("strictInput", () => {
 
   it("names the keys it doesn't know", () => {
     assert.deepEqual(messages(input, { a: "x", b: 1 }), [
-      "Unknown argument(s): b",
+      "Unknown field: b",
     ]);
     assert.deepEqual(messages(input, { a: "x", b: 1, c: 2 }), [
-      "Unknown argument(s): b, c",
+      "Unknown fields: b, c",
     ]);
   });
 

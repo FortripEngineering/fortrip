@@ -49,7 +49,7 @@ export interface FlagSpec {
   /** Given once per item; its field is a list. */
   multiple?: boolean;
   /** What a `boolean` flag sends when its field isn't boolean:
-   *  `--rooms` sends `include: "rooms"`. */
+   *  `--room-types` sends `include: "roomTypes"`. */
   value?: string;
   /**
    * Fields the flag also sends, each with a constant: the variant of a union
@@ -63,6 +63,9 @@ export interface FlagSpec {
    * a value has one.
    */
   placeholder?: string;
+  /** The command needs the field: `always`, or `unless-body` for a field
+   *  `--body` can give instead. Its description says so first. */
+  required?: "always" | "unless-body";
   description: string;
 }
 
@@ -101,7 +104,7 @@ export interface CommandSpec {
     | "search"
     | "get"
     | "offers"
-    | "book"
+    | "create"
     | "list"
     | "cancel"
     | "pay"
@@ -159,12 +162,10 @@ function fieldDescription(
   return node.description;
 }
 
-type FlagDef = Omit<FlagSpec, "description"> & {
-  description?: string;
-  /** The command needs it: its help starts with "Required." or, for a
-   *  field `--body` can give instead, "Required unless --body gives it." */
-  required?: "always" | "unless-body";
-};
+/** A flag before its description is settled: a required one's help starts
+ *  with "Required." or, for a field `--body` can give instead, "Required
+ *  unless --body gives it." */
+type FlagDef = Omit<FlagSpec, "description"> & { description?: string };
 
 /** The flags of a command that sends `input`, each with its field's
  *  description unless the definition words it otherwise. */
@@ -173,12 +174,12 @@ function flagsOf(
   defs: readonly FlagDef[],
 ): readonly FlagSpec[] {
   const json = z.toJSONSchema(input, { io: "input" }) as JsonSchema;
-  return defs.map(({ required, ...def }) => {
+  return defs.map((def) => {
     const description = def.description ?? fieldDescription(json, def.field, def.sets);
     const prefix =
-      required === "always"
+      def.required === "always"
         ? "Required. "
-        : required === "unless-body"
+        : def.required === "unless-body"
           ? "Required unless --body gives it. "
           : "";
     return { ...def, description: `${prefix}${description}` };
@@ -342,7 +343,7 @@ const searchFlags = flagsOf(searchHotelsInput, [
     type: "string",
     placeholder: "<cursor>",
     description:
-      "`nextCursor` from the previous page. A next page takes only `--cursor` and `--limit`.",
+      "The cursor the previous page gave for the next one. A next page takes only `--cursor` and `--limit`.",
   },
   localeFlag,
   currencyFlag,
@@ -350,11 +351,11 @@ const searchFlags = flagsOf(searchHotelsInput, [
 
 const hotelFlags = flagsOf(getHotelInput, [
   {
-    flag: "rooms",
+    flag: "room-types",
     field: "include",
     type: "boolean",
-    value: "rooms",
-    description: "Add the hotel's rooms.",
+    value: "roomTypes",
+    description: "Add the hotel's room types.",
   },
   localeFlag,
 ]);
@@ -382,12 +383,13 @@ const offersFlags = flagsOf(hotelOffersInput, [
   currencyFlag,
 ]);
 
-const bookFlags = flagsOf(createOrderInput, [
+const createFlags = flagsOf(createOrderInput, [
   {
     flag: "offer",
     field: "items.offerId",
     type: "string",
     placeholder: "<off_>",
+    required: "unless-body",
     description: "The offer to order, by offerId from `hotels offers`.",
   },
   {
@@ -396,11 +398,11 @@ const bookFlags = flagsOf(createOrderInput, [
     type: "string",
     multiple: true,
     placeholder: "<room>:<first>:<last>",
+    required: "unless-body",
     description:
       "A guest, as `room:first:last`, e.g. `1:John:Smith` for room 1. Repeat for each guest: at least one per room of the offer, no more than the room sleeps. Names in Latin letters as on the passport; transliterate accents (Müller → Mueller).",
   },
-  { flag: "first-name", field: "contact.firstName", type: "string", placeholder: "<name>", required: "unless-body" },
-  { flag: "last-name", field: "contact.lastName", type: "string", placeholder: "<name>", required: "unless-body" },
+  { flag: "name", field: "contact.name", type: "string", placeholder: "<name>", required: "unless-body" },
   { flag: "email", field: "contact.email", type: "string", placeholder: "<email>", required: "unless-body" },
   { flag: "phone", field: "contact.phone", type: "string", placeholder: "<phone>", required: "unless-body" },
   {
@@ -426,7 +428,14 @@ const cancelFlags = flagsOf(cancelOrderInput, [
     type: "string",
     placeholder: "<amount>",
     description:
-      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Without it or --close, the command changes nothing: it shows the penalty and the refund, or that the order can be closed.",
+      "To cancel a paid order: the penalty the user agreed to, exactly as `orders get` shows it, in the order's currency, e.g. `12.50`. Give exactly one of it and --close: with neither the command is refused and nothing is sent, and `orders get` shows the penalty and the refund, or that the order can be closed.",
+  },
+  {
+    flag: "close",
+    field: "close",
+    type: "boolean",
+    description:
+      "Close an unpaid order, one whose Cancel line says it can be closed, only once the user says they no longer want it: nothing is charged, and it can no longer be paid. Nothing is sent for a paid order, which is cancelled with --max-penalty.",
   },
 ]);
 
@@ -436,16 +445,9 @@ const payFlags = flagsOf(payOrderInput, [
     field: "sharedPaymentToken",
     type: "string",
     placeholder: "<spt_…>",
+    required: "always",
     description:
-      "Required unless --method. The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link or --method.",
-  },
-  {
-    flag: "method",
-    field: "method",
-    type: "string",
-    placeholder: "stripe_alipay_wechat_pay",
-    description:
-      "Pay by a method in the order's payment.methods instead of a token: stripe_alipay_wechat_pay is Alipay or WeChat Pay, and prints the WeChat Pay code and both links.",
+      "The spt_… token the user's Link wallet issued for this order. For agents that can request a token from the user's Link wallet; people pay by the order's link.",
   },
   {
     flag: "total",
@@ -454,7 +456,7 @@ const payFlags = flagsOf(payOrderInput, [
     placeholder: "<decimal>",
     required: "always",
     description:
-      "The total the user approved, exactly as `orders get` shows it, in the order's currency, e.g. `125.00`.",
+      "The total the user approved, exactly as `orders get` shows it, e.g. `125.00`. In USD: a token pays a USD order only.",
   },
 ]);
 
@@ -468,8 +470,8 @@ const BODY_OPTION: OptionSpec = {
 };
 
 export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
-  { name: "hotels", summary: "Search hotels, get offers and order one" },
-  { name: "orders", summary: "Your orders, their status, paying and cancelling one" },
+  { name: "hotels", summary: "Search hotels, read one's details and get live offers" },
+  { name: "orders", summary: "Create an order from an offer; your orders, their status, paying and cancelling one" },
 ];
 
 export const COMMANDS: readonly CommandSpec[] = [
@@ -484,7 +486,7 @@ export const COMMANDS: readonly CommandSpec[] = [
   {
     group: "hotels",
     name: "get",
-    summary: "Hotel details: description, policies, amenities and rooms",
+    summary: "Hotel details: description, policies, amenities and room types",
     tool: "get_hotel",
     flags: hotelFlags,
     positionals: [positional(getHotelInput, "hotelId")],
@@ -498,11 +500,11 @@ export const COMMANDS: readonly CommandSpec[] = [
     options: [BODY_OPTION],
   },
   {
-    group: "hotels",
-    name: "book",
-    summary: "Order an offer: an unpaid order with a payment link",
-    tool: "book_hotel",
-    flags: bookFlags,
+    group: "orders",
+    name: "create",
+    summary: "Create an unpaid order for an offer, with a payment link",
+    tool: "create_order",
+    flags: createFlags,
     options: [BODY_OPTION],
   },
   {
@@ -528,19 +530,11 @@ export const COMMANDS: readonly CommandSpec[] = [
     tool: "cancel_order",
     flags: cancelFlags,
     positionals: [positional(cancelOrderInput, "orderId")],
-    options: [
-      {
-        flag: "close",
-        type: "boolean",
-        description:
-          "Close an unpaid order (cancel.reason unpaid), only once the user says they no longer want it: nothing is charged, and it becomes expired. Nothing is sent for an order that can't be closed.",
-      },
-    ],
   },
   {
     group: "orders",
     name: "pay",
-    summary: "Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link",
+    summary: "Pay an order with a Link token (US and Canada), instead of its payment link",
     tool: "pay_order",
     flags: payFlags,
     positionals: [positional(payOrderInput, "orderId")],

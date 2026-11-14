@@ -1,6 +1,6 @@
 # Planning a hotel stay
 
-Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply; this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@latest`.
+Read this when the request is more than one hotel for fixed dates: flexible dates, a budget, split stays, several destinations, or "find me the best". The rules in SKILL.md still apply; this covers what to ask, how to compare and how to present. As there, `fortrip` is short for `npx -y fortrip@6.0.0-rc.0`.
 
 ## What to collect
 
@@ -16,17 +16,17 @@ Ask only for what changes which hotels qualify or how they rank. "4 stars" as `-
 
 ## Ranking
 
-1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's `price.total` covers the whole stay and every room, in the offer's currency.
+1. Drop options that break a hard constraint (dates, guests, budget cap, required facility). Compare a budget in the unit the user gave it: per night, per room or for the whole stay. An offer's total covers the whole stay and every room, in the offer's currency.
 2. Keep only options with a live offer.
 3. Order by the user's stated main goal. Goals they didn't state don't count.
 4. Use other preferences only to break ties.
 
-Use the cheapest comparable offer as the baseline unless the user fixed the room type. Two or three plans usually suffice, each with its price difference from the baseline and what it trades off (meals, cancellation, location, confirmation). Keep hotel names as returned and dates in the user's notation.
+Use the cheapest comparable offer as the baseline unless the user fixed the room type. Two or three plans usually suffice, each with its price difference from the baseline and what it trades off (meals, cancellation, location, confirmation). Give a hotel's name without the double quotes the text shows it in, exactly as written inside them, and dates in the user's notation.
 
-For a split stay or several destinations, price each leg with its own `fortrip hotels offers` call and add up the legs. Each leg is a separate `fortrip hotels book` call, with its own confirmation and its own payment link.
+For a split stay or several destinations, price each leg with its own `fortrip hotels offers` call and add up the legs. Each leg is a separate `fortrip orders create` call, with its own confirmation and its own payment link.
 
 ## Stop and say so
 
 - `fortrip hotels offers` covers up to 15 hotels per call and takes about 15 seconds, and its offers expire after about 30 minutes. If the request needs more hotels or date combinations than a few calls can cover, narrow it with the user, or present the result as a comparison of the hotels you priced, not the best overall.
 - When a search is too broad to price, show its localities and ask the user which they prefer, unless the request already names one of them; never pick one yourself.
-- Urgency is not consent. Call `fortrip hotels book` only for the offer the user picked, and give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip hotels book` returned.
+- Urgency is not consent. Call `fortrip orders create` only for the offer the user picked, and give its payment link only after the user confirms the total, currency, stay and terms of the order `fortrip orders create` returned.

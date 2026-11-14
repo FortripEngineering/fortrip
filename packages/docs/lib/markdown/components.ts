@@ -3,17 +3,19 @@
 // and its Markdown text are all made from these trees.
 import {
   ACCOUNT_ROUTES,
+  CANCEL_BLOCKERS,
   type Destination,
   destination,
   CURRENCIES,
   type ErrorCode,
+  FAILURE_REASONS,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
   HTTP_ROUTES,
   LIMITS,
   MCP_SERVER_URL,
+  META_KEYS,
   ORDER_STATUSES,
-  PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
   PUBLIC_ORIGINS,
@@ -27,8 +29,13 @@ import type { PhrasingContent } from "mdast";
 
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../prose/compatibility.ts";
-import { MCP_CONTENT } from "../prose/mcp-content.ts";
-import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../prose/order-statuses.ts";
+import { MCP_TEXT_RULES, META_KEY_DOCS, RULE_DOCS } from "../prose/mcp-content.ts";
+import {
+  CANCEL_BLOCKER_DOCS,
+  FAILURE_REASON_DOCS,
+  ORDER_STATUS_DOCS,
+  PAYMENT_STATUS_DOCS,
+} from "../prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../prose/pay-ways.ts";
 import { PAY_AFTER_TIMEOUT, RETRY_DOCS, RETRY_WAYS } from "../prose/retries.ts";
 import { ENDPOINTS, inputAnchor, referenceHref } from "../reference/api-docs.ts";
@@ -70,15 +77,10 @@ import { fields } from "./widgets.ts";
 
 type Props = Record<string, string>;
 
-/** A table of statuses in the contract's order, each with what it means. */
-function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, string>): Block[] {
-  return [table(["Status", "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
+/** A table of an enum's values in the contract's order, each with what it means. */
+function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, string>, head = "Status"): Block[] {
+  return [table([head, "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
 }
-
-/** The tools whose MCP answer carries `nextStep` (the response docs' flag,
- *  which response-docs.test.ts checks against the contract's MCP outputs). */
-const nextStepTools = () =>
-  TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep === true).map((tool) => tool.name);
 
 /** What a call answers when the rate limiter is down and refuses it. */
 const serviceUnavailable = (() => {
@@ -136,7 +138,7 @@ function signInScript(): string {
 /** One call of the quickstart in curl: its example's body and time limit,
  *  with the ids an earlier call gave as shell variables, and its answer
  *  saved to `file`. */
-function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "book_hotel", file: string): string {
+function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "create_order", file: string): string {
   const route = HTTP_ROUTES[op];
   const example = EXAMPLE_REQUESTS[op][0];
   const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
@@ -193,7 +195,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The API quickstart's five steps in curl, each step's answer abridged
    *  under it. */
   EndToEnd: () => {
-    const order = RESPONSES.book_hotel as { payment: { url: string } };
+    const order = RESPONSES.create_order as { payment: { url: string } };
     const { hotel, offer } = END_TO_END_IDS;
     return [
       heading(3, [text("1. Sign in")], "step-sign-in"),
@@ -229,7 +231,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       paragraph([
         text("Order the offer with the guests and a contact. Nothing is charged. It can take a couple of minutes, so allow at least three."),
       ]),
-      codeBlock("sh", endToEndCall("book_hotel", "order.json")),
+      codeBlock("sh", endToEndCall("create_order", "order.json")),
       ...abridged("order"),
       paragraph(
         inline(
@@ -349,6 +351,12 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The order's `payment.status`, each with what it means. */
   PaymentStatuses: () => statusTable(PAYMENT_STATUSES, PAYMENT_STATUS_DOCS),
 
+  /** The values of an order's `cancel.blockedBy`, each with what it means. */
+  CancelBlockers: () => statusTable(CANCEL_BLOCKERS, CANCEL_BLOCKER_DOCS, "blockedBy"),
+
+  /** The values of a failed order's `failure.reason`, each with what it means. */
+  FailureReasons: () => statusTable(FAILURE_REASONS, FAILURE_REASON_DOCS, "reason"),
+
   /** The tools, each linking to its page. */
   ToolList: () => [
     table(
@@ -359,29 +367,41 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
-  /** The tools whose successful `content` is more than the compact text,
-   *  from `MCP_CONTENT`. */
-  McpContentExceptions: () => {
-    const having = (block: (typeof MCP_CONTENT)[ToolName][number]) =>
-      TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
+  /** The rules that end a result's text after its data, each with the tools
+   *  that carry it and when, from `MCP_TEXT_RULES`. */
+  ResultRules: () => {
+    const rules = Object.keys(RULE_DOCS) as Array<keyof typeof RULE_DOCS>;
     return [
-      list([
-        [
-          ...codeList(having("presentation_hint")),
-          ...inline(
-            " add a block after the text, the presentation hint: it asks the model to show only what Fortrip returned, as cards where the client can draw them.",
-          ),
-        ],
-        [
-          ...codeList(having("wechat_code")),
-          ...inline(
-            " puts the WeChat Pay code first, as a PNG image, while its answer holds a live code, unless the image couldn't be fetched. The code and its links are in `structuredContent` either way.",
-          ),
-        ],
-        inline("So find a block by its `type` (`text`, `image`), not by its position."),
-      ]),
+      list(
+        rules.map((rule) => {
+          const { name, when, says } = RULE_DOCS[rule];
+          const tools = TOOLS.filter((tool) => MCP_TEXT_RULES[tool.name].includes(rule)).map((tool) => tool.name);
+          return [
+            ...codeList(tools),
+            ...inline(` end with ${name}${when ? `, when ${when}` : ""}: ${says}.`),
+          ];
+        }),
+      ),
     ];
   },
+
+  /** The tools with their annotations, as an MCP client is told them. */
+  ToolAnnotations: () => [
+    table(
+      ["Tool", "Reads only", "Destructive", "Idempotent", "Open world"],
+      TOOLS.map((tool) => ({
+        cells: [
+          [code(tool.name)],
+          ...[
+            tool.annotations.readOnlyHint,
+            tool.annotations.destructiveHint,
+            tool.annotations.idempotentHint,
+            tool.annotations.openWorldHint,
+          ].map((hint) => [text(hint ? "Yes" : "No")]),
+        ],
+      })),
+    ),
+  ],
 
   /** The commands, each linking to its page. */
   CommandList: () => [
@@ -456,17 +476,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       return [
         heading(2, [text(doc.title)], doc.id),
         paragraph(joined(where, " · ")),
-        ...(doc.mcpNextStep
-          ? [
-              paragraph([
-                text("Over MCP the object also carries "),
-                code("nextStep"),
-                text(": what to show the user and ask before giving them "),
-                code("payment.url"),
-                text("."),
-              ]),
-            ]
-          : []),
         ...responseBody(doc),
       ];
     }),
@@ -489,6 +498,16 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
+  /** The `_meta` keys of an MCP result, from the contract's `META_KEYS`. */
+  MetaKeys: () => [
+    table(
+      ["Key", "On", "Value"],
+      (Object.keys(META_KEYS) as (keyof typeof META_KEYS)[]).map((name) => ({
+        cells: [[code(META_KEYS[name])], inline(META_KEY_DOCS[name].on), inline(META_KEY_DOCS[name].value)],
+      })),
+    ),
+  ],
+
   /** The CLI's exit codes, from the CLI, each with what it means. */
   ExitCodes: () => [
     table(
@@ -500,7 +519,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The rate limits, then which calls the limiter refuses while it is down. */
   RateLimitsTable: () => [
     table(
-      ["Scope", "Calls", "Per minute"],
+      ["Rate limit", "Calls", "Per minute"],
       rateLimitRows().map((row) => ({
         cells: [
           [code(row.scope)],
@@ -579,15 +598,15 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     return [codeBlock("json", json(part === "details" ? (envelope.error as { details?: unknown }).details : envelope))];
   },
 
-  /** A tool's `content[0]` for its example answer: the compact text the
+  /** A tool's result for its example answer: the one text block the
    *  contract's `renderToolResult` writes, as the MCP server sends it. */
   ToolResultSample: ({ tool = "" }) => {
     if (!(tool in RESPONSES) || !TOOLS.some((t) => t.name === tool)) throw new Error(`<ToolResultSample> has no answer of ${tool}`);
     return [codeBlock("text", renderToolResult(tool as RenderedTool, RESPONSES[tool as OperationId], "mcp"))];
   },
 
-  /** An error's `content[0]`: the text the contract's `renderError` writes,
-   *  with no HTTP status, as the MCP server sends it. */
+  /** An error's result: the one text block the contract's `renderError`
+   *  writes, with no HTTP status, as the MCP server sends it. */
   ToolErrorSample: ({ code: errorCode = "" }) => {
     const { envelope } = errorExample(errorCode);
     return [codeBlock("text", renderError(envelope, undefined, "mcp"))];
@@ -612,8 +631,6 @@ function errorExample(errorCode: string) {
 
 /** Components that stand inside a sentence, by name. */
 export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
-  /** The fields of the pay input, one of which a call sends. */
-  PayInputs: () => codeList(Object.keys(PAY_INPUT_WAYS), "or"),
   /** The amenity codes a search can filter by. */
   FilterableAmenities: () => joined(FILTERABLE_AMENITIES.map((c) => [code(c)]), ", "),
   /** The currencies a request can ask for, besides USD. */
@@ -621,7 +638,6 @@ export const INLINE: Record<string, (props: Props) => PhrasingContent[]> = {
     const others = CURRENCIES.filter((c) => c !== "USD");
     return [text(others.length > 1 ? `${others.slice(0, -1).join(", ")} or ${others.at(-1)}` : others.join(""))];
   },
-  NextStepTools: () => codeList(nextStepTools()),
   /** What to do after a pay call timed out, as the retry table says it. */
   PayAfterTimeout: () => inline(PAY_AFTER_TIMEOUT),
 };

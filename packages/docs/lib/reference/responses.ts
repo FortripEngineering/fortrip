@@ -6,11 +6,10 @@ import me from "./fixtures/me.json" with { type: "json" };
 import order from "./fixtures/order-awaiting-payment.json" with { type: "json" };
 import cancelling from "./fixtures/order-cancelling.json" with { type: "json" };
 import paidByToken from "./fixtures/order-paid-by-token.json" with { type: "json" };
-import walletOpen from "./fixtures/order-wallet-open.json" with { type: "json" };
 import search from "./fixtures/search-hotels.json" with { type: "json" };
 
 /*
- * Example answers: one per operation, the pay answers of both requests, and
+ * Example answers: one per operation, the pay answer of its request, and
  * the errors the reference shows. They chain as the examples' requests do:
  * the search finds the hotel the offers are for, and the order is of the
  * first offer. `responses.test.ts` parses each with the contract's strict
@@ -29,7 +28,7 @@ export const RESPONSES = {
   search_hotels: search,
   get_hotel: hotel,
   get_hotel_offers: offers,
-  book_hotel: order,
+  create_order: order,
   get_order: order,
   list_orders: { data: [order], nextCursor: null },
   cancel_order: cancelling,
@@ -40,9 +39,8 @@ export const RESPONSES = {
 
 export type OperationId = keyof typeof RESPONSES;
 
-/** `pay_order`'s answer to each pay example: a token pays the order, and
- *  `method` opens an Alipay or WeChat Pay payment. */
-export const PAY_RESPONSES = { "pay-token": paidByToken, "pay-wallet": walletOpen } as const;
+/** `pay_order`'s answer to each pay example: a token pays the order. */
+export const PAY_RESPONSES = { "pay-token": paidByToken } as const;
 
 /** Error envelopes, with the HTTP status each is answered with. */
 export const ERRORS = {
@@ -76,11 +74,11 @@ export const ERRORS = {
 /** The error an operation's reference page shows: the one its callers meet
  *  first that the endpoint answers. */
 export function errorExampleFor(id: OperationId): keyof typeof ERRORS {
-  if (id === "book_hotel") return "offer_changed";
+  if (id === "create_order") return "offer_changed";
   return id === "auth_config" ? "service_unavailable" : "unauthenticated";
 }
 
-/** A path's steps: `data[0].price` is `data`, `[0]`, `price`; `[]` is every item. */
+/** A path's steps: `data[0].name` is `data`, `[0]`, `name`; `[]` is every item. */
 const steps = (path: string): string[] =>
   path.split(".").flatMap((part) => part.match(/[^[\]]+|\[\d*\]/g) ?? []);
 
@@ -96,7 +94,7 @@ function resolves(node: unknown, [step, ...rest]: string[]): boolean {
 }
 
 /** `value` with only the listed paths kept (`data[0].hotelId`,
- *  `hotels[].offers[0].price`), in its own key order: an abridged answer that
+ *  `hotels[].offers[0].total`), in its own key order: an abridged answer that
  *  is still the real one. A path that leads nowhere throws. */
 export function abridge(value: unknown, paths: readonly string[]): unknown {
   for (const path of paths) if (!resolves(value, steps(path))) throw new Error(`abridge: no ${path}`);
@@ -124,24 +122,23 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
   "device-login": { answer: authConfig, paths: ["clientId", "scopes", "deviceAuthorizationEndpoint", "tokenEndpoint"] },
   search: {
     answer: search,
-    paths: ["destination.place.placeId", "destination.place.name", "data[0].hotelId", "data[0].name", "data[0].price.fromPerRoomStay", "nextCursor"],
+    paths: ["destination.place.placeId", "destination.place.name", "data[0].hotelId", "data[0].name", "data[0].indicativePrice.fromPerRoomStay", "nextCursor"],
   },
   offers: {
     answer: offers,
     paths: [
-      "hotels[0].hotel.hotelId",
+      "hotels[0].hotelId",
       "hotels[0].offers[0].offerId",
       "hotels[0].offers[0].expiresAt",
-      "hotels[0].offers[0].price.total",
+      "hotels[0].offers[0].total",
       "hotels[0].offers[0].cancellation.status",
       "hotels[0].offers[0].cancellation.freeCancellationEndsAt",
       "hotels[0].offers[0].confirmation.mode",
     ],
   },
-  order: { answer: order, paths: ["orderId", "reference", "status", "price.total", "payment.url", "payment.expiresAt"] },
+  order: { answer: order, paths: ["orderId", "reference", "status", "total", "payment.url", "payment.expiresAt"] },
   "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
-  "pay-wallet": { answer: walletOpen, paths: ["orderId", "status", "payment.methods"] },
   "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },
   cancel: { answer: cancelling, paths: ["orderId", "status", "cancel"] },
 };

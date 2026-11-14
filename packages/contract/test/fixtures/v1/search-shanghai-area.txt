@@ -1,23 +1,27 @@
-Shanghai (region) · 31,205 hotels · plc_9100001 · CN · also named 上海
-Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates, not bookable (only offers are) · sort: nearest first
-Distances from Shanghai plc_9100002 (the seat).
+Place: "Shanghai" (region) · 31,205 hotels · plc_9100001 · CN · also named "上海"
+Stay 2026-11-14 → 2026-11-16 (2 nights), 1 room: 2 adults · indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are) · sort: nearest first
+Distances from "Shanghai" plc_9100002 (the seat).
 Counts: 31,205 matched, 4 priced, 3 with a price.
 
 Localities: pass one back as destination { kind: "locality", placeId }, never the name. The number is its matching hotels; "incl." lists places inside it, with all their hotels regardless of filters ("hotels overall").
-- Shanghai plc_9100002 6,953 — the locality, not the whole of Shanghai (incl. Jing'an plc_9100011, 512 hotels overall; Huangpu plc_9100012, 488 hotels overall; Xujiahui plc_9100013, 301 hotels overall)
-- Pudong plc_9100021 4,120 (incl. Lujiazui plc_9100022, 359 hotels overall)
-- Minhang plc_9100031 2,210
-- Songjiang plc_9100041 1,306 (incl. Sheshan plc_9100042, 64 hotels overall)
-351 hotels in this search belong to no locality.
-112 more localities; name one with place_name.
+- Locality: "Shanghai" plc_9100002 6,953 — the locality, not the whole of "Shanghai" (incl. "Jing'an" plc_9100011, 512 hotels overall; "Huangpu" plc_9100012, 488 hotels overall; "Xujiahui" plc_9100013, 301 hotels overall)
+- Locality: "Pudong" plc_9100021 4,120 (incl. "Lujiazui" plc_9100022, 359 hotels overall)
+- Locality: "Minhang" plc_9100031 2,210
+- Locality: "Songjiang" plc_9100041 1,306 (incl. "Sheshan" plc_9100042, 64 hotels overall)
+Unassigned: 351 hotels in this search belong to no locality.
+More: 112 more localities; name one with place_name.
 
-1. The Bund Riverside Hotel (外滩江畔酒店) · 5★ · 0.6 km · from USD 182.50/room-night (USD 365.00 per room for the stay) · 88 Zhongshan East 1st Road, Huangpu · Shanghai, CN · htl_BundRiverside0000000
-2. Jing'an Court Hotel (静安阁酒店) · 4.5★ · 1.8 km · from USD 96.10/room-night (USD 192.20 per room for the stay) · 1200 Nanjing West Road, Jing'an · Shanghai, CN · htl_JinganCourt000000000
-3. Riverside Inn · stars not listed · distance unknown · no indicative price · address not listed · Shanghai, CN · htl_NoAddress00000000000
-4. 静安小筑 · 2★ · 2.4 km · from USD 41.00/room-night (USD 82.00 per room for the stay) · 上海市静安区愚园路 168 号 · Shanghai, CN · htl_ZhOnlyName0000000000
+1. Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · 5★ · 0.6 km · estimate from USD 182.50/room-night (USD 365.00 per room for the stay) · "88 Zhongshan East 1st Road, Huangpu" · "Shanghai", CN · photo https://fortrip.ai/hotel-photos/hotels/imgs/1/a.webp · htl_BundRiverside0000000
+2. Hotel: "Jing'an Court Hotel" ("静安阁酒店") · 4.5★ · 1.8 km · estimate from USD 96.10/room-night (USD 192.20 per room for the stay) · "1200 Nanjing West Road, Jing'an" · "Shanghai", CN · htl_JinganCourt000000000
+3. Hotel: "Riverside Inn" · stars not listed · distance unknown · no indicative price · address not listed · "Shanghai", CN · htl_NoAddress00000000000
+4. Hotel: "静安小筑" · 2★ · 2.4 km · estimate from USD 41.00/room-night (USD 82.00 per room for the stay) · "上海市静安区愚园路 168 号" · "Shanghai", CN · htl_ZhOnlyName0000000000
 
 Notes:
-- indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
-- area_absorbed: Shanghai: the whole municipality, starting from the city center.
+- Note indicative_prices: the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.
+- Note area_absorbed: "Shanghai" is searched as the whole region, which includes 1 smaller place of the same name: "Shanghai" plc_9100002 (settlement).
 
 Next page: call again with only the cursor and, optionally, limit: { cursor: "c_shanghai_area_page_2" }.
+
+Currency: this request comes from mainland China. Prices are also available in CNY, paid through payment channels in mainland China; if the user may pay that way, offer them CNY prices: search and get offers with currency CNY.
+
+Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows: hotel details show them, a search does not. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \" is a "): present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.

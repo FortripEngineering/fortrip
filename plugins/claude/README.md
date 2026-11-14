@@ -10,7 +10,8 @@ from a conversation with Claude.
   `https://mcp.fortrip.ai/`. Its tools search hotels, read a hotel's
   details, get live offers for up to 15 hotels at a time, create an order
   with a payment link, pay an order, check an order's status or list your
-  orders, and cancel an order under its cancellation terms.
+  orders, cancel an order under its cancellation terms, and close an unpaid
+  order you no longer want. Each tool answers Claude in text.
 - **The `fortrip` skill**, which tells Claude the order to use the tools in,
   how to read prices, meal plans and cancellation terms, how to plan trips
   with flexible dates, budgets or several stops, and to show you the price,
@@ -51,14 +52,16 @@ token into the chat.
    them, the amount and currency you'll be charged, the meals, cancellation
    rules, confirmation time and any fees payable at the hotel.
 4. After you confirm, Claude gives you a payment link. It opens a Fortrip page
-   that recaps the order and continues to payment; for a USD order, Stripe
-   Checkout may also show the amount in your local currency. Nothing is
-   charged until you pay there. The link is for you only and expires after a
-   few hours; the order shows when.
+   that recaps the order and shows the ways to pay: for a USD order a card,
+   Alipay or WeChat Pay, and Stripe Checkout may also show the amount in your
+   local currency. Nothing is charged until you pay there. The link is for
+   you only and expires after a few hours; the order shows when.
 
 Stays are 1 to 15 nights, with 1 to 8 rooms per order and the same number of
 adults and children in each room. After you pay, Claude can check the order's
-status, including whether the hotel has confirmed it.
+status, including whether the hotel has confirmed it. If a booking fails,
+no stay is booked, your payment is released or refunded in full, and Claude
+tells you why.
 
 ## Cancelling an order
 
@@ -69,7 +72,12 @@ more than the penalty you agreed to: if it has gone up since, nothing is
 cancelled and Claude asks you again. The order shows as cancelling until the
 hotel has cancelled it and the refund is issued. Once the stay has started,
 or when the terms don't allow a cancellation here, email info@fortrip.ai with
-the order's reference.
+the order's reference. A cancelled order shows what the cancellation kept
+and what it refunded.
+
+An order you haven't paid needs no cancelling: it expires unpaid, with nothing
+charged. If you tell Claude you no longer want it, Claude can close it right
+away.
 
 Flights, activities and changes to existing orders aren't supported.
 
@@ -97,10 +105,11 @@ Flights, activities and changes to existing orders aren't supported.
   name, phone and email, and any special requests.
 - **Payment** goes to a payment provider: Stripe for a USD price, a provider
   in mainland China for a CNY price; the payment page shows the ways to pay.
-  In Claude you'll usually pay by link, or pay a USD order with Alipay or
-  WeChat Pay right in the chat. Paying by card without the link needs a one-time token you approve in your Link wallet, which only
-  works for US and Canadian Link accounts and a USD order of up to $500, and
-  only where Claude has a tool that can request one.
+  You pay on the page the payment link opens; Claude never opens or chooses a
+  payment for you. Paying without the link needs a one-time token you approve
+  in your Link wallet, which only works for US and Canadian Link accounts and
+  a USD order of up to $500, and only where Claude has a tool that can
+  request one.
   Claude never sees your card details; don't paste them into the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip
@@ -118,6 +127,11 @@ bookings are subject to its [terms](https://fortrip.ai/terms).
   terms.
 - **Offer expired or unavailable:** offers last about 30 minutes, and a room
   can sell out. Claude gets offers again so you can pick another.
+- **Booking failed after payment:** no stay was booked and the payment is
+  released or refunded in full. Claude tells you whether the rate was no
+  longer available or the hotel's booking system refused the order. A hotel's
+  system can refuse some guest names: if the names are as on the passports,
+  don't change them, and email info@fortrip.ai with the order's reference.
 - **Supplier unavailable:** the hotel supplier didn't respond. Claude retries
   once; if it still fails, try again in a few minutes.
 - **Too many requests:** Claude waits the time Fortrip asks for, then retries.

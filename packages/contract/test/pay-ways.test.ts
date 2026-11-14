@@ -1,33 +1,27 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { PAY_INPUT_WAYS, PAY_WAYS, PAYMENT_METHOD_IDS, payOrderInput } from "../src/index.ts";
+import * as contract from "../src/index.ts";
+import { order, PAY_WAYS, payOrderInput } from "../src/index.ts";
 
 describe("pay ways", () => {
-  it("maps every exclusive pay field", () => {
+  it("an order is paid by its link or, through pay_order, by a shared payment token", () => {
+    assert.deepEqual([...PAY_WAYS], ["payment_link", "stripe_shared_payment_token"]);
     const fields = Object.keys(payOrderInput.shape).filter(
       (key) => key !== "orderId" && key !== "total",
     );
-    assert.deepEqual(fields.sort(), Object.keys(PAY_INPUT_WAYS).sort());
+    assert.deepEqual(fields, ["sharedPaymentToken"]);
   });
 
-  it("covers every method value", () => {
-    const method = payOrderInput.shape.method.unwrap();
-    for (const option of method.options) {
-      assert.ok((PAY_WAYS as readonly string[]).includes(option), option);
+  it("an order offers the token as payment.tokenRequest, and lists no methods", () => {
+    const keys = Object.keys(order.shape.payment.shape);
+    assert.ok(keys.includes("tokenRequest"));
+    assert.ok(!keys.includes("methods"));
+  });
+
+  it("exports nothing of the wallet method, which agents no longer have", () => {
+    for (const name of ["PAYMENT_METHOD_IDS", "paymentMethod", "WALLET_NEXT_STEP", "walletNextStep"]) {
+      assert.ok(!(name in contract), name);
     }
-  });
-
-  it("lists the link way", () => {
-    assert.ok(PAY_WAYS.includes("payment_link"));
-  });
-
-  it("names every way but the link by its payment method's id", () => {
-    const ids: readonly string[] = PAYMENT_METHOD_IDS;
-    for (const way of PAY_WAYS.filter((w) => w !== "payment_link")) assert.ok(ids.includes(way), way);
-  });
-
-  it("pays each exclusive pay field by one of the ways", () => {
-    for (const [field, way] of Object.entries(PAY_INPUT_WAYS)) assert.ok(PAY_WAYS.includes(way), field);
   });
 });

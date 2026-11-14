@@ -22,21 +22,24 @@ import {
   payOrderInput,
   searchHotelsInput,
 } from "../src/inputs.ts";
+import * as index from "../src/index.ts";
 import { LIMITS, SUPPORT_EMAIL } from "../src/limits.ts";
+import { readFileSync } from "node:fs";
+
 import { hotel } from "../src/outputs/hotel.ts";
 import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
-  CALLS,
   CANCEL_NEXT_STEP,
-  MCP_OUTPUT,
+  cancelNextStep,
   ORDER_NEXT_STEP,
+  META_KEYS,
+  SERVER_INFO,
   TOOLS,
   type ToolName,
   type ToolSpec,
 } from "../src/tools.ts";
-import { FILTERABLE_AMENITIES } from "../src/vocabulary.ts";
 
 // The production bundle never runs zod's `config(en())`: messages asserted
 // here must be our own.
@@ -167,42 +170,50 @@ const orderFixture = {
               { firstName: "Mary", lastName: "Smith" },
               { firstName: "Tom", lastName: "Smith" },
             ],
+            roomType: {
+              name: { text: "Deluxe King", locale: "en" },
+              beds: null,
+              areaSqm: null,
+              maxOccupancy: null,
+              window: null,
+            },
+            meals: {
+              known: false,
+              included: null,
+              unspecifiedMainMeals: null,
+              allInclusive: null,
+              guestsCoveredPerRoom: null,
+              label: null,
+            },
           },
         ],
         specialRequests: null,
-        room: { name: { text: "Deluxe King", locale: "en" }, beds: null },
-        meals: {
-          known: false,
-          included: null,
-          unspecifiedMainMeals: null,
-          allInclusive: null,
-          guestsCoveredPerRoom: null,
-          label: null,
-        },
         cancellation: {
           status: "unknown",
-          asOf: "2026-10-24T08:00:00Z",
+          readAt: "2026-10-24T08:00:00Z",
           freeCancellationEndsAt: null,
           penalties: [],
           timeZone: "Asia/Shanghai",
         },
+        confirmation: null,
         payAtProperty: { disclosure: "incomplete", items: [] },
         confirmationNumber: null,
       },
     },
   ],
-  price: { total: usd("132.40") },
+  total: usd("132.40"),
   payment: {
     status: "unpaid",
-    url: "https://fortrip.ai/booking-status?session_id=cs_test_1",
+    url: `https://fortrip.ai/pay/${ORD}?s=cs_test_1`,
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
-    chargeCurrency: "USD",
     localCurrencyAtCheckout: true,
     localCharge: null,
-    methods: [],
+    tokenRequest: null,
   },
-  cancel: { available: false, reason: "not_confirmed", penalty: null, refund: null },
+  cancel: { action: "close", blockedBy: null, penalty: null, refund: null },
+  cancelled: null,
+  failure: null,
   manageUrl: "https://fortrip.ai/orders/ord_0123456789abcdefABCD",
 };
 
@@ -210,7 +221,7 @@ const TOOL_NAMES = [
   "search_hotels",
   "get_hotel",
   "get_hotel_offers",
-  "book_hotel",
+  "create_order",
   "get_order",
   "list_orders",
   "cancel_order",
@@ -245,7 +256,7 @@ describe("TOOLS", () => {
         search_hotels: "Search hotels",
         get_hotel: "Hotel details",
         get_hotel_offers: "Live offers",
-        book_hotel: "Create order",
+        create_order: "Create order",
         get_order: "Get order",
         list_orders: "List orders",
         cancel_order: "Cancel order",
@@ -254,24 +265,28 @@ describe("TOOLS", () => {
     );
   });
 
-  it("book_hotel says another order of a stay needs a new offer, and which link to pay", () => {
-    const book = TOOLS.find((t) => t.name === "book_hotel");
+  // The fact stays here; which link the user then pays is a rule, and rides
+  // on the offer_already_ordered error (render.test.ts).
+  it("create_order says another order of a stay takes a new offer", () => {
+    const create = TOOLS.find((t) => t.name === "create_order");
     assert.match(
-      book?.description ?? "",
-      /An offer is ordered once.{0,200}?get offers again.{0,200}?pay only the new link/,
+      create?.description ?? "",
+      /An offer is ordered once: another order of the stay \(another party, or a corrected guest name or contact\) takes a new offer\./,
     );
+    assert.doesNotMatch(create?.description ?? "", /tell the user/);
   });
 
-  it("pay_order describes both forms: a token and method stripe_alipay_wechat_pay", () => {
-    const pay = TOOLS.find((t) => t.name === "pay_order");
-    assert.match(pay?.description ?? "", /by one of its payment\.methods/);
-    assert.match(pay?.description ?? "", /\(method stripe_alipay_wechat_pay\)/);
-    assert.match(pay?.description ?? "", /request it with the entry's handler config\.business_profile and limits/);
-    assert.match(pay?.description ?? "", /then show the entry it returns: the WeChat code as an image if you can, and both links/);
-    assert.match(pay?.description ?? "", /only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes/);
-    assert.match(pay?.description ?? "", /A code lasts 120 minutes/);
-    assert.match(pay?.description ?? "", /^Pay a USD order without its link/);
-    assert.match(TOOLS.find((t) => t.name === "book_hotel")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
+  it("pay_order describes paying by token: who can, for which order, what it takes and answers", () => {
+    const pay = TOOLS.find((t) => t.name === "pay_order")?.description ?? "";
+    assert.match(pay, /^Pay a USD order without its payment link, with a Stripe shared payment token: for an agent that can request one from the user's Link wallet/);
+    // The order's text names what the token is requested with, by its label.
+    assert.match(pay, /an order whose text has a "Pay without the link" line, which gives the business_profile and the usage limits to request the token with/);
+    assert.match(pay, /It takes the orderId, the token as sharedPaymentToken and the order's total; a token pays one order\./);
+    // Paid by token only: no trace of a method to choose, or of the wallets that left.
+    assert.doesNotMatch(pay, /Alipay|WeChat|method/i);
+    // Pinned by a paired eval (R4, pay consent): cut only once the eval covers the result text.
+    assert.match(pay, /Call it only after the user confirmed the order's total and currency, the stay with each room's guests, the contact, any special requests and every term with a clear yes\./);
+    assert.match(TOOLS.find((t) => t.name === "create_order")?.description ?? "", /on that page or with pay_order; anyone holding the link can pay/);
   });
 
   it("gives every tool a title and a description of at most 1,024 characters", () => {
@@ -290,7 +305,7 @@ describe("TOOLS", () => {
     assert.equal(tool("search_hotels").input, searchHotelsInput);
     assert.equal(tool("get_hotel").input, getHotelInput);
     assert.equal(tool("get_hotel_offers").input, hotelOffersInput);
-    assert.equal(tool("book_hotel").input, createOrderInput);
+    assert.equal(tool("create_order").input, createOrderInput);
     assert.equal(tool("get_order").input, getOrderInput);
     assert.equal(tool("list_orders").input, listOrdersInput);
     assert.equal(tool("cancel_order").input, cancelOrderInput);
@@ -301,35 +316,36 @@ describe("TOOLS", () => {
     assert.equal(tool("search_hotels").output, searchResult);
     assert.equal(tool("get_hotel").output, hotel);
     assert.equal(tool("get_hotel_offers").output, hotelOffersResult);
-    assert.equal(tool("book_hotel").output, MCP_OUTPUT.book_hotel);
-    assert.equal(tool("get_order").output, MCP_OUTPUT.get_order);
-    assert.equal(tool("list_orders").output, MCP_OUTPUT.list_orders);
-    assert.equal(tool("cancel_order").output, MCP_OUTPUT.cancel_order);
-    assert.equal(tool("pay_order").output, MCP_OUTPUT.pay_order);
+    assert.equal(tool("create_order").output, order);
+    assert.equal(tool("get_order").output, order);
+    assert.equal(tool("list_orders").output, orderList);
+    assert.equal(tool("cancel_order").output, order);
+    assert.equal(tool("pay_order").output, order);
   });
 
-  it("states all four hints on every tool; only book_hotel, cancel_order and pay_order write, and only cancel_order destroys", () => {
+  // An MCP result is one text block, so no tool answers a schema of
+  // its own over MCP, and nothing carries a rule as a field.
+  it("a tool's output is its HTTP answer: no MCP-only field", () => {
+    for (const spec of TOOLS) {
+      assert.equal(jsonOf(spec.output, "output").properties?.nextStep, undefined, spec.name);
+    }
+  });
+
+  // Claude's connector review asks destructiveHint: true "for tools that
+  // modify or delete data": every tool that writes is destructive, so the
+  // client confirms each call that creates, pays for or cancels an order.
+  it("states all four hints on every tool; create_order, cancel_order and pay_order write, and every tool that writes is destructive", () => {
+    const writes = ["create_order", "cancel_order", "pay_order"];
     for (const spec of TOOLS) {
       assert.deepEqual(
         Object.keys(spec.annotations).sort(),
         ["destructiveHint", "idempotentHint", "openWorldHint", "readOnlyHint"],
         spec.name,
       );
-      assert.equal(
-        spec.annotations.destructiveHint,
-        spec.name === "cancel_order",
-        spec.name,
-      );
-      assert.equal(
-        spec.annotations.readOnlyHint,
-        !["book_hotel", "cancel_order", "pay_order"].includes(spec.name),
-        spec.name,
-      );
-      assert.equal(
-        spec.annotations.idempotentHint,
-        spec.name !== "book_hotel",
-        spec.name,
-      );
+      assert.equal(spec.annotations.readOnlyHint, !writes.includes(spec.name), spec.name);
+      assert.equal(spec.annotations.destructiveHint, writes.includes(spec.name), spec.name);
+      // The same call again answers the same order: none repeats its effect.
+      assert.equal(spec.annotations.idempotentHint, true, spec.name);
     }
     assert.deepEqual(
       Object.fromEntries(
@@ -339,7 +355,7 @@ describe("TOOLS", () => {
         search_hotels: true,
         get_hotel: true,
         get_hotel_offers: true,
-        book_hotel: true,
+        create_order: true,
         get_order: false,
         list_orders: false,
         cancel_order: true,
@@ -348,11 +364,16 @@ describe("TOOLS", () => {
     );
   });
 
-  it("book_hotel's hints are not destructive, not idempotent, open world", () => {
-    const { annotations } = tool("book_hotel");
-    assert.equal(annotations.destructiveHint, false);
-    assert.equal(annotations.idempotentHint, false);
-    assert.equal(annotations.openWorldHint, true);
+  // The same details answer the same order while the offer is held.
+  it("create_order's and pay_order's hints are destructive, idempotent, open world", () => {
+    for (const name of ["create_order", "pay_order"] as const) {
+      assert.deepEqual(tool(name).annotations, {
+        readOnlyHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+        destructiveHint: true,
+      });
+    }
   });
 
   // C6: a replay answers the current order, so cancel_order is idempotent.
@@ -375,38 +396,57 @@ describe("TOOLS", () => {
   });
 
   // C2: the result is an unpaid order with a payment link.
-  it("book_hotel says it answers an unpaid order with a payment link, and where changes go", () => {
-    const { description } = tool("book_hotel");
+  it("create_order says it answers an unpaid order with a payment link, and where changes go", () => {
+    const { description } = tool("create_order");
     // A paired eval (Haiku, S6) lost bookings when these two were cut:
     // one guest per room is enough, and offer_changed needs the user again.
     assert.ok(description.includes("Send the contact and, for each room of the offer, at least one guest."));
     assert.ok(description.includes("the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it."));
-    assert.match(description, /unpaid order/);
+    assert.match(description, /^Create an unpaid order for one offer from get_hotel_offers\./);
     assert.match(description, /payment link/);
     assert.ok(description.includes(SUPPORT_EMAIL), description);
-    // Spec §5.7: book_hotel points to cancel_order instead.
+    // Spec §5.7: create_order points to cancel_order instead.
     assert.doesNotMatch(description, /can't change or cancel/);
     assert.match(description, /cancel_order/);
   });
 
-  it("cancel_order carries the consent rule, says what it answers and what a refusal leaves", () => {
-    const { description } = tool("cancel_order");
-    assert.match(description, /only after the user confirmed the order's cancel\.penalty and cancel\.refund with a clear yes, pass maximumPenalty, that cancel\.penalty exactly as returned\./);
-    assert.match(description, /The order becomes cancelling, then cancelled with cancel\.refund refunded, or confirmed with reason refused if the hotel refuses: poll get_order\./);
-    assert.match(description, /cancellation_changed/);
-    assert.match(description, /Never state a refund the order did not return\./);
+  // The first order call of a weaker model nested everything correctly and
+  // also sent a top-level offerId, which a strict input refuses (39 of 39
+  // runs). The shape says where the offer goes, three times over.
+  it("create_order's input starts with items, and says the offer goes inside its item and nowhere else", () => {
+    const json = jsonOf(createOrderInput);
+    assert.deepEqual(Object.keys(json.properties ?? {}), ["items", "contact"]);
+    assert.match(
+      tool("create_order").description,
+      /It takes items, one item with the offer's offerId inside it \(nowhere else in the arguments\) and hotel\.rooms, and contact\./,
+    );
+    assert.match(json.properties?.items?.description ?? "", /The offerId goes inside the item, not beside items\.$/);
+    assert.match(
+      fieldOf(json, "items.offerId")?.description ?? "",
+      /It goes here, inside the item, and nowhere else in the request\.$/,
+    );
   });
 
-  it("cancel_order closes an unpaid order only on the user's word, and never races a payment", () => {
+  it("cancel_order carries the consent rule, says what it takes and what it answers", () => {
+    const { description } = tool("cancel_order");
+    // Pinned by a paired eval (R2, cancel consent): cut only once the eval
+    // covers the result text. It names the order's Cancel line, which the
+    // model reads, not a field of the JSON it doesn't.
+    assert.match(description, /only after the user confirmed the penalty and the refund on that line with a clear yes, pass maximumPenalty, that penalty exactly as shown\./);
+    assert.match(description, /It takes the orderId and exactly one of maximumPenalty \(a paid order\) and close: true \(an unpaid one\)\./);
+    assert.match(description, /The order becomes cancelling, then cancelled with the refund on its way, or confirmed again if the hotel refuses\./);
+    assert.match(description, /the answer is cancellation_changed and nothing changed\./);
+  });
+
+  it("cancel_order says what closing does, and that neither mode ever does the other's work", () => {
     const { description, annotations } = tool("cancel_order");
     assert.match(description, /^Cancel a paid order under its terms, or close an unpaid one\./);
-    assert.match(description, /close it, without maximumPenalty, only once the user says they no longer want it; nothing is charged and it becomes expired\./);
-    assert.match(description, /payment_in_progress: read it again shortly\./);
+    assert.match(description, /close: true closes it: nothing is charged, and it can no longer be paid\./);
+    assert.match(description, /answers order_not_cancellable, which says which mode applies now or what blocks both: nothing is cancelled or closed by the other mode\./);
+    assert.match(description, /While a payment is under way the answer is payment_in_progress\./);
     assert.ok(description.length <= 1024, String(description.length));
     assert.equal(annotations.destructiveHint, true);
     assert.equal(annotations.idempotentHint, true);
-    assert.equal(CALLS.mcp.close, "call cancel_order");
-    assert.equal(CALLS.cli.close, "run `fortrip orders cancel <orderId> --close`");
   });
 
   it("a description names only tools there are", () => {
@@ -433,7 +473,7 @@ describe("TOOLS", () => {
       CANCEL_NEXT_STEP,
     ];
     for (const text of texts) {
-      for (const [word] of text.matchAll(/\b(get|search|book|list|cancel)_[a-z_]+\b/g)) {
+      for (const [word] of text.matchAll(/\b(get|search|create|list|cancel|pay)_[a-z_]+\b/g)) {
         assert.ok(names.has(word) || vocabulary.has(word), `${word} in: ${text}`);
       }
     }
@@ -441,7 +481,7 @@ describe("TOOLS", () => {
 });
 
 describe("ORDER_NEXT_STEP", () => {
-  // The consent phrases, for an order's `payment.url`.
+  // The consent phrases, for an order's payment link.
   it("tells the model to show the order, ask, and give the link only after a yes", () => {
     assert.match(
       ORDER_NEXT_STEP,
@@ -450,7 +490,7 @@ describe("ORDER_NEXT_STEP", () => {
     assert.match(ORDER_NEXT_STEP, /end your reply by asking them to confirm, and wait for a clear yes/);
     assert.match(
       ORDER_NEXT_STEP,
-      /Only after they say yes, give them payment\.url exactly as returned\.$/,
+      /Only after they say yes, give them the payment link exactly as shown\.$/,
     );
   });
 
@@ -467,77 +507,81 @@ describe("CANCEL_NEXT_STEP", () => {
   it("tells the model to show the stay, the penalty and the refund, ask, and wait for a yes", () => {
     assert.match(
       CANCEL_NEXT_STEP,
-      /^Before you call cancel_order, show the user [^.]*stay[^.]*cancel\.penalty and cancel\.refund \(amount and currency\)/,
+      /^Before you call cancel_order with maximumPenalty, show the user [^.]*stay[^.]*the penalty and the refund on its Cancel line \(amount and currency\)/,
     );
     assert.match(CANCEL_NEXT_STEP, /end your reply by asking them to confirm the cancellation, and wait for a clear yes/);
-    assert.ok(CANCEL_NEXT_STEP.includes("Pass maximumPenalty as cancel.penalty, exactly as returned."));
-    assert.match(CANCEL_NEXT_STEP, /Never state a refund the order did not return\.$/);
+    // The penalty is the order's own, by the call on its Cancel line: the
+    // paragraph gives no figure a model could pass in its place.
+    assert.ok(
+      CANCEL_NEXT_STEP.includes(
+        "Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else.",
+      ),
+    );
+    assert.doesNotMatch(CANCEL_NEXT_STEP, /\d/);
+    assert.match(CANCEL_NEXT_STEP, /Never state a refund the order's text does not show\./);
+  });
+
+  // The input picks the mode, and nothing is cancelled or closed by
+  // the other one. The paragraph says which order takes which.
+  it("says the rule is for a paid order, and how an unpaid one is closed instead", () => {
+    assert.match(
+      CANCEL_NEXT_STEP,
+      /This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, with close: true and no maximumPenalty, only once the user says they no longer want it\.$/,
+    );
+    assert.match(cancelNextStep("cli"), /an unpaid order is closed instead, with --close and no --max-penalty, only once the user says they no longer want it\.$/);
   });
 });
 
-describe("MCP_OUTPUT", () => {
-  it("covers the tools that answer an order or orders", () => {
-    assert.deepEqual(Object.keys(MCP_OUTPUT), [
-      "book_hotel",
-      "get_order",
-      "list_orders",
-      "cancel_order",
-      "pay_order",
-    ]);
+describe("SERVER_INFO", () => {
+  // One constant for the hosted server and the CLI's bridge, which
+  // says of the server what its MCP Registry entry says.
+  it("is the registry entry's title, description, website and icon", () => {
+    const entry = JSON.parse(
+      readFileSync(new URL("../../../plugins/registry/server.json", import.meta.url), "utf8"),
+    );
+    assert.deepEqual(SERVER_INFO, {
+      name: "fortrip",
+      title: entry.title,
+      description: entry.description,
+      websiteUrl: entry.websiteUrl,
+      icons: entry.icons,
+    });
+    assert.ok(SERVER_INFO.title && SERVER_INFO.description && SERVER_INFO.icons.length > 0);
   });
+});
 
-  // C11: the cancel rule rides only in the text; nextStep keeps its
-  // payment-only meaning, and cancel_order's answer never holds a payment.url.
-  it("cancel_order answers the HTTP order, without nextStep", () => {
-    assert.equal(MCP_OUTPUT.cancel_order, order);
-    assert.equal(jsonOf(MCP_OUTPUT.cancel_order, "output").properties?.nextStep, undefined);
-  });
-
-  it("accepts an order with and without nextStep", () => {
-    for (const name of ["book_hotel", "get_order"] as const) {
-      const schema = MCP_OUTPUT[name];
-      assert.ok(schema.safeParse(orderFixture).success, `${name} without`);
-      const parsed = schema.parse({ ...orderFixture, nextStep: ORDER_NEXT_STEP }) as {
-        nextStep?: string;
-      };
-      assert.equal(parsed.nextStep, ORDER_NEXT_STEP, name);
-      assert.equal(
-        schema.safeParse({ ...orderFixture, nextStep: 1 }).success,
-        false,
-        `${name}: nextStep is text`,
-      );
+describe("a flag a command needs says so, in its spec and in its help", () => {
+  it("marks the flags of required fields, and starts their descriptions with it", () => {
+    const required = Object.fromEntries(
+      COMMANDS.map((spec) => [
+        commandInvocation(spec).replace(/^fortrip /, ""),
+        Object.fromEntries(spec.flags.filter((flag) => flag.required).map((flag) => [flag.flag, flag.required])),
+      ]).filter(([, flags]) => Object.keys(flags as object).length > 0),
+    );
+    assert.deepEqual(required, {
+      // --body can give each of these instead.
+      "orders create": { offer: "unless-body", guest: "unless-body", name: "unless-body", email: "unless-body", phone: "unless-body" },
+      "orders pay": { token: "always", total: "always" },
+    });
+    for (const spec of COMMANDS) {
+      for (const flag of spec.flags) {
+        const prefix = flag.required === "always" ? "Required. " : flag.required === "unless-body" ? "Required unless --body gives it. " : null;
+        if (prefix) assert.ok(flag.description.startsWith(prefix), `--${flag.flag}: ${flag.description}`);
+        else assert.doesNotMatch(flag.description, /^Required/, `--${flag.flag}`);
+      }
     }
   });
+});
 
-  it("accepts an order list with and without nextStep", () => {
-    const list = { data: [orderFixture], nextCursor: null };
-    const schema = MCP_OUTPUT.list_orders;
-    assert.ok(schema.safeParse(list).success);
-    assert.ok(schema.safeParse({ data: [], nextCursor: null }).success);
-    const parsed = schema.parse({ ...list, nextStep: ORDER_NEXT_STEP }) as {
-      nextStep?: string;
-    };
-    assert.equal(parsed.nextStep, ORDER_NEXT_STEP);
-  });
-
-  // Spec §6: `nextStep` is declared only in the MCP output schemas.
-  it("is the HTTP schema plus an optional nextStep, and nothing else", () => {
-    const pairs = [
-      [MCP_OUTPUT.book_hotel, order],
-      [MCP_OUTPUT.get_order, order],
-      [MCP_OUTPUT.list_orders, orderList],
-    ] as const;
-    for (const [mcp, http] of pairs) {
-      const mcpJson = jsonOf(mcp, "output");
-      const httpJson = jsonOf(http, "output");
-      assert.equal(httpJson.properties?.nextStep, undefined);
-      const nextStep = mcpJson.properties?.nextStep;
-      assert.equal(nextStep?.type, "string");
-      assert.ok(nextStep?.description?.trim());
-      assert.equal(mcpJson.required?.includes("nextStep"), false);
-      const { nextStep: _, ...rest } = mcpJson.properties ?? {};
-      assert.deepEqual({ ...mcpJson, properties: rest }, httpJson);
-    }
+describe("META_KEYS", () => {
+  // The hosted server and the CLI's bridge write the same keys, so both take them from here.
+  it("names the three _meta keys of a result, under Fortrip's prefix", () => {
+    assert.deepEqual(META_KEYS, {
+      requestId: "ai.fortrip/requestId",
+      replayed: "ai.fortrip/replayed",
+      error: "ai.fortrip/error",
+    });
+    assert.equal(index.META_KEYS, META_KEYS);
   });
 });
 
@@ -585,7 +629,7 @@ describe("COMMANDS", () => {
       "hotels search": "search_hotels",
       "hotels get": "get_hotel",
       "hotels offers": "get_hotel_offers",
-      "hotels book": "book_hotel",
+      "orders create": "create_order",
       "orders get": "get_order",
       "orders list": "list_orders",
       "orders cancel": "cancel_order",
@@ -651,7 +695,7 @@ describe("COMMANDS", () => {
       currency: "currency",
     });
     assert.deepEqual(fields("hotels get"), {
-      rooms: "include",
+      "room-types": "include",
       locale: "locale",
     });
     assert.deepEqual(fields("hotels offers"), {
@@ -665,11 +709,10 @@ describe("COMMANDS", () => {
       locale: "locale",
       currency: "currency",
     });
-    assert.deepEqual(fields("hotels book"), {
+    assert.deepEqual(fields("orders create"), {
       offer: "items.offerId",
       guest: "items.hotel.rooms.guests",
-      "first-name": "contact.firstName",
-      "last-name": "contact.lastName",
+      name: "contact.name",
       email: "contact.email",
       phone: "contact.phone",
       "special-requests": "items.hotel.specialRequests",
@@ -680,8 +723,8 @@ describe("COMMANDS", () => {
       limit: "limit",
       locale: "locale",
     });
-    assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty" });
-    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", method: "method", total: "total" });
+    assert.deepEqual(fields("orders cancel"), { "max-penalty": "maximumPenalty", close: "close" });
+    assert.deepEqual(fields("orders pay"), { token: "sharedPaymentToken", total: "total" });
     for (const name of ["login", "logout", "whoami", "mcp"]) {
       assert.deepEqual(command(name).flags, [], name);
     }
@@ -700,7 +743,7 @@ describe("COMMANDS", () => {
       "hotels search": [],
       "hotels get": ["<hotelId> hotelId"],
       "hotels offers": [],
-      "hotels book": [],
+      "orders create": [],
       "orders get": ["<orderId> orderId"],
       "orders list": [],
       "orders cancel": ["<orderId> orderId"],
@@ -726,7 +769,7 @@ describe("COMMANDS", () => {
       "hotels search amenity",
       "hotels offers hotel",
       "hotels offers room",
-      "hotels book guest",
+      "orders create guest",
     ]);
   });
 
@@ -784,10 +827,6 @@ describe("COMMANDS", () => {
     );
   });
 
-  // `orders pay` sends its token as `--token`: `payment` is UCP's form of
-  // the same token, for agents that speak UCP.
-  const OTHER_FORMS: Record<string, readonly string[]> = { "orders pay": ["payment"] };
-
   it("every input field has a flag or a positional, so the CLI can send any valid request", () => {
     for (const spec of COMMANDS) {
       if (!spec.tool || !tool(spec.tool).input) continue;
@@ -795,7 +834,6 @@ describe("COMMANDS", () => {
       const reachable = new Set([
         ...spec.flags.map((flag) => flag.field.split(".")[0]),
         ...(spec.positionals ?? []).map((p) => p.field),
-        ...(OTHER_FORMS[typed(spec)] ?? []),
       ]);
       assert.deepEqual(
         Object.keys(json.properties ?? {}).filter((key) => !reachable.has(key)),
@@ -815,7 +853,7 @@ describe("COMMANDS", () => {
       "orders pay total",
       "orders cancel max-penalty",
       "hotels offers room",
-      "hotels book guest",
+      "orders create guest",
     ]);
     for (const spec of COMMANDS) {
       if (!spec.flags.length) continue;
@@ -843,13 +881,15 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("only --rooms sends a value instead of true", () => {
+  it("only --room-types sends a value instead of true", () => {
     const valued = COMMANDS.flatMap((spec) =>
       spec.flags
         .filter((flag) => flag.value !== undefined)
         .map((flag) => `${typed(spec)} --${flag.flag}=${flag.value}`),
     );
-    assert.deepEqual(valued, ["hotels get --rooms=rooms"]);
+    assert.deepEqual(valued, ["hotels get --room-types=roomTypes"]);
+    // Named as what it adds, a hotel's room types: `rooms` is a stay's rooms.
+    assert.ok(!COMMANDS.some((spec) => spec.flags.some((flag) => flag.flag === "rooms")));
   });
 
   it("every flag description is non-empty", () => {
@@ -873,7 +913,7 @@ describe("COMMANDS", () => {
     }
   });
 
-  it("a flag on an enum field lists the enum's values as its placeholder; --amenity the filterable ones", () => {
+  it("a flag on an enum field lists the enum's values as its placeholder", () => {
     const listed: string[] = [];
     for (const spec of COMMANDS) {
       if (!spec.flags.length) continue;
@@ -886,9 +926,7 @@ describe("COMMANDS", () => {
         if (!values) continue;
         const label = `${typed(spec)} --${flag.flag}`;
         listed.push(label);
-        const expected =
-          label === "hotels search --amenity" ? [...FILTERABLE_AMENITIES] : values;
-        assert.equal(flag.placeholder, expected.join("|"), label);
+        assert.equal(flag.placeholder, values.join("|"), label);
       }
     }
     assert.deepEqual(listed, [
@@ -902,7 +940,6 @@ describe("COMMANDS", () => {
       "hotels offers --currency",
       "orders get --locale",
       "orders list --locale",
-      "orders pay --method",
     ]);
   });
 
@@ -920,8 +957,8 @@ describe("COMMANDS", () => {
     assert.equal(placeholder("hotels search", "check-in"), "YYYY-MM-DD");
     assert.equal(placeholder("hotels offers", "hotel"), "<htl_>");
     assert.equal(placeholder("hotels offers", "room"), "<adults[:age,…]>");
-    assert.equal(placeholder("hotels book", "offer"), "<off_>");
-    assert.equal(placeholder("hotels book", "guest"), "<room>:<first>:<last>");
+    assert.equal(placeholder("orders create", "offer"), "<off_>");
+    assert.equal(placeholder("orders create", "guest"), "<room>:<first>:<last>");
     assert.equal(placeholder("orders cancel", "max-penalty"), "<amount>");
   });
 
@@ -956,7 +993,7 @@ describe("COMMANDS", () => {
     assert.ok(named.includes("hotels offers"), "the walk found the commands named");
   });
 
-  it("offers and book have no occupancy defaults", () => {
+  it("offers have no occupancy defaults", () => {
     const stayJson = fieldOf(jsonOf(hotelOffersInput), "stay");
     assert.ok(stayJson?.required?.includes("rooms"));
     assert.equal(stayJson?.properties?.rooms?.default, undefined);
@@ -987,9 +1024,9 @@ describe("CLI-only options", () => {
     );
   });
 
-  // `orders cancel` sends one field, the penalty the user agreed to, and only
-  // from its flag (C7); `--close` closes an unpaid order and is never sent.
-  it("--body is taken by the commands that send a body, but cancel, --close by cancel, --no-browser by login", () => {
+  // `orders cancel` sends its mode only from a flag (C7): the penalty the
+  // user agreed to, or `--close`.
+  it("--body is taken by the commands that send a body, but cancel, --no-browser by login", () => {
     const options = Object.fromEntries(
       COMMANDS.map((spec) => [typed(spec), all(spec.options ?? [])]),
     );
@@ -997,10 +1034,10 @@ describe("CLI-only options", () => {
       "hotels search": ["body"],
       "hotels get": [],
       "hotels offers": ["body"],
-      "hotels book": ["body"],
+      "orders create": ["body"],
       "orders get": [],
       "orders list": [],
-      "orders cancel": ["close"],
+      "orders cancel": [],
       "orders pay": [],
       login: ["no-browser"],
       logout: [],
@@ -1008,7 +1045,6 @@ describe("CLI-only options", () => {
       mcp: [],
     });
     assert.equal(command("login").options?.[0]?.type, "boolean");
-    assert.equal(command("orders cancel").options?.[0]?.type, "boolean");
     assert.equal(command("hotels search").options?.[0]?.type, "string");
   });
 

@@ -2,15 +2,15 @@ import type { z } from "zod";
 
 import { parseOpen } from "../conventions/open.ts";
 import { ERROR_CODES, type ErrorCode } from "../errors.ts";
-import { LIMITS } from "../limits.ts";
+import { LIMITS, SUPPORT_EMAIL } from "../limits.ts";
 import {
   errorEnvelope,
   type ERROR_DETAILS,
   type KnownErrorBody,
 } from "../outputs/error-details.ts";
 import type { OfferChange } from "../outputs/order.ts";
-import type { RenderSurface } from "../tools.ts";
-import { km, label, money, num, plural, raw, when } from "./format.ts";
+import { cancelNextStep, type RenderSurface } from "../tools.ts";
+import { km, label, money, named, num, plural, raw, when } from "./format.ts";
 import {
   cancellationText,
   confirmationText,
@@ -18,7 +18,9 @@ import {
   mealsText,
   offerLine,
 } from "./offers.ts";
-import { CANCEL_REASON_WORDS, ORDER_STATUS_WORDS } from "./order.ts";
+import { blockerText, cancelLine, ORDER_STATUS_WORDS } from "./order.ts";
+import { localitiesLines } from "./search.ts";
+import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
 
 const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
   not_found: "was not found",
@@ -29,14 +31,91 @@ const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
   used: "was already used, or is held for another order",
   other_seller: "was granted to another seller",
 };
-import { localitiesLines } from "./search.ts";
+
+/** Why `pay_order` takes no token for the order, and what the user does
+ *  instead. */
+const PAYMENT_METHOD_UNAVAILABLE_WORDS: Record<string, string> = {
+  payment_open_on_page:
+    "The user has a payment open on the order's payment page, so a token can't pay it: they finish paying on that page",
+  token_not_offered: "This order takes no token now: the user pays by its payment link",
+  charge_refused:
+    "The charge was refused for a reason a new token wouldn't fix: the user pays by the order's payment link",
+};
+
+const SUPPLIER_OUTCOME_WORDS: Record<string, string> = {
+  not_started: "Nothing was sent to the hotel's supplier.",
+  unknown: "The request was sent and timed out: its outcome is unknown.",
+};
 
 /*
- * The error envelope (spec §11) as text. An error that leads to a next call
- * renders that call (§12). Never throws: an unknown code, or a body that
- * does not parse, falls back to the HTTP status, `retryable` and the raw
- * details.
+ * The error envelope as text, built from its `code` and `details`: the
+ * server's `message` is written for HTTP readers and names JSON paths, so
+ * for every code this build knows the text is Fortrip's own and complete
+ * without it. The message is shown only where there are no words of ours to
+ * show: a code this build does not know,
+ * `client_outdated`, whose message is the whole answer, and the issues of an
+ * `invalid_request`, which quote the caller's own arguments.
+ *
+ * An error that leads to a next call renders that call. Never throws: an
+ * unknown code, or a body that does not parse, falls back to the HTTP
+ * status, `retryable`, the message and the raw details. A known code whose
+ * details do not parse still says what happened in Fortrip's words, from
+ * the code, and shows those details as JSON. Every line begins
+ * with Fortrip's words. What someone else wrote (the server's message, an
+ * issue's message, a place's name, the caller's own text) is in quotes; a
+ * pointer, the request id, ids and codes are bare.
  */
+
+/** What each code says happened: the head of its text, after the code. */
+const HAPPENED: Record<Exclude<ErrorCode, "client_outdated">, string> = {
+  invalid_request: "the request can't be accepted as sent, and nothing was done. Fix what each line below says, then send it again.",
+  cursor_invalid: "this cursor can't continue its list.",
+  unauthenticated: "the user is not signed in to Fortrip, or the sign-in is no longer accepted.",
+  forbidden: "this sign-in is not allowed to make this call.",
+  not_found: "no such hotel, or no such order for this user.",
+  offer_expired: "the offer expired, and nothing was ordered.",
+  offer_changed: "the price or terms changed since the offer, and nothing was ordered.",
+  offer_already_ordered: "this offer was already ordered, with other details; no new order was made.",
+  order_in_progress: "the order is still being created, or still being confirmed with the hotel.",
+  cancellation_changed: "the penalty for cancelling is now higher than the one sent, and nothing was cancelled.",
+  order_not_cancellable: "the order can't be cancelled or closed the way that was asked, and nothing changed.",
+  order_not_payable: "this order can't be paid now.",
+  payment_in_progress: "a payment of this order is under way.",
+  payment_total_mismatch: "the payment was not made.",
+  payment_credential_invalid: "the token can't pay this order.",
+  payment_declined: "the payment was declined.",
+  payment_action_required: "the card asks for a verification that a payment by token can't give.",
+  payment_method_unavailable: "this order takes no token now.",
+  destination_ambiguous: "several places bear this name.",
+  destination_not_found: "the destination can't be searched as it was given.",
+  search_too_broad: "too many hotels match to sort or filter them by price.",
+  stay_unsupported: "this stay can't be priced or ordered as asked.",
+  stay_in_past: "the check-in date has passed.",
+  offer_unavailable: "the offer can no longer be ordered, and nothing was ordered.",
+  currency_unavailable: "prices in this currency aren't available.",
+  rate_limited: "too many calls of this kind in a short time.",
+  ordering_paused: "ordering is paused on Fortrip's side.",
+  service_unavailable: "Fortrip couldn't answer this time.",
+  supplier_unavailable: "the hotel's side couldn't be reached this time.",
+  internal: "something went wrong on Fortrip's side.",
+};
+
+const CURSOR_WORDS: Record<string, string> = {
+  expired: "has expired",
+  mismatch: "is not this user's, or was changed",
+  malformed: "is not one Fortrip gave",
+};
+
+/** What each rate limit counts. */
+const RATE_LIMIT_WORDS: Record<string, string> = {
+  search: "hotel searches",
+  offers: "calls for offers",
+  hotel: "reads of a hotel's details",
+  orders_read: "reads of orders",
+  orders_create: "orders created",
+  orders_cancel: "cancellations",
+  orders_pay: "payments",
+};
 
 type DetailSchemas = typeof ERROR_DETAILS;
 type Details<C extends ErrorCode> = z.output<Exclude<DetailSchemas[C], null>>;
@@ -44,161 +123,223 @@ type Details<C extends ErrorCode> = z.output<Exclude<DetailSchemas[C], null>>;
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-function changeLine(c: OfferChange): string {
-  const worse = c.worse === true ? " (worse)" : c.worse === false ? " (not worse)" : "";
-  const pair = (show: (v: never) => string) =>
-    `${show(c.previous as never)} → ${show(c.current as never)}`;
-  switch (c.field) {
-    case "price":
-      return `- price: ${pair(money)}${worse}`;
-    case "meals":
-      return `- meals: ${pair(mealsText)}${worse}`;
-    case "cancellation":
-      return `- cancellation: ${pair(cancellationText)}${worse}`;
-    case "confirmation":
-      return `- confirmation: ${pair(confirmationText)}${worse}`;
-    case "pay_at_property":
-      return `- fees not in the total: ${pair(feesText)}${worse}`;
-    default:
-      return `- ${c.field}: ${raw(c.previous)} → ${raw(c.current)}${worse}`;
-  }
+function changeLine(c: OfferChange): Ours {
+  const pair = (show: (v: never) => Ours) => ours`${show(c.previous as never)} → ${show(c.current as never)}`;
+  const line = (): Ours => {
+    switch (c.field) {
+      case "total":
+        return ours`- total: ${pair(money)}`;
+      case "meals":
+        return ours`- meals: ${pair(mealsText)}`;
+      case "cancellation":
+        return ours`- cancellation: ${pair(cancellationText)}`;
+      case "confirmation":
+        return ours`- confirmation: ${pair(confirmationText)}`;
+      case "payAtProperty":
+        return ours`- fees not in the total: ${pair(feesText)}`;
+      default:
+        return ours`- Change to ${code(c.field, ours`a term not recognized`)}: ${raw(c.previous)} → ${raw(c.current)}`;
+    }
+  };
+  return c.worse === true ? ours`${line()} (worse)` : c.worse === false ? ours`${line()} (not worse)` : line();
 }
 
-function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): string[] {
+function tooBroad(d: Details<"search_too_broad">, surface: RenderSurface): Ours[] {
   const locality =
     surface === "cli" ? "--locality <id>" : 'destination { kind: "locality", placeId: "<id>" }';
+  const topName = d.localities.items[0] ? theirs(d.localities.items[0].place.name) : ours``;
   const lines = [
-    `Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with ${locality} and the same text, filters, stay and sort.`,
+    ours`${plural(d.matched, "hotel")} match; a price sort or a price filter covers at most ${num(d.poolLimit)}.`,
+    ours`Next: show the user these localities and ask which they prefer, unless their request already names one of them; then search again with ${locality} and the same text, filters, stay and sort.`,
     ...localitiesLines(d.localities, null, surface),
   ];
   // A locality over the pool is priced from its nearest hotels only; when it
   // is the area's center, a radius around the center prices nearly the same.
   const top = d.localities.items[0];
-  if (top && top.total > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
+  if (top && top.localityTotal > d.poolLimit && d.center?.place?.placeId === top.place.placeId) {
     lines.push(
-      `Or: ${top.place.name}, the area's center, alone has ${num(top.total)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${top.place.name}).`,
+      ours`Or: ${topName}, the area's center, alone has ${num(top.localityTotal)} matching hotels: the same destination with ${surface === "cli" ? "--radius-meters" : "radiusMeters"} (up to ${LIMITS.radiusMetersMax}) prices nearly the same hotels (the nearest ${num(d.poolLimit)} around ${topName}).`,
     );
   }
   return lines;
 }
 
-function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface): string[] {
+function ambiguous(d: Details<"destination_ambiguous">, surface: RenderSurface): Ours[] {
   const shown =
     d.candidatesTotal > d.candidates.length
-      ? `${d.candidates.length} of ${d.candidatesTotal} shown`
-      : `${d.candidatesTotal}`;
+      ? ours`${d.candidates.length} of ${d.candidatesTotal} shown`
+      : ours`${d.candidatesTotal}`;
   const lines = [
-    `Places named "${d.name}" in ${d.countryCode} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
+    ours`Places named ${theirs(d.name)} in ${token("country", d.countryCode)} (${shown}). Ask the user which one, then search with ${surface === "cli" ? "--place <id>" : 'destination { kind: "place", placeId: "<id>" }'}:`,
   ];
   for (const c of d.candidates) {
-    const other = [c.names.en, c.names.zh].find((n) => n && n !== c.name);
-    const where = [c.region && `${c.region.name} ${c.region.placeId}`, c.countryCode]
-      .filter(Boolean)
-      .join(", ");
     const hotels =
-      c.hotels.scope === "area"
-        ? `${plural(c.hotels.count, "hotel")} in the area`
-        : c.hotels.radiusMeters === null
-          ? plural(c.hotels.count, "hotel")
-          : `${plural(c.hotels.count, "hotel")} within ${km(c.hotels.radiusMeters)}`;
+      c.hotels.radiusMeters === null
+        ? ours`${plural(c.hotels.count, "hotel")} in the area`
+        : ours`${plural(c.hotels.count, "hotel")} within ${km(c.hotels.radiusMeters)}`;
     lines.push(
-      [
-        `- ${c.name}${other ? ` (${other})` : ""} ${c.placeId}`,
-        `${c.kind} in ${where}`,
-        c.population === null ? "population not recorded" : `population ${num(c.population)}`,
-        hotels,
-      ].join(" · "),
+      joined(
+        [
+          ours`- Place: ${named(c.name, c.names)} ${token("id", c.placeId)}`,
+          ours`${code(c.kind, ours`kind not recognized`)} in ${joined([c.region && ours`${theirs(c.region.name)} ${token("id", c.region.placeId)}`, token("country", c.countryCode)], ", ")}`,
+          c.population === null ? ours`population not recorded` : ours`population ${num(c.population)}`,
+          hotels,
+        ],
+        " · ",
+      ),
     );
   }
   if (d.nameAsText !== null) {
-    lines.push(`${plural(d.nameAsText, "hotel")} have "${d.name}" in their name or address: it can also be searched as text.`);
+    lines.push(
+      ours`Also: ${plural(d.nameAsText, "hotel")} have ${theirs(d.name)} in their name or address: it can also be searched as text.`,
+    );
   }
   return lines;
 }
 
-function notFound(d: Details<"destination_not_found">, surface: RenderSurface): string[] {
+function notFound(d: Details<"destination_not_found">, surface: RenderSurface): Ours[] {
   switch (d.reason) {
     case "no_match": {
       const m = d as Extract<typeof d, { reason: "no_match" }>;
-      const text =
+      const none = ours`No place named ${theirs(m.name)} in ${token("country", m.countryCode)}. Names match exactly, accents and periods included: check the spelling, or try another name for the place.`;
+      return [
         m.nameAsText === null
-          ? ""
-          : ` ${plural(m.nameAsText, "hotel")} have "${m.name}" in their name or address: it can be searched as text.`;
-      return [`No place named "${m.name}" in ${m.countryCode}.${text}`];
+          ? none
+          : ours`${none} ${plural(m.nameAsText, "hotel")} have ${theirs(m.name)} in their name or address: it can be searched as text.`,
+      ];
     }
     case "unknown_id":
-      return [`Unknown placeId ${(d as { placeId: string }).placeId}.`];
+      return [ours`No place has the id ${token("id", (d as { placeId: string }).placeId)}: use an id an earlier answer showed, exactly as shown.`];
     case "not_a_locality": {
       const n = d as Extract<typeof d, { reason: "not_a_locality" }>;
       const town =
-        surface === "cli" ? `--place ${n.placeId}` : `{ kind: "place", placeId: "${n.placeId}" }`;
-      if (n.hub === null) {
-        return [`${n.placeId} belongs to no locality: search ${town} for an 8 km circle around it.`];
+        surface === "cli" ? ours`--place ${token("id", n.placeId)}` : ours`{ kind: "place", placeId: ${theirs(n.placeId)} }`;
+      if (n.locality === null) {
+        return [ours`Place ${token("id", n.placeId)} belongs to no locality: search ${town} for an 8 km circle around it.`];
       }
-      const total = n.hubTotal === null ? "" : ` (${plural(n.hubTotal, "matching hotel")})`;
+      const belongs = ours`Its hotels belong to the locality ${theirs(n.locality.name)} ${token("id", n.locality.placeId)}`;
       return [
-        `${n.placeId} is not a locality. Its hotels belong to the locality ${n.hub.name} ${n.hub.placeId}${total}.`,
-        `Search ${surface === "cli" ? `--locality ${n.hub.placeId}` : `{ kind: "locality", placeId: "${n.hub.placeId}" }`} for those, or ${town} for an 8 km circle around the town itself.`,
+        n.localityTotal === null
+          ? ours`Place ${token("id", n.placeId)} is not a locality. ${belongs}.`
+          : ours`Place ${token("id", n.placeId)} is not a locality. ${belongs} (${plural(n.localityTotal, "matching hotel")}).`,
+        ours`Search ${surface === "cli" ? ours`--locality ${token("id", n.locality.placeId)}` : ours`{ kind: "locality", placeId: ${theirs(n.locality.placeId)} }`} for those, or ${town} for an 8 km circle around the town itself.`,
       ];
     }
     default:
-      return [`Details: ${raw(d)}`];
+      return [ours`Details: ${raw(d)}`];
   }
 }
 
-function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
-  if (!("details" in e)) return [];
-  const getOrder = (id: string) => (surface === "cli" ? `\`fortrip orders get ${id}\`` : "get_order");
+/** Which of cancel and close applies to the order instead of the one asked
+ *  for, or what blocks both. The mode that applies is shown as the order's
+ *  own Cancel line, with the call it takes, the order's id in it: the
+ *  caller may have the order's penalty from this error alone, and the cancel
+ *  rule after it points at that line. */
+function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurface): Ours[] {
+  const c = d.cancel;
+  if (c.action === "close") {
+    return [
+      ours`This order isn't paid, so it is closed, not cancelled. Its Cancel line now:`,
+      cancelLine(c, d.orderId, surface),
+    ];
+  }
+  if (c.action === "cancel") {
+    return [
+      ours`This order is paid, so it is cancelled under its terms, not closed. Its Cancel line now:`,
+      cancelLine(c, d.orderId, surface),
+      own(cancelNextStep(surface)),
+    ];
+  }
+  if (c.action !== null) {
+    return [ours`What applies to this order now: ${code(c.action, ours`an action not recognized`)}.`];
+  }
+  return [
+    ours`This order can be neither cancelled nor closed now: ${blockerText(c)}.`,
+  ];
+}
+
+/** What happened in detail and what to do next, by code. */
+function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
+  // `id` is an order's id, or the placeholder for one.
+  const getOrder = (id: Ours) => (surface === "cli" ? ours`\`fortrip orders get ${id}\`` : ours`get_order`);
   switch (e.code) {
     case "invalid_request": {
-      const d = e.details;
-      const lines = d.issues.map((i) => `- ${i.pointer}: ${i.message}`);
-      if (d.filterable) lines.push(`Filterable amenities: ${d.filterable.join(", ")}.`);
-      if (d.share) {
-        lines.push(
-          `${d.share.code} is listed by ${(d.share.listedShare * 100).toFixed(1)} % of hotels that list any facility.`,
-        );
-      }
-      return lines;
+      const issues = e.details.issues.map((i) => ours`- Field ${token("pointer", i.pointer)}: ${theirs(i.message)}`);
+      // With no issue to show, the message is all there is to fix it by.
+      return issues.length > 0 ? issues : [ours`- What was refused: ${theirs(e.message)}`];
     }
     case "cursor_invalid":
-      return [`The cursor is ${e.details.reason}: search again without a cursor.`];
+      return [
+        ours`The cursor ${label(CURSOR_WORDS, e.details.reason, ours`can't be used`)}: start again from the first page, without a cursor.`,
+      ];
+    case "unauthenticated":
+      return [
+        surface === "cli"
+          ? ours`The user signs in again through the browser. Never ask them to paste a token.`
+          : ours`Ask the user to connect Fortrip again and sign in. Sign-in happens in the browser: never ask them to paste a token.`,
+      ];
+    case "forbidden":
+      return [ours`Tell the user. Sending it again won't help.`];
+    case "not_found":
+      return [ours`Use an id an earlier answer showed, exactly as shown.`];
     case "offer_expired":
-      return [`Offer ${e.details.offerId} expired at ${when(e.details.expiredAt, null)}: get fresh offers.`];
+      return [
+        ours`Offer ${token("id", e.details.offerId)} expired at ${when(e.details.expiredAt, null)}: get offers again and let the user choose again.`,
+      ];
     case "offer_changed":
       return [
-        "Changes:",
+        ours`Changes:`,
         ...e.details.changes.map(changeLine),
-        "New offer, held for ordering:",
+        ours`New offer, held for ordering:`,
         offerLine(e.details.offer),
-        "Show the user these changes and ask again before ordering the new offer.",
+        ours`Show the user these changes and ask again before ordering the new offer.`,
       ];
     case "offer_already_ordered":
+      return [
+        ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))}. An offer is ordered once, even when its order failed, expired or was closed: for another order of the stay (another party, or a corrected guest name or contact), get offers again and order the new offer. When a new order replaces an unpaid one, tell the user to pay only the new link: the earlier one expires unpaid.`,
+      ];
     case "order_in_progress":
-      return [`Order ${e.details.orderId}.`];
+      return [ours`Order ${token("id", e.details.orderId)}: wait, then send the same call again with the same details.`];
+    case "cancellation_changed":
+      return [
+        ours`Read the order again with ${getOrder(ours`<orderId>`)}, show the user the penalty and the refund now on its Cancel line, and ask them again before cancelling.`,
+      ];
     case "order_not_cancellable":
-      return [`Not cancellable: ${label(CANCEL_REASON_WORDS, e.details.reason)}.`];
+      return notCancellable(e.details, surface);
     case "order_not_payable":
       return [
-        `Order ${e.details.orderId}, ${label(ORDER_STATUS_WORDS, e.details.status)}: read it with ${getOrder(e.details.orderId)}; this call charged nothing.`,
+        ours`Order ${token("id", e.details.orderId)}, ${label(ORDER_STATUS_WORDS, e.details.status, ours`status not recognized`)}: read it with ${getOrder(token("id", e.details.orderId))}; this call charged nothing.`,
       ];
     case "payment_in_progress":
-      return [`Order ${e.details.orderId}: read it with ${getOrder(e.details.orderId)} in a few seconds.`];
-    case "payment_total_changed":
+      return [ours`Order ${token("id", e.details.orderId)}: read it with ${getOrder(token("id", e.details.orderId))} in a few seconds.`];
+    case "payment_total_mismatch": {
+      const again =
+        surface === "cli"
+          ? ours`run the same \`fortrip orders pay ${token("id", e.details.orderId)}\` command again with \`--total ${token("amount", e.details.total.amount)}\``
+          : ours`call pay_order again with it and the same token`;
       return [
-        `Order ${e.details.orderId} totals ${money(e.details.total)}, not the total sent: confirm this total with the user, then ${
-          surface === "cli"
-            ? `run the same \`fortrip orders pay ${e.details.orderId}\` command again with \`--total ${e.details.total.amount}\``
-            : "call pay_order again with it, the same way (the same token, or method stripe_alipay_wechat_pay)"
-        }. Nothing was charged.`,
+        ours`The total sent is not the order's: order ${token("id", e.details.orderId)} totals ${money(e.details.total)}, and that has not changed. Confirm this total with the user, then ${again}. Nothing was charged.`,
       ];
+    }
     case "payment_credential_invalid":
       return [
-        `The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason)}: request a new one with the limits of the order's stripe_shared_payment_token method. Nothing was charged.`,
+        ours`The token ${label(CREDENTIAL_INVALID_WORDS, e.details.reason, ours`was refused for a reason not recognized`)}: request a new one with the usage limits on the order's "Pay without the link" line. Nothing was charged.`,
       ];
-    case "payment_declined":
+    case "payment_method_unavailable": {
+      const why = Object.hasOwn(PAYMENT_METHOD_UNAVAILABLE_WORDS, e.details.reason)
+        ? label(PAYMENT_METHOD_UNAVAILABLE_WORDS, e.details.reason)
+        : ours`This order takes no token now (reason ${code(e.details.reason, ours`not recognized`)}): the user pays by its payment link`;
+      return [ours`${why}. Read the order with ${getOrder(ours`<orderId>`)}. This call charged nothing.`];
+    }
+    case "payment_declined": {
+      const declined = e.details.declineCode ? ours`Declined (${token("id", e.details.declineCode)})` : ours`Declined`;
       return [
-        `Declined${e.details.declineCode ? ` (${e.details.declineCode})` : ""}: the user picks another payment method in their wallet for a new token, or pays by link: read the order with ${getOrder("<orderId>")} and give its payment.url.`,
+        ours`${declined}: the user picks another card in their Link wallet for a new token, or pays by link: read the order with ${getOrder(ours`<orderId>`)} and give its payment link.`,
+      ];
+    }
+    case "payment_action_required":
+      return [
+        ours`The user pays by link instead: read the order with ${getOrder(ours`<orderId>`)} and give its payment link.`,
       ];
     case "destination_ambiguous":
       return ambiguous(e.details, surface);
@@ -208,42 +349,62 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): string[] {
       return tooBroad(e.details, surface);
     case "stay_unsupported":
       return e.details.reason === "mixed_occupancy"
-        ? ["Every room must have the same party: ask once per party."]
+        ? [ours`Every room must have the same party: ask once per party.`]
         : e.details.reason === "max_nights"
           ? [
-              `At most ${plural((e.details as { max: number }).max, "night")} per stay: ask the user whether to split it into consecutive stays, each its own order.`,
+              ours`At most ${plural((e.details as { max: number }).max, "night")} per stay: ask the user whether to split it into consecutive stays, each its own order.`,
             ]
-          : [`Details: ${raw(e.details)}`];
+          : [ours`Details: ${raw(e.details)}`];
     case "stay_in_past":
-      return [`Check-in ${e.details.checkIn} is already past${e.details.timeZone ? ` in ${e.details.timeZone}` : ""}.`];
+      return [
+        e.details.timeZone
+          ? ours`Check-in ${token("date", e.details.checkIn)} is already past in ${token("timeZone", e.details.timeZone)}: ask the user for new dates.`
+          : ours`Check-in ${token("date", e.details.checkIn)} is already past: ask the user for new dates.`,
+      ];
     case "offer_unavailable":
       return [
-        `Offer ${e.details.offerId}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason)}. Get fresh offers.`,
+        ours`Offer ${token("id", e.details.offerId)}: ${label({ sold_out: "sold out", refused: "can no longer be booked" }, e.details.reason, ours`unavailable, for a reason not recognized`)}. Other offers for the same room may be gone too: get offers again.`,
       ];
     case "currency_unavailable":
-      return [`Prices in ${e.details.currency} aren't available yet. Tell the user, and ask whether to see USD prices.`];
+      return [
+        ours`Prices in ${token("currency", e.details.currency)} aren't available yet. Tell the user, and ask whether to see USD prices.`,
+      ];
     case "rate_limited":
-      return [`Limit reached for: ${e.details.scope}.`];
+      return [
+        ours`The limit reached counts ${label(RATE_LIMIT_WORDS, e.details.rateLimit, ours`calls of a kind not recognized`)}: wait, then retry once.`,
+      ];
+    case "ordering_paused":
+      // The wait is on the retry line, when the server gives one.
+      return [
+        typeof e.retryAfterSeconds === "number"
+          ? ours`Tell the user, and try again later: no sooner than the retry line above says.`
+          : ours`Tell the user, and try again later.`,
+      ];
+    case "service_unavailable":
+      return [
+        ours`Retry once with the same details (a payment with the same token, never a new one); if it fails again, tell the user.`,
+      ];
     case "supplier_unavailable":
       return [
-        label(
-          {
-            not_started: "Nothing was sent to the hotel's supplier.",
-            unknown: "The request was sent and timed out: its outcome is unknown.",
-          },
-          e.details.outcome,
-        ),
+        Object.hasOwn(SUPPLIER_OUTCOME_WORDS, e.details.outcome)
+          ? label(SUPPLIER_OUTCOME_WORDS, e.details.outcome)
+          : ours`Outcome: ${code(e.details.outcome, ours`not recognized`)}.`,
+        ours`Retry once with the same details; if it fails again, tell the user.`,
       ];
+    case "internal":
+      return [ours`Tell the user; for help they email ${SUPPORT_EMAIL} with the request id below.`];
+    case "client_outdated":
+      return [];
     default:
-      return [`Details: ${raw((e as { details: unknown }).details)}`];
+      return [ours`Details: ${raw((e as { details?: unknown }).details)}`];
   }
 }
 
-function retryLine(retryable: unknown, after: unknown): string {
+function retryLine(retryable: unknown, after: unknown): Ours {
   if (retryable === true) {
-    return typeof after === "number" ? `Retryable: retry after ${after} s.` : "Retryable.";
+    return typeof after === "number" ? ours`Retryable: retry after ${after} s.` : ours`Retryable.`;
   }
-  return retryable === false ? "Not retryable." : "Retryable: unknown.";
+  return retryable === false ? ours`Not retryable.` : ours`Retryable: unknown.`;
 }
 
 /** The error envelope as text; `status` is the HTTP status, when known.
@@ -254,7 +415,6 @@ export function renderError(
   status?: number,
   surface: RenderSurface = "mcp",
 ): string {
-  const http = status === undefined ? "" : ` (HTTP ${status})`;
   let known: KnownErrorBody | null = null;
   let body: Record<string, unknown> | null = null;
   try {
@@ -265,17 +425,33 @@ export function renderError(
     if (isObject(envelope) && isObject(envelope.error)) body = envelope.error;
   }
   if (body === null) {
-    return `Error${http}: the answer carried no readable error.\nRetryable: unknown.`;
+    const lines = [
+      status === undefined
+        ? ours`Error: the answer carried no readable error.`
+        : ours`Error (HTTP ${status}): the answer carried no readable error.`,
+      ours`Retryable: unknown.`,
+    ];
+    return lines.join("\n");
   }
 
-  const code = typeof body.code === "string" ? body.code : "unknown";
+  // The code as it came only when it reads as one. What happened is ours
+  // for a code this build knows; otherwise it is the server's message, which
+  // may quote the caller: one line, after our words.
+  const name = typeof body.code === "string" ? code(body.code, ours`unknown`) : ours`unknown`;
+  const head = status === undefined ? ours`Error ${name}` : ours`Error ${name} (HTTP ${status})`;
+  const happened =
+    typeof body.code === "string" && Object.hasOwn(HAPPENED, body.code)
+      ? own(HAPPENED[body.code as keyof typeof HAPPENED])
+      : typeof body.message === "string"
+        ? theirs(body.message)
+        : null;
   const lines = [
-    `Error ${code}${http}${typeof body.message === "string" ? `: ${body.message}` : ""}`,
+    happened === null ? head : ours`${head}: ${happened}`,
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
-  if (typeof body.param === "string") lines.push(`Field: ${body.param}`);
+  if (typeof body.pointer === "string") lines.push(ours`Field: ${token("pointer", body.pointer)}`);
   if (known) lines.push(...detailLines(known, surface));
-  else if (body.details !== undefined) lines.push(`Details: ${raw(body.details)}`);
-  if (typeof body.requestId === "string") lines.push(`Request id: ${body.requestId}`);
+  else if (body.details !== undefined) lines.push(ours`Details: ${raw(body.details)}`);
+  if (typeof body.requestId === "string") lines.push(ours`Request id: ${token("id", body.requestId)}`);
   return lines.join("\n");
 }

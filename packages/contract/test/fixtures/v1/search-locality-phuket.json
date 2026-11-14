@@ -11,7 +11,6 @@
           "zh": "普吉"
         },
         "kind": "settlement",
-        "scope": "radius",
         "cityLike": null,
         "population": 89072,
         "region": {
@@ -44,7 +43,7 @@
             "zh": "普吉"
           }
         },
-        "basis": "hub"
+        "basis": "locality"
       },
       "radiusMeters": null,
       "radiusSource": null
@@ -70,7 +69,7 @@
     },
     "pricing": {
       "mode": "indicative",
-      "scope": "pool",
+      "covers": "pool",
       "status": "ok"
     },
     "sort": "price_asc",
@@ -86,6 +85,7 @@
       "localities": null,
       "nameAsText": null
     },
+    "currencyHint": null,
     "data": [
       {
         "hotelId": "htl_PhuketOldTown0000000",
@@ -116,9 +116,7 @@
         },
         "timeZone": "Asia/Bangkok",
         "distanceMeters": 1150,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "18.40",
             "currency": "USD"
@@ -159,9 +157,7 @@
         },
         "timeZone": "Asia/Bangkok",
         "distanceMeters": 12320,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "33.00",
             "currency": "USD"
@@ -202,9 +198,7 @@
         },
         "timeZone": "Asia/Bangkok",
         "distanceMeters": 13510,
-        "price": {
-          "kind": "indicative",
-          "basis": "lowest_unit",
+        "indicativePrice": {
           "fromPerRoomNight": {
             "amount": "88.25",
             "currency": "USD"

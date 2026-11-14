@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { MCP_OUTPUT } from "@fortrip/agent-contract";
+import { META_KEYS } from "@fortrip/agent-contract";
 
 import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { pageHtml, pageText } from "./built-page.ts";
@@ -14,39 +14,59 @@ import { pageHtml, pageText } from "./built-page.ts";
 const meaning = (code: string) => ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
 
 describe("stale statements stay fixed", () => {
-  it("/api: the pay inputs, and no additive-only promise; /payments: the Alipay or WeChat Pay input", () => {
+  it("/api: the pay inputs, and no additive-only promise; /payments: the order's token", () => {
     const text = pageText("/api");
     assert.doesNotMatch(text, /one of two ways/);
     assert.doesNotMatch(text, /changes only by adding/);
-    // §8.1 item 2: exactly one of the three inputs.
-    assert.match(text, /exactly one of sharedPaymentToken, payment or method, for the way it pays/);
+    // The pay input is the token and the total: no other way is sent.
+    assert.match(text, /takes sharedPaymentToken, the token the user approved for the order, and total/);
+    assert.doesNotMatch(text, /payment or method/);
     // §8.1 item 3, the owner's ruling, which the changelog states in full.
     assert.match(text, /major version/);
     assert.match(text, /changelog/);
     assert.match(pageText("/changelog"), /[Uu]ntil general availability/);
     const payments = pageText("/payments");
-    assert.ok(payments.includes("method"));
-    assert.ok(payments.includes("payment.methods"));
-    assert.ok(payments.includes('"stripe_alipay_wechat_pay"'));
+    // An order offers a token as payment.tokenRequest; no list of methods.
+    assert.ok(payments.includes("payment.tokenRequest"));
+    assert.doesNotMatch(payments, /with method|payment\.methods/);
   });
 
-  it("/mcp: content[0] is not always text", () => {
+  // Contract 6: a result is text only, on every tool.
+  it("/mcp: a result is one text block, with no structured content or output schema", () => {
     const text = pageText("/mcp");
-    assert.doesNotMatch(text, /content\[0\] is compact text/);
-    assert.match(text, /WeChat Pay code/);
-    assert.match(text, /content\[1\]/);
+    assert.match(text, /A result is text only\. content holds exactly one block, of type text/);
+    assert.match(text, /There is no structuredContent, and no tool declares an outputSchema/);
+    assert.doesNotMatch(text, /content\[1\]|WeChat Pay code|image/);
+    // An error is one text block too, its envelope in _meta.
+    assert.match(text, /A failed call has isError: true and one text block\./);
+    assert.match(text, /_meta\["ai\.fortrip\/error"\] carries the error envelope/);
+    // Every _meta key the hosted server returns has its row.
+    const html = pageHtml("/mcp");
+    assert.deepEqual(Object.values(META_KEYS), ["ai.fortrip/requestId", "ai.fortrip/replayed", "ai.fortrip/error"]);
+    for (const key of Object.values(META_KEYS)) {
+      assert.ok(html.includes(`<td><code>${key}</code></td>`), key);
+    }
+    // Where a developer gets JSON instead.
+    assert.match(text, /read it over the HTTP API, where each tool has an endpoint that answers JSON for the same input, or run the CLI command with --json/);
   });
 
-  it("/mcp: nextStep only on the answers that declare it; blocks found by type", () => {
+  // The CLI's text changed with the contract's: a script that read names bare has to know.
+  it("/changelog: the CLI migration table says text output quotes names, and how orders cancel changed", () => {
+    const changelog = readFileSync(new URL("../content/docs/changelog.mdx", import.meta.url), "utf8");
+    const cli = changelog.slice(changelog.indexOf("#### CLI"), changelog.indexOf("### Package"));
+    assert.match(cli, /\| Text output: names, addresses, the contact and special requests printed bare \| In double quotes, as JSON strings/);
+    assert.match(cli, /\| `orders cancel <orderId>` with no flag: .* \| Refused with exit 2, nothing read or sent/);
+    assert.match(cli, /\| A local refusal lists `Field \/pointer: …` for every issue \| The flag the value was typed as/);
+    // Every rename of the final round has its row.
+    for (const now of ["`payment.tokenRequest`", "`cancellation_not_allowed`", "`cancellation_refused`", "`status` `closed`", "`localityTotal`", "`details.orderId`", "`limitPerHotel`: the request's, or `null`"]) {
+      assert.ok(changelog.slice(0, changelog.indexOf("## 5.3.0")).includes(now), now);
+    }
+  });
+
+  it("/mcp: no nextStep field, the consent rule ends the text", () => {
     const text = pageText("/mcp");
-    const withNextStep = Object.entries(MCP_OUTPUT)
-      .filter(([, schema]) => "nextStep" in schema.shape)
-      .map(([tool]) => tool);
-    assert.ok(withNextStep.length > 0 && !withNextStep.includes("pay_order"));
-    const list = `${withNextStep.slice(0, -1).join(", ")} and ${withNextStep.at(-1)}`;
-    assert.ok(text.includes(`An answer of ${list} that holds a payment.url also carries nextStep`), list);
-    assert.match(text, /by its type \(text, image\), not by its position/);
-    assert.match(text, /unless the image couldn't be fetched/);
+    assert.doesNotMatch(text, /nextStep/);
+    assert.match(text, /The consent rule ends the text of every answer that holds a payment link\. Only the pay rule, which repeats it, can come after it; the cancel rule comes before it:/);
   });
 
   it("no page states the ways to pay or the pay inputs as a closed set by hand", () => {
@@ -64,27 +84,33 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(pageHtml("/quickstart"), /href="\/install#remote-mcp"/);
   });
 
-  it("a tool page says where its text is", () => {
-    assert.doesNotMatch(pageText("/mcp/pay-order"), /content\[0\] the same answer as compact text/);
-    assert.match(pageText("/mcp/pay-order"), /image/);
-  });
-
-  it("the intro and quickstart name Alipay or WeChat Pay", () => {
-    for (const route of ["/", "/quickstart"]) {
-      assert.match(pageText(route), /Alipay|WeChat Pay/, route);
+  it("a tool page says its result is one text block, and where the JSON is", () => {
+    for (const route of ["/mcp/pay-order", "/mcp/search-hotels"]) {
+      const text = pageText(route);
+      assert.match(text, /The result is one text block, content\[0\]: the answer as compact text/, route);
+      assert.match(text, /There is no structuredContent: the same answer as JSON is the/, route);
+      assert.doesNotMatch(text, /image|content\[1\]/, route);
     }
+    assert.match(pageText("/mcp/search-hotels"), /then the presentation hint\./);
+    assert.match(pageText("/mcp/pay-order"), /or fortrip orders pay --json\./);
   });
 
-  it("the payment errors cover Alipay and WeChat Pay (checked against the pay handler)", () => {
-    // payment_total_changed: the wallet path checks the total before it opens.
-    assert.match(meaning("payment_total_changed"), /same token/);
-    assert.match(meaning("payment_total_changed"), /Alipay or WeChat Pay/);
-    assert.match(meaning("payment_total_changed"), /charged nothing/);
-    // payment_method_unavailable: the wallet's own refusals, and a token
-    // refused while a wallet payment is open.
-    assert.match(meaning("payment_method_unavailable"), /`method`/);
-    assert.match(meaning("payment_method_unavailable"), /Alipay or WeChat Pay/);
-    assert.match(meaning("payment_method_unavailable"), /`payment\.methods`/);
+  // Agents no longer open an Alipay or WeChat Pay payment: the user pays
+  // that way on the payment link's page.
+  it("the payments page names Alipay or WeChat Pay", () => {
+    assert.match(pageText("/payments"), /Alipay or WeChat Pay/);
+  });
+
+  it("the payment errors name the token and the payment page, never a method agents no longer have", () => {
+    assert.match(meaning("payment_total_mismatch"), /same token/);
+    assert.match(meaning("payment_total_mismatch"), /hasn't changed/);
+    assert.match(meaning("payment_total_mismatch"), /charged nothing/);
+    // payment_method_unavailable: a token refused while the user pays on the
+    // payment page, among its reasons.
+    assert.match(meaning("payment_method_unavailable"), /`payment_open_on_page` \(the user has a payment open on the order's payment page/);
+    for (const code of ["payment_total_mismatch", "payment_method_unavailable"]) {
+      assert.doesNotMatch(meaning(code), /`method`|Alipay|WeChat|`payment\.methods`/, code);
+    }
   });
 
   it("no page states the access token's lifetime or the order reference's length", () => {
@@ -125,7 +151,7 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(pageText("/regions"), /\d\s?%/);
   });
 
-  // The facts contract 5 changed, as packages/contract/test/no-stale-copy.test.ts
+  // The facts contracts 5 and 6 changed, as packages/contract/test/no-stale-copy.test.ts
   // keeps them out of what agents read. Pages say "in USD" of nothing: only
   // the token is USD-only, and no page needs the phrase for it.
   // The lib's text (error meanings, pay ways, limits, environment…) renders
@@ -176,7 +202,31 @@ const STALE: readonly RegExp[] = [
   /get_planning_guide/,
   /fortrip guide/,
   /US dollars/,
-  /(?<!stripe_)alipay_wechat_pay/,
+  /alipay_wechat_pay/,
+  // Contract 6: one name and one place for each concept.
+  /book_hotel/,
+  /hotels book/,
+  /payment\.methods/,
+  /price\.total/,
+  /chargeCurrency/,
+  /cancel\.available/,
+  /cancel\.reason/,
+  /payment_total_changed/,
+  /perNightAllRooms/,
+  /hubTotal/,
+  /hubIncludes/,
+  /include=rooms/,
+  /collectedAt/,
+  /\basOf\b/,
+  /--method/,
+  /--first-name|--last-name/,
+  /contact\.(?:firstName|lastName)/,
+  /maxAmount/,
+  /pricing\.scope/,
+  /RateLimitScope/,
+  /`param`/,
+  /details_refused/,
+  /WeChat Pay code|qrData/,
   // One offer is one order: no per-stay check, cap or removed order.
   /order_exists/,
   /order_removed/,

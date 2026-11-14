@@ -2,11 +2,11 @@ import { ERROR_CODES, type ErrorCode } from "@fortrip/agent-contract";
 
 import { CliError, EXIT, type ErrorEnvelope, type ExitCode } from "./errors.ts";
 import { EXIT_BY_CODE, EXIT_BY_STATUS } from "./exit-codes.ts";
-import { VERSION } from "./version.ts";
+import { USER_AGENT } from "./version.ts";
 
 export const LOGIN_HINT = "Rerun the command to get a new sign-in link.";
 
-/** Longer than the API's longest route (`hotels book`, 120 s), so the CLI
+/** Longer than the API's longest route (`orders create`, 120 s), so the CLI
  *  doesn't give up, and an agent retry, just as the server is answering. */
 export const REQUEST_TIMEOUT_MS = 150_000;
 
@@ -40,7 +40,7 @@ export async function request(
       method,
       headers: {
         accept: "application/json",
-        "user-agent": `fortrip-cli/${VERSION}`,
+        "user-agent": USER_AGENT,
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
@@ -84,7 +84,7 @@ export async function postForm(
       headers: {
         accept: "application/json",
         "content-type": "application/x-www-form-urlencoded",
-        "user-agent": `fortrip-cli/${VERSION}`,
+        "user-agent": USER_AGENT,
       },
       body: new URLSearchParams(form).toString(),
       redirect: "manual",
@@ -110,6 +110,15 @@ export async function postForm(
   return { status: response.status, body };
 }
 
+/** The errors `transportError` made: no answer at all. */
+const unreachable = new WeakSet<CliError>();
+
+/** Whether `error` is a request that got no answer: the service could not be
+ *  reached, did not answer in time, or dropped the connection. */
+export function isUnreachable(error: unknown): boolean {
+  return error instanceof CliError && unreachable.has(error);
+}
+
 /** No answer, or the connection dropped: worth one retry. */
 function transportError(
   apiUrl: string,
@@ -121,10 +130,12 @@ function transportError(
     (error as Error)?.name === "TimeoutError"
       ? `No response from ${apiUrl} within ${timeoutMs / 1_000} s`
       : `Could not reach ${apiUrl}: ${(error as Error)?.message ?? String(error)}`;
-  return new CliError(message, EXIT.error, {
+  const failure = new CliError(message, EXIT.error, {
     ...(status !== undefined ? { status } : {}),
     retryable: true,
   });
+  unreachable.add(failure);
+  return failure;
 }
 
 /** Whether an answer is the v1 error envelope. */
@@ -149,7 +160,7 @@ function exitCodeFor(code: string | undefined, status: number): ExitCode {
 /**
  * The resource a 2xx answer is, or a `CliError` carrying Fortrip's error
  * envelope, whose exit code follows the CLI contract: `invalid_request` 2,
- * `unauthenticated` 3, `rate_limited` 4, anything else 1.
+ * `unauthenticated` 3, `rate_limited` 4, `client_outdated` 5, anything else 1.
  */
 export function unwrap(response: ApiResponse): unknown {
   const { status, body, headers, raw } = response;

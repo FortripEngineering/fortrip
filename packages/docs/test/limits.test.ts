@@ -31,7 +31,7 @@ test("each limit row says what it limits and shows its value", () => {
   assert.equal(row("Nights per stay")?.[1], "15");
   assert.equal(row("Search radius")?.[1], "1–80,000 m, default 8,000 m");
   assert.equal(row("Token payment")?.[1], "up to $500");
-  assert.equal(row("WeChat Pay code")?.[1], "120 minutes");
+  assert.equal(row("WeChat Pay code"), undefined);
   assert.equal(row("Time left to pay")?.[1], `${LIMITS.payCutoffMinutes} minutes`);
 });
 
@@ -56,7 +56,7 @@ test("the rate limits are the contract's, one row per scope, per minute", () => 
     rateLimitRows().map(({ scope, operations }) => [scope, operations]),
   );
   assert.deepEqual(operations.orders_read, ["get_order", "list_orders"]);
-  assert.deepEqual(operations.orders_create, ["book_hotel"]);
+  assert.deepEqual(operations.orders_create, ["create_order"]);
   assert.deepEqual(operations.orders_cancel, ["cancel_order"]);
   assert.deepEqual(operations.orders_pay, ["pay_order"]);
   assert.equal(rateLimitRows().find((row) => row.scope === "orders_create")?.failClosed, true);
@@ -68,8 +68,8 @@ test("every HTTP tool counts against exactly one scope", () => {
   assert.deepEqual(
     [...counted].sort(),
     [
-      "book_hotel",
       "cancel_order",
+      "create_order",
       "get_hotel",
       "get_hotel_offers",
       "get_order",

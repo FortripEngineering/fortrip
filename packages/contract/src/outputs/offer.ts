@@ -4,8 +4,9 @@ import { hotelId, offerId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
 import { openEnum, openObject } from "../conventions/open.ts";
 import { instant } from "../conventions/time.ts";
+import { LIMITS } from "../limits.ts";
 import { localizedText, names, stayEcho } from "./common.ts";
-import { roomFacts } from "./hotel.ts";
+import { roomType } from "./hotel.ts";
 
 /* `POST /v1/hotels/offers` (spec §9.2, §9.3). */
 
@@ -32,11 +33,23 @@ export const meals = openObject({
   "What the rate includes to eat. known false: the meals are unknown, not none, and included, unspecifiedMainMeals and allInclusive are null.",
 );
 
+/** What a fee payable at the property is for, in Fortrip's words. */
+export const FEE_KINDS = [
+  "tax",
+  "resort_fee",
+  "other",
+  "unknown",
+] as const;
+
+export type FeeKind = (typeof FEE_KINDS)[number];
+
 export const payAtProperty = openObject({
   disclosure: openEnum(["complete", "incomplete"]),
   items: z.array(
     openObject({
-      label: localizedText.nullable(),
+      kind: openEnum(FEE_KINDS).describe(
+        "What the fee is for: tax (a city, tourist or other tax the property collects), resort_fee (a resort, facility or amenity fee), other (a kind not in this list), unknown (the kind is not stated).",
+      ),
       amount: money.nullable(),
       mandatory: z.boolean(),
       basis: openEnum([
@@ -46,22 +59,21 @@ export const payAtProperty = openObject({
         "per_person_per_night",
         "unknown",
       ]),
-      collectedAt: openEnum(["property", "unknown"]),
     }),
   ),
 }).describe(
-  "Fees paid at the property, on top of price.total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed.",
+  "Fees paid at the property, on top of the total, in the property's currency, not converted. disclosure incomplete: there may be fees not listed.",
 );
 
 export const cancellation = openObject({
   status: openEnum(["free", "partial_penalty", "non_refundable", "unknown"]),
-  asOf: instant.describe("When these terms were read: status and penalties are as of this time."),
+  readAt: instant.describe("When these terms were read: status and penalties are as of this time."),
   freeCancellationEndsAt: instant.nullable(),
   penalties: z.array(
     openObject({ startsAt: instant.nullable(), amount: money }),
   ),
   timeZone: z.string().nullable(),
-}).describe("The cancellation terms, read at asOf.");
+}).describe("The cancellation terms, read at readAt.");
 
 export const confirmation = openObject({
   mode: openEnum(["instant", "on_request", "unknown"]).describe(
@@ -76,23 +88,20 @@ export const confirmation = openObject({
 
 export const offer = openObject({
   offerId,
-  type: openEnum(["hotel"]),
+  hotelId,
   expiresAt: instant,
-  hotel: openObject({
-    hotelId,
-    room: openObject({ name: localizedText.nullable(), ...roomFacts }),
-    roomCount: z.number().int(),
-    meals,
-  }),
-  price: openObject({
-    total: money,
-    perNightAllRooms: money.describe(
-      "price.total divided by the nights: all rooms, one night. A search's fromPerRoomNight is for one room; divide by roomCount to compare.",
-    ),
-    payAtProperty,
-  }),
+  roomType,
+  roomCount: z.number().int(),
+  meals,
   cancellation,
   confirmation,
+  payAtProperty,
+  total: money.describe(
+    "The whole stay for all rooms: what is charged. Fees payable at the property are not in it.",
+  ),
+  perRoomNight: money.describe(
+    "total divided by the rooms and the nights, rounded to cents: for comparison only. It need not multiply back to total, which is what is charged.",
+  ),
 });
 
 export type Offer = z.infer<typeof offer>;
@@ -108,7 +117,12 @@ export const omitted = openObject({
     "because another offer of the same room is as good on price and every term, or can't be told apart from one kept",
   ),
   unreadable: removed("because their details came back incomplete or inconsistent"),
-  byLimit: removed("by limitPerHotel"),
+  byLimit: removed(
+    `by the request's limitPerHotel, or by the ${LIMITS.offersPerHotelDefault} a hotel gets when it gave none (the answer's limitPerHotel says which); a higher limitPerHotel or a filter may show them`,
+  ),
+  byCallLimit: removed(
+    `because the call's hotels share ${LIMITS.offersPerCallDefault} offers in all (${LIMITS.offersPerCallMax} when limitPerHotel is given): a call for this hotel alone shows this many more`,
+  ),
 }).describe("How many offers each selection step left out.");
 
 export type Omitted = z.infer<typeof omitted>;
@@ -125,9 +139,18 @@ export const UNAVAILABLE_REASONS = [
 
 export const hotelOffersResult = openObject({
   stay: stayEcho,
+  limitPerHotel: z
+    .number()
+    .int()
+    .nullable()
+    .describe(
+      `The limitPerHotel the request gave; null when it gave none, and each hotel then gets up to ${LIMITS.offersPerHotelDefault} offers within the call's ${LIMITS.offersPerCallDefault}.`,
+    ),
   hotels: z.array(
     openObject({
-      hotel: openObject({ hotelId, name: z.string(), names }),
+      hotelId,
+      name: z.string(),
+      names,
       offers: z.array(offer),
       omitted,
     }),

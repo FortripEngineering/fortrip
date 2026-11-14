@@ -9,14 +9,14 @@ import {
 } from "../conventions/open.ts";
 import { instant, localDate } from "../conventions/time.ts";
 import { ERROR_CODES, type ErrorCode, SUPPLIER_STATUSES } from "../errors.ts";
-import { AMENITY_CODES } from "../vocabulary.ts";
 import { offer } from "./offer.ts";
 import { money } from "../conventions/money.ts";
 import {
-  CANCEL_REASONS,
   CREDENTIAL_INVALID_REASONS,
   ORDER_STATUSES,
   offerChange,
+  orderCancel,
+  PAYMENT_METHOD_UNAVAILABLE_REASONS,
 } from "./order.ts";
 import { center, place, placeRef } from "./place.ts";
 import { localities } from "./search.ts";
@@ -41,11 +41,6 @@ export const SUPPLIER_OUTCOME_STATUS: Readonly<
 export const ERROR_DETAILS = {
   invalid_request: openObject({
     issues: z.array(openObject({ pointer: z.string(), message: z.string() })),
-    filterable: z.array(openEnum(AMENITY_CODES)).optional(),
-    share: openObject({
-      code: openEnum(AMENITY_CODES),
-      listedShare: z.number().min(0).max(1),
-    }).optional(),
   }),
   cursor_invalid: openObject({
     reason: openEnum(["expired", "mismatch", "malformed"]),
@@ -58,16 +53,26 @@ export const ERROR_DETAILS = {
   offer_already_ordered: openObject({ orderId }),
   order_in_progress: openObject({ orderId }),
   cancellation_changed: null,
-  order_not_cancellable: openObject({ reason: openEnum(CANCEL_REASONS) }),
+  order_not_cancellable: openObject({
+    orderId: orderId.describe("The order the call was for."),
+    cancel: orderCancel.describe(
+      "The order's cancel as it is now: the action that applies instead of the one asked for, or what blocks both.",
+    ),
+  }),
   order_not_payable: openObject({ orderId, status: openEnum(ORDER_STATUSES) }),
   payment_in_progress: openObject({ orderId }),
-  payment_total_changed: openObject({ orderId, total: money }),
+  payment_total_mismatch: openObject({
+    orderId,
+    total: money.describe("The order's total, which the total sent did not equal; it has not changed."),
+  }),
   payment_credential_invalid: openObject({
     reason: openEnum(CREDENTIAL_INVALID_REASONS),
   }),
   payment_declined: openObject({ declineCode: z.string().nullable() }),
   payment_action_required: null,
-  payment_method_unavailable: null,
+  payment_method_unavailable: openObject({
+    reason: openEnum(PAYMENT_METHOD_UNAVAILABLE_REASONS),
+  }),
   destination_ambiguous: openObject({
     name: z.string(),
     countryCode: z.string(),
@@ -75,8 +80,12 @@ export const ERROR_DETAILS = {
       openObject({
         ...place.shape,
         hotels: openObject({
-          scope: openEnum(["area", "radius"]),
-          radiusMeters: z.number().nullable(),
+          radiusMeters: z
+            .number()
+            .nullable()
+            .describe(
+              "The radius of the circle around the place that count covers, in meters; null when count covers the place's whole area.",
+            ),
           count,
         }),
       }),
@@ -95,8 +104,8 @@ export const ERROR_DETAILS = {
     openObject({
       reason: z.literal("not_a_locality"),
       placeId,
-      hub: placeRef.nullable(),
-      hubTotal: count.nullable(),
+      locality: placeRef.nullable(),
+      localityTotal: count.nullable(),
     }),
   ]),
   search_too_broad: openObject({
@@ -120,7 +129,7 @@ export const ERROR_DETAILS = {
   }),
   currency_unavailable: openObject({ currency: z.string() }),
   rate_limited: openObject({
-    scope: openEnum([
+    rateLimit: openEnum([
       "search",
       "offers",
       "hotel",
@@ -128,13 +137,14 @@ export const ERROR_DETAILS = {
       "orders_create",
       "orders_cancel",
       "orders_pay",
-    ]),
+    ]).describe("Which rate limit was hit, by the kind of call it counts."),
   }),
   ordering_paused: null,
   service_unavailable: null,
   supplier_unavailable: openObject({
     outcome: openEnum(SUPPLIER_OUTCOMES),
   }),
+  client_outdated: null,
   internal: null,
 } satisfies Readonly<Record<ErrorCode, z.ZodType | null>>;
 
@@ -144,7 +154,7 @@ type Details = typeof ERROR_DETAILS;
 export type ErrorBody<C extends ErrorCode> = {
   code: C;
   message: string;
-  param?: string;
+  pointer?: string;
   retryable: boolean;
   retryAfterSeconds?: number;
   requestId: string;
@@ -156,7 +166,7 @@ export type KnownErrorBody = { [C in ErrorCode]: ErrorBody<C> }[ErrorCode];
 export type ErrorEnvelope = { error: KnownErrorBody | OpenFallback<"code"> };
 
 /**
- * `{ error: { code, message, param?, retryable, retryAfterSeconds?, details,
+ * `{ error: { code, message, pointer?, retryable, retryAfterSeconds?, details,
  * requestId } }`, picked by `code`: a known code whose §11 row lists details
  * carries them, parsed as that code's; one whose row shows "–" has none. An
  * unknown code falls back.
@@ -169,7 +179,10 @@ export const errorEnvelope = openObject({
       return openObject({
         code: z.literal(code),
         message: z.string(),
-        param: z.string().optional(),
+        pointer: z
+          .string()
+          .optional()
+          .describe("A JSON Pointer to the one field of the request the error is about, when there is one."),
         retryable: z.boolean(),
         retryAfterSeconds: z.number().int().optional(),
         ...(details ? { details } : {}),

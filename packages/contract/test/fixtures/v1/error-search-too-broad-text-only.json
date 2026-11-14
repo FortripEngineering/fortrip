@@ -20,7 +20,7 @@
                 }
               },
               "count": 3412,
-              "total": 3412,
+              "localityTotal": 3412,
               "includes": [
                 {
                   "place": {
@@ -45,7 +45,7 @@
                 }
               },
               "count": 2980,
-              "total": 2980,
+              "localityTotal": 2980,
               "includes": []
             },
             {
@@ -58,7 +58,7 @@
                 }
               },
               "count": 2511,
-              "total": 2511,
+              "localityTotal": 2511,
               "includes": []
             }
           ],

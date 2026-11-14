@@ -1,13 +1,14 @@
 import type { ErrorBody } from "./outputs/error-details.ts";
 
-/** A `rate_limited` error names the limit that was hit by this scope. */
-export type RateLimitScope = NonNullable<
+/** The name of a rate limit: a `rate_limited` error names the one that was
+ *  hit as `details.rateLimit`. */
+export type RateLimitName = NonNullable<
   ErrorBody<"rate_limited">["details"]
->["scope"];
+>["rateLimit"];
 
-/** Requests one token may make per scope in a window. */
+/** Requests one token may make against each rate limit in a window. */
 export const RATE_LIMITS: Record<
-  RateLimitScope,
+  RateLimitName,
   { limit: number; windowSeconds: number }
 > = {
   search: { limit: 10, windowSeconds: 60 },

@@ -5,17 +5,16 @@ import {
   type CommandGroupSpec,
   commandInvocation,
   type CommandSpec,
-  CURRENCIES,
   GLOBAL_FLAGS,
   HTTP_ROUTES,
-  order as orderSchema,
+  orderCancel,
   type RenderedTool,
   renderToolResult,
 } from "@fortrip/agent-contract";
 
 import { unwrap } from "./api.ts";
 import { authorizedRequest, login, logout, whoami } from "./auth.ts";
-import { cancelPreview, check, parseCommand, parseOptions } from "./commands.ts";
+import { cancelRequest, check, parseCommand, parseOptions } from "./commands.ts";
 import { resolveApiUrl, resolveMcpUrl } from "./credentials.ts";
 import {
   CliError,
@@ -23,11 +22,11 @@ import {
   type ExitCode,
   fieldLines,
   formatError,
+  localRequestId,
   notices,
   usageError,
 } from "./errors.ts";
 import { commandHelp, groupHelp, overallHelp } from "./help.ts";
-import { terminalQr } from "./qr.ts";
 import { VERSION } from "./version.ts";
 
 /** A global flag as typed: `--help` and `-h`. */
@@ -132,117 +131,111 @@ async function run(argv: string[]): Promise<Answer> {
       }
     }
   }
-  const preview = cancelPreview(spec, rest, process.env);
-  if (preview) return cancelOrder(apiUrl, spec, preview);
+  const mode = cancelRequest(spec, rest, process.env);
+  if (mode) return cancelOrder(apiUrl, spec, mode);
   const { method, path, body } = parseCommand(spec, rest, process.env);
-  if (spec.tool === "pay_order" && body) await inOrderCurrency(apiUrl, spec, rest, body);
+  if (spec.tool === "pay_order") await payableInUsd(apiUrl, spec, rest);
   const data = unwrap(await authorizedRequest(apiUrl, path, { method, body }));
   return { data, text: renderToolResult(spec.tool as RenderedTool, data, "cli") };
 }
 
-/** `orders pay`'s total is in the order's currency: read the order for it,
- *  set it on the total, and check the request again before it is sent. */
-async function inOrderCurrency(
-  apiUrl: string,
-  spec: CommandSpec,
-  rest: string[],
-  body: Record<string, unknown>,
-): Promise<void> {
+/** `orders pay` sends its total in USD, the one currency a token pays in.
+ *  The order is read first, so that one in another currency is not sent,
+ *  and the person is told how it is paid instead. */
+async function payableInUsd(apiUrl: string, spec: CommandSpec, rest: string[]): Promise<void> {
   const [orderId] = parseOptions(spec, rest).positionals as [string];
   const order = unwrap(await authorizedRequest(apiUrl, API.order(orderId), { method: "GET" }));
-  const currency = (order as { price?: { total?: { currency?: unknown } } } | null)?.price?.total?.currency;
-  if (typeof currency !== "string" || !(CURRENCIES as readonly string[]).includes(currency)) {
+  const currency = (order as { total?: { currency?: unknown } } | null)?.total?.currency;
+  const read = `\`${commandInvocation({ group: "orders", name: "get" })} ${orderId}\``;
+  if (typeof currency !== "string") {
+    throw new CliError(`Not sent: order ${orderId} shows no total to pay. Read it with ${read}.`, EXIT.error);
+  }
+  if (currency !== "USD") {
     throw new CliError(
-      `Not sent: the order ${orderId} has no price.total.currency in USD or CNY to pay in.`,
+      `Not sent: order ${orderId} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: ${read} shows it.`,
       EXIT.error,
     );
   }
-  body.total = { ...(body.total as Record<string, unknown>), currency };
-  check(spec, { ...body, orderId }, HTTP_ROUTES.pay_order, new Map());
 }
 
 /** An order as `orders cancel` reads it, field by field: the read may not
  *  be in the contract's shape. */
 type ReadOrder = {
   status?: unknown;
-  price?: { total?: { currency?: unknown } };
-  payment?: { status?: unknown };
-  cancel?: { available?: unknown; reason?: unknown; penalty?: { currency?: unknown } | null };
+  total?: { currency?: unknown };
+  cancel?: { action?: unknown; penalty?: { currency?: unknown } | null };
 } | null;
 
 /**
- * `orders cancel`, after one read of the order: without `--max-penalty` or
- * `--close`, or with `--max-penalty` on an unpaid order, it says what the
- * order allows and exits 2. `--close` closes an unpaid order, and answers
- * an expired one as it is. `--max-penalty` cancels in the currency of the
- * order's penalty, else of its total.
+ * `orders cancel` with its mode, after one read of the order. `--close`
+ * closes an unpaid order, and answers one already closed, or expired, as it
+ * is. `--max-penalty` cancels in the currency of the order's penalty, else
+ * of its total. The other mode's order (`--close` on one that can be
+ * cancelled, `--max-penalty` on one that can be closed) is not sent: it is
+ * refused here as the service refuses it (`modeRefused`). Any other order is
+ * sent, and the service answers for it: what blocks an order can pass, and
+ * an action this version does not know is not guessed at.
  */
 async function cancelOrder(
   apiUrl: string,
   spec: CommandSpec,
-  preview: NonNullable<ReturnType<typeof cancelPreview>>,
+  mode: NonNullable<ReturnType<typeof cancelRequest>>,
 ): Promise<Answer> {
-  const { flag, orderId, close, request } = preview;
-  const order = unwrap(await authorizedRequest(apiUrl, preview.path, { method: preview.method }));
+  const { orderId, close, request } = mode;
+  const order = unwrap(await authorizedRequest(apiUrl, mode.path, { method: mode.method }));
   const read = order as ReadOrder;
-  const closable = read?.cancel?.available === true && read.cancel.reason === "unpaid";
-  if (!request || (!close && closable)) throw usageError(notCancelled(spec, flag, orderId, order));
+  const action = read?.cancel?.action;
   if (close) {
-    if (read?.status === "expired") return { data: order, text: renderToolResult("cancel_order", order, "cli") };
-    if (!closable) {
-      if (read?.cancel?.available === true && read.cancel.reason === "cancellable") {
-        throw usageError(
-          `Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`${commandInvocation(spec)} ${orderId} ${flag} <amount>\`.`,
-        );
-      }
-      throw new CliError(["Not closed: nothing was sent.", ...orderLines(order)].join("\n"), EXIT.error);
+    if (read?.status === "closed" || read?.status === "expired") {
+      return { data: order, text: renderToolResult("cancel_order", order, "cli") };
     }
+    if (action === "cancel") throw modeRefused(orderId, order);
+    // A close that is answered closed the order: one paid meanwhile is
+    // refused with `order_not_cancellable`, never answered as it is.
     const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body: request.body }));
-    const text = renderToolResult("cancel_order", data, "cli");
-    if ((data as ReadOrder)?.status !== "expired") {
-      throw new CliError(["Not closed: it was paid meanwhile.", text].join("\n"), EXIT.error);
-    }
-    return { data, text };
+    return { data, text: renderToolResult("cancel_order", data, "cli") };
   }
+  if (action === "close") throw modeRefused(orderId, order);
   const penalty = read?.cancel?.penalty?.currency;
-  const currency = typeof penalty === "string" ? penalty : read?.price?.total?.currency;
+  const currency = typeof penalty === "string" ? penalty : read?.total?.currency;
   if (typeof currency !== "string") {
     throw new CliError(`Not sent: the order ${orderId} has no currency to send the penalty in.`, EXIT.error);
   }
   const body = request.body as Record<string, unknown>;
   body.maximumPenalty = { ...(body.maximumPenalty as Record<string, unknown>), currency };
-  check(spec, { ...body, orderId }, HTTP_ROUTES.cancel_order, new Map());
+  check(spec, { ...body, orderId }, HTTP_ROUTES.cancel_order);
   const data = unwrap(await authorizedRequest(apiUrl, request.path, { method: "POST", body }));
   return { data, text: renderToolResult("cancel_order", data, "cli") };
 }
 
-/** An order's hotel and Cancel lines, as `orders get` prints them. */
-function orderLines(order: unknown): string[] {
-  return renderToolResult("get_order", order, "cli")
-    .split("\n")
-    .filter((text) => text.startsWith("Hotel: ") || text.startsWith("Cancel: "));
-}
-
-/** What `orders cancel` says instead of cancelling: the order's hotel and
- *  Cancel lines and, when it can be cancelled now, the consent step and the
- *  command with the order's own penalty, or, when it can be closed, the
- *  command that closes it. */
-function notCancelled(spec: CommandSpec, flag: string, orderId: string, order: unknown): string {
-  const parsed = orderSchema.safeParse(order);
-  const cancel = parsed.success ? parsed.data.cancel : undefined;
-  const next =
-    cancel?.available && cancel.reason === "unpaid"
-      ? [
-          `Only once the user says they no longer want this order, run \`${commandInvocation(spec)} ${orderId} --close\`.`,
-        ]
-      : cancel?.available && cancel.penalty
-        ? [
-            `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`${commandInvocation(spec)} ${orderId} ${flag} ${cancel.penalty.amount}\`.`,
-          ]
-        : cancel
-          ? []
-          : [`${commandInvocation(spec)} needs ${flag}, the penalty the user agreed to.`];
-  return ["Not cancelled: nothing was sent.", ...orderLines(order), ...next].join("\n");
+/**
+ * The refusal of the other mode's order, as just read: what the
+ * service answers such a call, `order_not_cancellable` with the order's
+ * cancel state, made here so that nothing is sent. So it reads as the
+ * service's does, as text (the order's Cancel line, with the command for
+ * the mode that applies) and with `--json` (the envelope), and exits as it
+ * does. An order that does not say what can be done to it is not sent
+ * either.
+ */
+function modeRefused(orderId: string, order: unknown): CliError {
+  const cancel = orderCancel.safeParse((order as { cancel?: unknown } | null)?.cancel);
+  if (!cancel.success) {
+    const read = `\`${commandInvocation({ group: "orders", name: "get" })} ${orderId}\``;
+    return new CliError(
+      `Not sent: order ${orderId} doesn't show what can be done to it now. Read it with ${read}.`,
+      EXIT.error,
+    );
+  }
+  const message = "The order can't be cancelled or closed the way that was asked, and nothing was sent.";
+  return new CliError(message, EXIT.error, {}, {
+    error: {
+      code: "order_not_cancellable",
+      message,
+      retryable: false,
+      requestId: localRequestId(),
+      details: { orderId, cancel: cancel.data },
+    },
+  });
 }
 
 /** `whoami`, and `login` once signed in: the account,
@@ -278,19 +271,6 @@ function takeJson(argv: string[]): { json: boolean; argv: string[] } {
   return { json: kept.length < before.length, argv: [...kept, ...after] };
 }
 
-/** The WeChat Pay code of an `orders pay` answer's Alipay or WeChat Pay
- *  entry in `payment.methods`, drawn for the terminal;
- *  null when it isn't one, there is no code, or it doesn't fit. */
-function walletCode(argv: string[], data: unknown): string | null {
-  if (argv[0] !== "orders" || argv[1] !== "pay" || !process.stdout.isTTY) return null;
-  const methods = (data as { payment?: { methods?: unknown } } | null)?.payment?.methods;
-  const wallet = Array.isArray(methods)
-    ? (methods as { id?: unknown; wechatPay?: { qrData?: unknown } }[]).find((m) => m?.id === "stripe_alipay_wechat_pay")
-    : undefined;
-  const qrData = wallet?.wechatPay?.qrData;
-  return typeof qrData === "string" ? terminalQr(qrData, process.stdout.columns) : null;
-}
-
 async function main(): Promise<ExitCode> {
   const { json, argv } = takeJson(process.argv.slice(2));
   try {
@@ -303,8 +283,6 @@ async function main(): Promise<ExitCode> {
         process.stdout.write(`${JSON.stringify(output)}\n`);
       } else {
         process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
-        const code = walletCode(argv, data);
-        if (code) process.stdout.write(`Or scan this WeChat Pay code:\n${code}\n`);
       }
     }
     return EXIT.ok;

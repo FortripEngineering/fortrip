@@ -20,7 +20,7 @@
                 }
               },
               "count": 3911,
-              "total": 3911,
+              "localityTotal": 3911,
               "includes": [
                 {
                   "place": {
@@ -67,7 +67,7 @@
                 }
               },
               "count": 1762,
-              "total": 1762,
+              "localityTotal": 1762,
               "includes": [
                 {
                   "place": {
@@ -103,7 +103,7 @@
                 }
               },
               "count": 728,
-              "total": 728,
+              "localityTotal": 728,
               "includes": [
                 {
                   "place": {
@@ -128,7 +128,7 @@
                 }
               },
               "count": 540,
-              "total": 540,
+              "localityTotal": 540,
               "includes": []
             },
             {
@@ -141,7 +141,7 @@
                 }
               },
               "count": 515,
-              "total": 515,
+              "localityTotal": 515,
               "includes": []
             },
             {
@@ -154,7 +154,7 @@
                 }
               },
               "count": 312,
-              "total": 312,
+              "localityTotal": 312,
               "includes": []
             },
             {
@@ -167,7 +167,7 @@
                 }
               },
               "count": 150,
-              "total": 150,
+              "localityTotal": 150,
               "includes": []
             },
             {
@@ -180,7 +180,7 @@
                 }
               },
               "count": 140,
-              "total": 140,
+              "localityTotal": 140,
               "includes": []
             }
           ],

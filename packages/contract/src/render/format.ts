@@ -1,73 +1,86 @@
 import type { Money } from "../conventions/money.ts";
 import { countIsoDateDays } from "../dates.ts";
+import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
 
 /*
  * Small pieces every renderer shares. Values reach these after `parseOpen`,
- * so an open enum can hold any string: callers map the values they know and
- * show any other value as it came.
+ * so an open enum can hold any string: callers map the values they know,
+ * and show any other value as it came only when it reads as a code. A name
+ * is `theirs`, in quotes; an amount, a date or a time zone is a `token`.
  */
 
 export type Names = { en: string | null; zh: string | null };
 type Room = { adults: number; childrenAges: number[] };
 
 /** 31205 → "31,205". */
-export function num(n: number): string {
-  return n.toLocaleString("en-US");
+export function num(n: number): Ours {
+  return own(n.toLocaleString("en-US"));
 }
 
 /** Meters as kilometres with one decimal: 9012 → "9.0 km". */
-export function km(meters: number): string {
-  return `${(meters / 1000).toFixed(1)} km`;
+export function km(meters: number): Ours {
+  return ours`${own((meters / 1000).toFixed(1))} km`;
 }
 
-export function money(m: Money): string {
-  return `${m.currency} ${m.amount}`;
+export function money(m: Money): Ours {
+  return ours`${token("currency", m.currency)} ${token("amount", m.amount)}`;
 }
 
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${num(n)} ${n === 1 ? one : many}`;
+/** A count of things Fortrip names: `one` and `many` are words of ours. */
+export function plural(n: number, one: string, many = `${one}s`): Ours {
+  return ours`${num(n)} ${own(n === 1 ? one : many)}`;
 }
 
-/** The name, plus the other language's form when it differs. */
-export function named(name: string, names: Names): string {
+/** The name in quotes, plus the other language's form when it differs:
+ *  "Lakeside Garden Resort" ("湖畔花园度假酒店"). */
+export function named(name: string, names: Names): Ours {
   const other = [names.en, names.zh].find((n) => n && n !== name);
-  return other ? `${name} (${other})` : name;
+  return other ? ours`${theirs(name)} (${theirs(other)})` : theirs(name);
 }
 
-/** A known value's wording, or the raw value. */
-export function label(words: Record<string, string>, value: string): string {
-  return Object.hasOwn(words, value) ? words[value]! : value;
+/** A known value's wording. A value the package does not know is shown as
+ *  it came when it reads as a code, otherwise as `unknown`. */
+export function label(
+  words: Record<string, string>,
+  value: string,
+  unknown: Ours = ours`unknown`,
+): Ours {
+  return Object.hasOwn(words, value) ? own(words[value] as string) : code(value, unknown);
 }
 
-export function stayLine(checkIn: string, checkOut: string): string {
+export function stayLine(checkIn: string, checkOut: string): Ours {
   const nights = countIsoDateDays(checkIn, checkOut);
-  return `${checkIn} → ${checkOut} (${plural(nights, "night")})`;
+  return ours`${token("date", checkIn)} → ${token("date", checkOut)} (${plural(nights, "night")})`;
 }
 
-function partyOf(room: Room): string {
+function partyOf(room: Room): Ours {
   const adults = plural(room.adults, "adult");
   const n = room.childrenAges.length;
   if (n === 0) return adults;
-  const ages = room.childrenAges.join(", ");
-  return `${adults} and ${plural(n, "child", "children")} (${n === 1 ? "age" : "ages"} ${ages})`;
+  const ages = joined(room.childrenAges.map((age) => ours`${age}`), ", ");
+  return ours`${adults} and ${plural(n, "child", "children")} (${n === 1 ? "age" : "ages"} ${ages})`;
 }
 
 /** "1 room: 2 adults", "2 rooms, each 2 adults", or each room in turn. */
-export function party(rooms: Room[]): string {
+export function party(rooms: Room[]): Ours {
   const parties = rooms.map(partyOf);
-  if (parties.length === 1) return `1 room: ${parties[0]}`;
+  if (parties.length === 1) return ours`1 room: ${parties[0]!}`;
   if (parties.every((p) => p === parties[0])) {
-    return `${parties.length} rooms, each ${parties[0]}`;
+    return ours`${parties.length} rooms, each ${parties[0]!}`;
   }
-  return `${parties.length} rooms: ${parties.map((p, i) => `room ${i + 1} ${p}`).join("; ")}`;
+  return ours`${parties.length} rooms: ${joined(parties.map((p, i) => ours`room ${i + 1} ${p}`), "; ")}`;
 }
 
 /**
  * An instant in UTC, and in `timeZone` when one is given:
  * "2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai)".
  */
-export function when(instant: string, timeZone: string | null): string {
-  const utc = `${instant.slice(0, 10)} ${instant.slice(11, 16)} UTC`;
+export function when(instant: string, timeZone: string | null): Ours {
+  // The date and the minute of an RFC 3339 instant; anything else is shown
+  // whole, in quotes: it is not an instant of ours.
+  const read = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(instant);
+  if (!read) return theirs(instant);
+  const utc = ours`${own(read[1]!)} ${own(read[2]!)} UTC`;
   if (!timeZone) return utc;
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -79,20 +92,37 @@ export function when(instant: string, timeZone: string | null): string {
       minute: "2-digit",
       hourCycle: "h23",
     }).formatToParts(new Date(instant));
-    const part = (type: string) => parts.find((p) => p.type === type)?.value;
-    return `${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${timeZone})`;
+    // The formatter's own digits.
+    const part = (type: string) => own(String(parts.find((p) => p.type === type)?.value));
+    return ours`${utc} (${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")} ${token("timeZone", timeZone)})`;
   } catch {
     return utc;
   }
 }
 
-/** JSON text of a value that may not be JSON at all. */
-export function raw(value: unknown): string {
+/** The characters `JSON.stringify` leaves as they are that a reader or a
+ *  terminal could take as a line break or a control, or that a reader does
+ *  not see (the set `oneLine` removes). */
+const UNESCAPED = /[\u007f-\u009f\u2028\u2029\p{Default_Ignorable_Code_Point}\ufff9-\ufffb]/gu;
+
+/** A character as JSON escapes it, a surrogate pair for one past U+FFFF. */
+function escaped(character: string): string {
+  return Array.from({ length: character.length }, (_, i) =>
+    `\\u${character.charCodeAt(i).toString(16).padStart(4, "0")}`,
+  ).join("");
+}
+
+/** JSON text of a value that may not be JSON at all, on one line: its
+ *  strings are in JSON's quotes, as `theirs` are. */
+export function raw(value: unknown): Ours {
+  let text: string | undefined;
   try {
-    return JSON.stringify(value) ?? "no value";
+    text = JSON.stringify(value);
   } catch {
-    return String(value);
+    // A value JSON can't write (a cycle, a BigInt): its own words, quoted.
+    return theirs(String(value));
   }
+  return text === undefined ? ours`no value` : own(text.replace(UNESCAPED, escaped));
 }
 
 const WINDOWS: Record<string, string> = {
@@ -109,16 +139,17 @@ type RoomFacts = {
 };
 
 /** A room type's facts, each written out when not listed. */
-export function roomFacts(r: RoomFacts): string[] {
+export function roomFacts(r: RoomFacts): Ours[] {
   const area = r.areaSqm
     ? r.areaSqm.min === r.areaSqm.max
-      ? `${r.areaSqm.min} m²`
-      : `${r.areaSqm.min}–${r.areaSqm.max} m²`
-    : "size not stated";
+      ? ours`${r.areaSqm.min} m²`
+      : ours`${r.areaSqm.min}–${r.areaSqm.max} m²`
+    : ours`size not stated`;
+  const notListed = ours`window not listed`;
   return [
-    r.beds ? `beds: ${r.beds.text}` : "beds not listed",
+    r.beds ? ours`beds: ${theirs(r.beds.text)}` : ours`beds not listed`,
     area,
-    r.maxOccupancy === null ? "max occupancy not listed" : `max ${plural(r.maxOccupancy, "guest")}`,
-    r.window === null ? "window not listed" : label(WINDOWS, r.window),
+    r.maxOccupancy === null ? ours`max occupancy not listed` : ours`max ${plural(r.maxOccupancy, "guest")}`,
+    r.window === null ? notListed : label(WINDOWS, r.window, notListed),
   ];
 }

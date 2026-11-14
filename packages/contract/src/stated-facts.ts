@@ -5,7 +5,7 @@ export const SEARCH_RULES = {
   largeSettlementPopulation: 50_000,
   dominanceRatio: 100,
   nearDuplicateMeters: 5_000,
-  hubIncludes: 3,
+  localityIncludes: 3,
 } as const;
 
 /** How `POST /v1/orders` answers a success: `201` for a new order, `200` with the header for a replay. */

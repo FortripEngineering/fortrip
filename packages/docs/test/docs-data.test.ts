@@ -100,8 +100,8 @@ test("a command's page slug and invocation come from its group and name", () => 
   assert.equal(command("login")?.invocation, "fortrip login");
   // The tool pages' slugs are the tool names, dashed.
   assert.deepEqual(MCP_TOOLS.map((tool) => tool.slug).sort(), [
-    "book-hotel",
     "cancel-order",
+    "create-order",
     "get-hotel",
     "get-hotel-offers",
     "get-order",
@@ -144,7 +144,7 @@ test("a tool page links to the page of its CLI command", () => {
   const cli = (name: string) => MCP_TOOLS.find((t) => t.name === name)?.cli;
   assert.equal(cli("get_hotel_offers"), "fortrip hotels offers");
   assert.equal(cli("list_orders"), "fortrip orders list");
-  assert.equal(cli("book_hotel"), "fortrip hotels book");
+  assert.equal(cli("create_order"), "fortrip orders create");
 });
 
 test("a tool or command that answers an object links to its response schema", () => {

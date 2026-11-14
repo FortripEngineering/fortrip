@@ -69,11 +69,16 @@ function localCode(failure: CliError): string {
   }
 }
 
-/** `- /pointer: message` for each issue, as the contract renders the API's. */
+/** One line per issue: `- Field /pointer: message`, as the contract renders
+ *  the API's. An issue whose message already names the flag or the argument
+ *  the value was typed as (`--hotel: …`, `--total is required`, `<orderId>:
+ *  …`) is that message alone: the pointer says nothing a flag does not. */
 function issueLines(details: unknown): string[] | null {
   const issues = (details as { issues?: unknown } | null)?.issues;
   if (!Array.isArray(issues)) return null;
-  return issues.map((issue: { pointer?: unknown; message?: unknown }) => `- ${issue.pointer}: ${issue.message}`);
+  return issues.map((issue: { pointer?: unknown; message?: unknown }) =>
+    /^(?:--|<)/.test(String(issue.message)) ? `- ${issue.message}` : `- Field ${issue.pointer}: ${issue.message}`,
+  );
 }
 
 /**
@@ -82,7 +87,9 @@ function issueLines(details: unknown): string[] | null {
  * As text: Fortrip's error as the contract renders it (with the HTTP status
  * only for a code this version doesn't know), or `Error: <message>` and the
  * issues of a request the CLI refused; then the CLI's own facts and the
- * notices, one `name: value` line each.
+ * notices, one `name: value` line each. `client_outdated` is the service's
+ * message as it came and nothing else of the error: it says what happened
+ * and the command that updates the CLI.
  *
  * With `--json`, one line: `{ error, ...facts, ...notices }`, where `error`
  * is Fortrip's error object, or one shaped like it for the CLI's own
@@ -108,7 +115,9 @@ export function formatError(failure: CliError, json: boolean): string {
     return JSON.stringify({ error, ...Object.fromEntries(own.filter(([n]) => !inError(n))), ...notices });
   }
   const lines: string[] = [];
-  if (fromApi) {
+  if (fromApi?.code === "client_outdated" && typeof fromApi.message === "string") {
+    lines.push(fromApi.message);
+  } else if (fromApi) {
     const status = failure.details.status;
     const known = Object.hasOwn(ERROR_CODES, fromApi.code);
     lines.push(renderError(failure.envelope, known || typeof status !== "number" ? undefined : status, "cli"));

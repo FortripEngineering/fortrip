@@ -8,7 +8,7 @@ apart.
 
 It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
 ES2023 does. Its major version changes when the contract breaks, not with
-the API: `4.x` serves Fortrip API v1.
+the API: `6.x` serves Fortrip API v1.
 
 ```ts
 import { API, LIMITS, PUBLIC_ORIGINS, containsCardNumber } from "@fortrip/agent-contract";
@@ -25,22 +25,26 @@ It exports:
 - `searchHotelsInput`, `getHotelInput`, `hotelOffersInput`,
   `createOrderInput`, `getOrderInput`, `listOrdersInput`,
   `cancelOrderInput` and `payOrderInput`, the zod schemas of the requests,
-  with `sharedPaymentTokenOf(input)`, the token a parsed `payOrderInput`
-  pays with, and `searchResult`, `hotel`, `hotelOffersResult`, `order`,
+  with `offersPerHotel(limitPerHotel, hotelsWithOffers)`, the offers each
+  hotel of an offers call gets, and `misplacedKeys(schema, issues, sent)`,
+  where a key sent at the wrong depth belongs, with `misplacedKeyHint(key)`,
+  what to tell the caller about it, and `searchResult`, `hotel`,
+  `hotelOffersResult`, `order`,
   `orderList`, `paymentHandler` and `errorEnvelope`, the open schemas of the
   responses, with `ERROR_DETAILS`, each error code's `details`, and
   `parseOpen`, a parser that keeps unknown fields and values;
 - `COMMANDS`, `COMMAND_GROUPS` and `GLOBAL_FLAGS`, the CLI's commands, the
   groups they are typed after and its flags, `commandInvocation(spec)`, a
-  command as it is typed (`fortrip hotels search`), and `TOOLS`, the MCP
-  tools, with `MCP_OUTPUT`, `ORDER_NEXT_STEP`, `CANCEL_NEXT_STEP`,
-  `PAY_NEXT_STEP` and `WALLET_NEXT_STEP` (`cancelNextStep(surface)`,
-  `payNextStep(surface)` and `walletNextStep(surface)` word the last three for
-  `"mcp"` or `"cli"`);
+  command as it is typed (`fortrip hotels search`), `TOOLS`, the MCP
+  tools, and `SERVER_INFO`, what an MCP server for Fortrip says of itself;
 - `renderToolResult(tool, data, surface?)` and
-  `renderError(envelope, status?, surface?)`, the compact text of a result or
+  `renderError(envelope, status?, surface?)`, the whole text of a result or
   an error, naming tools (`"mcp"`, the default) or commands and flags
-  (`"cli"`), and `renderGuide(surface, topic)`, the agent
+  (`"cli"`): an MCP result is this one text block, with nothing added. The
+  rules a result ends with are exported too (`ORDER_NEXT_STEP`,
+  `CANCEL_NEXT_STEP`, `PAY_NEXT_STEP`, `PRESENTATION_HINT`, and
+  `cancelNextStep(surface)` and `payNextStep(surface)`, which word two of
+  them for `"mcp"` or `"cli"`), and `renderGuide(surface, topic)`, the agent
   guide as Markdown for `"mcp"`, `"claude-skill"` or `"cli"`;
 - field rules such as `containsCardNumber`, the guest-name rule and the date
   helpers, and `CONTRACT_VERSION`.

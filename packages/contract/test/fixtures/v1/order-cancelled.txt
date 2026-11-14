@@ -1,0 +1,12 @@
+Order ord_LakeCancelled0000000 · reference FT-C9R4WE · cancelled · created 2026-10-20 03:12 UTC · updated 2026-11-04 06:15 UTC
+Cancelled 2026-11-02 09:41 UTC: penalty kept USD 120.00, refund USD 246.00
+Hotel: "Lakeside Garden Resort" ("湖畔花园度假酒店") · htl_LakesideGarden000000 · 2026-11-20 → 2026-11-23 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds not listed, size not stated, max occupancy not listed, window not listed · room only
+Guests: "Wei Wang", "Jun Wang"
+Special requests: none
+Terms: partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
+Hotel confirmation number: "LGR-449120"
+Contact: "Wei Wang" · "wei.wang@example.com" · "+86 138 0013 8000"
+Total: USD 366.00 · payment refunded · card charged EUR 339.80
+Cancel: not available: it is already cancelled
+Manage: https://fortrip.ai/orders/ord_LakeCancelled0000000

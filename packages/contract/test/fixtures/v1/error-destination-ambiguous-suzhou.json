@@ -4,7 +4,7 @@
     "error": {
       "code": "destination_ambiguous",
       "message": "Several places in CN are named \"Suzhou\". Ask the user which one, then search it by placeId.",
-      "param": "/destination/name",
+      "pointer": "/destination/name",
       "retryable": false,
       "details": {
         "name": "Suzhou",
@@ -18,7 +18,6 @@
               "zh": "苏州"
             },
             "kind": "district",
-            "scope": "area",
             "cityLike": true,
             "population": 12748262,
             "region": {
@@ -35,7 +34,6 @@
               "lng": 120.59538
             },
             "hotels": {
-              "scope": "area",
               "radiusMeters": null,
               "count": 9210
             }
@@ -48,7 +46,6 @@
               "zh": "宿州"
             },
             "kind": "district",
-            "scope": "area",
             "cityLike": false,
             "population": 5324476,
             "region": {
@@ -65,7 +62,6 @@
               "lng": 116.97889
             },
             "hotels": {
-              "scope": "area",
               "radiusMeters": null,
               "count": 512
             }

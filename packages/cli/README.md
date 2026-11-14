@@ -6,7 +6,7 @@ are both `fortrip`; they talk to Fortrip API v1, `https://api.fortrip.ai/v1`.
 
 ```bash
 npx -y fortrip login
-npx -y fortrip hotels search --place-name Bangkok --country TH --check-in 2026-11-10 --check-out 2026-11-12 --room 2
+npx -y fortrip hotels search --place-name Bangkok --country TH --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
 ```
 
 ## Install and run
@@ -50,8 +50,10 @@ link is approved.
 You stay signed in. Access tokens are short-lived and the CLI renews them
 itself, before they run out; refresh tokens don't expire, so the sign-in lasts
 until you run `fortrip logout`, which revokes this machine's sign-in and
-deletes it (other machines stay signed in). `fortrip whoami` prints the
-signed-in account.
+deletes it (other machines stay signed in). When Fortrip can't be reached, or
+no longer takes this version of the CLI, `logout` deletes the sign-in all the
+same and warns that it was not revoked. `fortrip whoami` prints the signed-in
+account.
 
 The sign-in is saved in `~/.config/fortrip/credentials.json` (`$XDG_CONFIG_HOME`
 is honoured), mode `0600`, per API URL, so a token is only sent to the server
@@ -77,24 +79,24 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | Command | What it does |
 |---|---|
 | `hotels search` | Find hotels in a place, near a point or by name, with indicative prices |
-| `hotels get <hotelId>` | Hotel details: description, policies, amenities and rooms |
+| `hotels get <hotelId>` | Hotel details: description, policies, amenities and room types |
 | `hotels offers` | Live bookable offers for up to 15 hotels |
-| `hotels book` | Order an offer: an unpaid order with a payment link |
+| `orders create` | Create an unpaid order for an offer, with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
 | `orders cancel <orderId>` | Cancel a paid order under its terms (--max-penalty), or close an unpaid one (--close) |
-| `orders pay <orderId>` | Pay an order with a Link token (US and Canada) or with Alipay or WeChat Pay, instead of its payment link |
+| `orders pay <orderId>` | Pay an order with a Link token (US and Canada), instead of its payment link |
 | `login` | Sign in through the browser |
 | `logout` | Revoke and forget the saved token |
 | `whoami` | Show the signed-in account |
 | `mcp` | Run an MCP server over stdio for local clients, bridged to Fortrip's hosted server |
 
 ```bash
-fortrip hotels search --place-name Tokyo --country JP --check-in 2026-11-10 --check-out 2026-11-12 --room 2
-fortrip hotels offers --hotel <hotelId> --check-in 2026-11-10 --check-out 2026-11-12 --room 2 --room 2
+fortrip hotels search --place-name Tokyo --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
+fortrip hotels offers --hotel <hotelId> --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --room 2
 ```
 
-`hotels search`, `hotels offers` and `hotels book` also accept `--body '<json>'`
+`hotels search`, `hotels offers` and `orders create` also accept `--body '<json>'`
 or `--body @file.json` with the raw request body; flags override its fields.
 
 `--room` gives one room's party, as `adults` or `adults:age,age` with each
@@ -103,11 +105,9 @@ child of 6, is `--room 2 --room 2:6`. `hotels search` accepts rooms that
 differ; `hotels offers` takes one party per call, so every room must be the
 same.
 
-`hotels book` creates an unpaid order and prints a payment link for it.
+`orders create` creates an unpaid order and prints a payment link for it.
 Nothing is charged until the person pays on the page the link opens, or
-approves a shared payment token for `orders pay` in their wallet, or
-scans the WeChat Pay code or opens the Alipay link that
-`orders pay --method stripe_alipay_wechat_pay` prints. Orders
+approves a shared payment token for `orders pay` in their wallet. Orders
 are paid in the currency of the offers they come from (`--currency`).
 
 `orders get` and `orders list` say of each order whether it can be cancelled
@@ -117,9 +117,11 @@ the person agreed to exactly as shown; if the penalty has gone up since,
 nothing changes and the command exits 1 with `cancellation_changed`. An
 unpaid order is closed instead, once the person says they no longer want it:
 `orders cancel <orderId> --close` closes it, nothing is charged, and it
-becomes `expired`. Without `--max-penalty` or `--close` it changes nothing:
-it prints the order's penalty and refund, or that it can be closed, and
-exits 2.
+becomes `closed`. Without `--max-penalty` or `--close` the command is
+refused with exit 2 and nothing is sent: `orders get` shows the order's Cancel
+line, with the command to run. A flag that doesn't fit the order (`--close`
+on a paid one, `--max-penalty` on an unpaid one) is not sent either: the
+command answers `order_not_cancellable` and exits 1.
 
 ## For AI agents
 
@@ -135,7 +137,7 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
 `search_hotels`, `get_hotel`, `get_hotel_offers`,
-`book_hotel`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
+`create_order`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the
@@ -146,14 +148,25 @@ Clients that start local servers can run the CLI as a bridge. `fortrip mcp`
 runs an MCP server on stdio that forwards to the hosted server with your saved
 sign-in.
 
+A tool's result is one block of text, the same from the bridge as from the
+hosted server; an error is a tool error (`isError: true`) whose one block of
+text says what happened and what to do next, with Fortrip's error envelope in
+`_meta["ai.fortrip/error"]`. For the JSON of a result, use a command with
+`--json`.
+
 You can add the bridge to a client before you sign in: signed out, it still
 starts and lists its tools. A tool call is then answered with a tool error
-(`isError: true`, code `unauthenticated`) whose message says to run
+(`isError: true`, code `unauthenticated`) whose text says to run
 `npx -y fortrip login` in a terminal, or to open the sign-in link it names and
 approve it. Once you have, the next tool call works, with no restart. If a
 sign-in stops working later, only the request that hit it fails, the same way
 for a tool call; any other request that hits a sign-in problem gets the
 JSON-RPC error `-32001` instead. The server keeps running.
+
+When this version of the CLI is too old for Fortrip, a tool call is answered
+with the tool error `client_outdated`, whose text says so and gives the
+command that updates the CLI. Update it, then restart the server in your
+client.
 
 Claude Desktop (Settings, Developer, Edit Config; on macOS
 `~/Library/Application Support/Claude/claude_desktop_config.json`, on Windows
@@ -212,9 +225,10 @@ that starts with `local_`.
 |---|---|
 | 0 | Success |
 | 1 | Any other error, including the answers of the API that aren't mistakes in the request, such as `destination_ambiguous` or `offer_changed` (`retryable` says whether it is worth one retry) |
-| 2 | Invalid arguments (local, or the API's `invalid_request`) |
+| 2 | Invalid arguments (local, or the API's `invalid_request`). Found locally, nothing is sent, and each issue names its flag (`--total is required`), or its JSON Pointer when the value came from `--body` |
 | 3 | Not signed in, or the sign-in wasn't accepted; `loginUrl` on stderr |
-| 4 | Rate limited (`retryAfterSeconds` on stderr) |
+| 4 | Rate limited: stderr says when to retry (`Retryable: retry after 7 s.`; `retryAfterSeconds` with `--json`) |
+| 5 | This version of the CLI is too old for Fortrip (`client_outdated`): stderr is Fortrip's message, with the command that updates the CLI. Update it, then run the command again |
 
 ## Support
 

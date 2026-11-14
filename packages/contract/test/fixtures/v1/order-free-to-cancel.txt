@@ -1,0 +1,13 @@
+Order ord_BundFreeCancel000000 · reference FT-B4T8NE · confirmed · created 2026-11-01 09:05 UTC · updated 2026-11-01 09:20 UTC
+Hotel: "The Bund Riverside Hotel" ("外滩江畔酒店") · htl_BundRiverside0000000 · 2026-11-14 → 2026-11-16 (2 nights) · 1 room: 2 adults · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds: "1 king bed", 32 m², max 2 guests, window · breakfast for 2 guests per room (labelled "Breakfast for 2")
+Guests: "Hannah Weber", "Jonas Weber"
+Special requests: none
+Terms: free cancellation until 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai), then USD 182.50 from 2026-11-12 16:00 UTC (2026-11-13 00:00 Asia/Shanghai) · instant confirmation · nothing to pay at the property
+Hotel confirmation number: "BRH-771045"
+Contact: "Hannah Weber" · "hannah.weber@example.com" · "+49 151 2345 6789"
+Total: USD 365.00 · payment paid
+Cancel: can cancel now: penalty USD 0.00, refund USD 365.00 (only after the user's yes: call cancel_order { orderId: "ord_BundFreeCancel000000", maximumPenalty: { amount: "0.00", currency: "USD" } })
+Manage: https://fortrip.ai/orders/ord_BundFreeCancel000000
+
+Before you call cancel_order with maximumPenalty, show the user the order's stay (hotel, dates) and the penalty and the refund on its Cancel line (amount and currency), then end your reply by asking them to confirm the cancellation, and wait for a clear yes. Then make the call that Cancel line gives, exactly as shown: its maximumPenalty is the penalty on that line, never a figure from anywhere else. Never state a refund the order's text does not show. This is for a paid order, one whose Cancel line says it can be cancelled; an unpaid order is closed instead, with close: true and no maximumPenalty, only once the user says they no longer want it.

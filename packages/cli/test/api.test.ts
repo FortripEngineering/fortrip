@@ -42,6 +42,7 @@ describe("unwrap", () => {
     assert.equal(exitCodeOf(() => unwrap(response(401, envelope("unauthenticated")))), EXIT.unauthenticated);
     assert.equal(exitCodeOf(() => unwrap(response(429, envelope("rate_limited")))), EXIT.rateLimited);
     assert.equal(exitCodeOf(() => unwrap(response(400, envelope("invalid_request")))), EXIT.usage);
+    assert.equal(exitCodeOf(() => unwrap(response(426, envelope("client_outdated")))), EXIT.clientOutdated);
     for (const [status, code] of [
       [400, "cursor_invalid"],
       [404, "not_found"],
@@ -73,7 +74,10 @@ describe("unwrap", () => {
       invalid_request: EXIT.usage,
       unauthenticated: EXIT.unauthenticated,
       rate_limited: EXIT.rateLimited,
+      client_outdated: EXIT.clientOutdated,
     });
+    // Each exit code is its own number.
+    assert.deepEqual(Object.values(EXIT), [0, 1, 2, 3, 4, 5]);
     assert.deepEqual(EXIT_BY_STATUS, { 400: EXIT.usage, 401: EXIT.unauthenticated, 429: EXIT.rateLimited });
     for (const [code, exit] of Object.entries(EXIT_BY_CODE)) {
       assert.equal(exitCodeOf(() => unwrap(response(500, envelope(code)))), exit, code);

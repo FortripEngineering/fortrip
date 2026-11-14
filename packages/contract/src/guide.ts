@@ -18,9 +18,10 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  *   `fortrip` (`{{tool:hotels search}}`): `search_hotels` (mcp),
  *   `fortrip:search_hotels` (claude-skill), `fortrip hotels search` (cli).
  *   It throws on a surface without that tool: MCP has no `whoami`.
- * - `{{arg:<field>}}` names an input field: `rooms`, or the CLI's `--rooms`.
- * - `{{limit:<key>}}` is a number from `LIMITS`; `{{support}}` is the
- *   support address.
+ * - `{{arg:<field>}}` names an input field: `text`, or the CLI's `--text`.
+ * - `{{limit:<key>}}` is a number from `LIMITS`, and `{{km:<key>}}` a
+ *   distance of `LIMITS` in meters, read in kilometres ("8 km");
+ *   `{{support}}` is the support address.
  * - `{{#if <surface> …}}…{{/if}}` keeps its text only on the surfaces it
  *   names, and nests. A tag alone on its line takes the line with it.
  *
@@ -125,6 +126,9 @@ function resolve(token: string, surface: GuideSurface, shown: boolean): string {
   if (name !== undefined && rest.length === 0) {
     if (kind === "limit" && Object.hasOwn(LIMITS, name)) {
       return String(LIMITS[name as keyof typeof LIMITS]);
+    }
+    if (kind === "km" && /Meters/.test(name) && Object.hasOwn(LIMITS, name)) {
+      return `${Number(LIMITS[name as keyof typeof LIMITS]) / 1000} km`;
     }
     if (kind === "tool") {
       const spec = COMMANDS.find(

@@ -19,7 +19,7 @@ import {
 } from "../src/credentials.ts";
 import { CliError, EXIT, notices } from "../src/errors.ts";
 import { cli } from "./helpers/cli.ts";
-import { envelope, type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
+import { CLIENT_OUTDATED, envelope, type FakeApi, startFakeApi } from "./helpers/fake-api.ts";
 
 let api: FakeApi;
 let apiUrl: string;
@@ -827,6 +827,75 @@ describe("logout and whoami", () => {
   });
 });
 
+/*
+ * Forgetting a session on this machine is the user's own act: it must not
+ * need the service. A CLI too old for the service, or one that is offline,
+ * could otherwise never sign out.
+ */
+describe("logout when the service can't be asked to revoke", () => {
+  const NOT_REVOKED = /^The sign-in was removed from this machine, but Fortrip was not told to revoke it: /;
+
+  it("a CLI too old for the service still forgets the session, revokes nothing, and says so", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.config = [CLIENT_OUTDATED];
+    assert.deepEqual(await logout(apiUrl), { loggedOut: true, apiUrl, revoked: false });
+    assert.equal(await loadSession(apiUrl), null);
+    assert.deepEqual(api.revoked, []);
+    // The update command reaches the user: it is Fortrip's own message.
+    assert.match(String(notices.warning), NOT_REVOKED);
+    assert.ok(String(notices.warning).endsWith(CLIENT_OUTDATED.body.error.message));
+
+    // The command: signed out, exit 0, the warning beside the answer.
+    await saveSession(apiUrl, api.session());
+    api.scripts.config = [CLIENT_OUTDATED];
+    const run = await cli(["logout"], cliEnv());
+    assert.equal(run.code, 0, run.stderr);
+    assert.match(run.stdout, new RegExp(`^Logged out of ${apiUrl}\\.\nwarning: The sign-in was removed from this machine, but Fortrip was not told to revoke it: `));
+    assert.equal(await loadSession(apiUrl), null);
+    const again = await cli(["logout"], cliEnv());
+    assert.equal(again.code, EXIT.unauthenticated);
+  });
+
+  it("a service that can't be reached: the session is forgotten all the same", async () => {
+    // Nothing listens there: the sign-in config can't be read.
+    const offline = "http://127.0.0.1:9";
+    const session = api.session();
+    await saveSession(offline, session);
+    assert.deepEqual(await logout(offline), { loggedOut: true, apiUrl: offline, revoked: false });
+    assert.equal(await loadSession(offline), null);
+    assert.match(String(notices.warning), NOT_REVOKED);
+    assert.match(String(notices.warning), /Could not reach http:\/\/127\.0\.0\.1:9/);
+  });
+
+  it("a revocation endpoint that can't be reached: the same, with the recovery files", async () => {
+    const saved = api.session();
+    await saveSession(apiUrl, saved);
+    const older = api.session({ expiresAt: Date.now() + 60_000 });
+    await writeFile(
+      join(dirname(credentialsPath()), "credentials.recovered-1-a.json"),
+      JSON.stringify({ version: 2, sessions: { [apiUrl]: older } }),
+    );
+    const config = (await (await fetch(`${apiUrl}/v1/auth/config`)).json()) as Record<string, unknown>;
+    api.scripts.config = [{ status: 200, body: { ...config, revocationEndpoint: "http://127.0.0.1:9/oauth/token/revoke" } }];
+    assert.deepEqual(await logout(apiUrl), { loggedOut: true, apiUrl, revoked: false });
+    assert.equal(await loadSession(apiUrl), null);
+    assert.deepEqual(await loadRecoveredSessions(apiUrl), []);
+    assert.deepEqual(api.revoked, []);
+    assert.match(String(notices.warning), NOT_REVOKED);
+  });
+
+  it("a service that answers and refuses is another matter: the session is kept, so logout can be rerun", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.config = [{ status: 503, body: envelope("service_unavailable", "Try again shortly.", { retryable: true }) }];
+    const error = await failure(logout(apiUrl));
+    assert.equal(error.exitCode, EXIT.error);
+    assert.deepEqual(await loadSession(apiUrl), session);
+    assert.equal(notices.warning, undefined);
+  });
+});
+
 describe("a re-login revokes the session it replaced", () => {
   it("an agent command's re-login revokes the replaced refresh token, never the new one", async () => {
     const old = api.session();
@@ -889,6 +958,63 @@ describe("a re-login revokes the session it replaced", () => {
     await refreshSession(apiUrl, saved.accessToken);
     assert.equal(api.counts.refreshes, 1);
     assert.deepEqual(api.revoked, []);
+  });
+});
+
+// The service refuses a CLI whose major is behind its own with
+// HTTP 426, also on the endpoint the CLI reads before it signs in.
+describe("a CLI too old for the service (client_outdated)", () => {
+  const { message } = CLIENT_OUTDATED.body.error;
+
+  it("login says so before it starts a device login, and shows no code or link", async () => {
+    api.scripts.config = [CLIENT_OUTDATED];
+    const error = await failure(runLogin());
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.deepEqual(error.envelope, CLIENT_OUTDATED.body);
+    assert.equal(api.counts.config, 1);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(logs, []);
+
+    // The command: Fortrip's message alone on stderr, and a code of its own.
+    api.scripts.config = [CLIENT_OUTDATED];
+    const run = await cli(["login", "--no-browser"], cliEnv());
+    assert.equal(run.code, 5);
+    assert.equal(run.stdout, "");
+    assert.equal(run.stderr, `${message}\n`);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.equal(api.counts.polls, 0);
+  });
+
+  it("a signed-out command exits 5 with the message instead of a sign-in link", async () => {
+    api.scripts.config = [CLIENT_OUTDATED];
+    const error = await failure(requireToken(apiUrl));
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.equal(error.details.loginUrl, undefined);
+
+    api.scripts.config = [CLIENT_OUTDATED];
+    const text = await cli(["whoami"], cliEnv());
+    assert.equal(text.code, 5);
+    assert.equal(text.stderr, `${message}\n`);
+
+    api.scripts.config = [CLIENT_OUTDATED];
+    const json = await cli(["whoami", "--json"], cliEnv());
+    assert.equal(json.code, 5);
+    assert.deepEqual(JSON.parse(json.stderr), { ...CLIENT_OUTDATED.body, status: 426 });
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.deepEqual(await loadPendingLogins(apiUrl), []);
+  });
+
+  it("a signed-in command exits 5: one request, no refresh, no sign-in, the session kept", async () => {
+    const session = api.session();
+    await saveSession(apiUrl, session);
+    api.scripts.me = [CLIENT_OUTDATED];
+    const error = await failure(whoami(apiUrl));
+    assert.equal(error.exitCode, EXIT.clientOutdated);
+    assert.equal(error.message, message);
+    assert.equal(api.counts.me, 1);
+    assert.equal(api.counts.refreshes, 0);
+    assert.equal(api.counts.deviceStarts, 0);
+    assert.equal((await loadSession(apiUrl))?.accessToken, session.accessToken);
   });
 });
 

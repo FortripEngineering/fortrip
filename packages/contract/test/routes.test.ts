@@ -28,13 +28,13 @@ describe("HTTP routes", () => {
       routePath(HTTP_ROUTES[tool], input);
     assert.equal(p("search_hotels", {}), API.hotelSearch);
     assert.equal(p("get_hotel_offers", {}), API.hotelOffers);
-    assert.equal(p("book_hotel", {}), API.orders);
+    assert.equal(p("create_order", {}), API.orders);
     assert.equal(p("get_hotel", { hotelId: id }), API.hotel(id));
     assert.equal(
-      p("get_hotel", { hotelId: id, include: "rooms", locale: "zh" }),
-      API.hotel(id, { rooms: true, locale: "zh" }),
+      p("get_hotel", { hotelId: id, include: "roomTypes", locale: "zh" }),
+      API.hotel(id, { roomTypes: true, locale: "zh" }),
     );
-    assert.match(p("get_hotel", { hotelId: "h1", include: "rooms" }), /\?include=rooms$/);
+    assert.match(p("get_hotel", { hotelId: "h1", include: "roomTypes" }), /\?include=roomTypes$/);
     assert.equal(p("get_order", { orderId: id }), API.order(id));
     assert.equal(p("get_order", { orderId: id, locale: "en" }), API.order(id, { locale: "en" }));
     assert.equal(p("cancel_order", { orderId: id }), API.orderCancel(id));

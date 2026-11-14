@@ -1,0 +1,11 @@
+Order ord_LakeAttention0000000 · reference FT-A7N5QJ · needs attention from Fortrip · created 2026-10-20 03:12 UTC · updated 2026-10-20 04:55 UTC
+Hotel: "Lakeside Garden Resort" ("湖畔花园度假酒店") · htl_LakesideGarden000000 · 2026-11-20 → 2026-11-23 (3 nights) · 1 room: 2 adults and 2 children (ages 5, 9) · time zone Asia/Shanghai
+Room: "Deluxe King Room", beds not listed, size not stated, max occupancy not listed, window not listed · room only
+Guests: "Amara Okafor"
+Special requests: none
+Terms: partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 16:00 UTC (2026-11-19 00:00 Asia/Shanghai) · confirmation on request, within 60 min · fees not in the total: resort fee CNY 80.00, per night, mandatory
+Hotel confirmation number: none yet
+Contact: "Amara Okafor" · "amara.okafor@example.com" · no phone on record
+Total: USD 366.00 · payment paid
+Cancel: not available: Fortrip is looking into this order; for help, the user emails info@fortrip.ai with the order's reference
+Manage: https://fortrip.ai/orders/ord_LakeAttention0000000

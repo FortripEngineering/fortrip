@@ -10,12 +10,16 @@ import {
   DOCS_ORIGIN,
   FILTERABLE_AMENITIES,
   GLOBAL_FLAGS,
+  cancelNextStep,
   LIMITS,
   MCP_SERVER_URL,
+  ORDER_NEXT_STEP,
   ORDER_STATUSES,
-  PAY_INPUT_WAYS,
   PAY_WAYS,
   PAYMENT_STATUSES,
+  payNextStep,
+  PRESENTATION_HINT,
+  renderToolResult,
   TOOLS,
 } from "@fortrip/agent-contract";
 import { ENABLED_REGIONS } from "@fortrip/agent-contract/regions";
@@ -25,7 +29,7 @@ import { OPERATIONS } from "../lib/openapi/build.ts";
 import { MODEL_READS } from "../lib/markdown/pages.ts";
 import { CLIENT_IDS, CLIENT_SETUP, MCP_REGISTRY } from "../lib/prose/clients.ts";
 import { PRE_RELEASE_POLICY } from "../lib/prose/compatibility.ts";
-import { MCP_CONTENT } from "../lib/prose/mcp-content.ts";
+import { MCP_TEXT_RULES, RULE_DOCS } from "../lib/prose/mcp-content.ts";
 import { ORDER_STATUS_DOCS, PAYMENT_STATUS_DOCS } from "../lib/prose/order-statuses.ts";
 import { PAY_WAY_DOCS } from "../lib/prose/pay-ways.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
@@ -34,7 +38,7 @@ import { ERROR_ROWS } from "../lib/reference/error-docs.ts";
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { RESPONSE_DOCS, responseDoc, responseDocFor } from "../lib/reference/response-docs.ts";
+import { RESPONSE_DOCS, responseDoc } from "../lib/reference/response-docs.ts";
 import { inputRows } from "../lib/reference/schema-rows.ts";
 import { pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
 
@@ -54,10 +58,6 @@ const unescape = (text: string) =>
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">")
     .replaceAll("&amp;", "&");
-
-/** "`a`, `b` and `c`" (or `last`), as the pages write a list of names. */
-const codeList = (names: string[], last = "and") =>
-  names.map((name) => `\`${name}\``).reduce((list, name, i) => `${list}${i === names.length - 1 ? ` ${last} ` : ", "}${name}`);
 
 /** `assert.ok(text.includes(part))` for each part, naming the misses. */
 function includesAll(text: string, parts: readonly string[], where: string) {
@@ -196,7 +196,7 @@ describe("Markdown pages", () => {
   it("/api.md: every endpoint, the pay inputs and the pre-release policy", () => {
     const markdown = pageMarkdown("/api");
     includesAll(markdown, ENDPOINTS.map((e) => `\`${e.method} ${e.path}\``), "endpoint table");
-    assert.ok(markdown.includes(`exactly one of ${codeList(Object.keys(PAY_INPUT_WAYS), "or")}, for the way it pays.`), "pay inputs");
+    assert.ok(markdown.includes("takes `sharedPaymentToken`, the token the user approved for the order, and `total`"), "pay inputs");
     assert.ok(markdown.includes(`[changelog](${DOCS_ORIGIN}/changelog.md)`));
     assert.ok(markdown.includes("Pre-release: breaking changes ship as a new major version"));
     assert.ok(pageMarkdown("/changelog").includes(PRE_RELEASE_POLICY.split(". ")[0]!));
@@ -211,26 +211,56 @@ describe("Markdown pages", () => {
     includesAll(markdown, [`\`${MCP_SERVER_URL}\``, `\`${MCP_REGISTRY.name}\``], "remote server");
   });
 
-  it("/mcp.md, /cli.md: the tool and command lists, content blocks, flags and the raw body", () => {
+  it("/mcp.md, /cli.md: the tool and command lists, the rules that end a result, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
     includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
-    // The tools whose content is more than the compact text, by the block they add.
-    for (const [block, phrase] of [
-      ["presentation_hint", "the presentation hint"],
-      ["wechat_code", "WeChat Pay code first"],
-    ] as const) {
-      const tools = MCP_TOOLS.filter((tool) => MCP_CONTENT[tool.name].includes(block)).map((tool) => tool.name);
-      assert.ok(tools.length > 0, block);
-      const line = mcp.split("\n").find((l) => l.includes(phrase)) ?? "";
-      includesAll(line, tools.map((tool) => `\`${tool}\``), block);
+    // The rules that end a result's text, each on the line of the tools that carry it.
+    for (const rule of Object.keys(RULE_DOCS) as Array<keyof typeof RULE_DOCS>) {
+      const tools = MCP_TOOLS.filter((tool) => MCP_TEXT_RULES[tool.name].includes(rule)).map((tool) => tool.name);
+      assert.ok(tools.length > 0, rule);
+      const line = mcp.split("\n").find((l) => l.startsWith("- ") && l.includes(` end with ${RULE_DOCS[rule].name}`)) ?? "";
+      includesAll(line, tools.map((tool) => `\`${tool}\``), rule);
     }
-    const nextStep = TOOLS.filter((tool) => responseDocFor(tool.name)?.mcpNextStep).map((tool) => tool.name);
-    assert.ok(nextStep.length > 0);
-    assert.ok(mcp.includes(`An answer of ${codeList(nextStep)} that holds`), "nextStep tools");
     const cli = pageMarkdown("/cli");
     includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");
     includesAll(cli, GLOBAL_FLAGS.map((flag) => `--${flag.flag}`), "global flags");
     assert.ok(cli.includes(JSON.stringify(RAW_BODY_EXAMPLE)));
+  });
+
+  // MCP_TEXT_RULES says in which order the rules end a text: checked against
+  // the contract's own renderer, on a page with an order to pay by link or
+  // token and a paid order to cancel.
+  it("the rules of a tool's result come in the order the contract writes them", () => {
+    const payable = JSON.parse(readFileSync(new URL("../lib/reference/fixtures/order-awaiting-payment.json", import.meta.url), "utf8"));
+    assert.ok(payable.payment.url && payable.payment.tokenRequest);
+    const cancellable = {
+      ...payable,
+      status: "confirmed",
+      payment: { ...payable.payment, status: "paid", url: null, expiresAt: null, tokenRequest: null },
+      cancel: { action: "cancel", blockedBy: null, penalty: { amount: "10.00", currency: "USD" }, refund: { amount: "122.40", currency: "USD" } },
+    };
+    const paragraphs: Record<string, string> = {
+      cancel: cancelNextStep("mcp"),
+      consent: ORDER_NEXT_STEP,
+      pay: payNextStep("mcp"),
+      presentation: PRESENTATION_HINT,
+    };
+    const page = renderToolResult("list_orders", { data: [payable, cancellable], nextCursor: null });
+    const order = page.split("\n\n").flatMap((block) => Object.keys(paragraphs).filter((rule) => paragraphs[rule] === block));
+    assert.deepEqual(order, [...MCP_TEXT_RULES.list_orders]);
+    assert.deepEqual(order, ["cancel", "consent", "pay"]);
+    assert.deepEqual([...MCP_TEXT_RULES.get_order], order);
+    // A new order has no cancel rule: the consent rule, then the pay rule.
+    const created = renderToolResult("create_order", payable);
+    assert.ok(created.endsWith(`\n\n${MCP_TEXT_RULES.create_order.map((rule) => paragraphs[rule]).join("\n\n")}`));
+    // The answer of a cancellation or of a payment carries the rules of what it holds, as a read does.
+    for (const tool of ["cancel_order", "pay_order"] as const) {
+      assert.deepEqual([...MCP_TEXT_RULES[tool]], order, tool);
+      const rulesOf = (data: unknown) =>
+        renderToolResult(tool, data).split("\n\n").flatMap((block) => Object.keys(paragraphs).filter((rule) => paragraphs[rule] === block));
+      assert.deepEqual(rulesOf(payable), ["consent", "pay"], tool);
+      assert.deepEqual(rulesOf(cancellable), ["cancel"], tool);
+    }
   });
 
   it("/errors.md: every error code, rate limit scope and limit", () => {
@@ -313,7 +343,7 @@ describe("Markdown pages", () => {
       }
       assert.doesNotMatch(markdown, /\. the JSON body/, op.id);
     }
-    assert.match(pageMarkdown("/api/reference/book_hotel"), /The JSON body holds every field\./);
+    assert.match(pageMarkdown("/api/reference/create_order"), /The JSON body holds every field\./);
     assert.match(pageMarkdown("/api/reference/pay_order"), /Path: `orderId`; the JSON body holds the rest\./);
   });
 });

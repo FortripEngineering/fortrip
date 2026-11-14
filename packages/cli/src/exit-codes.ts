@@ -8,6 +8,9 @@ export const EXIT = {
   usage: 2,
   unauthenticated: 3,
   rateLimited: 4,
+  /** The service no longer takes this version of the CLI: update it. A code
+   *  of its own, so an agent can tell "update me" from a failed request. */
+  clientOutdated: 5,
 } as const;
 
 export type ExitCode = (typeof EXIT)[keyof typeof EXIT];
@@ -17,6 +20,7 @@ export const EXIT_BY_CODE: Readonly<Partial<Record<ErrorCode, ExitCode>>> = {
   invalid_request: EXIT.usage,
   unauthenticated: EXIT.unauthenticated,
   rate_limited: EXIT.rateLimited,
+  client_outdated: EXIT.clientOutdated,
 };
 
 /** The exit code of an error code this version doesn't know (or no error

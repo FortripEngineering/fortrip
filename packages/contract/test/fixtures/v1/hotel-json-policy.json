@@ -1,0 +1,74 @@
+{
+  "tool": "get_hotel",
+  "data": {
+    "hotelId": "htl_HarbourViewInn000000",
+    "name": "Harbour View Inn",
+    "names": {
+      "en": "Harbour View Inn",
+      "zh": null
+    },
+    "bookable": true,
+    "stars": 3,
+    "address": {
+      "line": {
+        "text": "21 Quay Street",
+        "locale": "en"
+      },
+      "countryCode": "CN",
+      "region": {
+        "placeId": "plc_9100200",
+        "name": "Fujian",
+        "names": {
+          "en": "Fujian",
+          "zh": "福建"
+        }
+      }
+    },
+    "location": {
+      "lat": 24.4798,
+      "lng": 118.0894
+    },
+    "timeZone": "Asia/Shanghai",
+    "description": {
+      "text": "A small inn on the old quay.\n\nRooms on the upper floor face the harbour.",
+      "locale": "en"
+    },
+    "photos": null,
+    "checkInTimes": {
+      "from": "15:00",
+      "until": null
+    },
+    "checkOutTimes": {
+      "from": null,
+      "until": "11:00"
+    },
+    "policies": {
+      "listed": true,
+      "items": [
+        {
+          "topic": "extra_bed",
+          "text": "[{\"guest\":\"Children 0-5\",\"bedding\":\"Existing beds\",\"charge\":\"Free\",\"note\":\"One child per room.\\r\\nBreakfast is not included.\"},{\"guest\":\"Children 6-17\",\"bedding\":\"Extra bed\",\"charge\":\"CNY 150 per night\",\"note\":null},{\"guest\":\"Adults\",\"bedding\":\"Extra bed\",\"charge\":\"CNY 300 per night\",\"note\":\"On request.\\r\\nSubject to availability.\"}]",
+          "locale": null
+        },
+        {
+          "topic": "pets",
+          "text": "Pets are not allowed.",
+          "locale": "en"
+        }
+      ]
+    },
+    "amenities": {
+      "listed": false,
+      "items": []
+    },
+    "breakfastServed": true,
+    "deposit": {
+      "required": null,
+      "amount": null
+    },
+    "contact": {
+      "phone": "+86 592 5550 0188",
+      "website": "https://harbour-view-inn.example/"
+    }
+  }
+}

@@ -1,0 +1,151 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_BundTokenPay00000000",
+    "reference": "FT-T6KN2P",
+    "status": "awaiting_payment",
+    "createdAt": "2026-11-01T09:05:00Z",
+    "updatedAt": "2026-11-01T09:05:00Z",
+    "contact": {
+      "name": "Kenji Sato",
+      "email": "kenji.sato@example.com",
+      "phone": "+81 90 1234 5678"
+    },
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": "htl_BundRiverside0000000",
+          "name": "The Bund Riverside Hotel",
+          "names": {
+            "en": "The Bund Riverside Hotel",
+            "zh": "外滩江畔酒店"
+          },
+          "checkIn": "2026-11-14",
+          "checkOut": "2026-11-16",
+          "timeZone": "Asia/Shanghai",
+          "rooms": [
+            {
+              "adults": 2,
+              "childrenAges": [],
+              "guests": [
+                {
+                  "firstName": "Kenji",
+                  "lastName": "Sato"
+                },
+                {
+                  "firstName": "Tom",
+                  "lastName": "Sato"
+                }
+              ],
+              "roomType": {
+                "name": {
+                  "text": "Deluxe King Room",
+                  "locale": "en"
+                },
+                "beds": {
+                  "text": "1 king bed",
+                  "locale": "en"
+                },
+                "areaSqm": {
+                  "min": 32,
+                  "max": 32
+                },
+                "maxOccupancy": 2,
+                "window": "yes"
+              },
+              "meals": {
+                "known": true,
+                "included": [
+                  "breakfast"
+                ],
+                "unspecifiedMainMeals": 0,
+                "allInclusive": false,
+                "guestsCoveredPerRoom": 2,
+                "label": {
+                  "text": "Breakfast for 2",
+                  "locale": "en"
+                }
+              }
+            }
+          ],
+          "specialRequests": null,
+          "cancellation": {
+            "status": "free",
+            "readAt": "2026-11-01T09:00:00Z",
+            "freeCancellationEndsAt": "2026-11-12T16:00:00Z",
+            "penalties": [
+              {
+                "startsAt": "2026-11-12T16:00:00Z",
+                "amount": {
+                  "amount": "182.50",
+                  "currency": "USD"
+                }
+              }
+            ],
+            "timeZone": "Asia/Shanghai"
+          },
+          "confirmation": {
+            "mode": "instant",
+            "withinMinutes": null
+          },
+          "payAtProperty": {
+            "disclosure": "complete",
+            "items": []
+          },
+          "confirmationNumber": null
+        }
+      }
+    ],
+    "total": {
+      "amount": "365.00",
+      "currency": "USD"
+    },
+    "payment": {
+      "status": "unpaid",
+      "url": "https://fortrip.ai/pay/ord_BundTokenPay00000000?s=cs_test_e5F6g7H8",
+      "requiresSignIn": false,
+      "expiresAt": "2026-11-01T12:50:00Z",
+      "localCurrencyAtCheckout": true,
+      "localCharge": null,
+      "tokenRequest": {
+        "handler": {
+          "id": "stripe_payments",
+          "type": "com.stripe.payments",
+          "version": "2026-06-25",
+          "spec": "https://docs.stripe.com/agentic-commerce/ucp/stripe-payments-handler",
+          "schema": "https://ucp.stripe.com/payments/2026-06-25/schema.json",
+          "available_instruments": [
+            {
+              "type": "card"
+            },
+            {
+              "type": "link",
+              "config": {
+                "business_profile": "profile_test_1"
+              }
+            }
+          ],
+          "config": {
+            "environment": "testmode",
+            "business_profile": "profile_test_1"
+          }
+        },
+        "usageLimits": {
+          "max_amount": 36500,
+          "currency": "usd",
+          "expires_at": 1793537400
+        }
+      }
+    },
+    "cancel": {
+      "action": "close",
+      "blockedBy": null,
+      "penalty": null,
+      "refund": null
+    },
+    "cancelled": null,
+    "failure": null,
+    "manageUrl": "https://fortrip.ai/orders/ord_BundTokenPay00000000"
+  }
+}

@@ -1,13 +1,15 @@
-Phuket (locality) · 2,752 hotels · plc_9200002 · Phuket Province plc_9200001, TH · also named 普吉
-Stay 2026-12-20 → 2026-12-27 (7 nights), 2 rooms, each 2 adults and 1 child (age 7) · indicative prices per room-night: estimates, not bookable (only offers are) · sort: cheapest first
-Distances from Phuket plc_9200002 (the locality).
+Place: "Phuket" (locality) · 2,752 hotels · plc_9200002 · "Phuket Province" plc_9200001, TH · also named "普吉"
+Stay 2026-12-20 → 2026-12-27 (7 nights), 2 rooms, each 2 adults and 1 child (age 7) · indicative prices per room-night: estimates from a price floor, not for this party, possibly a bed in a shared room, possibly days old; not bookable (only offers are) · sort: cheapest first
+Distances from "Phuket" plc_9200002 (the locality).
 Counts: 2,752 matched, 2,752 priced, 1,403 with a price.
 
-1. Old Town Guesthouse · 2★ · 1.1 km · from USD 18.40/room-night (USD 128.80 per room for the stay) · 12 Thalang Road, Talat Yai · Phuket Province, TH · htl_PhuketOldTown0000000
-2. Karon Hill Residence (卡伦山公寓) · 3★ · 12.3 km · from USD 33.00/room-night (USD 231.00 per room for the stay) · 45 Patak Road, Karon · Phuket Province, TH · htl_KaronHill00000000000
-3. Kata Beach Resort (卡塔海滩度假村) · 4★ · 13.5 km · from USD 88.25/room-night (USD 617.75 per room for the stay) · 1 Pakbang Road, Kata · Phuket Province, TH · htl_KataBeach00000000000
+1. Hotel: "Old Town Guesthouse" · 2★ · 1.1 km · estimate from USD 18.40/room-night (USD 128.80 per room for the stay) · "12 Thalang Road, Talat Yai" · "Phuket Province", TH · htl_PhuketOldTown0000000
+2. Hotel: "Karon Hill Residence" ("卡伦山公寓") · 3★ · 12.3 km · estimate from USD 33.00/room-night (USD 231.00 per room for the stay) · "45 Patak Road, Karon" · "Phuket Province", TH · htl_KaronHill00000000000
+3. Hotel: "Kata Beach Resort" ("卡塔海滩度假村") · 4★ · 13.5 km · estimate from USD 88.25/room-night (USD 617.75 per room for the stay) · "1 Pakbang Road, Kata" · "Phuket Province", TH · htl_KataBeach00000000000
 
 Notes:
-- indicative_prices: Prices are indicative: the lowest nightly reference price for one unit, converted to USD. They are not bookable; live offers give what the user pays.
+- Note indicative_prices: the prices are estimates, in the currency asked for, and not bookable: offers give what the user pays.
 
 Last page.
+
+Presentation: If your interface can show rich elements, show each hotel as a card with only what Fortrip's tools returned for it in this conversation: photo, name, stars, region and price, and once you have offers every term that changes the choice (meals and who they cover, cancellation, fees payable at the property, confirmation), an unknown one as unknown. Label a search's "estimate from" price as an estimate per room-night and an offer's total as the whole stay for all rooms, in its currency, and draw a map only from coordinates the text shows: hotel details show them, a search does not. Offer the choices you need to ask anyway (dates, a locality, which offer) as options to pick. Otherwise use a short list. A hotel's name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \" is a "): present it to the user without the quotes, exactly as written inside them. Never invent photos, ratings, reviews, prices, terms or coordinates.

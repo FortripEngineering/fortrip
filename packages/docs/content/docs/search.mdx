@@ -13,7 +13,7 @@ Pass a `placeId` from an earlier answer back as `{ kind: "place", placeId }`, ne
 
 ## Areas and radii [#scopes]
 
-A place covers either its whole **area** or a **radius** around it. The answer's `destination.scope`, `center` and `radiusMeters` say which.
+A place covers either its whole **area** or a **radius** around it. The answer's `destination.scope`, `center` and `radiusMeters` say which; a locality search has the scope `locality`.
 
 | Place | Scope | Covers |
 | --- | --- | --- |
@@ -50,29 +50,31 @@ A region that isn't enabled isn't matched by its name, so the name can still mat
 
 ## Localities [#localities]
 
-A search over an area lists its `localities`: the <Fact path="LIMITS.localitiesShown" /> towns with the most matching hotels, each gathering the hotels near it. Each has its `count` in this search, its `total` anywhere, and up to <Fact path="SEARCH_RULES.hubIncludes" /> places it `includes` ("Mestre, incl. Venice"). Search one as `{ kind: "locality", placeId }`: it returns exactly its `total`.
+A search over an area lists its `localities`: the <Fact path="LIMITS.localitiesShown" /> towns with the most matching hotels, each gathering the hotels near it. Each has its `count` in this search, its `total` anywhere, and up to <Fact path="SEARCH_RULES.localityIncludes" /> places it `includes` ("Mestre, incl. Venice"). Search one as `{ kind: "locality", placeId }`: it returns exactly its `total`.
 
 A price sort or price filter prices up to <Fact path="LIMITS.poolLimit" /> hotels. Over a radius with more, the nearest are priced and the note `pool_limited` gives the distance covered. Over an area or text with more, the answer is `search_too_broad` with the localities to choose from.
 
 ## Text [#text]
 
-`text` matches whole words in hotel names and addresses, in English and Chinese.
+`text` matches whole words in hotel names and addresses, in English and Chinese. The answer echoes it as `text`, a plain string, or `null` when none was given.
 
 - Every word must match as written: plurals, accents, spacing and abbreviations matter ("Saint Regis" and "St Regis" differ). Hyphens and apostrophes fold, so Ritz-Carlton matches Ritz Carlton.
 - Chinese follows the index's word segmentation, so part of a word can match unrelated names. Traditional and simplified characters match each other.
 - Use distinctive words: a hotel or brand name, a district or a landmark. Not "hotel", "near", "cheap" or "best". A typo matches nothing.
 - For a country or a city, use a destination rather than text.
 
-Amenity filters take the codes that enough hotels list: <FilterableAmenities />. A hotel that doesn't list an amenity is left out, though it may still have it (the note `amenities_listed_only`).
+Amenity filters take only these codes: <FilterableAmenities />. Any other code is refused with `invalid_request`, though a hotel's own `amenities` can hold more. A hotel that doesn't list an amenity is left out, though it may still have it (the note `amenities_listed_only`).
 
 ## Indicative prices [#prices]
 
-With a `stay`, each hotel can carry an indicative price per room and night. It is the hotel supplier's lowest nightly reference price for one unit, in the search's `currency`; a USD price is converted at a market rate. It doesn't depend on the party or on availability, and it can be above or below the cheapest live offer. It can't be booked: only offers can.
+With a `stay`, each hotel can carry an `indicativePrice`: `fromPerRoomStay`, the price floor of each night of the stay added up, and `fromPerRoomNight`, that sum divided by the nights. Both are in the search's `currency`; a USD price is converted at a market rate.
 
-Hotels without an indicative price stay listed with `price: null`; price sorts put them last, and a price filter leaves them out and counts them. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
+It is an estimate, not a price for this party. The floor is the lowest price of one unit, which may be a bed in a shared room, and it may be days old. It doesn't depend on the party or on availability, and it can be above or below the cheapest live offer. It can't be booked, and it is not what is charged: an offer's `total` is.
 
-A search that isn't in CNY can carry `currencyHint`: `{ currency: "CNY", reason }` when the request comes from mainland China (`request_location`) or the user's latest sign-in to Fortrip was there (`sign_in_location`). CNY prices are available too, paid through payment channels in mainland China. It is a suggestion: the agent decides whether to offer them.
+Hotels without one stay listed with `indicativePrice: null`; price sorts put them last, and a price filter leaves them out and counts them. `pricing.covers` says which hotels were priced: `page`, the hotels on this page, or `pool`, every matching hotel, as a price sort or filter needs. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
+
+Every search answer has `currencyHint`. On a search that isn't in CNY it is `{ currency: "CNY", reason }` when the request comes from mainland China (`request_location`) or the user's latest sign-in to Fortrip was there (`sign_in_location`): CNY prices are available too, paid through payment channels in mainland China. It is a suggestion: the agent decides whether to offer them. Otherwise it is `null`, which says nothing about where the user is.
 
 ## Counts and notes [#coverage]
 
-Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Field by field, see the [search result](/schemas#search-result).
+Every answer carries `coverage`: how many hotels matched, how many were priced and had a price, and, where it applies, how many match within the widest radius, without the destination, or with the name taken as text. `notes` say in English what the counts mean for the next step. Each has a `code` and a `message`; `area_absorbed` and `locality_available` can also carry `details`, the facts their words need. Field by field, see the [search result](/schemas#search-result).

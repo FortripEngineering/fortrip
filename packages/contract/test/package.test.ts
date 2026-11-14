@@ -14,6 +14,13 @@ describe("the published package", () => {
     assert.deepEqual(files, ["dist", "NOTICE"]);
   });
 
+  // The README names the major that serves the API: it went stale at 4.x once.
+  it("its README names its own major version", async () => {
+    const { version } = JSON.parse(await readFile("package.json", "utf8"));
+    const readme = await readFile("README.md", "utf8");
+    assert.ok(readme.includes(`\`${version.split(".")[0]}.x\` serves Fortrip API v1.`), version);
+  });
+
   // zod is a peer dependency, so the bundle imports it; a package bundled
   // into dist/ would need its license shipped too.
   it("bundles no other package's code", async () => {

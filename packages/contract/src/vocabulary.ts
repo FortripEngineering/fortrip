@@ -17,8 +17,8 @@ export const FILTERABLE_AMENITIES = [
 ] as const;
 
 /** Every amenity code a response can carry: the filterable ones, then the
- *  response-only ones and `other`. A search that filters by a response-only
- *  code is refused by the service with details (§7.7). */
+ *  response-only ones and `other`. A search takes only the filterable ones
+ *  as a filter. */
 export const AMENITY_CODES = [
   ...FILTERABLE_AMENITIES,
   "airport_shuttle",

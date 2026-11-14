@@ -51,7 +51,7 @@ Its answer is under [step 4](#step-order).
 
 ## Pay [#pay]
 
-An order is paid one way only. [Orders and payment](/payments#pay) says which ways an order offers and when each applies.
+An order is paid one way only: the user pays on its payment link, or an agent pays with a token the user approved. [Orders and payment](/payments#pay) says when each applies.
 
 ### Payment link [#pay-link]
 
@@ -65,21 +65,13 @@ The answer, abridged:
 
 ### Link token [#pay-token]
 
-Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet.
+Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet, and only while the order's `payment.tokenRequest` is set. Request the token with that field's `handler` and `usageLimits`, then send it with the order's `total`.
 
 <Example name="pay-token" />
 
 The answer, abridged:
 
 <ResponseExample name="pay-token" />
-
-### Alipay or WeChat Pay [#pay-wallet]
-
-<Example name="pay-wallet" />
-
-The answer, abridged:
-
-<ResponseExample name="pay-wallet" />
 
 ## List orders [#list]
 
@@ -91,7 +83,7 @@ The answer, abridged:
 
 ## Cancel [#cancel]
 
-Cancel a paid order only while its `cancel.available` is `true`, with `maximumPenalty` the order's `cancel.penalty` that the user agreed to, exactly as returned. An unpaid order (`cancel.reason` `unpaid`) is closed instead, without `maximumPenalty`, once the user says they no longer want it.
+The order's `cancel.action` says which request applies. `cancel`: a paid order, cancelled with `maximumPenalty` set to the order's `cancel.penalty` that the user agreed to, exactly as returned. `close`: an unpaid order, closed with `close: true` in place of `maximumPenalty`, once the user says they no longer want it. Send exactly one of the two; `null` means neither applies, and `cancel.blockedBy` says why. See [Cancel or close](/payments#cancel).
 
 <Example name="cancel" />
 

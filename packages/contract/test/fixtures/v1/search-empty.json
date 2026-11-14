@@ -11,7 +11,6 @@
           "zh": "二世古"
         },
         "kind": "settlement",
-        "scope": "radius",
         "cityLike": null,
         "population": 4823,
         "region": {
@@ -49,10 +48,7 @@
       "radiusMeters": 8000,
       "radiusSource": "default"
     },
-    "text": {
-      "value": "Ritz Carlton",
-      "match": "exact"
-    },
+    "text": "Ritz Carlton",
     "stay": {
       "checkIn": "2027-01-10",
       "checkOut": "2027-01-14",
@@ -65,7 +61,7 @@
     },
     "pricing": {
       "mode": "indicative",
-      "scope": "page",
+      "covers": "page",
       "status": "ok"
     },
     "sort": "distance",
@@ -81,6 +77,7 @@
       "localities": null,
       "nameAsText": null
     },
+    "currencyHint": null,
     "data": [],
     "nextCursor": null,
     "notes": [

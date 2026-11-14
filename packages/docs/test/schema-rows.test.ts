@@ -3,9 +3,12 @@ import { test } from "node:test";
 
 import {
   hotelOffersResult,
+  openObject,
+  openUnion,
   order,
   searchResult,
 } from "@fortrip/agent-contract";
+import { z } from "zod";
 
 import { TOOL_INPUTS } from "../lib/reference/input-docs.ts";
 import { inputRows, outputRows } from "../lib/reference/schema-rows.ts";
@@ -44,7 +47,7 @@ test("input rows carry type, required and constraints", () => {
   assert.equal(rows.get("stay.rooms[].adults")?.depth, 2);
   assert.deepEqual(rows.get("stay.rooms[].adults")?.meta, ["1–8"]);
 
-  const guestName = inputRows(TOOL_INPUTS.book_hotel).find(
+  const guestName = inputRows(TOOL_INPUTS.create_order).find(
     (row) => row.path === "items[].hotel.rooms[].guests[].firstName",
   );
   assert.equal(guestName?.badge, "required");
@@ -83,8 +86,8 @@ test("a union input lists each branch with its own fields", () => {
 test("output rows show nulls, open enums and object arrays with []", () => {
   const rows = new Map(outputRows(searchResult).map((row) => [row.key, row]));
   assert.equal(rows.get("data")?.type, "object[]");
-  assert.equal(rows.get("data[].price")?.type, "object | null");
-  assert.equal(rows.get("data[].price.fromPerRoomNight.amount")?.depth, 3);
+  assert.equal(rows.get("data[].indicativePrice")?.type, "object | null");
+  assert.equal(rows.get("data[].indicativePrice.fromPerRoomNight.amount")?.depth, 3);
   assert.equal(rows.get("nextCursor")?.type, "string | null");
   const sort = rows.get("sort");
   assert.equal(
@@ -109,16 +112,27 @@ test("an open union in an output lists its known branches", () => {
 });
 
 test("a union branch without a described discriminator shows its own description", () => {
-  const methods = outputRows(order).filter((row) => row.variant && row.path === "payment.methods[]");
+  const ways = openObject({
+    ways: z.array(
+      openUnion("id", [
+        openObject({ id: z.literal("by_token") }).describe("Paid with a token."),
+        openObject({ id: z.literal("by_link") }).describe("Paid on the payment page."),
+      ]),
+    ),
+  });
+  const rows = outputRows(ways).filter((row) => row.variant && row.path === "ways[]");
   assert.deepEqual(
-    methods.map((row) => row.type),
-    ['id: "stripe_shared_payment_token"', 'id: "stripe_alipay_wechat_pay"'],
+    rows.map((row) => [row.type, row.description]),
+    [
+      ['id: "by_token"', "Paid with a token."],
+      ['id: "by_link"', "Paid on the payment page."],
+    ],
   );
-  const [token, wallet] = methods.map((row) => row.description);
-  assert.match(token ?? "", /The entry is absent when a token can't pay this order/);
-  assert.match(wallet ?? "", /The entry is absent when the order can't be paid this way and none is open, as on a CNY order\./);
-  // The /schemas page shows both, as the pay ways' docs say it does.
-  const text = pageText("/schemas");
-  assert.ok(text.includes("The entry is absent when a token can't pay this order"));
-  assert.ok(text.includes("The entry is absent when the order can't be paid this way and none is open, as on a CNY order."));
+});
+
+test("an order's payment token says when it is null, on the /schemas page too", () => {
+  const token = outputRows(order).find((row) => row.path === "payment.tokenRequest");
+  assert.match(token?.description ?? "", /null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout/);
+  assert.ok(pageText("/schemas").includes("null when no token can pay this order: a CNY order"));
+  assert.ok(outputRows(order).some((row) => row.path === "payment.tokenRequest.usageLimits.max_amount"));
 });

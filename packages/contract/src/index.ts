@@ -28,6 +28,7 @@ export {
   oneOf,
   strictInput,
   text,
+  unknownFieldsMessage,
   wholeNumber,
 } from "./fields.ts";
 export {
@@ -47,12 +48,11 @@ export {
   getOrderInput,
   hotelOffersInput,
   listOrdersInput,
-  PAY_INPUT_WAYS,
+  offersPerHotel,
   PAY_WAYS,
   payOrderInput,
   type PayWay,
   searchHotelsInput,
-  sharedPaymentTokenOf,
   stay,
   type CancelOrderInput,
   type CreateOrderInput,
@@ -66,6 +66,7 @@ export {
   type Stay,
 } from "./inputs.ts";
 export { CURRENCIES, type Currency, LIMITS, SUPPORT_EMAIL } from "./limits.ts";
+export { misplacedKeyHint, misplacedKeys, type MisplacedKey } from "./misplaced-keys.ts";
 export {
   authConfig,
   meResult,
@@ -91,45 +92,54 @@ export {
 export {
   hotel,
   POLICY_TOPICS,
-  roomFacts,
+  roomType,
   type Hotel,
   type PolicyTopic,
+  type RoomType,
 } from "./outputs/hotel.ts";
 export {
   cancellation,
   confirmation,
+  FEE_KINDS,
   hotelOffersResult,
   meals,
   offer,
   omitted,
   payAtProperty,
   UNAVAILABLE_REASONS,
+  type FeeKind,
   type HotelOffersResult,
   type Offer,
   type Omitted,
 } from "./outputs/offer.ts";
 export {
-  CANCEL_REASONS,
+  CANCEL_ACTIONS,
+  CANCEL_BLOCKERS,
   CREDENTIAL_INVALID_REASONS,
+  FAILURE_REASONS,
   offerChange,
   order,
+  orderCancel,
   orderList,
   orderReference,
   ORDER_STATUSES,
-  PAYMENT_METHOD_IDS,
+  PAYMENT_METHOD_UNAVAILABLE_REASONS,
   PAYMENT_STATUSES,
   paymentHandler,
-  paymentMethod,
-  type CancelReason,
+  tokenUsageLimits,
+  type CancelAction,
+  type CancelBlocker,
   type CredentialInvalidReason,
+  type FailureReason,
   type OfferChange,
   type Order,
+  type OrderCancel,
   type OrderList,
   type OrderStatus,
   type PaymentHandler,
-  type PaymentMethod,
-  type PaymentMethodId,
+  type PaymentMethodUnavailableReason,
   type PaymentStatus,
+  type TokenUsageLimits,
 } from "./outputs/order.ts";
 export {
   center,
@@ -146,9 +156,12 @@ export {
   indicativePrice,
   localities,
   SEARCH_NOTE_CODES,
+  SEARCH_NOTE_DETAILS,
+  searchNote,
   searchResult,
   type HotelSummary,
   type IndicativePrice,
+  type SearchNote,
   type SearchNoteCode,
   type SearchResult,
 } from "./outputs/search.ts";
@@ -168,7 +181,7 @@ export {
   type HttpRoute,
   type HttpToolName,
 } from "./routes.ts";
-export { RATE_LIMITS, type RateLimitScope } from "./rate-limits.ts";
+export { RATE_LIMITS, type RateLimitName } from "./rate-limits.ts";
 export {
   renderError,
   renderToolResult,
@@ -178,17 +191,16 @@ export { ERROR_CODES, type ErrorCode } from "./errors.ts";
 export {
   CANCEL_NEXT_STEP,
   cancelNextStep,
-  MCP_OUTPUT,
   ORDER_NEXT_STEP,
   PAY_NEXT_STEP,
   payNextStep,
+  META_KEYS,
   PRESENTATION_HINT,
   type RenderSurface,
+  SERVER_INFO,
   TOOLS,
   type ToolName,
   type ToolSpec,
-  WALLET_NEXT_STEP,
-  walletNextStep,
 } from "./tools.ts";
 export {
   AMENITY_CODES,

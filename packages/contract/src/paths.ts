@@ -11,9 +11,9 @@ export const API = {
   hotelSearch: "/v1/hotels/search",
   hotelOffers: "/v1/hotels/offers",
   orders: "/v1/orders",
-  hotel(id: string, opts?: { rooms?: boolean; locale?: "en" | "zh" }): string {
+  hotel(id: string, opts?: { roomTypes?: boolean; locale?: "en" | "zh" }): string {
     const query: string[] = [];
-    if (opts?.rooms) query.push("include=rooms");
+    if (opts?.roomTypes) query.push("include=roomTypes");
     if (opts?.locale) query.push(`locale=${opts.locale}`);
     return `/v1/hotels/${encodeURIComponent(id)}${query.length ? `?${query.join("&")}` : ""}`;
   },

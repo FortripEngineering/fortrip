@@ -1,0 +1,88 @@
+{
+  "tool": "get_order",
+  "data": {
+    "orderId": "ord_CanalCheckout0000000",
+    "reference": "FT-W5J7XA",
+    "status": "awaiting_payment",
+    "createdAt": "2026-11-02T10:00:00Z",
+    "updatedAt": "2026-11-02T10:00:00Z",
+    "contact": null,
+    "items": [
+      {
+        "type": "hotel",
+        "hotel": {
+          "hotelId": null,
+          "name": "Canal House Lisbon",
+          "names": {
+            "en": "Canal House Lisbon",
+            "zh": null
+          },
+          "checkIn": "2026-12-03",
+          "checkOut": "2026-12-05",
+          "timeZone": "Europe/Lisbon",
+          "rooms": [
+            {
+              "adults": 1,
+              "childrenAges": [],
+              "guests": null,
+              "roomType": {
+                "name": {
+                  "text": "Classic Double",
+                  "locale": "en"
+                },
+                "beds": null,
+                "areaSqm": null,
+                "maxOccupancy": null,
+                "window": null
+              },
+              "meals": {
+                "known": false,
+                "included": null,
+                "unspecifiedMainMeals": null,
+                "allInclusive": null,
+                "guestsCoveredPerRoom": null,
+                "label": null
+              }
+            }
+          ],
+          "specialRequests": null,
+          "cancellation": {
+            "status": "unknown",
+            "readAt": "2026-11-02T10:00:00Z",
+            "freeCancellationEndsAt": null,
+            "penalties": [],
+            "timeZone": "Europe/Lisbon"
+          },
+          "confirmation": null,
+          "payAtProperty": {
+            "disclosure": "incomplete",
+            "items": []
+          },
+          "confirmationNumber": null
+        }
+      }
+    ],
+    "total": {
+      "amount": "410.00",
+      "currency": "EUR"
+    },
+    "payment": {
+      "status": "unpaid",
+      "url": "https://fortrip.ai/stays/book/sb_9f3k2Lx",
+      "requiresSignIn": true,
+      "expiresAt": "2026-11-02T10:30:00Z",
+      "localCurrencyAtCheckout": false,
+      "localCharge": null,
+      "tokenRequest": null
+    },
+    "cancel": {
+      "action": null,
+      "blockedBy": "website_checkout",
+      "penalty": null,
+      "refund": null
+    },
+    "cancelled": null,
+    "failure": null,
+    "manageUrl": "https://fortrip.ai/stays/book/sb_9f3k2Lx"
+  }
+}

@@ -1,11 +1,11 @@
 import { z } from "zod";
 
-import { hotelId } from "../conventions/ids.ts";
+import { hotelId, placeId } from "../conventions/ids.ts";
 import { money } from "../conventions/money.ts";
-import { openEnum, openObject, openUnion } from "../conventions/open.ts";
+import { openEnum, type OpenFallback, openObject, openUnion } from "../conventions/open.ts";
 import { LIMITS } from "../limits.ts";
 import { knownLocaleText, latLng, names, photo, stayEcho } from "./common.ts";
-import { center, place, placeRef } from "./place.ts";
+import { center, place, PLACE_KINDS, placeRef } from "./place.ts";
 
 /* `POST /v1/hotels/search` (spec §7.8). */
 
@@ -29,13 +29,64 @@ export const SEARCH_NOTE_CODES = [
 
 export type SearchNoteCode = (typeof SEARCH_NOTE_CODES)[number];
 
-/** An indicative (not bookable) price for one unit; only offers can be booked. */
+/**
+ * The facts a note's words need that the search itself does not hold, by
+ * code. A note of a code listed here may carry them as `details`; a server
+ * may leave them out, and a note of any other code has none.
+ */
+export const SEARCH_NOTE_DETAILS = {
+  area_absorbed: openObject({
+    places: z
+      .array(openObject({ placeId, name: z.string(), kind: openEnum(PLACE_KINDS) }))
+      .min(1)
+      .describe("The smaller places of the same name that the searched area holds."),
+  }),
+  locality_available: openObject({
+    localityTotal: z
+      .number()
+      .int()
+      .describe("How many matching hotels belong to the place as a locality."),
+  }),
+} satisfies Partial<Record<SearchNoteCode, z.ZodObject>>;
+
+type DetailedNoteCode = keyof typeof SEARCH_NOTE_DETAILS;
+
+/** A note of a search: `details` only on the codes that carry them, and
+ *  optional there. */
+export type SearchNote =
+  | {
+      [C in SearchNoteCode]: { code: C; message: string } & (C extends DetailedNoteCode
+        ? { details?: z.output<(typeof SEARCH_NOTE_DETAILS)[C]> }
+        : unknown);
+    }[SearchNoteCode]
+  | OpenFallback<"code">;
+
+/**
+ * A note of a search, picked by `code`: `details` is that code's, and
+ * optional. A code this build does not know falls back, with whatever it
+ * carries.
+ */
+export const searchNote = openUnion(
+  "code",
+  SEARCH_NOTE_CODES.map((code) => {
+    const details = (SEARCH_NOTE_DETAILS as Partial<Record<SearchNoteCode, z.ZodObject>>)[code];
+    return openObject({
+      code: z.literal(code),
+      message: z
+        .string()
+        .describe("The note in words, for a reader of the JSON; the text of a tool result words a note from its code."),
+      ...(details ? { details: details.optional() } : {}),
+    });
+  }),
+) as unknown as z.ZodType<SearchNote>;
+
+/** An estimate from a price floor; only offers can be booked. */
 export const indicativePrice = openObject({
-  kind: openEnum(["indicative"]),
-  basis: openEnum(["lowest_unit"]),
-  fromPerRoomNight: money,
-  fromPerRoomStay: money,
-});
+  fromPerRoomNight: money.describe("fromPerRoomStay divided by the nights."),
+  fromPerRoomStay: money.describe("The floor of each night of the stay, added up."),
+}).describe(
+  "An estimate from a price floor in the catalogue's price feed, not a price for this party: the floor may be a bed in a shared room, and may be days old. Not bookable, and not what is charged: an offer's total is.",
+);
 
 export type IndicativePrice = z.infer<typeof indicativePrice>;
 
@@ -52,20 +103,26 @@ export const hotelSummary = openObject({
   location: latLng.nullable(),
   timeZone: z.string().nullable(),
   distanceMeters: z.number().nullable(),
-  price: indicativePrice.nullable(),
+  indicativePrice: indicativePrice.nullable(),
   /** The cover photo; `null` without one. */
   photo: photo.nullable().describe("The cover photo; null when there is none."),
 });
 
 export type HotelSummary = z.infer<typeof hotelSummary>;
 
-/** The top locality hubs of a scope (§7.6); also `search_too_broad` details. */
+/** The top localities of a scope (§7.6); also `search_too_broad` details. */
 export const localities = openObject({
   items: z.array(
     openObject({
       place: placeRef,
-      count: z.number().int(),
-      total: z.number().int(),
+      count: z
+        .number()
+        .int()
+        .describe("How many of the search's matching hotels belong to the locality."),
+      localityTotal: z
+        .number()
+        .int()
+        .describe("How many matching hotels the locality has as a locality, beyond this search's scope too."),
       includes: z.array(
         openObject({ place: placeRef, members: z.number().int() }),
       ),
@@ -89,7 +146,9 @@ const destination = openUnion("kind", [
       "by_locality",
     ]),
     otherMatches: z.number().int(),
-    scope: openEnum(["area", "radius", "locality"]),
+    scope: openEnum(["area", "radius", "locality"]).describe(
+      "What the search covers: area, the place's whole area; radius, a circle of radiusMeters around center; locality, the hotels that belong to the locality.",
+    ),
     center,
     radiusMeters: z.number().nullable(),
     radiusSource: radiusSource.nullable(),
@@ -110,14 +169,18 @@ const hotels = (what: string) => count.nullable().describe(what);
 
 export const searchResult = openObject({
   destination: destination.nullable(),
-  text: openObject({
-    value: z.string(),
-    match: openEnum(["exact"]),
-  }).nullable(),
+  text: z
+    .string()
+    .nullable()
+    .describe("The text searched for, matched as exact words; null when none was given."),
   stay: stayEcho.nullable(),
   pricing: openObject({
     mode: openEnum(["indicative", "none"]),
-    scope: openEnum(["page", "pool"]).nullable(),
+    covers: openEnum(["page", "pool"])
+      .nullable()
+      .describe(
+        `Which hotels the prices cover: page, the hotels on this page; pool, every matching hotel, as a price sort or price filter needs (the nearest ${LIMITS.poolLimit.toLocaleString("en-US")} when more match); null without prices.`,
+      ),
     status: openEnum(["ok", "unavailable"]).nullable(),
   }),
   sort: openEnum([
@@ -132,7 +195,7 @@ export const searchResult = openObject({
       "Hotels that match the destination, the text and every filter but the price filter.",
     ),
     priced: hotels(
-      "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.scope); null without prices.",
+      "Hotels priced: those on this page, or with a price sort or price filter the whole priced set (pricing.covers); null without prices.",
     ),
     withPrice: hotels("Of those priced, how many have an indicative price; null when prices weren't asked for or are unavailable."),
     poolRadiusMeters: z
@@ -162,18 +225,16 @@ export const searchResult = openObject({
     currency: openEnum(["CNY"]),
     reason: openEnum(["request_location", "sign_in_location"]),
   })
-    .optional()
+    .nullable()
     .describe(
-      "Present only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement.",
+      "Set only when the search is not in that currency and the user may pay through its channel: this request comes from mainland China (request_location), or the user's latest sign-in to Fortrip was there (sign_in_location). Prices are also available in that currency; a suggestion, not a requirement. null when there is none, which says nothing about where the user is.",
     ),
   data: z.array(hotelSummary),
   nextCursor: z
     .string()
     .nullable()
     .describe("Pass it back as cursor for the next page; null on the last page."),
-  notes: z.array(
-    openObject({ code: openEnum(SEARCH_NOTE_CODES), message: z.string() }),
-  ),
+  notes: z.array(searchNote),
 });
 
 export type SearchResult = z.infer<typeof searchResult>;

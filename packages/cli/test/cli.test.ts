@@ -18,13 +18,14 @@ import {
   ERROR_CODES,
   errorEnvelope,
   GLOBAL_FLAGS,
+  order as orderSchema,
   type RenderedTool,
   renderError,
   renderToolResult,
   strictOutput,
 } from "@fortrip/agent-contract";
 
-import { terminalQr } from "../src/qr.ts";
+import { EXIT } from "../src/exit-codes.ts";
 
 const run = promisify(execFile);
 
@@ -32,7 +33,7 @@ const run = promisify(execFile);
 let reply: { status: number; body: unknown; headers?: Record<string, string> };
 /** Answers for the next requests, in order; `reply` answers the rest. */
 let replies: (typeof reply)[];
-let requests: { method?: string; url?: string; authorization?: string; body: unknown }[];
+let requests: { method?: string; url?: string; authorization?: string; userAgent?: string; body: unknown }[];
 let server: Server;
 let apiUrl: string;
 
@@ -47,6 +48,7 @@ before(async () => {
         method: req.method,
         url: req.url,
         authorization: req.headers.authorization,
+        userAgent: req.headers["user-agent"],
         body: raw ? JSON.parse(raw) : undefined,
       });
       const answer = replies.shift() ?? reply;
@@ -107,8 +109,8 @@ const ORDER = `ord_${"d4".repeat(10)}`;
 const SEARCH = ["hotels", "search", "--place-name", "Bangkok", "--country", "TH", ...STAY, "--room", "2"];
 const OFFERS = ["hotels", "offers", "--hotel", HOTEL, ...STAY, "--room", "2:6", "--room", "2:6"];
 const BOOK = [
-  ...["hotels", "book", "--offer", OFFER, "--guest", "1:John:Smith"],
-  ...["--first-name", "John", "--last-name", "Smith", "--email", "john@example.com"],
+  ...["orders", "create", "--offer", OFFER, "--guest", "1:John:Smith"],
+  ...["--name", "John Smith", "--email", "john@example.com"],
   ...["--phone", "+8613800000000"],
 ];
 
@@ -116,7 +118,7 @@ describe("requests", () => {
   it("each command sends its method, path and body with the token", async () => {
     for (const [args, method, url] of [
       [SEARCH, "POST", "/v1/hotels/search"],
-      [["hotels", "get", HOTEL, "--rooms"], "GET", `/v1/hotels/${HOTEL}?include=rooms`],
+      [["hotels", "get", HOTEL, "--room-types"], "GET", `/v1/hotels/${HOTEL}?include=roomTypes`],
       [OFFERS, "POST", "/v1/hotels/offers"],
       [BOOK, "POST", "/v1/orders"],
       [["orders", "get", ORDER], "GET", `/v1/orders/${ORDER}`],
@@ -150,10 +152,10 @@ describe("requests", () => {
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.5", currency: "USD" } });
   });
 
-  it("orders cancel --max-penalty takes cancel.penalty's currency, else price.total's, else sends nothing", async () => {
+  it("orders cancel --max-penalty takes cancel.penalty's currency, else the total's, else sends nothing", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
     order.cancel.penalty = { amount: "12.50", currency: "CNY" };
-    order.price.total = { amount: "880.00", currency: "CNY" };
+    order.total = { amount: "880.00", currency: "CNY" };
     replies = [{ status: 200, body: order }, reply];
     const cny = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(cny.code, 0, cny.stderr);
@@ -161,13 +163,13 @@ describe("requests", () => {
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
 
     requests = [];
-    order.cancel.penalty = null;
+    order.cancel = { action: null, blockedBy: "confirming", penalty: null, refund: null };
     replies = [{ status: 200, body: order }, reply];
     assert.equal((await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"])).code, 0);
     assert.deepEqual(requests[1]?.body, { maximumPenalty: { amount: "12.50", currency: "CNY" } });
 
     requests = [];
-    delete order.price.total.currency;
+    delete order.total.currency;
     replies = [{ status: 200, body: order }, reply];
     const none = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(none.code, 1);
@@ -178,7 +180,7 @@ describe("requests", () => {
   it("orders cancel --max-penalty on a confirmed order in another currency posts the penalty in that currency", async () => {
     const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
     order.cancel.penalty = { amount: "12.50", currency: "EUR" };
-    order.price.total = { amount: "880.00", currency: "EUR" };
+    order.total = { amount: "880.00", currency: "EUR" };
     replies = [{ status: 200, body: order }, reply];
     const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "12.50"]);
     assert.equal(code, 0, stderr);
@@ -194,87 +196,97 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  // C7: never a cancellation without the penalty the user agreed to.
-  it("orders cancel without --max-penalty reads the order, prints its stay and Cancel lines, the consent step, and exits 2", async () => {
-    const { data } = await fixture("order-confirmed");
-    reply = { status: 200, body: data };
-    const hotelLine = renderToolResult("get_order", data, "cli")
-      .split("\n")
-      .find((line) => line.startsWith("Hotel: "));
-    assert.ok(hotelLine);
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.equal(
-      stderr,
-      [
-        "Error: Not cancelled: nothing was sent.",
-        hotelLine,
-        "Cancel: can cancel now: penalty USD 120.00, refund USD 246.00",
-        `Show the user the stay, this penalty and this refund, and ask them to confirm. Only after a clear yes, run \`fortrip orders cancel ${ORDER} --max-penalty 120.00\`.`,
-        "",
-      ].join("\n"),
-    );
-    assert.deepEqual(
-      requests.map((r) => `${r.method} ${r.url}`),
-      [`GET ${API.order(ORDER)}`],
-    );
-    const json = JSON.parse((await cli(["orders", "cancel", ORDER, "--json"])).stderr);
-    assert.equal(json.error.code, "invalid_request");
-    assert.match(json.error.message, /Only after a clear yes, run `fortrip orders cancel ord_\w+ --max-penalty 120\.00`\.$/);
-    assert.ok(requests.every((r) => r.method === "GET"));
+  /*
+   * Without a mode flag the command line is incomplete, and that is all it is: exit 2, nothing
+   * read and nothing sent, the same sentence as text and in --json. What the order allows is
+   * on its Cancel line, which `orders get` prints with the command to run.
+   */
+  it("orders cancel without --max-penalty or --close is refused as it stands: exit 2, nothing read or sent, text and --json alike", async () => {
+    const message = `fortrip orders cancel needs exactly one of --max-penalty <amount>, to cancel a paid order for the penalty the user agreed to, and --close, to close an unpaid one. Nothing was sent. \`fortrip orders get ${ORDER}\` shows which applies, on the order's Cancel line, with the command to run.`;
+    for (const name of ["order-confirmed", "order-awaiting-payment", "order-stay-started"]) {
+      requests = [];
+      reply = { status: 200, body: (await fixture(name)).data };
+      const text = await cli(["orders", "cancel", ORDER]);
+      assert.equal(text.code, 2, name);
+      assert.equal(text.stdout, "");
+      assert.equal(text.stderr, `Error: ${message}\n`);
+      const json = await cli(["orders", "cancel", ORDER, "--json"]);
+      assert.equal(json.code, 2, name);
+      assert.equal(json.stdout, "");
+      const { error, ...beside } = JSON.parse(json.stderr);
+      assert.deepEqual(beside, {});
+      assert.deepEqual({ ...error, requestId: "" }, { code: "invalid_request", message, retryable: false, requestId: "", details: { issues: [] } });
+      // One line, and nothing of the order in it.
+      assert.doesNotMatch(error.message, /\n|Hotel|Cancel: /);
+      assert.equal(requests.length, 0, name);
+    }
   });
 
-  it("orders cancel without --max-penalty on an unpaid order says it can be closed, and the --close command", async () => {
-    const { data } = await fixture("order-awaiting-payment");
-    reply = { status: 200, body: data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.equal(
-      stderr,
-      [
-        "Error: Not cancelled: nothing was sent.",
-        renderToolResult("get_order", data, "cli").split("\n").find((line) => line.startsWith("Hotel: ")),
-        "Cancel: can be closed now, nothing is charged; close it only if the user says they no longer want it (run `fortrip orders cancel <orderId> --close`)",
-        `Only once the user says they no longer want this order, run \`fortrip orders cancel ${ORDER} --close\`.`,
-        "",
-      ].join("\n"),
-    );
-    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`]);
+  /** What the service answers a mode that does not fit the order, made from the order read. */
+  const notCancellable = (cancel: unknown) => ({
+    error: {
+      code: "order_not_cancellable",
+      message: "The order can't be cancelled or closed the way that was asked, and nothing was sent.",
+      retryable: false,
+      requestId: "local_0",
+      details: { orderId: ORDER, cancel },
+    },
   });
 
-  it("orders cancel --max-penalty on an unpaid order exits 2 naming --close, and posts nothing", async () => {
-    reply = { status: 200, body: (await fixture("order-awaiting-payment")).data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--max-penalty", "0.00"]);
-    assert.equal(code, 2);
-    assert.match(stderr, new RegExp(`run \`fortrip orders cancel ${ORDER} --close\``));
+  /*
+   * The other mode's order (--max-penalty on one that can be closed, --close on one that can
+   * be cancelled) is refused as the service refuses it (order_not_cancellable, exit 1), from
+   * the order's own cancel state and without sending: the same error as text and in --json,
+   * with the command for the mode that applies.
+   */
+  it("the other mode's order is refused as order_not_cancellable: exit 1, nothing posted, text and --json alike", async () => {
+    const cases: [string, string[], RegExp][] = [
+      ["order-awaiting-payment", ["--max-penalty", "0.00"], new RegExp(`^Cancel: can be closed now, .* \\(run \`fortrip orders cancel ${ORDER} --close\`\\)$`, "m")],
+      ["order-confirmed", ["--close"], new RegExp(`^Cancel: can cancel now: penalty USD 120\\.00, refund USD 246\\.00 \\(only after the user's yes: run \`fortrip orders cancel ${ORDER} --max-penalty 120\\.00\`\\)$`, "m")],
+    ];
+    for (const [name, mode, says] of cases) {
+      requests = [];
+      const { data } = await fixture(name);
+      reply = { status: 200, body: data };
+      const envelope = notCancellable((data as { cancel: unknown }).cancel);
+      strictOutput(errorEnvelope).parse(envelope);
+      const text = await cli(["orders", "cancel", ORDER, ...mode]);
+      assert.equal(text.code, 1, name);
+      assert.equal(text.stdout, "");
+      assert.equal(text.stderr.replace(/local_[0-9a-f]+/, "local_0"), `${renderError(envelope, undefined, "cli")}\n`, name);
+      assert.match(text.stderr, says, name);
+      assert.doesNotMatch(text.stderr, /<orderId>|cancel\.penalty/, name);
+      const json = await cli(["orders", "cancel", ORDER, ...mode, "--json"]);
+      assert.equal(json.code, 1, name);
+      const sent = JSON.parse(json.stderr);
+      assert.match(sent.error.requestId, /^local_[0-9a-f]+$/);
+      assert.deepEqual({ error: { ...sent.error, requestId: "local_0" } }, envelope, name);
+      assert.deepEqual(requests.map((r) => r.method), ["GET", "GET"], name);
+    }
+  });
+
+  it("the other mode's order whose cancel state doesn't read whole is not sent: exit 1", async () => {
+    const order = { ...((await fixture("order-awaiting-payment")).data as Record<string, unknown>), cancel: { action: "cancel" } };
+    reply = { status: 200, body: order };
+    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+    assert.equal(code, 1);
+    assert.equal(stderr, `Error: Not sent: order ${ORDER} doesn't show what can be done to it now. Read it with \`fortrip orders get ${ORDER}\`.\n`);
     assert.deepEqual(requests.map((r) => r.method), ["GET"]);
   });
 
   it("orders cancel --close closes an unpaid order: one read, then the close", async () => {
     const { data } = await fixture("order-awaiting-payment");
     const closed = structuredClone(data) as Record<string, any>;
-    closed.status = "expired";
+    closed.status = "closed";
     closed.payment.url = null;
     closed.payment.expiresAt = null;
-    closed.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
+    closed.cancel = { action: null, blockedBy: "closed", penalty: null, refund: null };
     replies = [{ status: 200, body: data }, { status: 200, body: closed }];
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(code, 0, stderr);
     assert.equal(stdout, `${renderToolResult("cancel_order", closed, "cli")}\n`);
     assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
-    assert.deepEqual(requests[1]?.body, {});
-  });
-
-  it("orders cancel --close answered with an order that isn't expired: not closed, it was paid meanwhile", async () => {
-    const { data } = await fixture("order-awaiting-payment");
-    const paid = (await fixture("order-confirmed")).data;
-    replies = [{ status: 200, body: data }, { status: 200, body: paid }];
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 1);
-    assert.equal(stdout, "");
-    assert.ok(stderr.startsWith("Error: Not closed: it was paid meanwhile.\n"), stderr);
-    assert.ok(stderr.includes(renderToolResult("cancel_order", paid, "cli")), stderr);
+    assert.deepEqual(requests[1]?.body, { close: true });
   });
 
   it("orders cancel --close answered payment_in_progress prints that error and exits 1", async () => {
@@ -298,105 +310,101 @@ describe("requests", () => {
     assert.equal(requests.length, 2);
   });
 
-  it("orders cancel --close on an expired order prints it and exits 0, closing nothing", async () => {
-    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    order.status = "expired";
-    order.payment.url = null;
-    order.payment.expiresAt = null;
-    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
-    reply = { status: 200, body: order };
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 0, stderr);
-    assert.equal(stdout, `${renderToolResult("cancel_order", order, "cli")}\n`);
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
-  });
-
-  it("orders cancel --close on an unpaid order it can't close prints its Cancel line and exits 1", async () => {
-    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
-    order.cancel = { available: false, reason: "not_confirmed", penalty: null, refund: null };
-    for (const [requiresSignIn, line] of [
-      [true, "Cancel: not needed: an unpaid order expires unpaid at 2026-11-01 12:50 UTC"],
-      [false, "Cancel: not now: a payment is under way; read the order again shortly"],
-    ] as const) {
+  it("orders cancel --close on an order already closed, or expired, prints it and exits 0, closing nothing", async () => {
+    for (const ended of ["closed", "expired"] as const) {
       requests = [];
-      order.payment.requiresSignIn = requiresSignIn;
+      const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
+      order.status = ended;
+      order.payment.url = null;
+      order.payment.expiresAt = null;
+      order.cancel = { action: null, blockedBy: ended, penalty: null, refund: null };
+      strictOutput(orderSchema).parse(order);
       reply = { status: 200, body: order };
       const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-      assert.equal(code, 1, line);
-      assert.equal(stdout, "");
-      assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
-      assert.ok(stderr.includes(`\n${line}\n`), stderr);
-      assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+      assert.equal(code, 0, stderr);
+      assert.equal(stdout, `${renderToolResult("cancel_order", order, "cli")}\n`);
+      assert.deepEqual(requests.map((r) => r.method), ["GET"], ended);
     }
   });
 
-  it("orders cancel --close on a paid order that can't be cancelled prints its Cancel line, exits 1, and offers no --max-penalty", async () => {
-    const order = structuredClone((await fixture("order-confirmed")).data) as Record<string, any>;
-    order.cancel = { available: false, reason: "non_refundable", penalty: null, refund: null };
-    reply = { status: 200, body: order };
-    const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 1);
-    assert.equal(stdout, "");
-    assert.match(stderr, /^Error: Not closed: nothing was sent\.\n/);
-    assert.ok(stderr.includes("\nCancel: not available: this rate can't be cancelled\n"), stderr);
-    assert.doesNotMatch(stderr, /--max-penalty/);
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+  // Only the other mode's order is refused here. What blocks an order can
+  // pass between the read and the close, and an action this version does not
+  // know is not guessed at: such an order is sent, and the service answers.
+  it("orders cancel --close on an order that shows no action, or one this version doesn't know, is sent and the service answers", async () => {
+    const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
+    for (const [action, blockedBy, why] of [
+      [null, "website_checkout", "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there"],
+      [null, "payment_in_progress", "a payment is under way; read the order again shortly"],
+      ["a_later_action", null, null],
+    ] as const) {
+      requests = [];
+      order.cancel = { action, blockedBy, penalty: null, refund: null };
+      order.payment.requiresSignIn = blockedBy === "website_checkout";
+      const envelope = {
+        error: {
+          code: "order_not_cancellable",
+          message: "This order can be neither cancelled nor closed now.",
+          retryable: false,
+          requestId: "req_1",
+          details: { orderId: ORDER, cancel: { action: null, blockedBy: blockedBy ?? "needs_attention", penalty: null, refund: null } },
+        },
+      };
+      strictOutput(errorEnvelope).parse(envelope);
+      replies = [{ status: 200, body: order }, { status: 409, body: envelope }];
+      const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
+      assert.equal(code, 1, String(blockedBy));
+      assert.equal(stdout, "");
+      assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`);
+      if (why) assert.ok(stderr.includes(`\nThis order can be neither cancelled nor closed now: ${why}.\n`), stderr);
+      assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+      assert.deepEqual(requests[1]?.body, { close: true });
+    }
   });
 
-  it("orders cancel --close answered invalid_request (paid meanwhile) exits 2 and never says closed", async () => {
+  // 6.0: a mode that doesn't fit the order's state is refused with the
+  // order's cancel as it is now; nothing is closed or cancelled by the other.
+  it("orders cancel --close answered order_not_cancellable (paid meanwhile) exits 1 with the action that applies, and closes nothing", async () => {
     const { data } = await fixture("order-awaiting-payment");
+    const { cancel } = (await fixture("order-confirmed")).data as { cancel: { action: string } };
+    assert.equal(cancel.action, "cancel");
     const envelope = {
       error: {
-        code: "invalid_request",
+        code: "order_not_cancellable",
         message: "This order is paid: cancel it under its terms with maximumPenalty.",
         retryable: false,
         requestId: "req_1",
-        details: { issues: [] },
+        details: { orderId: ORDER, cancel },
       },
     };
     strictOutput(errorEnvelope).parse(envelope);
-    replies = [{ status: 200, body: data }, { status: 400, body: envelope }];
+    replies = [{ status: 200, body: data }, { status: 409, body: envelope }];
     const { code, stdout, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 2);
+    assert.equal(code, 1);
     assert.equal(stdout, "");
-    assert.ok(stderr.startsWith(renderError(envelope, undefined, "cli")), stderr);
-    assert.doesNotMatch(stderr, /\bclosed\b/i);
-    assert.equal(requests.length, 2);
-  });
-
-  it("orders cancel --close on a paid order exits 2 naming --max-penalty, and posts nothing", async () => {
-    reply = { status: 200, body: (await fixture("order-confirmed")).data };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER, "--close"]);
-    assert.equal(code, 2);
-    assert.equal(
+    assert.equal(stderr, `${renderError(envelope, undefined, "cli")}\n`);
+    // The order's Cancel line, with its penalty, its refund and the command that cancels: never --close again.
+    assert.match(stderr, /^This order is paid, so it is cancelled under its terms, not closed\. Its Cancel line now:$/m);
+    assert.match(
       stderr,
-      `Error: Not closed: the order is paid. To cancel it under its terms, show the user cancel.penalty and, once they agree, run \`fortrip orders cancel ${ORDER} --max-penalty <amount>\`.\n`,
+      new RegExp(`^Cancel: can cancel now: penalty USD 120\\.00, refund USD 246\\.00 \\(only after the user's yes: run \`fortrip orders cancel ${ORDER} --max-penalty 120\\.00\`\\)$`, "m"),
     );
-    assert.deepEqual(requests.map((r) => r.method), ["GET"]);
+    assert.doesNotMatch(stderr, /<orderId>/);
+    assert.deepEqual(requests.map((r) => `${r.method} ${r.url}`), [`GET ${API.order(ORDER)}`, `POST ${API.orderCancel(ORDER)}`]);
+    assert.deepEqual(requests[1]?.body, { close: true });
   });
 
-  it("orders cancel without --max-penalty on an order not in the contract's shape still refuses, and offers no flag", async () => {
-    const { data } = await fixture("order-confirmed");
-    const { cancel: _, ...noCancel } = data as Record<string, unknown>;
-    reply = { status: 200, body: noCancel };
-    const { code, stderr } = await cli(["orders", "cancel", ORDER]);
-    assert.equal(code, 2);
-    assert.match(stderr, /^Error: Not cancelled: nothing was sent\.\n/);
-    assert.match(stderr, /fortrip orders cancel needs --max-penalty, the penalty the user agreed to\./);
-    assert.doesNotMatch(stderr, /Only after a clear yes/);
-    assert.ok(requests.every((r) => r.method === "GET"));
-  });
-
-  it("orders cancel without --max-penalty sends nothing for a bad order id, and passes on the read's error", async () => {
-    const bad = await cli(["orders", "cancel", "ao_1"]);
-    assert.equal(bad.code, 2);
-    assert.match(bad.stderr, /\/path\/orderId/);
-    assert.equal(requests.length, 0);
+  it("orders cancel sends nothing for a bad order id, and passes on the read's error", async () => {
+    for (const mode of [[], ["--close"], ["--max-penalty", "1.00"]]) {
+      const bad = await cli(["orders", "cancel", "ao_1", ...mode]);
+      assert.equal(bad.code, 2, mode.join(" "));
+      assert.match(bad.stderr, /^- <orderId>: orderId must be ord_ followed by 20 letters or digits$/m, mode.join(" "));
+      assert.equal(requests.length, 0);
+    }
     reply = {
       status: 404,
       body: { error: { code: "not_found", message: "No such order.", retryable: false, requestId: "req_1" } },
     };
-    const missing = await cli(["orders", "cancel", ORDER]);
+    const missing = await cli(["orders", "cancel", ORDER, "--close"]);
     assert.equal(missing.code, 1);
     assert.match(missing.stderr, /^Error not_found/);
   });
@@ -436,14 +444,32 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip hotels offers was given an invalid request.",
-        "- /hotelIds/0: hotelId must be htl_ followed by 20 letters or digits",
+        "- --hotel: hotelId must be htl_ followed by 20 letters or digits",
         "",
       ].join("\n"),
     );
+    // With --json the issue is the API's, pointer and message, and the message names the flag.
     const json = JSON.parse((await cli(["hotels", "offers", "--hotel", "1", ...STAY, "--room", "2", "--json"])).stderr);
     assert.deepEqual(json.error.details.issues, [
-      { pointer: "/hotelIds/0", message: "hotelId must be htl_ followed by 20 letters or digits" },
+      { pointer: "/hotelIds/0", message: "--hotel: hotelId must be htl_ followed by 20 letters or digits" },
     ]);
+    assert.equal(requests.length, 0);
+  });
+
+  // A value sent in --body is told by its pointer, as the API tells it, with the contract's hint.
+  it("a --body the contract refuses names pointers, and where a misplaced key belongs", async () => {
+    const body = JSON.stringify({ offerId: OFFER, items: [{ hotel: { rooms: [{ guests: [{ firstName: "A", lastName: "B" }] }] } }] });
+    const { code, stderr } = await cli(["orders", "create", "--body", body, "--name", "A B", "--email", "a@b.co", "--phone", "+8613800000000"]);
+    assert.equal(code, 2);
+    assert.equal(
+      stderr,
+      [
+        "Error: Not sent: fortrip orders create was given an invalid request.",
+        "- Field /items/0/offerId: offerId must be off_ followed by 20 letters or digits",
+        "- Field /offerId: Unknown field: offerId (belongs at /items/0/offerId)",
+        "",
+      ].join("\n"),
+    );
     assert.equal(requests.length, 0);
   });
 
@@ -455,19 +481,17 @@ describe("requests", () => {
       stderr,
       [
         "Error: Not sent: fortrip orders pay was given an invalid request.",
-        "- /sharedPaymentToken: sharedPaymentToken must be a Stripe shared payment token: spt_ followed by letters and digits",
+        "- --token is required",
         "",
       ].join("\n"),
     );
     assert.equal(requests.length, 0);
   });
 
-  it("orders pay --total takes the order's currency", async () => {
+  it("orders pay reads the order, then pays its total in USD", async () => {
     const { data } = await fixture("order-awaiting-payment");
-    const order = structuredClone(data) as { price: { total: Record<string, unknown> } };
-    order.price.total = { amount: "880.00", currency: "CNY" };
-    replies = [{ status: 200, body: order }, { status: 200, body: {} }];
-    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+    replies = [{ status: 200, body: data }, { status: 200, body: {} }];
+    const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "365.00", "--token", "spt_abc"]);
     assert.equal(code, 0, stderr);
     assert.equal(requests.length, 2);
     assert.equal(requests[0]?.method, "GET");
@@ -476,8 +500,28 @@ describe("requests", () => {
     assert.equal(requests[1]?.url, `/v1/orders/${ORDER}/pay`);
     assert.deepEqual(requests[1]?.body, {
       sharedPaymentToken: "spt_abc",
-      total: { amount: "880.00", currency: "CNY" },
+      total: { amount: "365.00", currency: "USD" },
     });
+  });
+
+  // A token pays a USD order only: an order in another currency is not sent, and the message
+  // names what the order's text shows (its Total, its payment link), never a JSON path.
+  it("orders pay on an order that is not in USD exits 1, posts nothing, and points at the payment link", async () => {
+    const { data } = await fixture("order-awaiting-payment");
+    for (const currency of ["CNY", "EUR"]) {
+      requests = [];
+      const order = structuredClone(data) as { total: Record<string, unknown> };
+      order.total = { amount: "880.00", currency };
+      replies = [{ status: 200, body: order }, { status: 200, body: {} }];
+      const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
+      assert.equal(code, 1, currency);
+      assert.equal(stdout, "");
+      assert.equal(
+        stderr,
+        `Error: Not sent: order ${ORDER} is not in USD, and a token pays a USD order only. The user pays by the order's payment link: \`fortrip orders get ${ORDER}\` shows it.\n`,
+      );
+      assert.deepEqual(requests.map((request) => request.method), ["GET"], currency);
+    }
   });
 
   it("orders pay with a bad --token exits 2 before reading the order", async () => {
@@ -486,11 +530,12 @@ describe("requests", () => {
     assert.equal(requests.length, 0);
   });
 
-  it("orders pay on an order without a price currency exits 1 and posts nothing", async () => {
+  it("orders pay on an order that shows no total exits 1 and posts nothing", async () => {
     replies = [{ status: 200, body: { id: ORDER } }, { status: 200, body: {} }];
     const { code, stderr } = await cli(["orders", "pay", ORDER, "--total", "880.00", "--token", "spt_abc"]);
     assert.equal(code, 1);
-    assert.match(stderr, /currency/);
+    assert.equal(stderr, `Error: Not sent: order ${ORDER} shows no total to pay. Read it with \`fortrip orders get ${ORDER}\`.\n`);
+    assert.doesNotMatch(stderr, /total\.currency/);
     assert.deepEqual(requests.map((request) => request.method), ["GET"]);
   });
 
@@ -526,39 +571,62 @@ describe("output", () => {
     const { data } = await fixture("order-awaiting-payment");
     reply = { status: 201, body: data };
     const { stdout } = await cli(BOOK);
-    assert.match(stdout, /Only after they say yes, give them payment\.url exactly as returned\.\n$/);
+    assert.match(stdout, /Only after they say yes, give them the payment link exactly as shown\.\n$/);
   });
 
-  it("orders pay --method stripe_alipay_wechat_pay prints the links and, on a wide TTY, the entry's code", async () => {
-    const { data } = await fixture("order-wallets-open");
-    const read = { status: 200, body: (await fixture("order-awaiting-payment")).data };
-    const args = ["orders", "pay", ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "365.00"];
-    replies = [read, { status: 200, body: data }];
-    // The spawned CLI has no TTY, so the code stays out and the links stay in.
-    const { code, stdout, stderr } = await cli(args);
+  // An order holds no Alipay or WeChat Pay payment for the CLI to draw: the
+  // answer is the order's text and nothing after it, on a TTY too.
+  it("orders pay prints the paid order's text, and no code after it", async () => {
+    const { data } = await fixture("order-confirmed");
+    const read = { status: 200, body: (await fixture("order-payable-by-token")).data };
+    const args = ["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "365.00"];
+    for (const preload of [[], [WIDE_TTY]]) {
+      requests = [];
+      replies = [read, { status: 200, body: data }];
+      const { code, stdout, stderr } = await cli(args, {}, preload);
+      assert.equal(code, 0, stderr);
+      assert.deepEqual(requests[1]?.body, {
+        sharedPaymentToken: "spt_1TestToken0123456789",
+        total: { amount: "365.00", currency: "USD" },
+      });
+      assert.equal(stdout, `${renderToolResult("pay_order", data, "cli")}\n`);
+      assert.ok(!stdout.includes("█"));
+    }
+  });
+
+  it("orders pay --wallet and --method are no flags: each exits 2 and sends nothing", async () => {
+    for (const flag of ["--wallet", "--method"]) {
+      requests = [];
+      const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, flag, "--total", "365.00"]);
+      assert.equal(code, 2, flag);
+      assert.equal(stdout, "", flag);
+      assert.match(stderr, new RegExp(flag));
+      assert.equal(requests.length, 0, flag);
+    }
+    // --method was one in 5.x: the answer is what to do in 6.0, in one line.
+    const { stderr } = await cli(["orders", "pay", ORDER, "--method", "stripe_alipay_wechat_pay", "--total", "365.00"]);
+    assert.equal(stderr, "Error: --method is no flag of fortrip orders pay since 6.0: an order is paid here with --token and --total only; any other way, the user pays on the order's payment link\n");
+  });
+
+  // 6.0: the contact is one name.
+  it("orders create takes the contact's name as --name: --first-name and --last-name are no flags", async () => {
+    const { code, stderr } = await cli(BOOK);
     assert.equal(code, 0, stderr);
-    assert.deepEqual(requests[1]?.body, {
-      method: "stripe_alipay_wechat_pay",
-      total: { amount: "365.00", currency: "USD" },
+    assert.deepEqual((requests[0]?.body as { contact: unknown }).contact, {
+      name: "John Smith",
+      email: "john@example.com",
+      phone: "+8613800000000",
     });
-    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/wechat/);
-    assert.match(stdout, /https:\/\/fortrip\.ai\/pay\/ord_BundAwaiting00000000\/alipay/);
-    assert.ok(!stdout.includes("█"));
-    // On a wide TTY, the code drawn is the wallet entry's wechatPay.qrData.
-    const { qrData } = (data as { payment: { methods: { wechatPay: { qrData: string } }[] } }).payment.methods[0]!
-      .wechatPay;
-    replies = [read, { status: 200, body: data }];
-    const tty = await cli(args, {}, [WIDE_TTY]);
-    assert.equal(tty.code, 0, tty.stderr);
-    assert.ok(tty.stdout.endsWith(`\nOr scan this WeChat Pay code:\n${terminalQr(qrData, 200)}\n`), tty.stdout);
-  });
-
-  it("orders pay --wallet is no flag: it exits 2 and sends nothing", async () => {
-    const { code, stdout, stderr } = await cli(["orders", "pay", ORDER, "--wallet", "--total", "365.00"]);
-    assert.equal(code, 2);
-    assert.equal(stdout, "");
-    assert.match(stderr, /--wallet/);
-    assert.equal(requests.length, 0);
+    for (const flag of ["--first-name", "--last-name"]) {
+      requests = [];
+      const refused = await cli([...BOOK, flag, "John"]);
+      assert.equal(refused.code, 2, flag);
+      assert.equal(refused.stderr, `Error: ${flag} is no flag of fortrip orders create since 6.0: give the contact's full name as --name\n`);
+      assert.equal(requests.length, 0, flag);
+    }
+    const rooms = await cli(["hotels", "get", HOTEL, "--rooms"]);
+    assert.equal(rooms.code, 2);
+    assert.equal(rooms.stderr, "Error: --rooms is no flag of fortrip hotels get since 6.0: use --room-types\n");
   });
 
   it("--json prints the answer as one line of JSON, anywhere before --", async () => {
@@ -622,7 +690,42 @@ describe("errors", () => {
     reply = { status: 429, body: { error: { ...error("rate_limited", true).error, retryAfterSeconds: 7 } } };
     const limited = await cli(SEARCH);
     assert.equal(limited.code, 4);
-    assert.match(limited.stderr, /^Error rate_limited: rate_limited happened\nRetryable: retry after 7 s\./);
+    // The envelope here names no limit: the error is still worded from its code.
+    assert.match(limited.stderr, /^Error rate_limited: too many calls of this kind in a short time\.\nRetryable: retry after 7 s\./);
+  });
+
+  // The service's message is complete, and the exit code is its own.
+  it("client_outdated (HTTP 426) prints Fortrip's message as it is, exits 5, and nothing retries", async () => {
+    const message =
+      "This fortrip CLI (5.3.0) is too old for the service. Update it with `npm install -g fortrip@latest`, then run the command again.";
+    const envelope = { error: { code: "client_outdated", message, retryable: false, requestId: "req_1" } };
+    strictOutput(errorEnvelope).parse(envelope);
+    assert.deepEqual(ERROR_CODES.client_outdated.status, [426]);
+    reply = { status: 426, body: envelope };
+    for (const args of [SEARCH, ["hotels", "get", HOTEL], OFFERS, BOOK, ["orders", "get", ORDER], ["orders", "list"], ["whoami"]]) {
+      requests = [];
+      const { code, stdout, stderr } = await cli(args);
+      assert.equal(code, 5, args.join(" "));
+      assert.equal(stdout, "", args.join(" "));
+      assert.equal(stderr, `${message}\n`, args.join(" "));
+      assert.equal(requests.length, 1, args.join(" "));
+    }
+    // orders cancel and orders pay read the order first: refused there, nothing is posted.
+    for (const args of [
+      ["orders", "cancel", ORDER, "--max-penalty", "12.50"],
+      ["orders", "cancel", ORDER, "--close"],
+      ["orders", "pay", ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"],
+    ]) {
+      requests = [];
+      const { code, stderr } = await cli(args);
+      assert.equal(code, 5, args.join(" "));
+      assert.equal(stderr, `${message}\n`, args.join(" "));
+      assert.deepEqual(requests.map((r) => r.method), ["GET"], args.join(" "));
+    }
+    // With --json, the envelope, as for any error.
+    const json = await cli([...SEARCH, "--json"]);
+    assert.equal(json.code, 5);
+    assert.deepEqual(JSON.parse(json.stderr), { ...envelope, status: 426 });
   });
 
   it("an unknown error code falls back to the HTTP status", async () => {
@@ -632,7 +735,7 @@ describe("errors", () => {
     };
     const { code, stderr } = await cli(SEARCH);
     assert.equal(code, 1);
-    assert.match(stderr, /^Error brand_new \(HTTP 409\): Something new\nRetryable\./);
+    assert.match(stderr, /^Error brand_new \(HTTP 409\): "Something new"\nRetryable\./);
   });
 
   it("a 401 for FORTRIP_TOKEN exits 3 with the server's error and tokenSource beside it", async () => {
@@ -643,7 +746,9 @@ describe("errors", () => {
     const { code, stdout, stderr } = await cli(["orders", "list"]);
     assert.equal(code, 3);
     assert.equal(stdout, "");
-    assert.match(stderr, /^Error unauthenticated: Invalid token\n/);
+    // The contract words a known code itself; the server's message is not shown.
+    assert.match(stderr, /^Error unauthenticated: the user is not signed in to Fortrip, or the sign-in is no longer accepted\.\n/);
+    assert.doesNotMatch(stderr, /Invalid token/);
     assert.match(stderr, /^tokenSource: FORTRIP_TOKEN$/m);
     assert.match(stderr, /didn't accept FORTRIP_TOKEN/);
 
@@ -861,7 +966,7 @@ describe("help", () => {
 
   it("-h works like --help, and anywhere in the command", async () => {
     for (const args of [
-      ["hotels", "book", "-h"],
+      ["orders", "create", "-h"],
       ["hotels", "offers", "--hotel", "1", "--help"],
       ["orders", "get", "-h"],
     ]) {
@@ -908,8 +1013,18 @@ describe("help", () => {
     assert.match(flat(stdout), /Output is compact text on stdout; --json prints it as one line of JSON\./);
   });
 
+  it("--help lists every exit code", async () => {
+    const { stdout } = await cli(["--help"]);
+    const codes = flat(stdout).match(/Exit codes: (.*?)\. Environment:/)?.[1] ?? "";
+    assert.deepEqual(
+      [...codes.matchAll(/(?:^|, )(\d) /g)].map((m) => Number(m[1])),
+      Object.values(EXIT),
+    );
+    assert.match(codes, /5 this CLI is too old for Fortrip \(the error says how to update it\)$/);
+  });
+
   it("no help names an API path", async () => {
-    for (const args of [["--help"], ["hotels", "offers", "--help"], ["hotels", "book", "--help"]]) {
+    for (const args of [["--help"], ["hotels", "offers", "--help"], ["orders", "create", "--help"]]) {
       assert.doesNotMatch((await cli(args)).stdout, /\/api\/|\/v1\//);
     }
   });
@@ -919,7 +1034,7 @@ describe("unknown commands", () => {
   it("a group's command typed without its group names the command", async () => {
     for (const [typed, meant] of [
       ["search", "`fortrip hotels search`"],
-      ["book", "`fortrip hotels book`"],
+      ["create", "`fortrip orders create`"],
       ["get", "`fortrip hotels get` or `fortrip orders get`"],
       ["list", "`fortrip orders list`"],
     ]) {
@@ -944,6 +1059,8 @@ describe("unknown commands", () => {
       ["hotels", "nope"],
       ["hotels", "login"],
       ["orders", "refund"],
+      // 6.0: an order is created with `orders create`.
+      ["hotels", "book"],
     ]) {
       const { code, stderr } = await cli([group as string, name as string]);
       assert.equal(code, 2, `${group} ${name}`);
@@ -966,5 +1083,14 @@ describe("other commands", () => {
       assert.equal(code, 0);
       assert.match(stdout, /^\d+\.\d+\.\d+/);
     }
+  });
+
+  it("the user agent of every request is fortrip-cli/<the version --version prints>", async () => {
+    const version = (await cli(["--version"])).stdout.trim();
+    assert.equal(version, JSON.parse(await readFile("package.json", "utf8")).version);
+    await cli(["orders", "list"]);
+    await cli(SEARCH);
+    assert.equal(requests.length, 2);
+    for (const request of requests) assert.equal(request.userAgent, `fortrip-cli/${version}`);
   });
 });

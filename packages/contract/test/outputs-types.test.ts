@@ -42,7 +42,7 @@ function checkIn(item: Order["items"][number]): string | null {
 
 function previousTotal(change: OfferChange): string | null {
   const known = change as KnownBranch<OfferChange, "field">;
-  return known.field === "price" ? known.previous.amount : null;
+  return known.field === "total" ? known.previous.amount : null;
 }
 
 function changedFields(body: KnownErrorBody): string[] {
@@ -50,10 +50,10 @@ function changedFields(body: KnownErrorBody): string[] {
   return (body.details?.changes ?? []).map((c) => c.field);
 }
 
-function hubName(body: KnownErrorBody): string | null {
+function localityName(body: KnownErrorBody): string | null {
   if (body.code !== "destination_not_found" || !body.details) return null;
   const d = body.details as KnownBranch<typeof body.details, "reason">;
-  return d.reason === "not_a_locality" ? (d.hub?.name ?? null) : null;
+  return d.reason === "not_a_locality" ? (d.locality?.name ?? null) : null;
 }
 
 function placeId(result: SearchResult): string | null {
@@ -66,6 +66,6 @@ describe("v1 output and request Money types", () => {
     assert.deepEqual(notUnknown, [false, false, false, false]);
     assert.deepEqual(requestMoneyTyped, [false, false, false]);
     assert.equal(echoedPenalty.maximumPenalty?.currency, "EUR");
-    assert.ok([checkIn, previousTotal, changedFields, hubName, placeId].every((f) => typeof f === "function"));
+    assert.ok([checkIn, previousTotal, changedFields, localityName, placeId].every((f) => typeof f === "function"));
   });
 });
