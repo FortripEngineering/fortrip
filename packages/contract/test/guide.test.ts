@@ -754,4 +754,13 @@ describe("a client not offered payment by token", () => {
     assert.equal(renderText("{{#if mcp}}a{{#if token-pay}} b{{/if}}{{/if}}", "cli", { tokenPay: true }), "");
     assert.throws(() => renderText("{{#if mcp token-pay}}x{{/if}}", "mcp"), /guide surface/i);
   });
+
+  it("is refused on the skills' surfaces, whose files are the same for every client", () => {
+    for (const surface of ["claude-skill", "cli"] as const) {
+      assert.throws(() => renderGuide(surface, "main", { tokenPay: false }), /MCP server's only/);
+      assert.throws(() => renderText("a", surface, { tokenPay: false }), /MCP server's only/);
+    }
+    // The planning guide has nothing about paying: the MCP surface renders it either way.
+    assert.equal(renderGuide("mcp", "planning", { tokenPay: false }), renderGuide("mcp", "planning"));
+  });
 });

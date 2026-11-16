@@ -36,8 +36,10 @@ export type GuideTopic = "main" | "planning";
 /** What the client the guide is rendered for is offered. */
 export interface GuideOptions {
   /** Paying by a shared payment token (`pay_order`). False for a host whose
-   *  rules leave payment to the payment link alone: the guide then never
-   *  names the tool. Default true. */
+   *  rules leave payment to the payment link alone: the MCP instructions
+   *  then never name the tool. Default true. Only the `mcp` surface takes
+   *  false: a skill is a file written once for every client, and its tool
+   *  table and "Paying without the link" section stay. */
   tokenPay?: boolean;
 }
 
@@ -93,6 +95,9 @@ export function renderText(text: string, surface: GuideSurface, options: GuideOp
   // Every token must mean something, whether `surface` shows it or not.
   for (const [token, body] of text.matchAll(TOKEN)) {
     if (!/^(#if |\/if$)/.test(body ?? "")) resolve(token, surface, false);
+  }
+  if (options.tokenPay === false && surface !== "mcp") {
+    throw new Error(`The guide without payment by token is the MCP server's only, not the ${surface} surface's`);
   }
   const shown = select(text, surface, options.tokenPay !== false).replace(TOKEN, (token) =>
     resolve(token, surface, true),
