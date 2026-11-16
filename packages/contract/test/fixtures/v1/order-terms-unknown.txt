@@ -7,5 +7,5 @@ Terms: cancellation terms unknown · confirmation mode not on record · fees not
 Hotel confirmation number: "CHL-20944"
 Contact: "Mateus Lima" · "mateus.lima@example.com" · "+55 11 95555 0111"
 Total: EUR 236.00 · payment paid
-Cancel: not available: its cancellation terms are not on record; for help, the user emails info@fortrip.ai with the order's reference
+Cancel: not available: its cancellation terms are not on record; for help, the user emails support@fortrip.ai with the order's reference
 Manage: https://fortrip.ai/stays/orders/so_7m2Pq9d

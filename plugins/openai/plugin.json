@@ -5,7 +5,7 @@
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
-    "email": "info@fortrip.ai",
+    "email": "support@fortrip.ai",
     "url": "https://fortrip.ai"
   },
   "homepage": "https://fortrip.ai",
@@ -27,7 +27,7 @@
           "Cancel bookings"
         ],
         "websiteURL": "https://fortrip.ai",
-        "supportURL": "https://fortrip.ai/faq",
+        "supportURL": "https://fortrip.ai/support",
         "privacyPolicyURL": "https://fortrip.ai/privacy",
         "termsOfServiceURL": "https://fortrip.ai/terms",
         "defaultPrompt": [
@@ -87,7 +87,7 @@
             {
               "description": "The tools can't change an existing booking's dates, room or guests; Fortrip support handles that by email.",
               "prompt": "Move my hotel booking in Bangkok to next week.",
-              "expected_behavior": "Doesn't cancel or order anything. Explains that it can't change an existing order, and tells the user to email info@fortrip.ai with the order's reference."
+              "expected_behavior": "Doesn't cancel or order anything. Explains that it can't change an existing order, and tells the user to email support@fortrip.ai with the order's reference."
             }
           ]
         },

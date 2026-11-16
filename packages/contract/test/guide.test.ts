@@ -449,7 +449,7 @@ describe("the CLI guide", () => {
       "`--body",
       "`--json`",
       "`fortrip orders get`",
-      "info@fortrip.ai",
+      "support@fortrip.ai",
     ]) {
       assert.ok(main.includes(phrase), phrase);
     }

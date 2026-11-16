@@ -234,7 +234,7 @@ that starts with `local_`.
 
 A cancellation the CLI can make goes through `fortrip orders cancel`. For
 changes, other cancellations, refunds or other help with a booking, email
-[info@fortrip.ai](mailto:info@fortrip.ai) with the order's reference. Never
+[support@fortrip.ai](mailto:support@fortrip.ai) with the order's reference. Never
 send the payment link.
 
 ## Releasing

@@ -1298,10 +1298,10 @@ describe("orders and the consent rule", () => {
     // Refused by the hotel's system: a cause is offered, not asserted, and a real name is never to be altered.
     assert.equal(
       why("hotel_refused"),
-      "Why it failed: the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them. Give the user info@fortrip.ai and this order's reference now, before any new order: for help, the user emails that address with the reference",
+      "Why it failed: the hotel's booking system refused this order, and would refuse the same order again. Some guest names are not accepted by it, which may be the cause; if the names are as on the passport, don't change them. Give the user support@fortrip.ai and this order's reference now, before any new order: for help, the user emails that address with the reference",
     );
     assert.doesNotMatch(why("hotel_refused"), /check the guest names|because|correct the/);
-    assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails info@fortrip\.ai with the order's reference$/);
+    assert.match(why("unknown"), /not on record; read the order again later, or for help, the user emails support@fortrip\.ai with the order's reference$/);
     data.failure = { reason: "struck_by_lightning" };
     assert.equal(render(fixture).split("\n")[1], "Why it failed: struck_by_lightning");
     // One encoding: a failed order whose reason is not on record says `unknown`. One with no
@@ -1427,7 +1427,7 @@ describe("orders and the consent rule", () => {
   });
 
   it("each order that can be neither cancelled nor closed says the one thing that blocks it", () => {
-    const support = "for help, the user emails info@fortrip.ai with the order's reference";
+    const support = "for help, the user emails support@fortrip.ai with the order's reference";
     const cases: [Golden, string, string][] = [
       // Two statuses, as two blockers: the time ran out, or the caller closed it.
       ["order-expired", "not paid: the time to pay ran out", "its time to pay ran out, so there is nothing to cancel or close"],
@@ -1590,11 +1590,11 @@ describe("orders and the consent rule", () => {
     // A sound booking only support can cancel is not an order Fortrip is looking into.
     assert.equal(
       line("support_only"),
-      "Cancel: not available: the booking stands, and it can't be cancelled here; to cancel it, the user emails info@fortrip.ai with the order's reference",
+      "Cancel: not available: the booking stands, and it can't be cancelled here; to cancel it, the user emails support@fortrip.ai with the order's reference",
     );
     assert.equal(
       line("needs_attention"),
-      "Cancel: not available: Fortrip is looking into this order; for help, the user emails info@fortrip.ai with the order's reference",
+      "Cancel: not available: Fortrip is looking into this order; for help, the user emails support@fortrip.ai with the order's reference",
     );
     assert.equal(line("cancellation_refused"), "Cancel: not available: the hotel refused the cancellation; the booking stands");
     assert.equal(

@@ -5,7 +5,7 @@
   "description": "Search hotels worldwide, compare live room rates and cancellation terms, book and pay securely, and cancel bookings. Requires a Fortrip account.",
   "author": {
     "name": "Fortrip",
-    "email": "info@fortrip.ai",
+    "email": "support@fortrip.ai",
     "url": "https://fortrip.ai"
   },
   "homepage": "https://fortrip.ai",
@@ -14,7 +14,7 @@
   "keywords": ["hotels", "travel", "booking", "rates"],
   "icon": "./.claude-plugin/icon.png",
   "documentationUrl": "https://github.com/FortripEngineering/fortrip/blob/main/plugins/claude/README.md",
-  "supportUrl": "https://fortrip.ai/faq",
+  "supportUrl": "https://fortrip.ai/support",
   "privacyPolicyUrl": "https://fortrip.ai/privacy",
   "termsOfServiceUrl": "https://fortrip.ai/terms"
 }

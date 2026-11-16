@@ -51,4 +51,4 @@ export const CURRENCIES = ["USD", "CNY"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 /** Where a person goes when an agent gets stuck. */
-export const SUPPORT_EMAIL = "info@fortrip.ai";
+export const SUPPORT_EMAIL = "support@fortrip.ai";

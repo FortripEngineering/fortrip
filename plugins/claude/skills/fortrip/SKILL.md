@@ -147,7 +147,7 @@ Check the order with `fortrip:get_order`; its first line has the status:
 
 - confirming with the hotel, then confirmed, with the hotel confirmation number.
 - failed: no stay was booked. "Why it failed" says why and what to do next, and the Total line whether the payment was released or refunded.
-- needs attention from Fortrip: Fortrip is looking into it; the user can email info@fortrip.ai with the order's reference.
+- needs attention from Fortrip: Fortrip is looking into it; the user can email support@fortrip.ai with the order's reference.
 - The Manage link is the user's own page for the order.
 
 ## Presenting hotels
@@ -193,4 +193,4 @@ Close an unpaid order only once the user says they no longer want it: call `fort
 
 ## Changes and support
 
-These tools can't change an order: for changes, a cancellation that `fortrip:cancel_order` can't make, or other problems, the user emails info@fortrip.ai with the order's reference (never its payment link).
+These tools can't change an order: for changes, a cancellation that `fortrip:cancel_order` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).

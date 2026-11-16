@@ -71,7 +71,7 @@ you paid less the penalty), and waits for you to confirm. You're charged no
 more than the penalty you agreed to: if it has gone up since, nothing is
 cancelled and Claude asks you again. The order shows as cancelling until the
 hotel has cancelled it and the refund is issued. Once the stay has started,
-or when the terms don't allow a cancellation here, email info@fortrip.ai with
+or when the terms don't allow a cancellation here, email support@fortrip.ai with
 the order's reference. A cancelled order shows what the cancellation kept
 and what it refunded.
 
@@ -131,14 +131,14 @@ bookings are subject to its [terms](https://fortrip.ai/terms).
   released or refunded in full. Claude tells you whether the rate was no
   longer available or the hotel's booking system refused the order. A hotel's
   system can refuse some guest names: if the names are as on the passports,
-  don't change them, and email info@fortrip.ai with the order's reference.
+  don't change them, and email support@fortrip.ai with the order's reference.
 - **Supplier unavailable:** the hotel supplier didn't respond. Claude retries
   once; if it still fails, try again in a few minutes.
 - **Too many requests:** Claude waits the time Fortrip asks for, then retries.
 - **Changing an order, or a cancellation Claude can't make:** email
-  info@fortrip.ai with the order's reference.
+  support@fortrip.ai with the order's reference.
 
 ## Support
 
-Email [info@fortrip.ai](mailto:info@fortrip.ai) or see the
-[FAQ](https://fortrip.ai/faq).
+Email [support@fortrip.ai](mailto:support@fortrip.ai) or see
+[Help with a booking](https://fortrip.ai/support).

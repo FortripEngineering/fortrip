@@ -137,7 +137,7 @@ describe("LIMITS and friends", () => {
       tokensPerOrder: 5,
     });
     assert.deepEqual([...CURRENCIES], ["USD", "CNY"]);
-    assert.equal(SUPPORT_EMAIL, "info@fortrip.ai");
+    assert.equal(SUPPORT_EMAIL, "support@fortrip.ai");
   });
 });
 

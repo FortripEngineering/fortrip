@@ -7,5 +7,5 @@ Terms: partial penalty now: USD 120.00 from booking; USD 366.00 from 2026-11-18 
 Hotel confirmation number: none yet
 Contact: "Amara Okafor" · "amara.okafor@example.com" · no phone on record
 Total: USD 366.00 · payment paid
-Cancel: not available: Fortrip is looking into this order; for help, the user emails info@fortrip.ai with the order's reference
+Cancel: not available: Fortrip is looking into this order; for help, the user emails support@fortrip.ai with the order's reference
 Manage: https://fortrip.ai/orders/ord_LakeAttention0000000
