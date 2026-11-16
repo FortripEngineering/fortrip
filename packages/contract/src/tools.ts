@@ -197,7 +197,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "search_hotels",
     title: "Search hotels",
     description:
-      "Find hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point, or a country. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A name several places bear answers destination_ambiguous, and a search too broad to price answers search_too_broad with its localities; each error says what to do next. The answer states what was searched, the counts and notes; a next page is the cursor and, optionally, limit.",
+      "Use this when the user wants hotels in a place they name, or a hotel by its name or brand. It finds hotels by destination and/or text, with an indicative per-room-night price when a stay is given. destination is the place the user asked for, never a location they did not give: a place_name with its countryCode, a place or locality by placeId from an earlier answer, a point (a landmark or an address the user named, or the coordinates hotel details showed), or a country. text matches hotel names, brands and areas word for word. Indicative prices are estimates and not bookable: get_hotel_offers returns what the user pays. A name several places bear answers destination_ambiguous, and a search too broad to price answers search_too_broad with its localities; each error says what to do next. The answer states what was searched, the counts and notes; a next page is the cursor and, optionally, limit.",
     annotations: READ,
     input: searchHotelsInput,
     output: searchResult,
@@ -206,7 +206,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "get_hotel",
     title: "Hotel details",
     description:
-      'One hotel\'s catalogue facts: names, address, coordinates, time zone, check-in and check-out times, the full description, every policy and the amenities, and its room types with include: "roomTypes". "Not listed" is not "no". No prices or availability: get_hotel_offers has those.',
+      'Use this when the user asks about one hotel itself: where it is, its check-in and check-out times, its policies, amenities or room types. It returns the hotel\'s catalogue facts: names, address, coordinates, time zone, check-in and check-out times, the full description, every policy and the amenities, and its room types with include: "roomTypes". "Not listed" is not "no". No prices or availability: get_hotel_offers has those.',
     annotations: READ,
     input: getHotelInput,
     output: hotel,
@@ -214,7 +214,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "get_hotel_offers",
     title: "Live offers",
-    description: `Live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room type, the meals included, the total, in the request's currency, for the whole stay and every room (what is charged), with its average per room-night for comparison, fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for create_order with the time it expires. Hotels with nothing to offer are listed as unavailable with the reason. Up to limitPerHotel offers per hotel (default ${LIMITS.offersPerHotelDefault}, fewer when the call's hotels share its ${LIMITS.offersPerCallDefault} offers), picked to span price, free cancellation, breakfast and rooms, listed cheapest first; the answer says, per hotel, how many more a call for that hotel alone would show.`,
+    description: `Use this when the user wants what a stay really costs or whether it can be booked, at hotels already found, and before create_order. It returns live, bookable offers for up to ${LIMITS.offersHotels} hotels and one stay. Every room in stay.rooms must have the same party: for different parties, call once per party. Each offer has the room type, the meals included, the total, in the request's currency, for the whole stay and every room (what is charged), with its average per room-night for comparison, fees payable at the property, the cancellation terms with times in UTC and the hotel's time zone, the confirmation mode, and an offerId for create_order with the time it expires. Hotels with nothing to offer are listed as unavailable with the reason. Up to limitPerHotel offers per hotel (default ${LIMITS.offersPerHotelDefault}, fewer when the call's hotels share its ${LIMITS.offersPerCallDefault} offers), picked to span price, free cancellation, breakfast and rooms, listed cheapest first; the answer says, per hotel, how many more a call for that hotel alone would show.`,
     annotations: READ,
     input: hotelOffersInput,
     output: hotelOffersResult,
@@ -222,7 +222,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "create_order",
     title: "Create order",
-    description: `Create an unpaid order for one offer from get_hotel_offers. It takes items, one item with the offer's offerId inside it (nowhere else in the arguments) and hotel.rooms, and contact. The answer is the order, awaiting payment: its reference, the total, the stay and its terms, and a payment link, a Fortrip page to pay on. Nothing is charged until the order is paid${PAID_WHERE}; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: another order of the stay (another party, or a corrected guest name or contact) takes a new offer. cancel_order cancels or closes an order; for changes, or a cancellation it can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Create an unpaid order when the user asks to book one offer from get_hotel_offers. It takes items, one item with the offer's offerId inside it (nowhere else in the arguments) and hotel.rooms, and contact. The answer is the order, awaiting payment: its reference, the total, the stay and its terms, and a payment link, a Fortrip page to pay on. Nothing is charged until the order is paid${PAID_WHERE}; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: another order of the stay (another party, or a corrected guest name or contact) takes a new offer. cancel_order cancels or closes an order; for changes, or a cancellation it can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     // Destructive: Claude's connector review asks `destructiveHint: true`
     // "for tools that modify or delete data", and a per-call confirmation
     // before an order is created is the behaviour wanted. Idempotent: the
@@ -240,7 +240,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "get_order",
     title: "Get order",
     description:
-      "One of the user's orders by orderId: its status, the payment status and, while it awaits payment, its payment link; the stay, its guests and its terms; whether it can be cancelled now, for which penalty and refund, or closed; why a failed order booked nothing and what a cancellation kept; and the hotel's confirmation number once there is one. It shows whether a payment went through.",
+      "Use this when the user asks about one order of theirs: whether it is paid or confirmed, its terms, or what cancelling it would cost. It returns the order by orderId: its status, the payment status and, while it awaits payment, its payment link; the stay, its guests and its terms; whether it can be cancelled now, for which penalty and refund, or closed; why a failed order booked nothing and what a cancellation kept; and the hotel's confirmation number once there is one. It shows whether a payment went through.",
     annotations: READ_OWN,
     input: getOrderInput,
     output: order,
@@ -249,7 +249,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "list_orders",
     title: "List orders",
     description:
-      "The user's hotel orders, newest first, including those made on the Fortrip website, each as get_order shows it. A next page is the cursor the answer gives.",
+      "Use this when the user asks what they have booked, or about an order whose orderId you do not have. It returns the user's hotel orders, newest first, including those made on the Fortrip website, each as get_order shows it. A next page is the cursor the answer gives.",
     annotations: READ_OWN,
     input: listOrdersInput,
     output: orderList,
@@ -258,7 +258,7 @@ export const TOOLS: readonly ToolSpec[] = [
     name: "cancel_order",
     title: "Cancel order",
     description:
-      "Cancel a paid order under its terms, or close an unpaid one. It takes the orderId and exactly one of maximumPenalty (a paid order) and close: true (an unpaid one). Paid (the order's Cancel line says it can be cancelled): pass maximumPenalty, the penalty on that line exactly as shown. The order becomes cancelling, then cancelled with the refund on its way, or confirmed again if the hotel refuses. If the penalty rose above maximumPenalty, the answer is cancellation_changed and nothing changed. Unpaid (the Cancel line says it can be closed): close: true closes it: nothing is charged, and it can no longer be paid. A mode that does not fit the order (close on an order paid meanwhile) answers order_not_cancellable, which says which mode applies now or what blocks both: nothing is cancelled or closed by the other mode. While a payment is under way the answer is payment_in_progress. The same call again answers the order as it is.",
+      "Use this when the user asks to cancel a paid order or to close an unpaid one. It cancels a paid order under its terms, or closes an unpaid one. It takes the orderId and exactly one of maximumPenalty (a paid order) and close: true (an unpaid one). Paid (the order's Cancel line says it can be cancelled): pass maximumPenalty, the penalty on that line exactly as shown. The order becomes cancelling, then cancelled with the refund on its way, or confirmed again if the hotel refuses. If the penalty rose above maximumPenalty, the answer is cancellation_changed and nothing changed. Unpaid (the Cancel line says it can be closed): close: true closes it: nothing is charged, and it can no longer be paid. A mode that does not fit the order (close on an order paid meanwhile) answers order_not_cancellable, which says which mode applies now or what blocks both: nothing is cancelled or closed by the other mode. While a payment is under way the answer is payment_in_progress. The same call again answers the order as it is.",
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

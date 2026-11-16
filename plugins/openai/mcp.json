@@ -3,7 +3,17 @@
   "mcpServers": {
     "fortrip": {
       "type": "streamable-http",
-      "url": "https://mcp.fortrip.ai/"
+      "url": "https://mcp.fortrip.ai/",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "cimd"
+            }
+          }
+        }
+      }
     }
   }
 }

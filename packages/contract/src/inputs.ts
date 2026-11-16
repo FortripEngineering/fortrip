@@ -140,7 +140,9 @@ export const destination = z.discriminatedUnion(
     strictInput({
       kind: z
         .literal("point", { error: "kind must be point" })
-        .describe("A point on the map."),
+        .describe(
+          "A point the user asked to stay near: a landmark or an address they named, or the coordinates hotel details showed. Never a position the user did not give.",
+        ),
       location: strictInput({
         lat: bounded("lat", -90, 90).describe("Latitude, WGS84."),
         lng: bounded("lng", -180, 180).describe("Longitude, WGS84."),

@@ -259,7 +259,7 @@ function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurf
 }
 
 /** What happened in detail and what to do next, by code. */
-function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
+function detailLines(e: KnownErrorBody, surface: RenderSurface, tokenPay: boolean): Ours[] {
   // `id` is an order's id, or the placeholder for one.
   const getOrder = (id: Ours) => (surface === "cli" ? ours`\`fortrip orders get ${id}\`` : ours`get_order`);
   switch (e.code) {
@@ -382,7 +382,9 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface): Ours[] {
       ];
     case "service_unavailable":
       return [
-        ours`Retry once with the same details (a payment with the same token, never a new one); if it fails again, tell the user.`,
+        tokenPay
+          ? ours`Retry once with the same details (a payment with the same token, never a new one); if it fails again, tell the user.`
+          : ours`Retry once with the same details; if it fails again, tell the user.`,
       ];
     case "supplier_unavailable":
       return [
@@ -409,11 +411,13 @@ function retryLine(retryable: unknown, after: unknown): Ours {
 
 /** The error envelope as text; `status` is the HTTP status, when known.
  *  `surface` names the next calls: tools (`mcp`, the default) or commands
- *  (`cli`). */
+ *  (`cli`). `options.tokenPay: false`, for a client not offered payment by
+ *  token: no line names one. */
 export function renderError(
   envelope: unknown,
   status?: number,
   surface: RenderSurface = "mcp",
+  options: { tokenPay?: boolean } = {},
 ): string {
   let known: KnownErrorBody | null = null;
   let body: Record<string, unknown> | null = null;
@@ -450,8 +454,13 @@ export function renderError(
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
   if (typeof body.pointer === "string") lines.push(ours`Field: ${token("pointer", body.pointer)}`);
-  if (known) lines.push(...detailLines(known, surface));
+  if (known) lines.push(...detailLines(known, surface, options.tokenPay !== false));
   else if (body.details !== undefined) lines.push(ours`Details: ${raw(body.details)}`);
-  if (typeof body.requestId === "string") lines.push(ours`Request id: ${token("id", body.requestId)}`);
+  // The CLI ends every error with its request id. Over MCP only the error
+  // whose words ask for it does (an internal one): a tool's text holds what
+  // the user's request needs, and `_meta` carries the envelope with its id.
+  if (typeof body.requestId === "string" && (surface === "cli" || body.code === "internal")) {
+    lines.push(ours`Request id: ${token("id", body.requestId)}`);
+  }
   return lines.join("\n");
 }

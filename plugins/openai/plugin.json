@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
@@ -15,7 +15,7 @@
       "interface": {
         "displayName": "Fortrip",
         "shortDescription": "Search and book hotels",
-        "longDescription": "Fortrip helps you find and book hotels around the world without leaving the chat. Search by city, neighborhood, hotel name or brand, see what a hotel offers, and compare live room rates, meals and cancellation terms side by side.\n\nWhen you've picked a room, the assistant shows you the total price and the terms and waits for your OK. You then pay on a secure payment page, and nothing is charged until you do. You can check your bookings at any time and cancel one under its cancellation terms; the assistant tells you the fee and the refund first.\n\nYou need a Fortrip account. Fortrip books hotels only for now: flights, activities and changes to an existing booking aren't supported.",
+        "longDescription": "Fortrip helps you find and book hotels around the world. Search by city, neighborhood, hotel name or brand, see what a hotel offers, and compare live room rates, meals and cancellation terms side by side.\n\nWhen you've picked a room, the assistant shows you the total price and the terms and waits for your OK. You then pay on a secure payment page, and nothing is charged until you do. You can check your bookings at any time and cancel one under its cancellation terms; the assistant tells you the fee and the refund first.\n\nYou need a Fortrip account. Fortrip books hotels only for now: flights, activities and changes to an existing booking aren't supported.",
         "developerName": "Fortrip",
         "category": "Travel",
         "capabilities": [
@@ -58,7 +58,7 @@
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY.",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room type, meals, free-cancellation deadline and total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so. If the answer is currency_unavailable, it says CNY prices aren't available yet and offers USD prices."
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room type, meals, free-cancellation deadline and total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so."
             },
             {
               "description": "Compare two check-in dates within a budget",
@@ -86,7 +86,7 @@
             },
             {
               "description": "A booking's dates, room or guests can't be changed: a change means cancelling it under its terms and booking again.",
-              "prompt": "Move my hotel booking in Bangkok to next week.",
+              "prompt": "Move my hotel booking to next week.",
               "expected_behavior": "Doesn't cancel or order anything on its own. Explains that an existing order can't be changed, and that moving it means cancelling it under its terms and booking the new dates. Asks what the user wants before doing either."
             }
           ]
@@ -95,11 +95,11 @@
         "commerce_description": "Users can book hotel stays. create_order creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there, with the ways to pay of the order's currency: a USD order through Stripe Checkout or a wallet such as Alipay or WeChat Pay, a CNY order through payment channels in mainland China. The assistant never pays and never opens or chooses a payment method itself. Before giving the link, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the payment page."
       },
       "publication": {
-        "release_notes": "See why a booking didn't go through and what a cancellation refunded. Alipay and WeChat Pay are on the payment page, where you choose how to pay.",
+        "release_notes": "Search hotels worldwide, compare live room rates with their meals and cancellation terms, book with payment on a secure Fortrip page, and check or cancel your bookings.",
         "translations": {
           "zh-CN": {
             "subtitle": "搜索并预订酒店",
-            "description": "Fortrip 让你在对话里直接找酒店、订酒店。按城市、街区、酒店名或品牌搜索，查看酒店详情，并排比较实时房价、餐食和取消政策。\n\n选好房间后，助手会先告诉你总价和各项条款，等你确认。之后你在安全的付款页面完成付款，付款之前不会扣任何钱。你可以随时查看自己的预订，也可以按取消政策取消，助手会先告诉你违约金和退款金额。\n\n需要 Fortrip 账号。目前只支持酒店，暂不支持机票、活动和修改已有预订。"
+            "description": "Fortrip 帮你在对话里找酒店、比房价、下订单。按城市、街区、酒店名或品牌搜索，查看酒店详情，并排比较实时房价、餐食和取消政策。\n\n选好房间后，助手会先告诉你总价和各项条款，等你确认。之后你在安全的付款页面完成付款，付款之前不会扣任何钱。你可以随时查看自己的预订，也可以按取消政策取消，助手会先告诉你违约金和退款金额。\n\n需要 Fortrip 账号。目前只支持酒店，暂不支持机票、活动和修改已有预订。"
           }
         }
       }

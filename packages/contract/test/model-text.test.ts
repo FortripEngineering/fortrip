@@ -412,9 +412,12 @@ describe("every known error is worded without the server's message", () => {
       const [head, retry, ...rest] = text.split("\n");
       assert.match(head!, /^Error [a-z_]+ \(HTTP \d+\): \S/, where);
       assert.match(retry!, /^(Retryable|Not retryable)/, where);
-      // Beyond what happened: what to do next, then the request id.
-      if (!outdated) assert.ok(rest.length >= 2, `${where}: ${text}`);
-      assert.equal(rest.at(-1), "Request id: req_1", where);
+      // Beyond what happened: what to do next. The request id ends every
+      // error of the CLI's; over MCP only the one whose words ask for it.
+      const withId = where.endsWith("(cli)") || where.startsWith("renderError internal ");
+      if (!outdated) assert.ok(rest.length >= (withId ? 2 : 1), `${where}: ${text}`);
+      assert.equal(rest.at(-1) === "Request id: req_1", withId, where);
+      assert.equal(text.includes("req_1"), withId, where);
     }
   });
 

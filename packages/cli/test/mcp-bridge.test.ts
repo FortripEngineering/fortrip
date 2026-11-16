@@ -617,7 +617,7 @@ describe("fortrip mcp bridge", () => {
     assert.equal(
       toolError(reply).text,
       // The service's message is its text, not the contract's: a JSON string.
-      `Error client_outdated: ${JSON.stringify(CLIENT_OUTDATED.body.error.message)}\nNot retryable.\nRequest id: req_fakeoutdated`,
+      `Error client_outdated: ${JSON.stringify(CLIENT_OUTDATED.body.error.message)}\nNot retryable.`,
     );
     assert.equal(api.mcpRequests.length - sent, 1);
     assert.equal(api.counts.refreshes, 0);

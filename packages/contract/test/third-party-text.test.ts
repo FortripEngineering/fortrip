@@ -822,10 +822,10 @@ describe("orders", () => {
 
 describe("errors", () => {
   const error = (name: string) => (load(name) as unknown as ErrorFixture).envelope.error;
-  const text = (name: string, change: (e: Record<string, any>) => void) => {
+  const text = (name: string, change: (e: Record<string, any>) => void, surface: RenderSurface = "mcp") => {
     const e = error(name);
     change(e);
-    return renderError({ error: e }, 409);
+    return renderError({ error: e }, 409, surface);
   };
 
   // The text of a code this build knows is built from the code
@@ -837,7 +837,7 @@ describe("errors", () => {
       e.pointer = `/total\n${HOSTILE[1]}`;
       e.requestId = `req_1\u2028${HOSTILE[2]}`;
     };
-    const lines = text("error-payment-total-mismatch", change).split("\n");
+    const lines = text("error-payment-total-mismatch", change, "cli").split("\n");
     assert.deepEqual(
       [lines[0], lines[2], lines.at(-1)],
       [
@@ -847,6 +847,10 @@ describe("errors", () => {
       ],
     );
     assert.equal(lines.length, 5);
+    // Over MCP the request id is not in the text: every other line is.
+    const overMcp = text("error-payment-total-mismatch", change).split("\n");
+    assert.equal(overMcp.length, 4);
+    assert.ok(!overMcp.join("\n").includes("req_1"));
     assert.ok(!lines.join("\n").includes(HOSTILE[0]!));
     // A code this build does not know has only the message: one line, after our words.
     const unknown = text("error-payment-total-mismatch", (e) => {
@@ -875,7 +879,7 @@ describe("errors", () => {
       e.code = `payment_total_mismatch\n${HOSTILE[0]}`;
       e.details.orderId = `ord_1\n${HOSTILE[2]}`;
     }).split("\n");
-    assert.equal(lines.length, 5);
+    assert.equal(lines.length, 4);
     assert.ok(lines[0]!.startsWith("Error unknown (HTTP 409): "), lines[0]);
     assert.ok(lines[3]!.startsWith(`Details: {"orderId":"ord_1\\n${HOSTILE[2]}",`), lines[3]);
   });
@@ -934,7 +938,7 @@ describe("errors", () => {
     assert.ok(sample("payment_declined", { declineCode: "card_declined" })[2]!.startsWith("Declined (card_declined): "));
     assert.equal(sample("stay_in_past", { checkIn: "2026-10-31", timeZone: "Asia/Shanghai" })[2], "Check-in 2026-10-31 is already past in Asia/Shanghai: ask the user for new dates.");
     for (const details of [{ issues: [] }, { declineCode: null }]) {
-      assert.equal(sample("no_such_code", details).length, 4);
+      assert.equal(sample("no_such_code", details).length, 3);
     }
   });
 });
@@ -1025,8 +1029,10 @@ describe("a value of an open enum the package does not know", () => {
   });
 
   it("is shown in an error only when it reads as a code", () => {
+    // Each line ends with a line break, the last one too: a case below names
+    // the end of its line with one.
     const sample = (code: string, details?: unknown) =>
-      renderError({ error: { code, message: "Something happened.", retryable: false, ...(details ? { details } : {}), requestId: "req_1" } }, 400);
+      `${renderError({ error: { code, message: "Something happened.", retryable: false, ...(details ? { details } : {}), requestId: "req_1" } }, 400)}\n`;
     const cases: [string, (v: string) => string, string][] = [
       ["code", (v) => sample(v), 'Error unknown (HTTP 400): "Something happened."'],
       ["cursor reason", (v) => sample("cursor_invalid", { reason: v }), "\nThe cursor can't be used: "],
@@ -1578,9 +1584,10 @@ describe("every string of a result, replaced by a hostile one", () => {
           const text = renderError(allowed, status, surface);
           assertOurs(text, where, ERROR_OWN, CANCEL_LOOKALIKES);
           assert.ok(worded(allowed, code, text), where);
-          // The request id is quoted after our words; the message, as
+          // The request id, where it is shown (the CLI's every error; over
+          // MCP an internal one), is quoted after our words; the message, as
           // hostile, is the head only of client_outdated, and nowhere else.
-          assert.ok(text.endsWith(`\nRequest id: ${token("id", hostile)}`), where);
+          assert.equal(text.endsWith(`\nRequest id: ${token("id", hostile)}`), surface === "cli" || code === "internal", where);
           assert.equal(text.split("\n")[0]!.endsWith(`: ${theirs(hostile)}`), code === "client_outdated", where);
           // Every string there is: an error of no known code, its details as JSON.
           const all = structuredClone(envelope);
