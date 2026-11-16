@@ -1020,6 +1020,43 @@ describe("unknowns carry their own negation inline", () => {
     assert.ok(line.includes(" · USD 365.00 total (average USD 182.50 per room-night) · "), line);
   });
 
+  it("says which terms some of a hotel's offers leave unknown, so nothing is said of them all", () => {
+    const MEALS =
+      "Unknown: the meals of 1 of these 3 offers. A statement about the meals of every one of them (that none includes breakfast, that all are room only) is not known to be true: make it only about the offers that state their meals.";
+    const CANCELLATION =
+      "Unknown: the cancellation terms of 1 of these 3 offers. A statement about the cancellation of every one of them (that none is free to cancel, that all are refundable) is not known to be true: make it only about the offers that state their terms.";
+    const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const offers = (fixture.data.hotels as { offers: Record<string, any>[] }[])[0]!.offers;
+    // The golden: one offer of three states no meals, another no cancellation terms.
+    for (const surface of ["mcp", "cli"] as const) {
+      const lines = renderToolResult("get_hotel_offers", fixture.data, surface).split("\n");
+      const last = lines.findIndex((l) => l.startsWith("3. Offer "));
+      // Right under the offers they are about, before what was left out.
+      assert.deepEqual(lines.slice(last + 1, last + 3), [MEALS, CANCELLATION], surface);
+      assert.match(lines[last + 3]!, /^Not shown: /, surface);
+    }
+    const unknownLines = () => render(fixture).split("\n").filter((l) => l.startsWith("Unknown: "));
+    // Meals the source read but did not state count as unknown too.
+    offers[1]!.meals = { ...offers[1]!.meals, included: null };
+    assert.deepEqual(unknownLines(), [MEALS.replace("1 of these 3", "2 of these 3"), CANCELLATION]);
+    // A status this version does not know is not a stated one.
+    offers[0]!.cancellation = { ...offers[0]!.cancellation, status: "flexible_plus" };
+    assert.equal(unknownLines()[1], CANCELLATION.replace("1 of these 3", "2 of these 3"));
+    // Every offer unknown: each line says so, and no offer is left to say more of.
+    for (const offer of offers) offer.meals = copy(offers[0]!.meals);
+    assert.deepEqual(unknownLines(), [CANCELLATION.replace("1 of these 3", "2 of these 3")]);
+    // Every offer stated: nothing to add.
+    const stated = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const hotel = (stated.data.hotels as { offers: Record<string, any>[] }[])[0]!;
+    hotel.offers = [hotel.offers[1]!, { ...copy(hotel.offers[1]!), offerId: "off_BundKingBreakfast001" }];
+    assert.doesNotMatch(render(stated), /^Unknown: /m);
+    // One offer alone: its own line says what it leaves unknown.
+    const alone = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+    const only = (alone.data.hotels as { offers: Record<string, any>[] }[])[0]!;
+    only.offers = [only.offers[0]!];
+    assert.doesNotMatch(render(alone), /^Unknown: /m);
+  });
+
   it("says how many more offers a call for the hotel alone would show", () => {
     const fixture = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
     const omitted = (fixture.data.hotels as { omitted: Record<string, number> }[])[0]!.omitted;

@@ -1184,6 +1184,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^total = the whole stay and every room, /,
     /^No hotel has offers for this stay\.$/,
     /^\d+\. Offer /,
+    /^Unknown: the (meals|cancellation terms) of \d+ of these \d+ offers\. /,
     /^Not shown: /,
     /^A call for this hotel alone would show /,
     /^Limit: /,

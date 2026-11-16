@@ -2,7 +2,7 @@ import type { RoomType } from "../outputs/hotel.ts";
 import type { HotelOffersResult, Offer } from "../outputs/offer.ts";
 import { LIMITS } from "../limits.ts";
 import type { RenderSurface } from "../tools.ts";
-import { label, money, named, party, plural, roomFacts, stayLine, when } from "./format.ts";
+import { label, money, named, num, party, plural, roomFacts, stayLine, when } from "./format.ts";
 import { code, joined, type Ours, ours, own, theirs, token } from "./third-party.ts";
 
 /* `get_hotel_offers` (spec §9), and the terms orders and errors share. */
@@ -46,6 +46,9 @@ export function mealsWithLabel(m: Meals): Ours {
   return m.label ? ours`${text} (labelled ${theirs(m.label.text)})` : text;
 }
 
+/** The cancellation statuses that charge something, in our words. */
+const PENALTY_STATUSES: Record<string, string> = { partial_penalty: "partial penalty now", non_refundable: "non-refundable" };
+
 export function cancellationText(c: Cancellation): Ours {
   const unknown = ours`cancellation terms unknown`;
   if (c.status === "unknown") return unknown;
@@ -62,11 +65,7 @@ export function cancellationText(c: Cancellation): Ours {
         : ours`free cancellation until ${when(c.freeCancellationEndsAt, c.timeZone)}`;
     return steps ? ours`${head}, then ${steps}` : head;
   }
-  const head = label(
-    { partial_penalty: "partial penalty now", non_refundable: "non-refundable" },
-    c.status,
-    unknown,
-  );
+  const head = label(PENALTY_STATUSES, c.status, unknown);
   return steps ? ours`${head}: ${steps}` : head;
 }
 
@@ -144,6 +143,29 @@ export function offerLine(o: Offer): Ours {
   );
 }
 
+/*
+ * An unknown on one offer is lost in a sentence about them all: models that
+ * read each offer's unknown rightly still summed up "none of the five offers
+ * includes breakfast" (6.0 output eval). So where some of a hotel's offers
+ * state a term and some do not, a line under them says so. With every offer
+ * unknown, or one offer alone, the offers' own lines already say it all.
+ */
+function unknownTermLines(offers: readonly Offer[]): Ours[] {
+  const n = offers.length;
+  const mixed = (unknown: (o: Offer) => boolean) => {
+    const k = offers.filter(unknown).length;
+    return k > 0 && k < n ? k : null;
+  };
+  const meals = mixed((o) => !o.meals.known || o.meals.included === null);
+  const cancellation = mixed((o) => o.cancellation.status !== "free" && !Object.hasOwn(PENALTY_STATUSES, o.cancellation.status));
+  return [
+    meals !== null &&
+      ours`Unknown: the meals of ${num(meals)} of these ${plural(n, "offer")}. A statement about the meals of every one of them (that none includes breakfast, that all are room only) is not known to be true: make it only about the offers that state their meals.`,
+    cancellation !== null &&
+      ours`Unknown: the cancellation terms of ${num(cancellation)} of these ${plural(n, "offer")}. A statement about the cancellation of every one of them (that none is free to cancel, that all are refundable) is not known to be true: make it only about the offers that state their terms.`,
+  ].filter((line): line is Ours => line !== false);
+}
+
 const OMITTED: Record<string, string> = {
   byNationality: "restricted by nationality",
   byFilters: "removed by the filters",
@@ -217,6 +239,7 @@ export function renderOffers(r: HotelOffersResult, surface: RenderSurface = "mcp
   for (const h of r.hotels) {
     lines.push(ours``, ours`Hotel: ${named(h.name, h.names)} · ${token("id", h.hotelId)} · ${plural(h.offers.length, "offer")}`);
     h.offers.forEach((o, i) => lines.push(ours`${i + 1}. ${offerLine(o)}`));
+    lines.push(...unknownTermLines(h.offers));
     const omitted = omittedText(h.omitted);
     if (omitted) lines.push(ours`Not shown: ${omitted}.`);
     const callLimit = callLimitText(h.omitted, r.limitPerHotel, surface);
