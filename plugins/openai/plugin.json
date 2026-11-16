@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
@@ -45,8 +45,8 @@
             {
               "description": "Search hotels in a city for given dates",
               "prompt": "Find 5-star hotels in Bangkok for 2 adults, checking in 30 days from today for 2 nights, with prices in USD.",
-              "tools_triggered": "search_hotels",
-              "expected_behavior": "Calls search_hotels with a place_name destination for Bangkok in Thailand, the requested dates and party, filters.stars with a minimum of 5 and currency USD, and lists matching 5-star Bangkok hotels with their indicative price per room per night in USD, saying these are indicative prices and live offers still need to be checked."
+              "tools_triggered": "search_hotels (get_hotel optional) (get_hotel_offers optional)",
+              "expected_behavior": "Calls search_hotels with a place_name destination for Bangkok in Thailand, the requested dates and party, filters.stars with a minimum of 5 and currency USD, and lists matching 5-star Bangkok hotels with prices in USD. A price from the search is given as an indicative estimate per room per night, with live offers still to be checked. It may go on to call get_hotel_offers for some of the hotels and give their live offers, each with its total for the stay and its terms."
             },
             {
               "description": "Read static hotel details",
@@ -63,14 +63,14 @@
             {
               "description": "Compare two check-in dates within a budget",
               "prompt": "I need 3 nights in Shanghai for 2 adults in 1 room, checking in either 30 or 37 days from today, for under 150 USD per night. Which dates and hotels give the best value?",
-              "tools_triggered": "search_hotels, get_hotel_offers",
+              "tools_triggered": "search_hotels, get_hotel_offers (get_hotel optional)",
               "expected_behavior": "Calls search_hotels for Shanghai for each check-in date with filters.price.maxPerRoomNight of 150 USD, then get_hotel_offers for a shortlist of the results on each date. It compares each offer's average per room-night with the 150 USD budget and recommends options within it, each with its dates, total in USD, meals and cancellation terms. It treats search prices as indicative and calls a hotel available only when get_hotel_offers returned an offer for it."
             },
             {
               "description": "Create a booking payment link after confirmation",
               "prompt": "Book the cheapest free-cancellation room at Anantara Riverside Bangkok Resort for 1 adult in 1 room, 2 nights starting 60 days from today. Guest: John Smith, email john.smith@example.com, phone +1 415 555 0100.",
               "tools_triggered": "search_hotels, get_hotel_offers, create_order",
-              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay with the guest's name, the contact, the total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the order's payment link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there. If no free-cancellation offer is available, it says so and asks how to proceed instead of ordering another offer."
+              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay with the guest's name, the contact, the total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the order's payment link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there. If no free-cancellation offer is available, it says so and asks how to proceed instead of ordering another offer. If the offer sold out or its price or terms changed when it was ordered, it says so, shows every change, and asks again before ordering another offer."
             }
           ],
           "negative": [
@@ -87,7 +87,7 @@
             {
               "description": "A booking's dates, room or guests can't be changed: a change means cancelling it under its terms and booking again.",
               "prompt": "Move my hotel booking to next week.",
-              "expected_behavior": "Doesn't cancel or order anything on its own. Explains that an existing order can't be changed, and that moving it means cancelling it under its terms and booking the new dates. Asks what the user wants before doing either."
+              "expected_behavior": "May call list_orders to look for the booking. Doesn't cancel or order anything on its own. Explains that an existing order can't be changed, and that moving it means cancelling it under its terms and booking the new dates. Asks what the user wants before doing either."
             }
           ]
         },
