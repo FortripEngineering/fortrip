@@ -150,13 +150,22 @@ export function offerLine(o: Offer): Ours {
  * state a term and some do not, a line under them says so. With every offer
  * unknown, or one offer alone, the offers' own lines already say it all.
  */
+/** Whether the offer leaves open that it includes breakfast: its meals are
+ *  not stated, or no breakfast is named and a main meal is left unnamed or
+ *  unstated (`mealsText` then says "more main meal (not named)" or "other
+ *  main meals not stated"). */
+function breakfastUnknown(m: Meals): boolean {
+  if (!m.known || m.included === null) return true;
+  return !m.allInclusive && !m.included.includes("breakfast") && m.unspecifiedMainMeals !== 0;
+}
+
 function unknownTermLines(offers: readonly Offer[]): Ours[] {
   const n = offers.length;
   const mixed = (unknown: (o: Offer) => boolean) => {
     const k = offers.filter(unknown).length;
     return k > 0 && k < n ? k : null;
   };
-  const meals = mixed((o) => !o.meals.known || o.meals.included === null);
+  const meals = mixed((o) => breakfastUnknown(o.meals));
   const cancellation = mixed((o) => o.cancellation.status !== "free" && !Object.hasOwn(PENALTY_STATUSES, o.cancellation.status));
   return [
     meals !== null &&

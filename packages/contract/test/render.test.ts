@@ -1039,6 +1039,27 @@ describe("unknowns carry their own negation inline", () => {
     // Meals the source read but did not state count as unknown too.
     offers[1]!.meals = { ...offers[1]!.meals, included: null };
     assert.deepEqual(unknownLines(), [MEALS.replace("1 of these 3", "2 of these 3"), CANCELLATION]);
+    // Meals stated in part: with no breakfast named and a main meal left
+    // unnamed or unstated, breakfast is as unknown as on an offer that states none.
+    const partly = (meals: Record<string, unknown>) => {
+      const one = copy(load("offers-two-hotels-one-unavailable")) as ToolFixture;
+      const hotel = (one.data.hotels as { offers: Record<string, any>[] }[])[0]!;
+      const roomOnly = { known: true, included: [], unspecifiedMainMeals: 0, allInclusive: false, guestsCoveredPerRoom: null, label: null };
+      hotel.offers = [
+        { ...copy(hotel.offers[1]!), meals: roomOnly },
+        { ...copy(hotel.offers[1]!), offerId: "off_BundKingBreakfast001", meals: { ...roomOnly, ...meals } },
+      ];
+      strictOutput(outputOf("get_hotel_offers")).parse(one.data);
+      return render(one).split("\n").filter((l) => l.startsWith("Unknown: the meals"));
+    };
+    const ONE_OF_TWO = [MEALS.replace("1 of these 3", "1 of these 2")];
+    assert.deepEqual(partly({ unspecifiedMainMeals: null }), ONE_OF_TWO);
+    assert.deepEqual(partly({ unspecifiedMainMeals: 1 }), ONE_OF_TWO);
+    assert.deepEqual(partly({ included: ["dinner"], unspecifiedMainMeals: null }), ONE_OF_TWO);
+    // Breakfast named, all inclusive, or every main meal accounted for: known.
+    assert.deepEqual(partly({ included: ["breakfast"], unspecifiedMainMeals: null }), []);
+    assert.deepEqual(partly({ allInclusive: true, unspecifiedMainMeals: null }), []);
+    assert.deepEqual(partly({ included: ["dinner"], unspecifiedMainMeals: 0 }), []);
     // A status this version does not know is not a stated one.
     offers[0]!.cancellation = { ...offers[0]!.cancellation, status: "flexible_plus" };
     assert.equal(unknownLines()[1], CANCELLATION.replace("1 of these 3", "2 of these 3"));
