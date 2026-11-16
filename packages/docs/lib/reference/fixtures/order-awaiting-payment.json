@@ -109,7 +109,7 @@
   },
   "payment": {
     "status": "unpaid",
-    "url": "https://fortrip.ai/pay/ord_Wr4tY7uI0oPa3SdF6gHj?s=cs_live_b1Q9xT4mK7pW2rZ8vN3c",
+    "url": "https://fortrip.ai/pay/ord_Wr4tY7uI0oPa3SdF6gHj?s=Lk9b1Q9xT4mK7pW2rZ8vN3c",
     "requiresSignIn": false,
     "expiresAt": "2027-02-20T11:49:12Z",
     "localCurrencyAtCheckout": true,

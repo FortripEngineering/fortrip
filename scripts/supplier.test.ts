@@ -7,8 +7,18 @@ import { fileURLToPath } from "node:url";
 
 const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-/** The supplier's name, assembled so this file doesn't carry it. */
-const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
+/** The supplier's names, from the environment (a CI secret) so that this
+ *  repository carries none. Unset, as on a fork or a laptop, there is nothing
+ *  to look for and the check is skipped. */
+const SUPPLIER_NAMES = (process.env.SUPPLIER_DENYLIST ?? "")
+  .split(",")
+  .map((name) => name.trim())
+  .filter(Boolean);
+const SUPPLIER =
+  SUPPLIER_NAMES.length > 0
+    ? new RegExp(SUPPLIER_NAMES.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i")
+    : null;
+const NO_LIST = SUPPLIER ? false : "SUPPLIER_DENYLIST is not set";
 
 /** What the packages, the skills and the plugins publish: every file under
  *  them that git tracks, or would (`pnpm validate` checks the whole tree,
@@ -16,7 +26,7 @@ const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
 const PUBLISHED = /^(packages\/[^/]+\/src|skills|plugins)\//;
 
 describe("no supplier names", () => {
-  it("in the packages' sources, the skills or the plugins", () => {
+  it("in the packages' sources, the skills or the plugins", { skip: NO_LIST }, () => {
     const files = execFileSync(
       "git",
       ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
@@ -26,7 +36,7 @@ describe("no supplier names", () => {
       .filter((file) => PUBLISHED.test(file) && existsSync(path.join(repo, file)));
     assert.ok(files.length > 30, `${files.length} files`);
     assert.deepEqual(
-      files.filter((file) => SUPPLIER.test(readFileSync(path.join(repo, file), "utf8"))),
+      files.filter((file) => (SUPPLIER as RegExp).test(readFileSync(path.join(repo, file), "utf8"))),
       [],
     );
   });

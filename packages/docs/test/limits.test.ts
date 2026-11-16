@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { LIMITS, RATE_LIMITS } from "@fortrip/agent-contract";
 
-import { failClosedClause, limitRows, rateLimitRows } from "../lib/reference/limits.ts";
+import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 
 test("the limits table reads every limit the contract defines", () => {
   const read = new Set<string>();
@@ -59,7 +59,6 @@ test("the rate limits are the contract's, one row per scope, per minute", () => 
   assert.deepEqual(operations.orders_create, ["create_order"]);
   assert.deepEqual(operations.orders_cancel, ["cancel_order"]);
   assert.deepEqual(operations.orders_pay, ["pay_order"]);
-  assert.equal(rateLimitRows().find((row) => row.scope === "orders_create")?.failClosed, true);
 });
 
 test("every HTTP tool counts against exactly one scope", () => {
@@ -80,9 +79,7 @@ test("every HTTP tool counts against exactly one scope", () => {
   );
 });
 
-test("the errors page names every operation refused while the limiter is down", () => {
-  assert.equal(
-    failClosedClause(),
-    "order creation, order cancellations and order payments, which answer",
-  );
+test("the rate limits say nothing of what happens while the limiter is down", async () => {
+  const { BLOCKS } = await import("../lib/markdown/components.ts");
+  assert.doesNotMatch(JSON.stringify(BLOCKS.RateLimitsTable?.({})), /limiter|go through/i);
 });

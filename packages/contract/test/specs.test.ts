@@ -125,8 +125,18 @@ function inputOf(spec: CommandSpec): z.ZodType {
   return input;
 }
 
-/** The supplier's name, assembled so this file doesn't carry it. */
-const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
+/** The supplier's names, from the environment (a CI secret) so that this
+ *  repository carries none. Unset, as on a fork or a laptop, there is nothing
+ *  to look for and the check is skipped. */
+const SUPPLIER_NAMES = (process.env.SUPPLIER_DENYLIST ?? "")
+  .split(",")
+  .map((name) => name.trim())
+  .filter(Boolean);
+const SUPPLIER =
+  SUPPLIER_NAMES.length > 0
+    ? new RegExp(SUPPLIER_NAMES.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i")
+    : null;
+const NO_LIST = SUPPLIER ? false : "SUPPLIER_DENYLIST is not set";
 
 /** Every string in a value, however deep. */
 function strings(value: unknown): string[] {
@@ -204,7 +214,7 @@ const orderFixture = {
   total: usd("132.40"),
   payment: {
     status: "unpaid",
-    url: `https://fortrip.ai/pay/${ORD}?s=cs_test_1`,
+    url: `https://fortrip.ai/pay/${ORD}?s=Lk91`,
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
@@ -1081,7 +1091,7 @@ describe("CLI-only options", () => {
 });
 
 describe("the specs", () => {
-  it("no spec names the supplier", () => {
+  it("no spec names the supplier", { skip: NO_LIST }, () => {
     const everything = [
       ...strings(TOOLS.map(({ input, output, ...rest }) => rest)),
       ...TOOLS.flatMap((spec) =>
@@ -1096,6 +1106,8 @@ describe("the specs", () => {
       CANCEL_NEXT_STEP,
     ];
     assert.ok(everything.length > 100, "the walk found the specs' text");
-    assert.deepEqual(everything.filter((text) => SUPPLIER.test(text)), []);
+    // A count, not the strings: a failure must not print what it found.
+    const naming = everything.filter((text) => (SUPPLIER as RegExp).test(text)).length;
+    assert.ok(naming === 0, `${naming} string(s) of the specs name the supplier`);
   });
 });
