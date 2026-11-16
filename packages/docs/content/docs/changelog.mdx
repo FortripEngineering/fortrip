@@ -7,6 +7,18 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.0.1
+
+Released 2026-11-16.
+
+The schemas, the tools, the commands and the errors keep their shape. The change is to the text that agents read.
+
+### Changed
+
+- An offers answer says when a term is unknown for only some of a hotel's offers. Under those offers, a line gives how many of them state no meals, or no cancellation terms, and says that a statement about every one of them (that none includes breakfast, that all are refundable) is not known to be true. No line is written when every offer states the term, when none does, or when the hotel has one offer.
+- The support address in order texts, error texts, the guide and the skills is `support@fortrip.ai`.
+- The guide says an order can't be changed: it can only be cancelled under its terms and ordered again. It no longer sends the user to support for a change.
+
 ## 6.0.0
 
 Released 2026-11-14.
