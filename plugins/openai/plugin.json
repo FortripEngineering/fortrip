@@ -58,7 +58,7 @@
               "description": "Compare live rates and cancellation terms",
               "prompt": "Show live offers with free cancellation at Anantara Riverside Bangkok Resort for 2 adults in 1 room, 2 nights starting 45 days from today, with the amounts in CNY.",
               "tools_triggered": "search_hotels, get_hotel_offers",
-              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room type, meals, free-cancellation deadline and total in CNY, which is what is charged."
+              "expected_behavior": "Finds the hotel with search_hotels, calls get_hotel_offers for it with the dates, 1 room of 2 adults, filters.requireFreeCancellation and currency CNY, and lists offers with their room type, meals, free-cancellation deadline and total in CNY, which is what is charged. If the hotel has no free-cancellation offer for those dates, it says so."
             },
             {
               "description": "Compare two check-in dates within a budget",
@@ -70,7 +70,7 @@
               "description": "Create a booking payment link after confirmation",
               "prompt": "Book the cheapest free-cancellation room at Anantara Riverside Bangkok Resort for 1 adult in 1 room, 2 nights starting 60 days from today. Guest: John Smith, email john.smith@example.com, phone +1 415 555 0100.",
               "tools_triggered": "search_hotels, get_hotel_offers, create_order",
-              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay with the guest's name, the contact, the total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the order's payment link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there."
+              "expected_behavior": "Finds the hotel, calls get_hotel_offers with filters.requireFreeCancellation, and calls create_order with the cheapest free-cancellation offer, the guest in room 1 and the contact's name, email and phone. It shows the stay with the guest's name, the contact, the total with its currency, the meals, cancellation rules, confirmation mode and pay-at-hotel fees, and asks the user to confirm. Only after the user confirms does it give the order's payment link, a Fortrip page on fortrip.ai that recaps the order and continues to payment. Nothing is charged unless the user pays there. If no free-cancellation offer is available, it says so and asks how to proceed instead of ordering another offer."
             }
           ],
           "negative": [
