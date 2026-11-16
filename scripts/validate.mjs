@@ -55,7 +55,16 @@ for (const file of ["plugins/openai/plugin.json", "plugins/openai/mcp.json", "pl
     : new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
   const validate = ajv.compile(schema);
-  check(`${file} matches ${data.$schema}`, validate(data), JSON.stringify(validate.errors));
+  check(`${file} matches ${data.$schema}`, validate(withoutServerExtensions(data)), JSON.stringify(validate.errors));
+}
+
+/** OpenAI's packaging guide declares a server's authentication under the
+ *  server's own `extensions["com.openai"].auth`, a key the 1.0.0 MCP schema
+ *  does not list for a server: the rest of the file is held to the schema. */
+function withoutServerExtensions(data) {
+  if (!data.mcpServers) return data;
+  const servers = Object.entries(data.mcpServers).map(([name, { extensions: _, ...server }]) => [name, server]);
+  return { ...data, mcpServers: Object.fromEntries(servers) };
 }
 
 // Every listing points at the same hosted MCP server.
@@ -87,6 +96,10 @@ for (const entry of load(".claude-plugin/marketplace.json").plugins) {
   }
 }
 check("plugins/openai/mcp.json url", load("plugins/openai/mcp.json").mcpServers?.fortrip?.url === MCP_URL);
+// The server is OAuth-protected, and ChatGPT is told apart by its client
+// metadata document, so the package asks for that registration.
+const auth = load("plugins/openai/mcp.json").mcpServers?.fortrip?.extensions?.["com.openai"]?.auth;
+check("plugins/openai/mcp.json declares OAuth by client metadata document", auth?.type === "oauth" && auth?.client?.mode === "cimd", JSON.stringify(auth));
 
 // OpenAI submission limits. "Supported text" has no control characters
 // (a line break only where allowed), no U+2028/U+2029 and no invisible
@@ -151,7 +164,11 @@ for (const [locale, t] of Object.entries(openai.publication.translations)) {
 }
 
 // Skills: front matter, size and relative links.
-for (const skill of ["plugins/claude/skills/fortrip/SKILL.md", "skills/fortrip-cli/SKILL.md"]) {
+for (const skill of [
+  "plugins/claude/skills/fortrip/SKILL.md",
+  "plugins/openai/skills/fortrip/SKILL.md",
+  "skills/fortrip-cli/SKILL.md",
+]) {
   const source = read(skill);
   const match = source.match(/^---\n([\s\S]*?)\n---\n/);
   check(`${skill} has front matter`, match);

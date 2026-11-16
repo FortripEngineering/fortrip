@@ -1,9 +1,10 @@
 /*
  * Renders the files that come from the agent contract (`packages/contract`):
  *
- * - the two skills, `plugins/claude/skills/fortrip` and `skills/fortrip-cli`,
- *   each a `SKILL.md` (the front matter below plus the contract's main guide
- *   for that surface) and a `references/planning.md` (its planning guide);
+ * - the three skills, `plugins/claude/skills/fortrip`,
+ *   `plugins/openai/skills/fortrip` and `skills/fortrip-cli`, each a
+ *   `SKILL.md` (the front matter below plus the contract's main guide for
+ *   that surface) and a `references/planning.md` (its planning guide);
  * - the contract's `src/guide-data.generated.ts`, the guide fragments inlined
  *   by `packages/contract/scripts/embed-guide.ts`.
  *
@@ -30,13 +31,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { embeddedGuide } from "../packages/contract/scripts/embed-guide.ts";
-import type { GuideSurface } from "../packages/contract/src/index.ts";
+import type { GuideOptions, GuideSurface } from "../packages/contract/src/index.ts";
 
 const GUIDE_DATA = "packages/contract/src/guide-data.generated.ts";
 
 const SKILLS: readonly {
   dir: string;
   surface: GuideSurface;
+  /** How the guide is rendered, when not as the surface's default. */
+  options?: GuideOptions;
+  /** A last paragraph of the `SKILL.md`, for what the surface's guide has
+   *  no words for. */
+  after?: string;
   name: string;
   description: string;
 }[] = [
@@ -46,6 +52,19 @@ const SKILLS: readonly {
     name: "fortrip",
     description:
       "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
+  },
+  // The OpenAI plugin's skill: the MCP guide as ChatGPT is served it, without
+  // payment by token. That guide is the server instructions, which have no
+  // file to point at, so the pointer to the planning reference is added here.
+  {
+    dir: "plugins/openai/skills/fortrip",
+    surface: "mcp",
+    options: { tokenPay: false },
+    after:
+      'For flexible dates, a budget, split stays, several destinations or "find me the best", read [references/planning.md](references/planning.md) before searching.',
+    name: "fortrip",
+    description:
+      "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
   },
   {
     dir: "skills/fortrip-cli",
@@ -151,12 +170,15 @@ function forCliVersion(text: string): string {
 await update(GUIDE_DATA, await embeddedGuide());
 
 const { renderGuide } = await import("../packages/contract/src/index.ts");
-for (const { dir, surface, name, description } of guideDataOnly ? [] : SKILLS) {
+for (const { dir, surface, options, after, name, description } of guideDataOnly ? [] : SKILLS) {
+  const main = renderGuide(surface, "main", options);
   await update(
     `${dir}/SKILL.md`,
-    forCliVersion(`---\nname: ${name}\ndescription: ${description}\n---\n\n${renderGuide(surface, "main")}`),
+    forCliVersion(
+      `---\nname: ${name}\ndescription: ${description}\n---\n\n${after ? `${main.trimEnd()}\n\n${after}\n` : main}`,
+    ),
   );
-  await update(`${dir}/references/planning.md`, forCliVersion(renderGuide(surface, "planning")));
+  await update(`${dir}/references/planning.md`, forCliVersion(renderGuide(surface, "planning", options)));
 }
 
 if (stale.length > 0) {

@@ -127,13 +127,15 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ### OpenAI plugin
 
-`plugins/openai/plugin.json` holds the listing copy and review test cases, and
-`mcp.json` the hosted server URL. `mcp.json` follows the Agent Plugins schema
+`plugins/openai/plugin.json` holds the listing copy and review test cases,
+`mcp.json` the hosted server URL and how a client signs in to it (OAuth, the
+client registered by its metadata document), and `skills/fortrip` the
+generated skill. `mcp.json` follows the Agent Plugins schema
 (`type: streamable-http`), while `plugins/claude/.mcp.json` follows Claude's
 (`type: http`); both point at the same server. Build the upload:
 
 ```bash
-cd plugins/openai && rm -f ../../fortrip-openai.zip && zip -rX ../../fortrip-openai.zip plugin.json mcp.json assets
+cd plugins/openai && rm -f ../../fortrip-openai.zip && zip -rX ../../fortrip-openai.zip plugin.json mcp.json assets skills
 ```
 
 Upload the zip in the OpenAI portal. The portal verifies the domain through
