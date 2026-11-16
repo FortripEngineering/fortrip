@@ -715,3 +715,43 @@ describe("renderText", () => {
     assert.throws(() => renderText("{{#if cli}}{{tool:serch}}{{/if}}", "mcp"), /guide/i);
   });
 });
+
+describe("a client not offered payment by token", () => {
+  const MENTIONS = /pay_order|orders pay|shared payment token|by token|Pay one way only/i;
+
+  it("gets MCP instructions that never name the pay tool, and are otherwise the same", () => {
+    const full = renderGuide("mcp", "main");
+    const without = renderGuide("mcp", "main", { tokenPay: false });
+    assert.match(full, MENTIONS);
+    assert.doesNotMatch(without, MENTIONS);
+    // Only the three phrases about paying by token are gone.
+    assert.equal(
+      without,
+      full
+        .replace(", `pay_order` pays by token", "")
+        .replace("Pay one way only: give the payment link or call `pay_order`. ", "")
+        .replace(" or, by token, through `pay_order`", ""),
+    );
+    // What is left still reads whole.
+    assert.match(without, /cancels a paid order or closes an unpaid one\. Every result is text/);
+    assert.match(without, /^- First show the order's total and currency/m);
+    assert.match(without, /payment happens only on the payment link\./);
+    assert.ok(without.length <= 2500, String(without.length));
+  });
+
+  it("is the default everywhere else: the option left out, or true, changes nothing", () => {
+    for (const surface of ["mcp", "claude-skill", "cli"] as const) {
+      for (const topic of ["main", "planning"] as const) {
+        assert.equal(renderGuide(surface, topic, {}), renderGuide(surface, topic));
+        assert.equal(renderGuide(surface, topic, { tokenPay: true }), renderGuide(surface, topic));
+      }
+    }
+  });
+
+  it("takes token-pay as a condition of its own, never mixed with surfaces", () => {
+    assert.equal(renderText("a{{#if token-pay}} b{{/if}} c", "mcp"), "a b c");
+    assert.equal(renderText("a{{#if token-pay}} b{{/if}} c", "mcp", { tokenPay: false }), "a c");
+    assert.equal(renderText("{{#if mcp}}a{{#if token-pay}} b{{/if}}{{/if}}", "cli", { tokenPay: true }), "");
+    assert.throws(() => renderText("{{#if mcp token-pay}}x{{/if}}", "mcp"), /guide surface/i);
+  });
+});

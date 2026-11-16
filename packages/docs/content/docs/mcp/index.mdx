@@ -21,6 +21,8 @@ Each tool takes the same input as its [HTTP endpoint](/api#endpoints).
 
 `create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. All three are idempotent, so a call that timed out is [safe to send again](/api#retries).
 
+ChatGPT is not offered `pay_order`: its list has the other seven tools, and an order's text gives the payment link alone.
+
 ## What a tool returns [#results]
 
 A result is text only. `content` holds exactly one block, of type `text`: the whole answer, written for the model. It has one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. There is no `structuredContent`, and no tool declares an `outputSchema`, so the model of every client reads the same text.

@@ -53,7 +53,9 @@ describe("stale statements stay fixed", () => {
   // The CLI's text changed with the contract's: a script that read names bare has to know.
   it("/changelog: the CLI migration table says text output quotes names, and how orders cancel changed", () => {
     const changelog = readFileSync(new URL("../content/docs/changelog.mdx", import.meta.url), "utf8");
-    const cli = changelog.slice(changelog.indexOf("#### CLI"), changelog.indexOf("### Package"));
+    // 6.0.0's own entry: later entries have a Package section too.
+    const entry = changelog.slice(changelog.indexOf("## 6.0.0"));
+    const cli = entry.slice(entry.indexOf("#### CLI"), entry.indexOf("### Package"));
     assert.match(cli, /\| Text output: names, addresses, the contact and special requests printed bare \| In double quotes, as JSON strings/);
     assert.match(cli, /\| `orders cancel <orderId>` with no flag: .* \| Refused with exit 2, nothing read or sent/);
     assert.match(cli, /\| A local refusal lists `Field \/pointer: …` for every issue \| The flag the value was typed as/);

@@ -24,12 +24,25 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  *   `{{support}}` is the support address.
  * - `{{#if <surface> …}}…{{/if}}` keeps its text only on the surfaces it
  *   names, and nests. A tag alone on its line takes the line with it.
+ * - `{{#if token-pay}}…{{/if}}` keeps its text only for a client that is
+ *   offered payment by token (`GuideOptions.tokenPay`, the default).
  *
  * Any other `{{…}}` throws, so a typo fails the tests instead of shipping.
  */
 
 export type GuideSurface = "mcp" | "claude-skill" | "cli";
 export type GuideTopic = "main" | "planning";
+
+/** What the client the guide is rendered for is offered. */
+export interface GuideOptions {
+  /** Paying by a shared payment token (`pay_order`). False for a host whose
+   *  rules leave payment to the payment link alone: the guide then never
+   *  names the tool. Default true. */
+  tokenPay?: boolean;
+}
+
+/** The condition that is not a surface. */
+const TOKEN_PAY = "token-pay";
 
 const SURFACES: readonly GuideSurface[] = ["mcp", "claude-skill", "cli"];
 
@@ -52,7 +65,7 @@ const TOPICS: Record<GuideTopic, readonly string[]> = {
 };
 
 /** The guide on `topic` as `surface` states it, in Markdown. */
-export function renderGuide(surface: GuideSurface, topic: GuideTopic): string {
+export function renderGuide(surface: GuideSurface, topic: GuideTopic, options: GuideOptions = {}): string {
   if (!Object.hasOwn(TOPICS, topic)) {
     throw new Error(`Unknown guide topic "${topic}"`);
   }
@@ -61,7 +74,7 @@ export function renderGuide(surface: GuideSurface, topic: GuideTopic): string {
     if (fragment === undefined) {
       throw new Error(`Missing guide fragment "${name}"`);
     }
-    return renderText(fragment, surface).trim();
+    return renderText(fragment, surface, options).trim();
   });
   const text = parts.filter(Boolean).join("\n\n");
   return `${text.replace(/\n{3,}/g, "\n\n")}\n`;
@@ -73,7 +86,7 @@ const CONDITION = /{{#if ([^{}]*)}}|{{\/if}}/g;
 const LONE_CONDITION = /^[ \t]*({{#if [^{}\n]*}}|{{\/if}})[ \t]*\n/gm;
 
 /** One fragment's text as `surface` states it. */
-export function renderText(text: string, surface: GuideSurface): string {
+export function renderText(text: string, surface: GuideSurface, options: GuideOptions = {}): string {
   if (!SURFACES.includes(surface)) {
     throw new Error(`Unknown guide surface "${surface}"`);
   }
@@ -81,7 +94,7 @@ export function renderText(text: string, surface: GuideSurface): string {
   for (const [token, body] of text.matchAll(TOKEN)) {
     if (!/^(#if |\/if$)/.test(body ?? "")) resolve(token, surface, false);
   }
-  const shown = select(text, surface).replace(TOKEN, (token) =>
+  const shown = select(text, surface, options.tokenPay !== false).replace(TOKEN, (token) =>
     resolve(token, surface, true),
   );
   if (/{{|}}/.test(shown)) {
@@ -90,8 +103,9 @@ export function renderText(text: string, surface: GuideSurface): string {
   return shown;
 }
 
-/** The text without the conditions that don't name `surface`. */
-function select(text: string, surface: GuideSurface): string {
+/** The text without the conditions that don't name `surface`, and without
+ *  the token-pay ones for a client not offered payment by token. */
+function select(text: string, surface: GuideSurface, tokenPay: boolean): string {
   const tagged = text.replace(LONE_CONDITION, "$1");
   const open: boolean[] = [];
   let out = "";
@@ -106,6 +120,10 @@ function select(text: string, surface: GuideSurface): string {
       continue;
     }
     const names = tag[1].trim().split(/\s+/);
+    if (names.length === 1 && names[0] === TOKEN_PAY) {
+      open.push(tokenPay);
+      continue;
+    }
     for (const name of names) {
       if (!SURFACES.includes(name as GuideSurface)) {
         throw new Error(`Unknown guide surface "${name}" in ${tag[0]}`);

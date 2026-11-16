@@ -38,7 +38,7 @@ export {
   guestNameRe,
   normalizeGuestName,
 } from "./guest-name.ts";
-export { renderGuide, type GuideSurface, type GuideTopic } from "./guide.ts";
+export { renderGuide, type GuideOptions, type GuideSurface, type GuideTopic } from "./guide.ts";
 export {
   cancelOrderInput,
   createOrderInput,
@@ -199,6 +199,7 @@ export {
   type RenderSurface,
   SERVER_INFO,
   TOOLS,
+  toolsFor,
   type ToolName,
   type ToolSpec,
 } from "./tools.ts";

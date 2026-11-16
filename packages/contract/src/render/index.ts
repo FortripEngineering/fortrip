@@ -63,14 +63,34 @@ const HOTEL_TOOLS = new Set<RenderedTool>(["search_hotels", "get_hotel", "get_ho
  * - on MCP, how to present hotels (`PRESENTATION_HINT`) for `search_hotels`,
  *   `get_hotel` and `get_hotel_offers`. The CLI's text carries none: there
  *   the rule is the skill's, as before.
+ *
+ * `options.tokenPay: false`, for a client not offered payment by token: no
+ * order has a "Pay without the link" line, and no result ends with the pay
+ * rule. The order is read as if it could not be paid by token.
  */
 export function renderToolResult(
   tool: RenderedTool,
   data: unknown,
   surface: RenderSurface = "mcp",
+  options: { tokenPay?: boolean } = {},
 ): string {
-  const text = resultText(tool, data, surface);
+  const text = resultText(tool, options.tokenPay === false ? withoutTokenRequest(data) : data, surface);
   return surface === "mcp" && HOTEL_TOOLS.has(tool) ? `${text}\n\n${PRESENTATION_HINT}` : text;
+}
+
+/** `value` with every `payment.tokenRequest` inside it null: what a client
+ *  not offered payment by token is shown. Anything else is left as it came. */
+function withoutTokenRequest(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutTokenRequest);
+  if (typeof value !== "object" || value === null) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, inner] of Object.entries(value)) {
+    out[key] =
+      key === "payment" && typeof inner === "object" && inner !== null && "tokenRequest" in inner
+        ? { ...inner, tokenRequest: null }
+        : withoutTokenRequest(inner);
+  }
+  return out;
 }
 
 /** A page of orders, whatever its orders are: each is read on its own. */

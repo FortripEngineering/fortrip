@@ -187,6 +187,11 @@ const READ = {
 /** Reads of Fortrip's own records. */
 const READ_OWN = { ...READ, openWorldHint: false } as const;
 
+/** Where an order is paid, as `create_order` says it: the one phrase of
+ *  another tool's description that names `pay_order`. */
+const PAID_WHERE = ", on that page or with pay_order";
+const PAID_WHERE_WITHOUT_TOKEN = " on that page";
+
 export const TOOLS: readonly ToolSpec[] = [
   {
     name: "search_hotels",
@@ -217,7 +222,7 @@ export const TOOLS: readonly ToolSpec[] = [
   {
     name: "create_order",
     title: "Create order",
-    description: `Create an unpaid order for one offer from get_hotel_offers. It takes items, one item with the offer's offerId inside it (nowhere else in the arguments) and hotel.rooms, and contact. The answer is the order, awaiting payment: its reference, the total, the stay and its terms, and a payment link, a Fortrip page to pay on. Nothing is charged until the order is paid, on that page or with pay_order; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: another order of the stay (another party, or a corrected guest name or contact) takes a new offer. cancel_order cancels or closes an order; for changes, or a cancellation it can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
+    description: `Create an unpaid order for one offer from get_hotel_offers. It takes items, one item with the offer's offerId inside it (nowhere else in the arguments) and hotel.rooms, and contact. The answer is the order, awaiting payment: its reference, the total, the stay and its terms, and a payment link, a Fortrip page to pay on. Nothing is charged until the order is paid${PAID_WHERE}; anyone holding the link can pay. Send the contact and, for each room of the offer, at least one guest. If the price or terms changed since the offer, the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it. Sending the same details again returns the same order. An offer is ordered once: another order of the stay (another party, or a corrected guest name or contact) takes a new offer. cancel_order cancels or closes an order; for changes, or a cancellation it can't make, the user emails ${SUPPORT_EMAIL} with the order's reference.`,
     // Destructive: Claude's connector review asks `destructiveHint: true`
     // "for tools that modify or delete data", and a per-call confirmation
     // before an order is created is the behaviour wanted. Idempotent: the
@@ -279,3 +284,17 @@ export const TOOLS: readonly ToolSpec[] = [
     output: order,
   },
 ];
+
+/**
+ * The tools a client is offered. Without `tokenPay`, for a host whose rules
+ * leave payment to the payment link alone: `pay_order` is not listed, and
+ * `create_order` does not name it.
+ */
+export function toolsFor(options: { tokenPay?: boolean } = {}): readonly ToolSpec[] {
+  if (options.tokenPay !== false) return TOOLS;
+  return TOOLS.filter((tool) => tool.name !== "pay_order").map((tool) =>
+    tool.name === "create_order"
+      ? { ...tool, description: tool.description.replace(PAID_WHERE, PAID_WHERE_WITHOUT_TOKEN) }
+      : tool,
+  );
+}
