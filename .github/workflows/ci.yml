@@ -41,6 +41,15 @@ jobs:
         run: test -n "$SUPPLIER_DENYLIST"
         env:
           SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
+      # GitHub masks the secret as a whole; mask each name too, so that no
+      # later output can show one.
+      - name: Mask each supplier name
+        run: |
+          printf '%s' "$SUPPLIER_DENYLIST" | tr ',' '\n' | while IFS= read -r name; do
+            if [ -n "$name" ]; then echo "::add-mask::$name"; fi
+          done
+        env:
+          SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
       - run: pnpm test
         env:
           SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
@@ -79,6 +88,15 @@ jobs:
 
       # scripts/validate.mjs covers the OpenAI package, the MCP Registry entry
       # and repo-wide rules; Claude Code's own validator covers the Claude
+      # GitHub masks the secret as a whole; mask each name too, so that no
+      # later output can show one.
+      - name: Mask each supplier name
+        run: |
+          printf '%s' "$SUPPLIER_DENYLIST" | tr ',' '\n' | while IFS= read -r name; do
+            if [ -n "$name" ]; then echo "::add-mask::$name"; fi
+          done
+        env:
+          SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
       # marketplace, plugin and skills.
       - run: pnpm validate
         env:

@@ -1106,6 +1106,8 @@ describe("the specs", () => {
       CANCEL_NEXT_STEP,
     ];
     assert.ok(everything.length > 100, "the walk found the specs' text");
-    assert.deepEqual(everything.filter((text) => (SUPPLIER as RegExp).test(text)), []);
+    // A count, not the strings: a failure must not print what it found.
+    const naming = everything.filter((text) => (SUPPLIER as RegExp).test(text)).length;
+    assert.ok(naming === 0, `${naming} string(s) of the specs name the supplier`);
   });
 });

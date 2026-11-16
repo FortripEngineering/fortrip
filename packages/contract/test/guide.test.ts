@@ -80,7 +80,8 @@ describe("renderGuide", () => {
     });
 
     it(`${label}: never names the supplier`, { skip: NO_LIST }, () => {
-      assert.doesNotMatch(renderGuide(surface, topic), SUPPLIER as RegExp);
+      // Not doesNotMatch: its failure prints the pattern and the text.
+      assert.ok(!(SUPPLIER as RegExp).test(renderGuide(surface, topic)), `${label} names the supplier`);
     });
   }
 

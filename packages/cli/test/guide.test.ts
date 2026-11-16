@@ -34,7 +34,8 @@ describe("guide", () => {
     for (const args of [["--help"], ["hotels", "--help"], ["hotels", "offers", "--help"], ["orders", "--help"], ["orders", "create", "--help"]]) {
       texts.push((await cli(...args)).stdout);
     }
-    for (const text of texts) assert.doesNotMatch(text, SUPPLIER as RegExp);
+    // Not doesNotMatch: its failure prints the pattern and the text.
+    texts.forEach((text, index) => assert.ok(!(SUPPLIER as RegExp).test(text), `text ${index} names the supplier`));
   });
 
   it("`fortrip guide` is an unknown command", async () => {
