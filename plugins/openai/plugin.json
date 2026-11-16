@@ -85,9 +85,9 @@
               "expected_behavior": "Calls no Fortrip tool and doesn't ask for card details. Explains that it can't save a card to the Fortrip account or charge it, and that each order is paid on its own, on the Fortrip payment page its payment link opens."
             },
             {
-              "description": "A booking's dates, room or guests can't be changed: a change means cancelling it under its terms and booking again.",
-              "prompt": "Move my hotel booking to next week.",
-              "expected_behavior": "May call list_orders to look for the booking. Doesn't cancel or order anything on its own. Explains that an existing order can't be changed, and that moving it means cancelling it under its terms and booking the new dates. Asks what the user wants before doing either."
+              "description": "Activities are out of scope: Fortrip only searches and books hotels.",
+              "prompt": "Book two tickets for a Chao Phraya dinner cruise in Bangkok tomorrow night.",
+              "expected_behavior": "Calls no Fortrip tool. Says that Fortrip books hotels only and can't book the cruise."
             }
           ]
         },
