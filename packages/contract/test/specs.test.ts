@@ -1111,3 +1111,32 @@ describe("the specs", () => {
     assert.ok(naming === 0, `${naming} string(s) of the specs name the supplier`);
   });
 });
+
+describe("the tools of a client not offered payment by token", () => {
+  it("are the others, and none of them names pay_order", () => {
+    const tools = index.toolsFor({ tokenPay: false });
+    assert.deepEqual(
+      tools.map((tool) => tool.name),
+      index.TOOLS.map((tool) => tool.name).filter((name) => name !== "pay_order"),
+    );
+    for (const tool of tools) {
+      const everything = JSON.stringify([tool.title, tool.description, z.toJSONSchema(tool.input, { io: "input" })]);
+      assert.doesNotMatch(everything, /pay_order|shared payment token|Link wallet/i, tool.name);
+    }
+    const create = tools.find((tool) => tool.name === "create_order");
+    assert.match(create?.description ?? "", /Nothing is charged until the order is paid on that page; anyone holding the link can pay\./);
+    // Everything else about each tool is the same object's.
+    for (const tool of tools) {
+      const full = index.TOOLS.find((other) => other.name === tool.name);
+      assert.equal(tool.input, full?.input, tool.name);
+      assert.deepEqual(tool.annotations, full?.annotations, tool.name);
+      if (tool.name !== "create_order") assert.equal(tool, full, tool.name);
+    }
+  });
+
+  it("are every tool by default", () => {
+    assert.equal(index.toolsFor(), index.TOOLS);
+    assert.equal(index.toolsFor({ tokenPay: true }), index.TOOLS);
+    assert.match(index.TOOLS.find((tool) => tool.name === "create_order")?.description ?? "", /paid, on that page or with pay_order;/);
+  });
+});

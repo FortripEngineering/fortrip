@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
     "name": "Fortrip",
@@ -80,9 +80,9 @@
               "expected_behavior": "Calls no Fortrip tool. Says that Fortrip can't search or book flights."
             },
             {
-              "description": "Saving a payment card isn't supported: the plugin never handles card details, and each booking is paid on its own, by its payment link or a single-use token the user approves in their Link wallet.",
+              "description": "Saving a payment card isn't supported: the plugin never handles card details, and each booking is paid on its own, on the payment page its link opens.",
               "prompt": "Save my credit card to my Fortrip account so my next hotel booking is charged automatically.",
-              "expected_behavior": "Calls no Fortrip tool and doesn't ask for card details. Explains that it can't save a card to the Fortrip account or charge it, and that each order is paid on its own: on the Fortrip payment page its payment link opens, or with a single-use token the user approves in their Link wallet."
+              "expected_behavior": "Calls no Fortrip tool and doesn't ask for card details. Explains that it can't save a card to the Fortrip account or charge it, and that each order is paid on its own, on the Fortrip payment page its payment link opens."
             },
             {
               "description": "A booking's dates, room or guests can't be changed: a change means cancelling it under its terms and booking again.",
@@ -92,7 +92,7 @@
           ]
         },
         "commerce": true,
-        "commerce_description": "Users can book hotel stays. create_order creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there, with the ways to pay of the order's currency: a USD order through Stripe Checkout or a wallet such as Alipay or WeChat Pay, a CNY order through payment channels in mainland China. For a USD order, pay_order can instead pay with a single-use Stripe shared payment token the user approves in their Link wallet (US and Canadian accounts, orders up to $500), held until the hotel confirms; the assistant never opens or chooses a wallet payment itself. Before giving the link or paying, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the payment page or in their wallet."
+        "commerce_description": "Users can book hotel stays. create_order creates an unpaid order for one offer and returns a link to a Fortrip page on fortrip.ai that recaps the order and its terms; the user completes payment there, with the ways to pay of the order's currency: a USD order through Stripe Checkout or a wallet such as Alipay or WeChat Pay, a CNY order through payment channels in mainland China. The assistant never pays and never opens or chooses a payment method itself. Before giving the link, the assistant shows the amount and currency charged, the meals, cancellation rules and pay-at-hotel fees, and waits for the user to confirm. The plugin refuses card numbers, and nothing is charged without the user's approval on the payment page."
       },
       "publication": {
         "release_notes": "See why a booking didn't go through and what a cancellation refunded. Alipay and WeChat Pay are on the payment page, where you choose how to pay.",

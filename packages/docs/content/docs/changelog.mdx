@@ -7,6 +7,20 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.1.0
+
+Released 2026-11-16.
+
+No change for a client that uses the API, the CLI or the MCP tools as before.
+
+### Added
+
+- The hosted MCP server does not offer `pay_order` to ChatGPT, whose rules leave payment to the payment link: the tool is not in its list, an order's text has no "Pay without the link" line, and the server instructions do not name the tool. Every other client is offered it as before.
+
+### Package
+
+- A `tokenPay: false` option for a client not offered payment by token: `renderGuide(surface, topic, { tokenPay: false })`, `renderToolResult(tool, data, surface, { tokenPay: false })`, and `toolsFor({ tokenPay: false })`, the tools without `pay_order`. Left out, everything renders as before.
+
 ## 6.0.1
 
 Released 2026-11-16.

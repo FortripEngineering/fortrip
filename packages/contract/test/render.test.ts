@@ -2495,3 +2495,50 @@ describe("ordering_paused", () => {
     assert.doesNotMatch(lines.join("\n"), /retry line/);
   });
 });
+
+describe("results for a client not offered payment by token", () => {
+  const TOKEN = /Pay without the link|shared payment token|pay_order|orders pay/;
+
+  it("show an order payable by token as payable by its link alone", () => {
+    const fixture = load("order-payable-by-token") as ToolFixture;
+    const full = renderToolResult(fixture.tool, fixture.data);
+    assert.match(full, /^Pay without the link: /m);
+    assert.ok(full.endsWith(`\n\n${PAY_NEXT_STEP}`));
+    for (const tool of ["create_order", "get_order", "cancel_order"] as const) {
+      const text = renderToolResult(tool, fixture.data, "mcp", { tokenPay: false });
+      assert.doesNotMatch(text, TOKEN, tool);
+      // The link and the rule about giving it stay, and now end the text.
+      assert.match(text, /^Payment link \(/m, tool);
+      assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`), tool);
+    }
+    // Nothing else of the text changes.
+    assert.equal(
+      renderToolResult("get_order", fixture.data, "mcp", { tokenPay: false }),
+      renderToolResult("get_order", { ...fixture.data, payment: { ...(fixture.data.payment as object), tokenRequest: null } }),
+    );
+  });
+
+  it("show a page of orders the same way, an unreadable one among them included", () => {
+    const page = copy((load("list-orders") as ToolFixture).data) as { data: Record<string, any>[] };
+    const token = withToken().payment.tokenRequest;
+    page.data[0]!.payment = { ...page.data[0]!.payment, tokenRequest: token };
+    // An order this build can't read is shown as it came: without the token request too.
+    page.data.push({ id: "ord_Unreadable0000000000", payment: { url: null, tokenRequest: token } });
+    assert.match(renderToolResult("list_orders", page), TOKEN);
+    const text = renderToolResult("list_orders", page, "mcp", { tokenPay: false });
+    assert.doesNotMatch(text, TOKEN);
+    assert.doesNotMatch(text, /business_profile|usageLimits/);
+    assert.ok(!text.includes(PAY_NEXT_STEP));
+  });
+
+  it("leave every other result, and the default, as they are", () => {
+    for (const name of GOLDENS) {
+      const fixture = load(name);
+      if (!("tool" in fixture)) continue;
+      const text = renderToolResult(fixture.tool, fixture.data);
+      assert.equal(renderToolResult(fixture.tool, fixture.data, "mcp", {}), text, name);
+      assert.equal(renderToolResult(fixture.tool, fixture.data, "mcp", { tokenPay: true }), text, name);
+      if (!TOKEN.test(text)) assert.equal(renderToolResult(fixture.tool, fixture.data, "mcp", { tokenPay: false }), text, name);
+    }
+  });
+});

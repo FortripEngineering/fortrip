@@ -9,7 +9,7 @@
 
 {{/if}}
 {{#if mcp}}
-- Pay one way only: give the payment link or call `{{tool:orders pay}}`. First show the order's total and currency, the stay with each room's guests, the contact, any special requests and every term, end that reply by asking the user to confirm, and wait for a clear yes. Then give the payment link exactly as shown, to this user only: anyone holding it can pay.
+- {{#if token-pay}}Pay one way only: give the payment link or call `{{tool:orders pay}}`. {{/if}}First show the order's total and currency, the stay with each room's guests, the contact, any special requests and every term, end that reply by asking the user to confirm, and wait for a clear yes. Then give the payment link exactly as shown, to this user only: anyone holding it can pay.
 - Another order of the stay (another party, a corrected name or contact) takes a new offer; when it replaces an unpaid order, tell the user to pay only the new link.
 {{/if}}
 {{#if claude-skill cli}}
@@ -18,7 +18,7 @@
 - Another order of the stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `{{tool:orders cancel}}` and {{#if claude-skill}}`close: true`{{/if}}{{#if cli}}`--close`{{/if}} once the user says they no longer want it.
 - An order awaiting payment whose Payment link line says there is none has a payment being processed: read it again shortly with `{{tool:orders get}}`, and don't give an earlier link.
 {{/if}}
-- Never ask for, accept or pass on payment card details; payment happens only on the payment link or, by token, through `{{tool:orders pay}}`.{{#if claude-skill cli}} A card number in a guest name, the contact or the special requests is rejected{{#if cli}} with exit 2{{/if}}.{{/if}}
+- Never ask for, accept or pass on payment card details; payment happens only on the payment link{{#if token-pay}} or, by token, through `{{tool:orders pay}}`{{/if}}.{{#if claude-skill cli}} A card number in a guest name, the contact or the special requests is rejected{{#if cli}} with exit 2{{/if}}.{{/if}}
 {{#if claude-skill cli}}
 
 ## Paying without the link
