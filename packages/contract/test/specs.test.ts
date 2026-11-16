@@ -310,6 +310,20 @@ describe("TOOLS", () => {
     }
   });
 
+  // A directory's review asks of each description when the tool is used.
+  it("every tool a client without payment by token is offered says first when it is used", () => {
+    for (const spec of index.toolsFor({ tokenPay: false })) {
+      assert.match(spec.description, /^(Use this when the user |Create an unpaid order when the user asks )/, spec.name);
+    }
+  });
+
+  // The same review bars asking for the user's own location.
+  it("search_hotels takes where the user wants to stay, never where the user is", () => {
+    const search = TOOLS.find((t) => t.name === "search_hotels")!;
+    assert.match(search.description, /destination is where the user wants to stay, never where the user is now: /);
+    assert.ok(JSON.stringify(z.toJSONSchema(search.input, { io: "input" })).includes("Never the user's own position."));
+  });
+
   // Spec §6: MCP tool inputs mirror the HTTP bodies and query exactly.
   it("every tool's input is the HTTP request schema", () => {
     assert.equal(tool("search_hotels").input, searchHotelsInput);
@@ -412,7 +426,7 @@ describe("TOOLS", () => {
     // one guest per room is enough, and offer_changed needs the user again.
     assert.ok(description.includes("Send the contact and, for each room of the offer, at least one guest."));
     assert.ok(description.includes("the answer is offer_changed with every change and a new offer: show the changes and ask the user again before ordering it."));
-    assert.match(description, /^Create an unpaid order for one offer from get_hotel_offers\./);
+    assert.match(description, /^Create an unpaid order when the user asks to book one offer from get_hotel_offers\./);
     assert.match(description, /payment link/);
     assert.ok(description.includes(SUPPORT_EMAIL), description);
     // Spec §5.7: create_order points to cancel_order instead.
@@ -450,7 +464,7 @@ describe("TOOLS", () => {
 
   it("cancel_order says what closing does, and that neither mode ever does the other's work", () => {
     const { description, annotations } = tool("cancel_order");
-    assert.match(description, /^Cancel a paid order under its terms, or close an unpaid one\./);
+    assert.match(description, /^Use this when the user wants to cancel a paid order or drop an unpaid one\. It cancels a paid order under its terms, or closes an unpaid one\./);
     assert.match(description, /close: true closes it: nothing is charged, and it can no longer be paid\./);
     assert.match(description, /answers order_not_cancellable, which says which mode applies now or what blocks both: nothing is cancelled or closed by the other mode\./);
     assert.match(description, /While a payment is under way the answer is payment_in_progress\./);

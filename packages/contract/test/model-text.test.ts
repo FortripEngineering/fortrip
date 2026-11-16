@@ -412,9 +412,12 @@ describe("every known error is worded without the server's message", () => {
       const [head, retry, ...rest] = text.split("\n");
       assert.match(head!, /^Error [a-z_]+ \(HTTP \d+\): \S/, where);
       assert.match(retry!, /^(Retryable|Not retryable)/, where);
-      // Beyond what happened: what to do next, then the request id.
-      if (!outdated) assert.ok(rest.length >= 2, `${where}: ${text}`);
-      assert.equal(rest.at(-1), "Request id: req_1", where);
+      // Beyond what happened: what to do next. The request id ends every
+      // error of the CLI's; over MCP only the one whose words ask for it.
+      const withId = where.endsWith("(cli)") || where.startsWith("renderError internal ");
+      if (!outdated) assert.ok(rest.length >= (withId ? 2 : 1), `${where}: ${text}`);
+      assert.equal(rest.at(-1) === "Request id: req_1", withId, where);
+      assert.equal(text.includes("req_1"), withId, where);
     }
   });
 
@@ -568,10 +571,10 @@ describe("a rule that tells the model to copy what the text shows says what the 
       );
       assert.ok(skill.includes("give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it)"), file);
     }
-    // The Claude skill has the presentation paragraph; both planning references say it of a plan's hotels.
+    // The Claude skill has the presentation paragraph; the three planning references say it of a plan's hotels.
     const all = [...(sources.skills as Text[]), ...(sources.plugins as Text[])].map(({ text }) => text).join("\n");
     assert.ok(all.includes('A hotel\'s name is shown in double quotes, as text from the hotel, written as a JSON string (inside it, \\" is a "): present it to the user without the quotes, exactly as written inside them.'));
-    assert.equal(all.split("Give a hotel's name without the double quotes the text shows it in, exactly as written inside them, and dates in the user's notation.").length - 1, 2);
+    assert.equal(all.split("Give a hotel's name without the double quotes the text shows it in, exactly as written inside them, and dates in the user's notation.").length - 1, 3);
   });
 
   it("what a rule says to copy exactly is bare in the text: a payment link, a penalty, a total, an id", () => {

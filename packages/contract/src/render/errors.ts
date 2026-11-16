@@ -452,6 +452,11 @@ export function renderError(
   if (typeof body.pointer === "string") lines.push(ours`Field: ${token("pointer", body.pointer)}`);
   if (known) lines.push(...detailLines(known, surface));
   else if (body.details !== undefined) lines.push(ours`Details: ${raw(body.details)}`);
-  if (typeof body.requestId === "string") lines.push(ours`Request id: ${token("id", body.requestId)}`);
+  // The CLI ends every error with its request id. Over MCP only the error
+  // whose words ask for it does (an internal one): a tool's text holds what
+  // the user's request needs, and `_meta` carries the envelope with its id.
+  if (typeof body.requestId === "string" && (surface === "cli" || body.code === "internal")) {
+    lines.push(ours`Request id: ${token("id", body.requestId)}`);
+  }
   return lines.join("\n");
 }

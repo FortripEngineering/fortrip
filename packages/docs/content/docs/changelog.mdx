@@ -7,6 +7,18 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.1.1
+
+Released 2026-11-16.
+
+The schemas, the tools, the commands and the errors keep their shape. The change is to the text that agents read.
+
+### Changed
+
+- An MCP error's text ends with its request id only for an `internal` error, whose text asks the user to quote it. Every error still carries the id in `_meta["ai.fortrip/error"]`, and the CLI still ends every error with it.
+- Each tool's description starts by saying when the tool is used.
+- `search_hotels` says its destination is where the user wants to stay, never where the user is: a `point` is a landmark or an address the user named, or the coordinates hotel details showed.
+
 ## 6.1.0
 
 Released 2026-11-16.

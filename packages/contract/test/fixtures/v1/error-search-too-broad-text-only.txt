@@ -7,4 +7,3 @@ Localities: pass one back as destination { kind: "locality", placeId }, never th
 - Locality: "Chongqing" plc_9600002 2,980
 - Locality: "Xi'an" plc_9600003 2,511
 More: 2,204 more localities; name one with place_name.
-Request id: req_text_0001

@@ -659,7 +659,7 @@ describe("other errors", () => {
         "Error search_too_broad (HTTP 422): too many hotels match to sort or filter them by price.",
         "Not retryable.",
         'Details: {"matched":"lots"}',
-        "Request id: req_1",
+        ...(surface === "cli" ? ["Request id: req_1"] : []),
       ]);
     }
     // The same when another field of the envelope is what does not parse.
@@ -823,7 +823,7 @@ describe("other errors", () => {
     for (const surface of ["mcp", "cli"] as const) {
       assert.equal(
         renderError({ error: { code: "client_outdated", message, retryable: false, requestId: "req_1" } }, 426, surface),
-        `Error client_outdated (HTTP 426): "${message}"\nNot retryable.\nRequest id: req_1`,
+        `Error client_outdated (HTTP 426): "${message}"\nNot retryable.${surface === "cli" ? "\nRequest id: req_1" : ""}`,
       );
     }
   });
