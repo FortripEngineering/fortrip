@@ -1895,7 +1895,7 @@ describe("renderToolResult on malformed data", () => {
     for (const tool of ["create_order", "get_order"] as const) {
       const text = renderToolResult(tool, order.data);
       assert.match(text, /not in the expected shape/);
-      assert.ok(text.includes("https://fortrip.ai/pay/ord_BundAwaiting00000000?s=cs_test_a1B2c3D4"));
+      assert.ok(text.includes("https://fortrip.ai/pay/ord_BundAwaiting00000000?s=Lk9a1B2c3D4"));
       assert.ok(text.endsWith(`\n\n${ORDER_NEXT_STEP}`), tool);
     }
     const list = copy(load("list-orders")) as ToolFixture;

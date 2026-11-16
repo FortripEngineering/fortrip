@@ -43,7 +43,7 @@ import { CLI_COMMANDS, RAW_BODY_EXAMPLE } from "../reference/cli-commands.ts";
 import { ENVIRONMENT_ROWS } from "../reference/environment.ts";
 import { ERROR_ROWS } from "../reference/error-docs.ts";
 import { EXIT_ROWS } from "../reference/exit-codes.ts";
-import { failClosedClause, limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
+import { limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { regionGroups } from "../reference/regions.ts";
 import { EXAMPLE_LANGUAGES, EXAMPLE_REQUESTS, exampleCode } from "../reference/examples.ts";
@@ -82,12 +82,6 @@ function statusTable<S extends string>(statuses: readonly S[], docs: Record<S, s
   return [table([head, "Meaning"], statuses.map((s) => ({ cells: [[code(s)], inline(docs[s])] })))];
 }
 
-/** What a call answers when the rate limiter is down and refuses it. */
-const serviceUnavailable = (() => {
-  const row = ERROR_ROWS.find((r) => r.code === ("service_unavailable" satisfies ErrorCode));
-  if (!row) throw new Error("no service_unavailable error row");
-  return row;
-})();
 
 /** A response's section body: its fields; for an answer that is another
  *  object, a line pointing there; for a list, its own fields, `data` linking
@@ -516,7 +510,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
-  /** The rate limits, then which calls the limiter refuses while it is down. */
   RateLimitsTable: () => [
     table(
       ["Rate limit", "Calls", "Per minute"],
@@ -535,11 +528,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
         ],
       })),
     ),
-    paragraph([
-      ...inline(`If the rate limiter itself is down, calls go through, except ${failClosedClause()} `),
-      code(`${serviceUnavailable.status} ${serviceUnavailable.code}`),
-      text(" instead."),
-    ]),
   ],
 
   LimitsTable: () => [

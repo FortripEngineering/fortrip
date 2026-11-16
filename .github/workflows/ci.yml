@@ -33,7 +33,17 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+
+      # The checks that nothing names the hotel supplier read its names from
+      # this secret, so the repository carries none. A fork's pull request has
+      # no secrets and skips them; on main they must run.
+      - if: github.event_name == 'push'
+        run: test -n "$SUPPLIER_DENYLIST"
+        env:
+          SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
       - run: pnpm test
+        env:
+          SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
       - run: pnpm build
 
   listings:
@@ -71,6 +81,8 @@ jobs:
       # and repo-wide rules; Claude Code's own validator covers the Claude
       # marketplace, plugin and skills.
       - run: pnpm validate
+        env:
+          SUPPLIER_DENYLIST: ${{ secrets.SUPPLIER_DENYLIST }}
 
       - run: npm install --global @anthropic-ai/claude-code@2.1.292
       - name: Claude marketplace, plugin and skills

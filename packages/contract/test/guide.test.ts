@@ -23,8 +23,18 @@ const RENDERINGS = SURFACES.flatMap((surface) =>
   TOPICS.map((topic) => ({ surface, topic, label: `${surface} ${topic}` })),
 );
 
-/** The supplier's name, assembled so this file doesn't carry it. */
-const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
+/** The supplier's names, from the environment (a CI secret) so that this
+ *  repository carries none. Unset, as on a fork or a laptop, there is nothing
+ *  to look for and the check is skipped. */
+const SUPPLIER_NAMES = (process.env.SUPPLIER_DENYLIST ?? "")
+  .split(",")
+  .map((name) => name.trim())
+  .filter(Boolean);
+const SUPPLIER =
+  SUPPLIER_NAMES.length > 0
+    ? new RegExp(SUPPLIER_NAMES.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i")
+    : null;
+const NO_LIST = SUPPLIER ? false : "SUPPLIER_DENYLIST is not set";
 
 /** Line breaks fall anywhere in Markdown prose. */
 function flat(text: string): string {
@@ -65,10 +75,12 @@ describe("renderGuide", () => {
       assert.doesNotMatch(text, /[ \t]+\n/);
     });
 
-    it(`${label}: never names the supplier or an API path`, () => {
-      const text = renderGuide(surface, topic);
-      assert.doesNotMatch(text, SUPPLIER);
-      assert.doesNotMatch(text, /\/api\//);
+    it(`${label}: never names an API path`, () => {
+      assert.doesNotMatch(renderGuide(surface, topic), /\/api\//);
+    });
+
+    it(`${label}: never names the supplier`, { skip: NO_LIST }, () => {
+      assert.doesNotMatch(renderGuide(surface, topic), SUPPLIER as RegExp);
     });
   }
 

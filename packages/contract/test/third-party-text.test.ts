@@ -244,7 +244,7 @@ describe("the helpers", () => {
       ["timeZone", ["Asia/Shanghai", "UTC", "America/Argentina/Buenos_Aires", "Etc/GMT+8", "America/Port-au-Prince"]],
       ["locale", ["en", "zh", "zh-Hans"]],
       ["handlerType", ["com.stripe.payments"]],
-      ["url", ["https://fortrip.ai/pay/ord_BundAwaiting00000000?s=cs_test_a1B2c3D4", "https://fortrip.ai/orders/ord_1?x=1&y=2#z", "http://localhost:3000/pay"]],
+      ["url", ["https://fortrip.ai/pay/ord_BundAwaiting00000000?s=Lk9a1B2c3D4", "https://fortrip.ai/orders/ord_1?x=1&y=2#z", "http://localhost:3000/pay"]],
       ["cursor", ["c_orders_page_2", "eyJ2IjoxfQ==", "a.b-c~d+e/f"]],
     ];
     for (const [kind, values] of written) {
