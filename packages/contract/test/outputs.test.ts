@@ -258,7 +258,7 @@ const orderFixture = {
   total: usd("132.40"),
   payment: {
     status: "unpaid",
-    url: `https://fortrip.ai/pay/${ORD}?s=cs_test_1`,
+    url: `https://fortrip.ai/pay/${ORD}?s=Lk91`,
     requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,

@@ -181,13 +181,19 @@ const files = [];
 })("");
 // The hotel supplier is never named in anything the repository publishes:
 // every tracked file (and any new one git doesn't ignore), whatever its type.
-// The pattern is built from fragments so that this file doesn't name it either.
-const SUPPLIER = new RegExp(["hui" + "zhi", "汇" + "智"].join("|"), "i");
-const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repo, encoding: "utf8" })
-  .split("\0")
-  .filter((f) => f && fs.existsSync(path.join(repo, f)));
-const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
-check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
+// Its names come from the environment (a CI secret), so that this repository
+// carries none; unset, as on a fork or a laptop, the check is skipped.
+const supplierNames = (process.env.SUPPLIER_DENYLIST ?? "").split(",").map((name) => name.trim()).filter(Boolean);
+if (supplierNames.length === 0) {
+  console.log("SKIP no file names the hotel supplier (SUPPLIER_DENYLIST is not set)");
+} else {
+  const SUPPLIER = new RegExp(supplierNames.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i");
+  const listed = execFileSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], { cwd: repo, encoding: "utf8" })
+    .split("\0")
+    .filter((f) => f && fs.existsSync(path.join(repo, f)));
+  const supplier = listed.filter((f) => SUPPLIER.test(read(f)));
+  check("no file names the hotel supplier", supplier.length === 0, supplier.join(", "));
+}
 // Anthropic Software Directory Policy §2F: the Claude plugin must not have
 // Claude fetch instructions at run time (the CLI skill bundles its own guide).
 const fetching = files.filter((f) => f.startsWith(`plugins${path.sep}claude${path.sep}`) && /\bnpx\b|fortrip@latest|get_planning_guide/.test(read(f)));

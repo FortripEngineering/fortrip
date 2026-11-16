@@ -143,17 +143,16 @@ export const OPERATION_NAMES: Record<ToolName, string> = {
 type Scope = RateLimitName extends infer S ? (S extends string ? (string extends S ? never : S) : never) : never;
 
 /** What the contract doesn't say about a rate limit: the tools whose calls
- *  count against it, and whether they are refused (in production) while the
- *  limiter is down. Keyed by the limit's name, so one the contract gains
+ *  count against it. Keyed by the limit's name, so one the contract gains
  *  fails the typecheck until it is described. */
-const SCOPES: Record<Scope, { operations: ToolName[]; failClosed: boolean }> = {
-  search: { operations: ["search_hotels"], failClosed: false },
-  offers: { operations: ["get_hotel_offers"], failClosed: false },
-  hotel: { operations: ["get_hotel"], failClosed: false },
-  orders_create: { operations: ["create_order"], failClosed: true },
-  orders_read: { operations: ["get_order", "list_orders"], failClosed: false },
-  orders_cancel: { operations: ["cancel_order"], failClosed: true },
-  orders_pay: { operations: ["pay_order"], failClosed: true },
+const SCOPES: Record<Scope, { operations: ToolName[] }> = {
+  search: { operations: ["search_hotels"] },
+  offers: { operations: ["get_hotel_offers"] },
+  hotel: { operations: ["get_hotel"] },
+  orders_create: { operations: ["create_order"] },
+  orders_read: { operations: ["get_order", "list_orders"] },
+  orders_cancel: { operations: ["cancel_order"] },
+  orders_pay: { operations: ["pay_order"] },
 };
 
 export interface RateLimitRow {
@@ -161,8 +160,6 @@ export interface RateLimitRow {
   perMinute: number;
   /** The tools whose calls count against it. */
   operations: ToolName[];
-  /** Refused when the limiter is down (in production). */
-  failClosed: boolean;
 }
 
 /** The per-user limits the API enforces (spec §13), from the contract's
@@ -175,14 +172,3 @@ export function rateLimitRows(): RateLimitRow[] {
   });
 }
 
-/** The operations refused while the rate limiter is down, as the subject
- *  of "…, which answer(s) 503": "a, which answers", "a and b, which
- *  answer", "a, b and c, which answer". */
-export function failClosedClause(): string {
-  const names = rateLimitRows()
-    .filter((row) => row.failClosed)
-    .flatMap((row) => row.operations.map((name) => OPERATION_NAMES[name]));
-  return names.length > 1
-    ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}, which answer`
-    : `${names.join("")}, which answers`;
-}
