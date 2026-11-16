@@ -1,10 +1,10 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "fortrip",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Find and book hotels worldwide: compare live room rates, pay securely, and check or cancel your bookings.",
   "author": {
-    "name": "Fortrip",
+    "name": "FortripAI, Inc.",
     "email": "support@fortrip.ai",
     "url": "https://fortrip.ai"
   },
@@ -16,7 +16,7 @@
         "displayName": "Fortrip",
         "shortDescription": "Search and book hotels",
         "longDescription": "Fortrip helps you find and book hotels around the world. Search by city, neighborhood, hotel name or brand, see what a hotel offers, and compare live room rates, meals and cancellation terms side by side.\n\nWhen you've picked a room, the assistant shows you the total price and the terms and waits for your OK. You then pay on a secure payment page, and nothing is charged until you do. You can check your bookings at any time and cancel one under its cancellation terms; the assistant tells you the fee and the refund first.\n\nYou need a Fortrip account. Fortrip books hotels only for now: flights, activities and changes to an existing booking aren't supported.",
-        "developerName": "Fortrip",
+        "developerName": "FortripAI, Inc.",
         "category": "Travel",
         "capabilities": [
           "Search hotels",
