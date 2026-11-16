@@ -80,7 +80,7 @@ describe("order and payment guide", () => {
     const text = pageText("/payments");
     assert.match(
       text,
-      /A guest name that the hotel's booking system would refuse answers invalid_request with a pointer to the name, before any order is made\. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name\. The user emails info@fortrip\.ai instead\./,
+      /A guest name that the hotel's booking system would refuse answers invalid_request with a pointer to the name, before any order is made\. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name\. The user emails support@fortrip\.ai instead\./,
     );
   });
 

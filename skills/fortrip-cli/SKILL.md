@@ -193,7 +193,7 @@ Check the order with `fortrip orders get`; its first line has the status:
 
 - confirming with the hotel, then confirmed, with the hotel confirmation number.
 - failed: no stay was booked. "Why it failed" says why and what to do next, and the Total line whether the payment was released or refunded.
-- needs attention from Fortrip: Fortrip is looking into it; the user can email info@fortrip.ai with the order's reference.
+- needs attention from Fortrip: Fortrip is looking into it; the user can email support@fortrip.ai with the order's reference.
 - The Manage link is the user's own page for the order.
 
 ## Errors
@@ -235,4 +235,4 @@ Close an unpaid order only once the user says they no longer want it: run `fortr
 
 ## Changes and support
 
-The CLI can't change an order: for changes, a cancellation that `fortrip orders cancel` can't make, or other problems, the user emails info@fortrip.ai with the order's reference (never its payment link).
+The CLI can't change an order: it can only be cancelled under its terms and ordered again. For a cancellation that `fortrip orders cancel` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).

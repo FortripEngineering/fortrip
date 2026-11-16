@@ -14,4 +14,4 @@ Close an unpaid order only once the user says they no longer want it: {{#if clau
 ## Changes and support
 
 {{/if}}
-{{#if mcp}}Cancel a paid order only after the user confirmed the penalty and the refund on its Cancel line; close an unpaid one only once they say they no longer want it. For changes{{/if}}{{#if claude-skill}}These tools can't change an order: for changes{{/if}}{{#if cli}}The CLI can't change an order: for changes{{/if}}, a cancellation that `{{tool:orders cancel}}` can't make, or other problems, the user emails {{support}} with the order's reference (never its payment link).
+{{#if mcp}}Cancel a paid order only after the user confirmed the penalty and the refund on its Cancel line; close an unpaid one only once they say they no longer want it. An order can't be changed, only{{/if}}{{#if claude-skill}}These tools can't change an order: it can only be{{/if}}{{#if cli}}The CLI can't change an order: it can only be{{/if}} cancelled under its terms and ordered again. For a cancellation that `{{tool:orders cancel}}` can't make, or other problems, the user emails {{support}} with the order's reference (never its payment link).
