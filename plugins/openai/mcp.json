@@ -10,8 +10,7 @@
             "type": "oauth",
             "client": {
               "mode": "cimd"
-            },
-            "baseScopes": ["profile", "email"]
+            }
           }
         }
       }

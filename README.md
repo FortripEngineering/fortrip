@@ -131,7 +131,8 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 `mcp.json` the hosted server URL and how a client signs in to it (OAuth, the
 client registered by its metadata document), and `skills/fortrip` the
 generated skill. `mcp.json` follows the Agent Plugins schema
-(`type: streamable-http`), while `plugins/claude/.mcp.json` follows Claude's
+(`type: streamable-http`) but for the server's `extensions`, where OpenAI's
+packaging guide puts the sign-in declaration, while `plugins/claude/.mcp.json` follows Claude's
 (`type: http`); both point at the same server. Build the upload:
 
 ```bash

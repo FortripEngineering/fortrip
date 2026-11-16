@@ -2541,4 +2541,16 @@ describe("results for a client not offered payment by token", () => {
       if (!TOKEN.test(text)) assert.equal(renderToolResult(fixture.tool, fixture.data, "mcp", { tokenPay: false }), text, name);
     }
   });
+
+  // The one error of every tool's that names a token: the rest that do are pay_order's own.
+  it("word a service_unavailable error without a token", () => {
+    const unavailable = { error: { code: "service_unavailable", message: "Try again.", retryable: true, retryAfterSeconds: 5, requestId: "req_1" } };
+    const full = renderError(unavailable, 503);
+    assert.match(full, /^Retry once with the same details \(a payment with the same token, never a new one\); if it fails again, tell the user\.$/m);
+    assert.equal(renderError(unavailable, 503, "mcp", {}), full);
+    assert.equal(renderError(unavailable, 503, "mcp", { tokenPay: true }), full);
+    const text = renderError(unavailable, 503, "mcp", { tokenPay: false });
+    assert.match(text, /^Retry once with the same details; if it fails again, tell the user\.$/m);
+    assert.doesNotMatch(text, /token/);
+  });
 });

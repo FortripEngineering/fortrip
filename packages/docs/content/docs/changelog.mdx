@@ -7,7 +7,7 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
-## 6.1.1
+## 6.2.0
 
 Released 2026-11-16.
 
@@ -15,9 +15,14 @@ The schemas, the tools, the commands and the errors keep their shape. The change
 
 ### Changed
 
-- An MCP error's text ends with its request id only for an `internal` error, whose text asks the user to quote it. Every error still carries the id in `_meta["ai.fortrip/error"]`, and the CLI still ends every error with it.
+- The hosted MCP server's error text ends with its request id only for an `internal` error, whose text asks the user to quote it. Every error still carries the id in `_meta["ai.fortrip/error"]`. The CLI still ends every error with it, the sign-in error of its MCP bridge included.
 - Each tool's description starts by saying when the tool is used.
-- `search_hotels` says its destination is where the user wants to stay, never where the user is: a `point` is a landmark or an address the user named, or the coordinates hotel details showed.
+- `search_hotels` says its destination is the place the user asked for, never a location they did not give: a `point` is a landmark or an address the user named, or the coordinates hotel details showed.
+- A `service_unavailable` error does not name a payment token to ChatGPT, which is not offered `pay_order`.
+
+### Package
+
+- `renderError(envelope, status, surface, { tokenPay: false })` words an error for a client not offered payment by token. Left out, an error renders as before.
 
 ## 6.1.0
 

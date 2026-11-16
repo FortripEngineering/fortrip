@@ -317,11 +317,11 @@ describe("TOOLS", () => {
     }
   });
 
-  // The same review bars asking for the user's own location.
-  it("search_hotels takes where the user wants to stay, never where the user is", () => {
+  // The same review bars asking for a location the user did not give.
+  it("search_hotels takes the place the user asked for, never a location they did not give", () => {
     const search = TOOLS.find((t) => t.name === "search_hotels")!;
-    assert.match(search.description, /destination is where the user wants to stay, never where the user is now: /);
-    assert.ok(JSON.stringify(z.toJSONSchema(search.input, { io: "input" })).includes("Never the user's own position."));
+    assert.match(search.description, /destination is the place the user asked for, never a location they did not give: /);
+    assert.ok(JSON.stringify(z.toJSONSchema(search.input, { io: "input" })).includes("Never a position the user did not give."));
   });
 
   // Spec §6: MCP tool inputs mirror the HTTP bodies and query exactly.
@@ -464,7 +464,7 @@ describe("TOOLS", () => {
 
   it("cancel_order says what closing does, and that neither mode ever does the other's work", () => {
     const { description, annotations } = tool("cancel_order");
-    assert.match(description, /^Use this when the user wants to cancel a paid order or drop an unpaid one\. It cancels a paid order under its terms, or closes an unpaid one\./);
+    assert.match(description, /^Use this when the user asks to cancel a paid order or to close an unpaid one\. It cancels a paid order under its terms, or closes an unpaid one\./);
     assert.match(description, /close: true closes it: nothing is charged, and it can no longer be paid\./);
     assert.match(description, /answers order_not_cancellable, which says which mode applies now or what blocks both: nothing is cancelled or closed by the other mode\./);
     assert.match(description, /While a payment is under way the answer is payment_in_progress\./);
