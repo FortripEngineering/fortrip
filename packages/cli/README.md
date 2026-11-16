@@ -232,8 +232,9 @@ that starts with `local_`.
 
 ## Support
 
-A cancellation the CLI can make goes through `fortrip orders cancel`. For
-changes, other cancellations, refunds or other help with a booking, email
+A cancellation the CLI can make goes through `fortrip orders cancel`. An order
+can't be changed: cancel it under its terms and order again. For other
+cancellations, refunds or other help with a booking, email
 [support@fortrip.ai](mailto:support@fortrip.ai) with the order's reference. Never
 send the payment link.
 

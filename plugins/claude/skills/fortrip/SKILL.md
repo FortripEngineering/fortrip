@@ -193,4 +193,4 @@ Close an unpaid order only once the user says they no longer want it: call `fort
 
 ## Changes and support
 
-These tools can't change an order: for changes, a cancellation that `fortrip:cancel_order` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).
+These tools can't change an order: it can only be cancelled under its terms and ordered again. For a cancellation that `fortrip:cancel_order` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).

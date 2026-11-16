@@ -235,4 +235,4 @@ Close an unpaid order only once the user says they no longer want it: run `fortr
 
 ## Changes and support
 
-The CLI can't change an order: for changes, a cancellation that `fortrip orders cancel` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).
+The CLI can't change an order: it can only be cancelled under its terms and ordered again. For a cancellation that `fortrip orders cancel` can't make, or other problems, the user emails support@fortrip.ai with the order's reference (never its payment link).
