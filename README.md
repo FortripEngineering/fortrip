@@ -150,8 +150,7 @@ in its "MCP + Skill" form: `connector-meta.json` holds the listing copy in
 Chinese and English and how a user signs in (WorkBuddy's cloud registers
 itself with our authorization server and holds the tokens), `mcp.json` the
 hosted server, `icon.png` the icon and `skills/fortrip` the generated skill.
-`mcp.json` disables `pay_order`: the user pays on the page the payment link
-opens. It holds no client ID or secret. Build the upload:
+The package holds no client ID or secret. Build the upload:
 
 ```bash
 git archive --format=zip --prefix=fortrip/ -o fortrip-workbuddy.zip HEAD:plugins/workbuddy

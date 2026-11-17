@@ -69,8 +69,8 @@ const SKILLS: readonly {
     description:
       "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
   },
-  // The WorkBuddy connector's skill: the same MCP guide. The connector's
-  // mcp.json disables pay_order, so the skill names no payment by token.
+  // The WorkBuddy connector's skill: the MCP guide as the hosted server
+  // gives it to every client but the Fortrip CLI, without payment by token.
   {
     dir: "plugins/workbuddy/skills/fortrip",
     surface: "mcp",

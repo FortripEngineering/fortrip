@@ -96,20 +96,21 @@ for (const entry of load(".claude-plugin/marketplace.json").plugins) {
   }
 }
 check("plugins/openai/mcp.json url", load("plugins/openai/mcp.json").mcpServers?.fortrip?.url === MCP_URL);
-// The server is OAuth-protected, and ChatGPT is told apart by its client
-// metadata document, so the package asks for that registration.
+// The server is OAuth-protected, and ChatGPT names itself by its client
+// metadata document, which registers nothing per connection: the package
+// asks for that.
 const auth = load("plugins/openai/mcp.json").mcpServers?.fortrip?.extensions?.["com.openai"]?.auth;
 check("plugins/openai/mcp.json declares OAuth by client metadata document", auth?.type === "oauth" && auth?.client?.mode === "cimd", JSON.stringify(auth));
 
 // The WorkBuddy connector (open.workbuddy.cn, "MCP + Skill"): one server,
 // the hosted one, with sign-in held by WorkBuddy's cloud after it registers
-// itself with our authorization server. pay_order is not offered there.
+// itself with our authorization server. The hosted server offers pay_order
+// to the Fortrip CLI alone, so the package has nothing to disable.
 const workbuddy = load("plugins/workbuddy/connector-meta.json");
 const workbuddyServers = Object.entries(load("plugins/workbuddy/mcp.json").mcpServers ?? {});
 check("workbuddy mcp.json has exactly one server", workbuddyServers.length === 1, `${workbuddyServers.length}`);
 const [workbuddyKey, workbuddyServer] = workbuddyServers[0] ?? [];
 check("workbuddy mcp.json server is the hosted one over streamable HTTP", workbuddyServer?.url === MCP_URL && workbuddyServer?.type === "streamableHttp", JSON.stringify(workbuddyServer));
-check("workbuddy mcp.json disables pay_order", workbuddyServer?.disabledTools?.includes("pay_order"), JSON.stringify(workbuddyServer?.disabledTools));
 check("workbuddy source is kebab-case and is the server's key", /^[a-z0-9]+(-[a-z0-9]+)*$/.test(workbuddy.source) && workbuddy.source === workbuddyKey, workbuddy.source);
 check("workbuddy type is mcp", workbuddy.type === "mcp", workbuddy.type);
 check("workbuddy version is semver", /^\d+\.\d+\.\d+$/.test(workbuddy.version), workbuddy.version);

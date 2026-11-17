@@ -3,10 +3,7 @@
     "fortrip": {
       "type": "streamableHttp",
       "url": "https://mcp.fortrip.ai/",
-      "timeout": 180000,
-      "disabledTools": [
-        "pay_order"
-      ]
+      "timeout": 180000
     }
   }
 }
