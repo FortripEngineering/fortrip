@@ -11,7 +11,7 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 4. **Pay**, one way only: the user pays on the order's payment link, or an agent pays with a token the user approved.
 5. **After payment**, read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
 
-The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create`, `fortrip orders pay` and `fortrip orders get`.
+The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create`, `fortrip orders pay` and `fortrip orders get`. Over MCP, `pay_order` is offered through the CLI's `fortrip mcp` alone: a client connected to the hosted server pays by the payment link.
 
 ## Order [#order]
 
