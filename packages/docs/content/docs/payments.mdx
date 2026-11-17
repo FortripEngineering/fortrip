@@ -5,13 +5,13 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 
 ## The flow [#flow]
 
-1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId` that can be ordered until its `expiresAt`, a `total` for the whole stay and every room, in the request's `currency`, and its terms.
-2. **Order.** <code><Fact path="ROUTES.create_order" /></code> creates an unpaid order for one offer: it is `awaiting_payment`, and nothing is charged.
-3. **Confirm with the user** ([what to show](#confirm)).
-4. **Pay**, one way only: the user pays on the order's payment link, or an agent pays with a token the user approved.
-5. **After payment**, read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
+1. **Offer.** <code><Fact path="ROUTES.get_hotel_offers" /></code> returns live offers. Each has an `offerId`, a `total` for the whole stay and every room, its terms, and the `expiresAt` it can be ordered until.
+2. **Order.** <code><Fact path="ROUTES.create_order" /></code> creates an unpaid order for one offer. Nothing is charged.
+3. **Confirm with the user** ([what to show](#confirm)), and wait for a yes.
+4. **Pay.** The user pays on the order's payment link, or an agent pays with a token the user approved.
+5. **Follow.** Read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
 
-The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order`, `pay_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create`, `fortrip orders pay` and `fortrip orders get`. Over MCP, `pay_order` is offered through the CLI's `fortrip mcp` alone: a client connected to the hosted server pays by the payment link.
+The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create` and `fortrip orders get`. Over MCP, `pay_order` is offered through the CLI's `fortrip mcp` alone: a client connected to the hosted server pays by the payment link.
 
 ## Order [#order]
 
@@ -21,18 +21,19 @@ Send `items`, which holds exactly one item, and `contact`:
 { items: [{ offerId, hotel: { rooms: [{ guests }], specialRequests? } }], contact: { name, email, phone } }
 ```
 
-- The `offerId` goes inside the item, and nowhere else in the request.
 - `hotel.rooms` has one entry per room of the offer, in order, each with at least one guest, named in Latin letters as on their passport.
 - `contact` is who the hotel and the confirmation email reach: one `name`, in any script, an `email` and a `phone` with its country code.
-
-The request mirrors the order it creates: the order's `items[].hotel.rooms[].guests`, `specialRequests` and `contact` read back what was sent. The [schemas](/schemas) list every field.
-
-- A known field sent at the wrong depth, such as `offerId` beside `items`, answers `invalid_request` with the path it belongs at.
-- A guest name that the hotel's booking system would refuse answers `invalid_request` with a pointer to the name, before any order is made. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name. The user emails <Fact path="SUPPORT_EMAIL" /> instead.
-- Before it creates the order, Fortrip checks the offer with the hotel. If the price or any term changed, the answer is `409 offer_changed` instead (below). No order is made at a price the user hasn't seen.
-- A call that timed out is [safe to send again](/api#retries) with the same details.
-- Another order of the same stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new order; the earlier one expires unpaid, or can be [closed](#close) now once the user says they no longer want it.
 - Never collect card details. A card number in a guest name, the contact or the special requests is refused.
+
+The guests' names, the contact and any special requests go to the hotel to make the booking, and Fortrip emails the booking confirmation to the contact. How Fortrip handles this data is in its [privacy policy](https://fortrip.ai/privacy). The [schemas](/schemas) list every field.
+
+What can come back in place of an order:
+
+- **The offer changed.** Fortrip checks the offer with the hotel first. If the price or any term changed, the answer is `409 offer_changed` and no order is made ([below](#offer-changed)).
+- **A guest name is refused.** A guest name that the hotel's booking system would refuse answers `invalid_request` with a pointer to the name, before any order is made. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name. The user emails <Fact path="SUPPORT_EMAIL" /> instead.
+- **The call timed out.** It is [safe to send again](/api#retries) with the same details.
+
+An offer is ordered once. Another order of the same stay, for another party or with a corrected name, needs a new offer: get offers again. When the new order replaces an unpaid one, tell the user to pay only the new one.
 
 ### When the offer changed [#offer-changed]
 
@@ -44,18 +45,9 @@ Each change's `field` is the offer's key that changed: `total`, `meals`, `cancel
 
 ### The order [#the-order]
 
-The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `total` is what is charged, for the whole stay and every room, in the currency of the offer the order was made from. Fees paid at the hotel are not in it.
+The order's `reference`, which starts with `FT-`, is the number the user quotes to support. `total` is what is charged, for the whole stay and every room; fees paid at the hotel are not in it.
 
-`items[0].hotel` holds the stay as ordered:
-
-- What holds for the whole stay has the same name as on the offer: `cancellation`, `confirmation` and `payAtProperty`, the fees paid at the hotel.
-- What holds for one room is on each entry of `rooms`: its party, its `guests`, its `roomType` and its `meals`. Read every room: an order made on the Fortrip website can hold rooms that differ.
-
-## Data you send [#data]
-
-- The guests' names, the contact's name, email and phone, and any special requests go to the hotel to make the booking.
-- Fortrip emails the booking confirmation to the contact.
-- How Fortrip handles this data is in its [privacy policy](https://fortrip.ai/privacy).
+`items[0].hotel` holds the stay as ordered. `cancellation`, `confirmation` and `payAtProperty` hold for the whole stay, as on the offer. Each entry of `rooms` has its party, its `guests`, its `roomType` and its `meals`: read every room, because an order made on the Fortrip website can hold rooms that differ.
 
 ## Confirm with the user [#confirm]
 
@@ -68,47 +60,46 @@ Before any payment, show the user:
 
 End that message by asking the user to confirm, and wait for a clear yes; urgency is not consent. Only then give them `payment.url`, or pay with a token.
 
-<Fact path="GUIDE_SENTENCES.adaptivePricing" /> A Link token (a shared payment token from the user's Stripe Link wallet) pays a USD order only, and a card in another currency may add a foreign transaction fee. On a USD order, Alipay and WeChat Pay show the total in yuan at their own rate.
+<Fact path="GUIDE_SENTENCES.adaptivePricing" /> Alipay and WeChat Pay show the total in yuan at their own rate. A Link token pays a USD order only, and a card in another currency may add a foreign transaction fee.
 
 ## Pay [#pay]
 
 Pay one way only. Every order awaiting payment has a payment link, `payment.url`. While the order's `payment.tokenRequest` is set, an agent that can request a Link token can pay with one instead.
 
-- `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, never in a shared channel, document, log or ticket, and give it exactly as returned: don't shorten, rebuild or re-encode it.
+- `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, exactly as returned.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is `null` has a payment being processed: read the order again shortly, and don't give an earlier link.
-- The link closes at `payment.expiresAt`, and the order is then `expired`, or when the order is [closed](#close), and it is then `closed`. To order the stay again, get offers again and confirm the new order with the user.
-- Once a token payment succeeds, `payment.url` stops working. One that fails leaves the link open and the order `awaiting_payment`.
+- The link closes at `payment.expiresAt`, when the order is [closed](#close), or once a token payment succeeds. A token payment that fails leaves it open.
 - If the user pays on the link first, a token hold made meanwhile is released.
 
 <PayWays variant="full" />
 
-A total other than the order's answers [`payment_total_mismatch`](/errors#code-payment_total_mismatch) and charges nothing. Every other refusal of a payment is in the [error codes](/errors#codes). The [`pay_order`](/mcp/pay-order) and [`fortrip orders pay`](/cli/orders-pay) pages have the full input and answer.
+A total other than the order's answers [`payment_total_mismatch`](/errors#code-payment_total_mismatch) and charges nothing. Every other refusal of a payment is in the [error codes](/errors#codes).
 
 ### On the payment page [#payment-page]
 
-The link opens a Fortrip page that recaps the order and shows the ways to pay for its currency. The user chooses there:
+The link opens a Fortrip page that recaps the order. The user chooses how to pay there:
 
 - **A USD order:** a card, through Stripe Checkout, or Alipay or WeChat Pay.
 - **A CNY order:** a cashier in mainland China.
 
-An agent doesn't open or choose any of these: it gives the link, and the user pays. While the user has an Alipay or WeChat Pay payment open on the page, the order's `payment.tokenRequest` is `null`, and `pay_order` answers [`payment_method_unavailable`](/errors#code-payment_method_unavailable) with `reason` `payment_open_on_page`: the user finishes paying on the page.
+An agent doesn't open or choose any of these: it gives the link, and the user pays. While the user has an Alipay or WeChat Pay payment open on the page, the order's `payment.tokenRequest` is `null`, and `pay_order` answers [`payment_method_unavailable`](/errors#code-payment_method_unavailable) with `reason` `payment_open_on_page`.
 
 ## After payment [#after-payment]
 
-Read the order with <code><Fact path="ROUTES.get_order" /></code> ([`get_order`](/mcp/get-order), [`fortrip orders get`](/cli/orders-get)) until it is no longer `confirming`; [Polling](/api#polling) says how often. Its `status`:
+Read the order ([`get_order`](/mcp/get-order), [`fortrip orders get`](/cli/orders-get)) until it is no longer `confirming`; [Polling](/api#polling) says how often. Its `status`:
 
 <OrderStatuses />
 
-And its `payment.status`, which says where the money is:
+Its `payment.status` says where the money is:
 
 <PaymentStatuses />
 
-- `items[0].hotel.confirmationNumber` is the hotel's confirmation number, once it gives one. The confirmation is also emailed to the contact.
+- `items[0].hotel.confirmationNumber` is the hotel's confirmation number, once it gives one.
 - `manageUrl` is the order's page on fortrip.ai, for the user signed in to the account that ordered it.
 
 ### When a booking fails [#failure]
 
-A `failed` order booked no stay, and its payment is released or refunded in full without a cancellation. Its `failure.reason` says why, so that an agent doesn't order the same thing again:
+A `failed` order booked no stay, and its payment is released or refunded in full. Its `failure.reason` says why, so that an agent doesn't order the same thing again:
 
 <FailureReasons />
 
@@ -116,7 +107,7 @@ Every `failed` order has `failure`: a reason that isn't on record is `unknown`. 
 
 ## Cancel or close [#cancel]
 
-Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) and <code><Fact path="ROUTES.cancel_order" /></code> do one of two things, and the request says which:
+Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) and <code><Fact path="ROUTES.cancel_order" /></code> either cancel or close, and the request says which:
 
 | | Cancel | Close |
 | --- | --- | --- |
@@ -126,13 +117,13 @@ Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`
 | Effect | The hotel booking is cancelled. The penalty is kept and the rest refunded. | Nothing is charged. The order is `closed` and can no longer be paid. |
 | Ask the user | Show the penalty and the refund, and wait for a clear yes. | Close it only once the user says they no longer want it. |
 
-Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now. The same mode sent again answers the order it already cancelled or closed, and `close` on an order that already `expired` answers that order as it is.
+Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now.
 
 ### What `cancel` shows [#cancel-state]
 
 Every order says what can be done to it now, in `cancel`: `{ action, blockedBy, penalty, refund }`. Exactly one of `action` and `blockedBy` is set.
 
-- **`action: "cancel"`**: a paid order that can be cancelled now. `penalty` is what a cancellation keeps and `refund` what it returns, both in the total's currency. Past the free deadline the penalty can be the whole total and the refund 0: the action is still `cancel`.
+- **`action: "cancel"`**: a paid order that can be cancelled now. `penalty` is what a cancellation keeps and `refund` what it returns. Past the free deadline the penalty can be the whole total and the refund 0: the action is still `cancel`.
 - **`action: "close"`**: an unpaid order that can be closed. `penalty` and `refund` are `null`.
 - **`action: null`**: neither applies, and `blockedBy` says why:
 
@@ -140,16 +131,15 @@ Every order says what can be done to it now, in `cancel`: `{ action, blockedBy, 
 
 ### Cancel a paid order [#cancel-paid]
 
-Show the user the order's `cancel.penalty` and `cancel.refund`, and wait for a yes. Then cancel with `maximumPenalty` set to that `penalty`, exactly as returned. It is a ceiling: if the penalty has risen above it, the answer is [`cancellation_changed`](/errors#code-cancellation_changed) and nothing is cancelled. Read the order and ask the user again.
+Set `maximumPenalty` to the order's `cancel.penalty`, exactly as returned. It is a ceiling: if the penalty has risen above it, the answer is [`cancellation_changed`](/errors#code-cancellation_changed) and nothing is cancelled. Read the order and ask the user again.
 
-The order is then `cancelling` while the hotel cancels, and `cancelled` once it has. A cancelled order's `cancelled` holds what the cancellation kept and returned: `{ at, penalty, refund }`. The refund goes back to the payment the order was paid with, and `payment.status` says whether it has arrived. If the hotel refuses the cancellation, the order is `confirmed` again, with `cancel.blockedBy` `cancellation_refused`.
+The order is `cancelling` while the hotel cancels, and `cancelled` once it has. A cancelled order's `cancelled` holds what the cancellation kept and returned: `{ at, penalty, refund }`. The refund goes back to the payment the order was paid with, and `payment.status` says whether it has arrived. If the hotel refuses the cancellation, the order is `confirmed` again, with `cancel.blockedBy` `cancellation_refused`.
 
 ### Close an unpaid order [#close]
 
-Close an order only once the user says they no longer want it: the same call with `close: true` in place of `maximumPenalty` (`fortrip orders cancel <orderId> --close`). Nothing is charged, and the order is `closed`.
+An unpaid order needs no closing: left alone, it expires at `payment.expiresAt` with nothing charged. To end it sooner, send `close: true` (`fortrip orders cancel <orderId> --close`).
 
 - While a payment of the order is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly.
-- An order made on the Fortrip website isn't closed through the API: it expires at `payment.expiresAt`.
-- An unpaid order needs no closing. Left alone, it expires at `payment.expiresAt` with nothing charged.
+- An order made on the Fortrip website isn't closed through the API.
 
 For a change, or a cancellation these can't make, the user emails <Fact path="SUPPORT_EMAIL" /> with the order's `reference`.

@@ -7,7 +7,7 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A request with a field the input doesn't define is refused with `invalid_request`; when the field is a known one sent at the wrong depth, the answer names the path it belongs at. There is no CORS: call the API from a server, a script or the CLI, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
 
 ## Authentication [#authentication]
 
@@ -18,16 +18,16 @@ Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a For
 - **An app without a browser of its own, such as a CLI or a script:** the device flow below, with the `clientId` from <code><Fact path="ROUTES.authConfig" /></code>, the OAuth sign-in settings.
 - **A web app:** the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints. Request the scopes the OAuth sign-in settings list in `scopes` (they include `offline_access`, for a refresh token).
 
-There are no API keys, service accounts or partner accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to that account.
+There are no API keys or service accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to it.
 
 ### Device flow [#device-flow]
 
-1. <code><Fact path="ROUTES.authConfig" /></code> returns `issuer`, `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
-2. Run the OAuth device authorization flow (RFC 8628) with them: post `client_id` and `scope` as a form to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete` (or `verification_uri` and `user_code`), then poll `tokenEndpoint` every `interval` seconds with `grant_type=urn:ietf:params:oauth:grant-type:device_code`, the `device_code` and `client_id` until the user approves.
-3. Request `offline_access`, which `scopes` includes, to get a refresh token with the access token.
-4. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token` and your `client_id`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again. To sign out, revoke the refresh token at `revocationEndpoint`, again with your `client_id`.
+The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/api-quickstart#sign-in) runs it in curl, TypeScript and Python.
 
-The [API quickstart](/api-quickstart#sign-in) runs this flow in curl, TypeScript and Python.
+1. <code><Fact path="ROUTES.authConfig" /></code> returns `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
+2. Post `client_id` and `scope` to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete`, then poll `tokenEndpoint` every `interval` seconds until the user approves. Request `offline_access`, which `scopes` includes, to get a refresh token.
+3. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again.
+4. To sign out, revoke the refresh token at `revocationEndpoint`.
 
 A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
 
@@ -35,9 +35,7 @@ A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROU
 
 <EndpointTable />
 
-The [API reference](/api/reference/search_hotels) has each endpoint's parameters, body and answers, generated from the contract, as is the [OpenAPI 3.1 document](/openapi.json).
-
-A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUTES.get_hotel" />?include=roomTypes&amp;locale=en</code> takes what `get_hotel` takes as `{ hotelId, include: "roomTypes", locale: "en" }`. Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
+The [API reference](/api/reference/search_hotels) has each endpoint's parameters, body and answers; there is also an [OpenAPI 3.1 document](/openapi.json). Successful answers are the object itself, with no envelope; failures are the [error envelope](/errors).
 
 ## Conventions [#conventions]
 
@@ -46,14 +44,14 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 - Coordinates are `{ lat, lng }` in WGS84; distances are in meters.
 - Names with an English and a Chinese form are `name`, in the requested `locale`, plus `names: { en, zh }`. Other text from the catalogue is `{ text, locale }`, with `locale` `null` when unknown. Messages the API writes are in English.
 - **Unknown is not no.** A list or flag the source didn't state is `null`, or comes with `known`, `listed`, `disclosure` or `status` saying so. An amenity that isn't listed may still exist.
-- **Read responses tolerantly.** Objects can gain fields, enums can gain values and unions can gain branches. Allow fields you don't know, treat an unknown enum value or error code as its raw string (or by its HTTP status and `retryable`), and don't fail on them.
+- **Read responses tolerantly.** Objects can gain fields, enums can gain values and unions can gain branches: don't fail on one you don't know.
 
 ### Money [#money]
 
-- Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float. Money in a request is USD or CNY: a search's price bound in the search's `currency`, a payment's `total` in the order's. A cancellation's `maximumPenalty` is the order's `cancel.penalty` exactly as returned, in whatever currency it is.
-- Prices are in the request's `currency` (USD, the default, or <OtherCurrencies />).
-- An order is charged its `total`, in the currency that `total` names. Orders made through the API are charged in the currency of their offers; orders made on the Fortrip website, which the order list includes, may be in another currency.
-- The amount to show the user before they pay is the order's `total`. Fees paid at the property, `payAtProperty`, come on top, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
+- Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float.
+- Prices are in the request's `currency` (USD, the default, or <OtherCurrencies />). Money you send back, a payment's `total` or a cancellation's `maximumPenalty`, is copied from the order exactly as returned.
+- An order is charged its `total`, in the currency that `total` names. Orders made on the Fortrip website, which the order list includes, may be in another currency.
+- Fees paid at the property, `payAtProperty`, come on top of the total, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
 
 ## Headers [#headers]
 
@@ -66,9 +64,9 @@ A path parameter is also a field of the MCP tool's input: <code><Fact path="ROUT
 
 ## Pagination [#pagination]
 
-Search results and the order list are pages: `{ data, nextCursor }` for orders, and `data` with `nextCursor` alongside the rest of a search result. Pass `nextCursor` back as `cursor`; a next page of a search takes only `cursor` and, optionally, `limit`. `nextCursor` is `null` on the last page. A cursor belongs to its request and user; an expired, edited or foreign one answers `400 cursor_invalid`.
+Search results and the order list are pages, with `data` and `nextCursor`. Pass `nextCursor` back as `cursor`; a next page of a search takes only `cursor` and, optionally, `limit`. `nextCursor` is `null` on the last page. An expired or edited cursor answers `400 cursor_invalid`.
 
-Live offers are not a page: they are grouped by hotel, under `hotels`, with the hotels that have nothing to offer under `unavailable` and the reason. One call answers a bounded number of offers across its hotels; [the offers budget](/errors#offers-budget) says how many and how to see more.
+Live offers are not a page: one call answers a bounded number of offers, grouped by hotel. [The offers budget](/errors#offers-budget) says how many and how to see more.
 
 ## Retries and idempotency [#retries]
 
@@ -80,17 +78,15 @@ There is no `Idempotency-Key` header. Every call is safe to send again with the 
 
 ## Polling [#polling]
 
-There are no webhooks. After you give the user the payment link, read the order with <code><Fact path="ROUTES.get_order" /></code> when the user says they have paid, or every few seconds while they are paying. It moves from `awaiting_payment` to `confirming` once paid; keep reading while it is `confirming`. Each read counts against the `orders_read` limit of <Fact path="RATE_LIMITS.orders_read.limit" /> calls a minute. How long the hotel may take is in the offer's `confirmation`: `instant`, or `on_request` within `withinMinutes`.
+There are no webhooks. After you give the user the payment link, read the order with <code><Fact path="ROUTES.get_order" /></code> when the user says they have paid, or every few seconds while they are paying, and keep reading while it is `confirming`. Each read counts against the `orders_read` limit of <Fact path="RATE_LIMITS.orders_read.limit" /> calls a minute. How long the hotel may take is in the offer's `confirmation`: `instant`, or `on_request` within `withinMinutes`.
 
 ## Orders [#orders]
 
 - <code><Fact path="ROUTES.create_order" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
-- It answers `409 offer_changed` when the price or a term changed since the offer, with every change and a new offer; and `409 offer_already_ordered` when the offer was ordered with other details. An offer is ordered once, even when its order failed, expired or was closed: another order of the stay takes a new offer.
 - <code><Fact path="ROUTES.pay_order" /></code> takes `sharedPaymentToken`, the token the user approved for the order, and `total`, the order's `total` exactly as returned. Both are required.
-- <code><Fact path="ROUTES.cancel_order" /></code> takes exactly one of `maximumPenalty`, which cancels a paid order, and `close: true`, which closes an unpaid one. The order's `cancel.action` says which applies.
-- Orders can't be changed through the API.
+- <code><Fact path="ROUTES.cancel_order" /></code> takes exactly one of `maximumPenalty`, which cancels a paid order, and `close: true`, which closes an unpaid one.
 
-The whole flow, the ways to pay, the order statuses, and cancelling and closing are in [Orders and payment](/payments).
+The flow, the ways to pay, the order statuses, and cancelling and closing are in [Orders and payment](/payments).
 
 ## TypeScript types [#typescript]
 

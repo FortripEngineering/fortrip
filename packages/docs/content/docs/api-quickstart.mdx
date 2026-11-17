@@ -1,9 +1,9 @@
 ---
 title: API quickstart
-description: Book a stay over HTTP in five steps, then each call in curl, TypeScript and Python. Every example is a file checked against the contract.
+description: Book a stay over HTTP in five steps, then each call in curl, TypeScript and Python.
 ---
 
-Every call sends `FORTRIP_TOKEN`, an access token of the user who signs in. There is no test environment: searching, getting offers and creating an order are free, an unpaid order expires on its own, and any payment is real. See [Testing your integration](/faq#testing).
+Every call sends `FORTRIP_TOKEN`, an access token of the user who signs in. There is no test environment: any payment is real. See [Testing your integration](/faq#testing).
 
 The TypeScript examples use `fetch` on Node.js, and the Python examples use [`httpx`](https://www.python-httpx.org/).
 
@@ -15,7 +15,7 @@ You need curl and jq. Each call saves its answer to a file, and the next call ta
 
 ## Sign in [#sign-in]
 
-This script runs the OAuth device flow with the settings <code><Fact path="ROUTES.authConfig" /></code> returns, and prints the access token and the refresh token. [Authentication](/api#authentication) explains the flow and when to use another.
+This script runs the OAuth device flow and prints the access token and the refresh token. [Authentication](/api#authentication) explains the flow and when to use another.
 
 <Example name="device-login" />
 
@@ -25,7 +25,7 @@ This script runs the OAuth device flow with the settings <code><Fact path="ROUTE
 
 ### Refresh a token [#refresh]
 
-The access token is short-lived. Get a new one with the refresh token, at the same token endpoint. Each refresh returns a new refresh token; keep only the newest ([why](/api#device-flow)).
+Get a new access token with the refresh token, at the same token endpoint. Each refresh returns a new refresh token; keep only the newest ([why](/api#device-flow)).
 
 <RefreshTokenExample />
 
@@ -33,29 +33,23 @@ The access token is short-lived. Get a new one with the refresh token, at the sa
 
 <Example name="search" />
 
-Its answer is under [step 2](#step-search).
-
 ## Offers [#offers]
 
 <Example name="offers" />
 
-Its answer is under [step 3](#step-offers).
-
 ## Order [#order]
 
-Ordering charges nothing. Show the user the total and every term, and wait for a clear yes before anyone pays. The order can take a couple of minutes; a call that timed out is [safe to send again](/api#retries). See [Orders and payment](/payments).
+Ordering charges nothing; [confirm the order with the user](/payments#confirm) before anyone pays. The call can take a couple of minutes, and is [safe to send again](/api#retries) after a timeout.
 
 <Example name="order" />
 
-Its answer is under [step 4](#step-order).
-
 ## Pay [#pay]
 
-An order is paid one way only: the user pays on its payment link, or an agent pays with a token the user approved. [Orders and payment](/payments#pay) says when each applies.
+The user pays on the order's payment link, or an agent pays with a token the user approved. [Orders and payment](/payments#pay) says when each applies.
 
 ### Payment link [#pay-link]
 
-The payment link needs no request: give the user the order's `payment.url`. Read it from the order.
+Give the user the order's `payment.url`, read from the order.
 
 <Example name="get-order" />
 
@@ -65,7 +59,7 @@ The answer, abridged:
 
 ### Link token [#pay-token]
 
-Only for agents that can request a Link token, a shared payment token from the user's Stripe Link wallet, and only while the order's `payment.tokenRequest` is set. Request the token with that field's `handler` and `usageLimits`, then send it with the order's `total`.
+Only while the order's `payment.tokenRequest` is set. Request the token with that field's `handler` and `usageLimits`, then send it with the order's `total`.
 
 <Example name="pay-token" />
 
@@ -83,7 +77,7 @@ The answer, abridged:
 
 ## Cancel [#cancel]
 
-The order's `cancel.action` says which request applies. `cancel`: a paid order, cancelled with `maximumPenalty` set to the order's `cancel.penalty` that the user agreed to, exactly as returned. `close`: an unpaid order, closed with `close: true` in place of `maximumPenalty`, once the user says they no longer want it. Send exactly one of the two; `null` means neither applies, and `cancel.blockedBy` says why. See [Cancel or close](/payments#cancel).
+The order's `cancel.action` says which request applies: `cancel`, sent with `maximumPenalty` set to the order's `cancel.penalty`, or `close`, sent with `close: true`. See [Cancel or close](/payments#cancel).
 
 <Example name="cancel" />
 
