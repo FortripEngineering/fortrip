@@ -11,7 +11,11 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 Released 2026-11-17.
 
-No change for a client that uses the API, the CLI or the MCP tools as before.
+No change for a client that uses the API or the CLI. A client connected to the hosted MCP server no longer lists `pay_order`.
+
+### Changed
+
+- The hosted MCP server offers `pay_order` through the CLI's `fortrip mcp` alone (since 2026-11-17). For every other client the tool is not in the list, an order's text has no "Pay without the link" line, and the server instructions do not name the tool: the user pays on the page the payment link opens. Until now only ChatGPT, Claude and Claude Code were served that way. `POST /v1/orders/{orderId}/pay` and `fortrip orders pay` are as before.
 
 ### Added
 
