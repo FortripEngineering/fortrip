@@ -1,8 +1,8 @@
 # Fortrip for Claude
 
-Search hotels worldwide, compare live rates and cancellation terms, book
-and pay securely, and cancel bookings on [Fortrip](https://fortrip.ai), all
-from a conversation with Claude.
+Search hotels worldwide, compare live offers with their meals and
+cancellation terms, book with a payment link, and cancel bookings on
+[Fortrip](https://fortrip.ai), all from a conversation with Claude.
 
 ## What's in the plugin
 
