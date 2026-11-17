@@ -140,9 +140,19 @@ describe("pnpm generate", () => {
     assert.match(openai, /`search_hotels`/);
     assert.doesNotMatch(openai, /fortrip:search_hotels|\bnpx\b/);
     assert.doesNotMatch(openai, /pay_order|payment token|Link wallet|Pay without the link/i);
-    assert.match(read(root, CLAUDE_SKILL), /pay_order/);
+    assert.match(read(root, CLI_SKILL), /`fortrip orders pay`/);
     assert.doesNotMatch(openai, /references\/|planning\.md/);
     assert.ok(!existsSync(path.join(root, "plugins/openai/skills/fortrip/references")));
+  });
+
+  // Nor are Claude and Claude Code: the plugin's skill names none of it,
+  // while the CLI's skill, which any agent may run, keeps the command.
+  it("renders the Claude skill without payment by token", () => {
+    const root = rendered();
+    const claude = read(root, CLAUDE_SKILL);
+    assert.match(claude, /`fortrip:create_order`/);
+    assert.doesNotMatch(claude, /pay_order|payment token|Link wallet|without the link/i);
+    assert.match(read(root, CLI_SKILL), /## Paying without the link/);
   });
 
   it("points no generated skill file to a runtime guide", () => {

@@ -46,12 +46,15 @@ const SKILLS: readonly {
   name: string;
   description: string;
 }[] = [
+  // The Claude plugin's skill: Claude and Claude Code are not offered payment
+  // by token, so it names none of it.
   {
     dir: "plugins/claude/skills/fortrip",
     surface: "claude-skill",
+    options: { tokenPay: false },
     name: "fortrip",
     description:
-      "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
+      "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
   },
   // The OpenAI plugin's skill: the MCP guide as ChatGPT is served it, without
   // payment by token. That guide is the server instructions, which point at

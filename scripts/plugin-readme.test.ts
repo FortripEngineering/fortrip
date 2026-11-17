@@ -9,10 +9,8 @@ import { LIMITS } from "../packages/contract/src/limits.ts";
 const README = readFileSync(new URL("../plugins/claude/README.md", import.meta.url), "utf8");
 
 describe("the Claude plugin's README", () => {
-  it("states the token payment cap as LIMITS.tokenPaymentMaxUsd", () => {
-    const figures = [...README.matchAll(/\$(\d[\d,]*)/g)].map(([, n]) => Number((n as string).replaceAll(",", "")));
-    assert.ok(figures.length > 0, "no dollar figure");
-    for (const figure of figures) assert.equal(figure, LIMITS.tokenPaymentMaxUsd);
+  it("names no payment by token: Claude and Claude Code are not offered it", () => {
+    assert.doesNotMatch(README, /pay an order|one-time token|payment token|Link wallet|\$\d/i);
   });
 
   it("states the stay limits as LIMITS.nightsSupplier and LIMITS.rooms", () => {

@@ -24,7 +24,9 @@ The `fortrip` CLI (npm package `fortrip`) calls Fortrip as the signed-in user an
 | `{{tool:orders get}}` | One order and its status, including whether the hotel confirmed it |
 | `{{tool:orders list}}` | The user's orders, newest first, including those made on the Fortrip website |
 | `{{tool:orders cancel}}` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
+{{#if token-pay}}
 | `{{tool:orders pay}}` | Pays an order without its link, by a shared payment token from the user's wallet |
+{{/if}}
 
 In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \" is a "): give it to the user without the quotes, exactly as written inside them. Ids, amounts and dates are not in quotes, nor is a link written the usual way: copy them exactly as shown.
 

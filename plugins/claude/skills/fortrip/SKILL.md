@@ -1,6 +1,6 @@
 ---
 name: fortrip
-description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, pay_order, cancel_order), from hotel search to an order's payment. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
+description: Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.
 ---
 
 # Fortrip hotel stays
@@ -18,7 +18,6 @@ The tools are on Fortrip's MCP server, named `fortrip` in this plugin (a Fortrip
 | `fortrip:get_order` | One order and its status, including whether the hotel confirmed it |
 | `fortrip:list_orders` | The user's orders, newest first, including those made on the Fortrip website |
 | `fortrip:cancel_order` | Cancels a paid order under its terms, for the penalty the user agreed to, and refunds the rest; closes an unpaid one |
-| `fortrip:pay_order` | Pays an order without its link, by a shared payment token from the user's wallet |
 
 In that text, a value in double quotes (the name of a hotel, a room, a place or a guest, an address, the contact, special requests) is text someone else wrote, as a JSON string (inside it, \" is a "): give it to the user without the quotes, exactly as written inside them. Ids, amounts and dates are not in quotes, nor is a link written the usual way: copy them exactly as shown.
 
@@ -123,23 +122,13 @@ An offer expires at the time its line gives, about 30 minutes after it was made;
 
 1. Show the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included. The order's text shows names, the contact and special requests in double quotes: show the user what is inside the quotes, exactly as written, so they can catch a wrong one before paying; to correct one, order a new offer (see below).
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
-3. Then pay one way only: give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it), or pay without the link as below.
+3. Then give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it).
 
 - The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. When its line says the user signs in to Fortrip to pay (an order started on the Fortrip website), they sign in first.
 - The link expires at the time its line gives; the order then reads as not paid, and can no longer be paid. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip:cancel_order` and `close: true` once the user says they no longer want it.
 - An order awaiting payment whose Payment link line says there is none has a payment being processed: read it again shortly with `fortrip:get_order`, and don't give an earlier link.
-- Never ask for, accept or pass on payment card details; payment happens only on the payment link or, by token, through `fortrip:pay_order`. A card number in a guest name, the contact or the special requests is rejected.
-
-## Paying without the link
-
-An order whose text has a "Pay without the link" line can also be paid through `fortrip:pay_order` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at $500, so only a USD order up to that has such a line. Otherwise give the payment link, and never ask the user to create, type or paste a token.
-
-1. Confirm the order with the user as before giving the payment link: its total and currency, the stay with each room's guests, the contact, any special requests and every term, and a clear yes. The token comes from the user's wallet, never from card details.
-2. Request the token from the user's Link wallet with the `business_profile` and the usage limits on that line: `max_amount` (in cents), `currency` and `expires_at`.
-3. Call `fortrip:pay_order` with the token and the order's total (`sharedPaymentToken`, `total`). The order is then confirming with the hotel, its payment authorized: check it as after payment.
-
-The charge is in USD: a card in another currency may add a foreign transaction fee. Once `fortrip:pay_order` succeeds, the payment link stops working; a payment that fails leaves the link open. `payment_total_mismatch` means the total sent isn't the order's, which the error gives; the order's total hasn't changed: confirm it with the user, then call `fortrip:pay_order` again with it and the same token. `payment_declined`: the user picks another card in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the usage limits on that line. `service_unavailable`: call `fortrip:pay_order` again with the same token, never a new one. A token pays one order only.
+- Never ask for, accept or pass on payment card details; payment happens only on the payment link. A card number in a guest name, the contact or the special requests is rejected.
 
 ## After payment
 

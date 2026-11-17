@@ -25,7 +25,8 @@ import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
  * - `{{#if <surface> …}}…{{/if}}` keeps its text only on the surfaces it
  *   names, and nests. A tag alone on its line takes the line with it.
  * - `{{#if token-pay}}…{{/if}}` keeps its text only for a client that is
- *   offered payment by token (`GuideOptions.tokenPay`, the default).
+ *   offered payment by token (`GuideOptions.tokenPay`, the default), on any
+ *   surface.
  *
  * Any other `{{…}}` throws, so a typo fails the tests instead of shipping.
  */
@@ -37,9 +38,9 @@ export type GuideTopic = "main" | "planning";
 export interface GuideOptions {
   /** Paying by a shared payment token (`pay_order`). False for a host whose
    *  rules leave payment to the payment link alone: the MCP instructions
-   *  then never name the tool. Default true. Only the `mcp` surface takes
-   *  false: a skill is a file written once for every client, and its tool
-   *  table and "Paying without the link" section stay. */
+   *  and the Claude plugin's skill then never name the tool. Default true.
+   *  The `cli` surface doesn't take false: the CLI has `orders pay` whoever
+   *  runs it, and its skill's "Paying without the link" section stays. */
   tokenPay?: boolean;
 }
 
@@ -96,8 +97,8 @@ export function renderText(text: string, surface: GuideSurface, options: GuideOp
   for (const [token, body] of text.matchAll(TOKEN)) {
     if (!/^(#if |\/if$)/.test(body ?? "")) resolve(token, surface, false);
   }
-  if (options.tokenPay === false && surface !== "mcp") {
-    throw new Error(`The guide without payment by token is the MCP server's only, not the ${surface} surface's`);
+  if (options.tokenPay === false && surface === "cli") {
+    throw new Error("The CLI's guide always has payment by token: the CLI has the command whoever runs it");
   }
   const shown = select(text, surface, options.tokenPay !== false).replace(TOKEN, (token) =>
     resolve(token, surface, true),

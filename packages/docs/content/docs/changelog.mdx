@@ -7,6 +7,21 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.3.0
+
+Released 2026-11-17.
+
+No change for a client that uses the API or the CLI. Claude and Claude Code no longer list `pay_order`.
+
+### Changed
+
+- The hosted MCP server does not offer `pay_order` to Claude (claude.ai, its desktop and mobile apps, Cowork) or to Claude Code, whose directory rules leave payment to the payment link, as ChatGPT's do: the tool is not in their list, an order's text has no "Pay without the link" line, and the server instructions do not name the tool. Every other client is offered it as before, and so is `fortrip orders pay`.
+- The Claude plugin's skill no longer has a "Paying without the link" section, and its README no longer describes payment by token (plugin 1.14.0).
+
+### Package
+
+- `renderGuide("claude-skill", topic, { tokenPay: false })` renders the Claude skill's guide without payment by token. The `cli` surface still refuses the option: the CLI has `orders pay` whoever runs it.
+
 ## 6.2.0
 
 Released 2026-11-16.
