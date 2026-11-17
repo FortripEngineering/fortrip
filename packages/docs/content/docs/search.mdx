@@ -68,7 +68,7 @@ Amenity filters take only these codes: <FilterableAmenities />. Any other code i
 
 With a `stay`, each hotel can carry an `indicativePrice`: `fromPerRoomStay`, the price floor of each night of the stay added up, and `fromPerRoomNight`, that sum divided by the nights. Both are in the search's `currency`; a USD price is converted at a market rate.
 
-It is an estimate, not a price for this party: the lowest price of one unit, which may be a bed in a shared room, and it may be days old. It can be above or below the cheapest live offer, and it can't be booked: what is charged is an offer's `total`.
+It is an estimate, not a price for this party, and says nothing about availability: the lowest price of one unit, which may be a bed in a shared room, and it may be days old. It can be above or below the cheapest live offer, and it can't be booked: what is charged is an offer's `total`.
 
 Hotels without one stay listed with `indicativePrice: null`; price sorts put them last, and a price filter leaves them out and counts them. `pricing.covers` says which hotels were priced: `page`, the hotels on this page, or `pool`, every matching hotel, as a price sort or filter needs. When prices can't be looked up, the search still answers, with `pricing.status` `"unavailable"` and the note `prices_unavailable`.
 

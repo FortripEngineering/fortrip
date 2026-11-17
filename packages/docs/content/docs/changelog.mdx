@@ -73,7 +73,7 @@ A major release, with no compatibility with earlier versions. Update the CLI wit
 - **Orders are created with `create_order`** (`fortrip orders create`), and the contact has one `name`.
 - **Cancelling names its mode.** `cancel_order` takes exactly one of `maximumPenalty`, to cancel a paid order, and `close: true`, to close an unpaid one. A closed order has its own status, `closed`.
 - **Paying takes a token and the total.** `pay_order` takes `sharedPaymentToken` and `total`. An agent no longer opens an Alipay or WeChat Pay payment: the user pays that way on the order's payment page.
-- **Each concept has one name.** `total`, `roomType`, `meals` and `payAtProperty` are the same on an offer and on an order. An order says how it can be paid in `payment.tokenRequest`, what can be done to it in `cancel`, why it failed in `failure`, and what a cancellation kept and returned in `cancelled`.
+- **Each concept has one name.** `total`, `roomType`, `meals` and `payAtProperty` have the same name and shape on an offer and on an order. An order says how it can be paid in `payment.tokenRequest`, what can be done to it in `cancel`, why it failed in `failure`, and what a cancellation kept and returned in `cancelled`.
 - **An offers call answers a bounded number of offers.** See [the offers budget](/errors#offers-budget).
 - **Errors say more.** `invalid_request` names where a misplaced field belongs, a guest name the hotel's booking system would refuse is refused before an order is made, and a CLI that is a major version behind is told to update with `client_outdated`.
 
@@ -83,4 +83,4 @@ A major release, with no compatibility with earlier versions. Update the CLI wit
 
 ## Before 6.0
 
-Versions 3.0.0 (2026-10-25) to 5.3.0 (2026-11-13) led up to the 6.0 contract. The tools, fields and commands they had were replaced in 6.0 and are not listed here.
+Versions 3.0.0 (2026-10-25) to 5.3.0 (2026-11-13) led up to the 6.0 contract. What 6.0 renamed or removed is not listed here.

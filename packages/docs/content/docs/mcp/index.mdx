@@ -59,7 +59,7 @@ Hotel, room and place names, addresses, descriptions and policies are the hotel'
 
 ### Errors [#errors]
 
-A failed call has `isError: true` and one text block. The text gives the error's code, what happened, whether a retry can help and the next call to make. `_meta["ai.fortrip/error"]` carries the [error envelope](/errors) for your code.
+A failed call has `isError: true` and one text block. The text gives the error's code, what happened, whether a retry can help and the next call to make. `_meta["ai.fortrip/error"]` carries the [error envelope](/errors) for your code. Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` this way, with the field at fault.
 
 An `offer_changed` error from `create_order`:
 

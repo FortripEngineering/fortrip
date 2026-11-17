@@ -41,8 +41,6 @@ Every failure answers the same envelope:
 
 <ExitCodes />
 
-A CLI that is a major version behind the service is answered `client_outdated` on every command, with the command that updates it, and exits with a code of its own, the last row above.
-
 ## Rate limits [#rate-limits]
 
 Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. Over a limit, the answer is `429 rate_limited`, and `details.rateLimit` names the limit.
@@ -60,7 +58,7 @@ One offers call answers a bounded number of offers, however many hotels it price
 - **Without `limitPerHotel`:** up to <Fact path="LIMITS.offersPerHotelDefault" /> per hotel and <Fact path="LIMITS.offersPerCallDefault" /> in all.
 - **With `limitPerHotel`:** up to that many per hotel, from 1 to <Fact path="LIMITS.offersPerHotelMax" />, and <Fact path="LIMITS.offersPerCallMax" /> in all.
 
-When the hotels have more than the call's total, it is split evenly among those that have offers. Each hotel keeps a spread of choices: the cheapest, the cheapest free to cancel, the cheapest with breakfast, and other rooms, listed cheapest first.
+Every hotel that has offers gets the same cap: the per-hotel limit, or an even share of the call's total when that is smaller. Each hotel keeps a spread of choices: the cheapest, the cheapest free to cancel, the cheapest with breakfast, and other rooms, listed cheapest first.
 
 To see more, call again with fewer hotels, or with one hotel and a higher `limitPerHotel`, or narrow the offers with `filters.requireBreakfast` or `filters.requireFreeCancellation`. Each hotel's `omitted` counts what the call left out.
 

@@ -27,7 +27,7 @@ The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/a
 1. <code><Fact path="ROUTES.authConfig" /></code> returns `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
 2. Post `client_id` and `scope` to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete`, then poll `tokenEndpoint` every `interval` seconds until the user approves. Request `offline_access`, which `scopes` includes, to get a refresh token.
 3. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again.
-4. To sign out, revoke the refresh token at `revocationEndpoint`.
+4. To sign out, revoke the refresh token at `revocationEndpoint`, with your `client_id`.
 
 A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
 
@@ -50,7 +50,7 @@ The [API reference](/api/reference/search_hotels) has each endpoint's parameters
 
 - Money is `{ amount: "132.40", currency: "USD" }`. The amount is a decimal string: read it as a decimal, not a float.
 - Prices are in the request's `currency` (USD, the default, or <OtherCurrencies />). Money you send back, a payment's `total` or a cancellation's `maximumPenalty`, is copied from the order exactly as returned.
-- An order is charged its `total`, in the currency that `total` names. Orders made on the Fortrip website, which the order list includes, may be in another currency.
+- An order is charged its `total`, in the currency that `total` names. Orders made through the API are charged in the currency of their offers; orders made on the Fortrip website, which the order list includes, may be in another currency.
 - Fees paid at the property, `payAtProperty`, come on top of the total, in the property's currency. <Fact path="GUIDE_SENTENCES.adaptivePricing" />
 
 ## Headers [#headers]
@@ -84,7 +84,6 @@ There are no webhooks. After you give the user the payment link, read the order 
 
 - <code><Fact path="ROUTES.create_order" /></code> answers <Fact path="ORDER_HTTP.createdStatus" /> with an order `awaiting_payment`, and <Fact path="ORDER_HTTP.replayedStatus" /> with <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code> when the same details are sent again.
 - <code><Fact path="ROUTES.pay_order" /></code> takes `sharedPaymentToken`, the token the user approved for the order, and `total`, the order's `total` exactly as returned. Both are required.
-- <code><Fact path="ROUTES.cancel_order" /></code> takes exactly one of `maximumPenalty`, which cancels a paid order, and `close: true`, which closes an unpaid one.
 
 The flow, the ways to pay, the order statuses, and cancelling and closing are in [Orders and payment](/payments).
 

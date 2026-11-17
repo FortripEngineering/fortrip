@@ -11,7 +11,7 @@ description: From a live offer to a confirmed booking. Create the order, confirm
 4. **Pay.** The user pays on the order's payment link, or an agent pays with a token the user approved.
 5. **Follow.** Read the order with <code><Fact path="ROUTES.get_order" /></code> until the hotel confirms.
 
-The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create` and `fortrip orders get`. Over MCP, `pay_order` is offered through the CLI's `fortrip mcp` alone: a client connected to the hosted server pays by the payment link.
+The MCP tools and the CLI commands take the same steps: `get_hotel_offers`, `create_order` and `get_order`, or `fortrip hotels offers`, `fortrip orders create` and `fortrip orders get`. Over MCP, `pay_order` is offered [through the CLI's `fortrip mcp` alone](/mcp#tools).
 
 ## Order [#order]
 
@@ -27,7 +27,7 @@ Send `items`, which holds exactly one item, and `contact`:
 
 The guests' names, the contact and any special requests go to the hotel to make the booking, and Fortrip emails the booking confirmation to the contact. How Fortrip handles this data is in its [privacy policy](https://fortrip.ai/privacy). The [schemas](/schemas) list every field.
 
-What can come back in place of an order:
+The cases to plan for (every code is in the [error codes](/errors#codes)):
 
 - **The offer changed.** Fortrip checks the offer with the hotel first. If the price or any term changed, the answer is `409 offer_changed` and no order is made ([below](#offer-changed)).
 - **A guest name is refused.** A guest name that the hotel's booking system would refuse answers `invalid_request` with a pointer to the name, before any order is made. If the name is the guest's real one, as on their passport, don't alter it to get past the check: the stay is booked under that name. The user emails <Fact path="SUPPORT_EMAIL" /> instead.
@@ -117,7 +117,7 @@ Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`
 | Effect | The hotel booking is cancelled. The penalty is kept and the rest refunded. | Nothing is charged. The order is `closed` and can no longer be paid. |
 | Ask the user | Show the penalty and the refund, and wait for a clear yes. | Close it only once the user says they no longer want it. |
 
-Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now.
+Send exactly one of `maximumPenalty` and `close`. Nothing is ever cancelled or closed by the other mode: a request whose mode doesn't fit the order, such as `close` on an order paid meanwhile, answers [`order_not_cancellable`](/errors#code-order_not_cancellable) with the order's `cancel` as it is now. The same mode sent again answers the order it already cancelled or closed, and `close` on an order that already `expired` answers that order as it is.
 
 ### What `cancel` shows [#cancel-state]
 
