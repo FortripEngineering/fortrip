@@ -358,14 +358,17 @@ describe("TOOLS", () => {
   // Claude's connector review asks destructiveHint: true "for tools that
   // modify or delete data": every tool that writes is destructive, so the
   // client confirms each call that creates, pays for or cancels an order.
-  it("states all four hints on every tool; create_order, cancel_order and pay_order write, and every tool that writes is destructive", () => {
+  it("states its title and all four hints on every tool; create_order, cancel_order and pay_order write, and every tool that writes is destructive", () => {
     const writes = ["create_order", "cancel_order", "pay_order"];
     for (const spec of TOOLS) {
       assert.deepEqual(
         Object.keys(spec.annotations).sort(),
-        ["destructiveHint", "idempotentHint", "openWorldHint", "readOnlyHint"],
+        ["destructiveHint", "idempotentHint", "openWorldHint", "readOnlyHint", "title"],
         spec.name,
       );
+      // A directory that reads a tool's title from its annotations finds
+      // the tool's own.
+      assert.equal(spec.annotations.title, spec.title, spec.name);
       assert.equal(spec.annotations.readOnlyHint, !writes.includes(spec.name), spec.name);
       assert.equal(spec.annotations.destructiveHint, writes.includes(spec.name), spec.name);
       // The same call again answers the same order: none repeats its effect.
@@ -392,6 +395,7 @@ describe("TOOLS", () => {
   it("create_order's and pay_order's hints are destructive, idempotent, open world", () => {
     for (const name of ["create_order", "pay_order"] as const) {
       assert.deepEqual(tool(name).annotations, {
+        title: tool(name).title,
         readOnlyHint: false,
         idempotentHint: true,
         openWorldHint: true,
@@ -403,6 +407,7 @@ describe("TOOLS", () => {
   // C6: a replay answers the current order, so cancel_order is idempotent.
   it("cancel_order's hints are destructive, idempotent, open world", () => {
     assert.deepEqual(tool("cancel_order").annotations, {
+      title: "Cancel order",
       readOnlyHint: false,
       idempotentHint: true,
       openWorldHint: true,

@@ -7,6 +7,20 @@ description: What changed for callers of the API, the MCP tools, the CLI and the
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number. Each entry lists breaking changes first, then what is new, then how to migrate. The values in an entry are the ones that release had.
 
+## 6.3.1
+
+Released 2026-11-17.
+
+No change for a client that uses the API, the CLI or the MCP tools as before.
+
+### Added
+
+- Each MCP tool's annotations carry its title too, as `annotations.title`, on the hosted server and the CLI's bridge. A client or directory that reads a tool's title from its annotations finds the same one as the tool's `title`.
+
+### Package
+
+- `TOOLS[n].annotations.title` is the tool's `title`.
+
 ## 6.3.0
 
 Released 2026-11-17.

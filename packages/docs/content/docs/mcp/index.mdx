@@ -19,7 +19,7 @@ Each tool takes the same input as its [HTTP endpoint](/api#endpoints).
 
 <ToolAnnotations />
 
-`create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. All three are idempotent, so a call that timed out is [safe to send again](/api#retries).
+`create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. All three are idempotent, so a call that timed out is [safe to send again](/api#retries). Each tool's annotations also carry its title, as `annotations.title`.
 
 ChatGPT, Claude and Claude Code are not offered `pay_order`: their list has the other seven tools, and an order's text gives the payment link alone.
 

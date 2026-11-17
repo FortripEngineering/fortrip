@@ -42,6 +42,9 @@ export interface ToolSpec {
   title: string;
   description: string;
   annotations: {
+    /** The tool's `title` again: a client or directory that reads a tool's
+     *  title from its annotations finds the same one here. */
+    title: string;
     readOnlyHint: boolean;
     idempotentHint: boolean;
     openWorldHint: boolean;
@@ -192,7 +195,11 @@ const READ_OWN = { ...READ, openWorldHint: false } as const;
 const PAID_WHERE = ", on that page or with pay_order";
 const PAID_WHERE_WITHOUT_TOKEN = " on that page";
 
-export const TOOLS: readonly ToolSpec[] = [
+/** The tools as written here: each one's hints, without the title that
+ *  `TOOLS` repeats in its annotations. */
+type WrittenSpec = Omit<ToolSpec, "annotations"> & { annotations: Omit<ToolSpec["annotations"], "title"> };
+
+const SPECS: readonly WrittenSpec[] = [
   {
     name: "search_hotels",
     title: "Search hotels",
@@ -284,6 +291,11 @@ export const TOOLS: readonly ToolSpec[] = [
     output: order,
   },
 ];
+
+export const TOOLS: readonly ToolSpec[] = SPECS.map((spec) => ({
+  ...spec,
+  annotations: { title: spec.title, ...spec.annotations },
+}));
 
 /**
  * The tools a client is offered. Without `tokenPay`, for a host whose rules
