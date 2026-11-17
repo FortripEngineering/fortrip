@@ -5,7 +5,7 @@
 
 1. Show the order's total and currency, the stay (hotel, room, dates, and each room's party and guest names), the contact (name, email, phone), any special requests and every term: meals, cancellation (status, deadline, penalties) and fees payable at the property, unknowns included. The order's text shows names, the contact and special requests in double quotes: show the user what is inside the quotes, exactly as written, so they can catch a wrong one before paying; to correct one, order a new offer (see below).
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
-3. Then pay one way only: give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it), or pay without the link as below.
+3. Then {{#if token-pay}}pay one way only: {{/if}}give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it){{#if token-pay}}, or pay without the link as below{{/if}}.
 
 {{/if}}
 {{#if mcp}}
@@ -21,6 +21,7 @@
 - Never ask for, accept or pass on payment card details; payment happens only on the payment link{{#if token-pay}} or, by token, through `{{tool:orders pay}}`{{/if}}.{{#if claude-skill cli}} A card number in a guest name, the contact or the special requests is rejected{{#if cli}} with exit 2{{/if}}.{{/if}}
 {{#if claude-skill cli}}
 
+{{#if token-pay}}
 ## Paying without the link
 
 An order whose text has a "Pay without the link" line can also be paid through `{{tool:orders pay}}` with a Stripe shared payment token that the user's Link wallet grants for it. Use it only if you have a tool that can request such a token from the user's Link wallet: Link is for US and Canadian accounts, and caps a spend request at ${{limit:tokenPaymentMaxUsd}}, so only a USD order up to that has such a line. Otherwise give the payment link, and never ask the user to create, type or paste a token.
@@ -31,6 +32,7 @@ An order whose text has a "Pay without the link" line can also be paid through `
 
 The charge is in USD: a card in another currency may add a foreign transaction fee. Once `{{tool:orders pay}}` succeeds, the payment link stops working; a payment that fails leaves the link open. `payment_total_mismatch` means the total sent isn't the order's, which the error gives; the order's total hasn't changed: confirm it with the user, then {{#if claude-skill}}call{{/if}}{{#if cli}}run{{/if}} `{{tool:orders pay}}` again with it and the same token. `payment_declined`: the user picks another card in their wallet, or pays by link. `payment_action_required`: the card needs a verification this can't give: pay by link. `payment_credential_invalid`: request a new token with the usage limits on that line. `service_unavailable`: call `{{tool:orders pay}}` again with the same token, never a new one. A token pays one order only.
 
+{{/if}}
 ## After payment
 
 Check the order with `{{tool:orders get}}`; its first line has the status:

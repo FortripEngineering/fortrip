@@ -9,9 +9,10 @@ from a conversation with Claude.
 - **The Fortrip connector**, Fortrip's hosted MCP server at
   `https://mcp.fortrip.ai/`. Its tools search hotels, read a hotel's
   details, get live offers for up to 15 hotels at a time, create an order
-  with a payment link, pay an order, check an order's status or list your
-  orders, cancel an order under its cancellation terms, and close an unpaid
-  order you no longer want. Each tool answers Claude in text.
+  with a payment link, check an order's status or list your orders, cancel
+  an order under its cancellation terms, and close an unpaid order you no
+  longer want. No tool takes a payment: you pay on the Fortrip page the
+  payment link opens. Each tool answers Claude in text.
 - **The `fortrip` skill**, which tells Claude the order to use the tools in,
   how to read prices, meal plans and cancellation terms, how to plan trips
   with flexible dates, budgets or several stops, and to show you the price,
@@ -106,10 +107,7 @@ Flights, activities and changes to existing orders aren't supported.
 - **Payment** goes to a payment provider: Stripe for a USD price, a provider
   in mainland China for a CNY price; the payment page shows the ways to pay.
   You pay on the page the payment link opens; Claude never opens or chooses a
-  payment for you. Paying without the link needs a one-time token you approve
-  in your Link wallet, which only works for US and Canadian Link accounts and
-  a USD order of up to $500, and only where Claude has a tool that can
-  request one.
+  payment for you.
   Claude never sees your card details; don't paste them into the chat.
 
 The plugin connects only to Fortrip and stores nothing itself. Fortrip

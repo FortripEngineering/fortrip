@@ -755,12 +755,36 @@ describe("a client not offered payment by token", () => {
     assert.throws(() => renderText("{{#if mcp token-pay}}x{{/if}}", "mcp"), /guide surface/i);
   });
 
-  it("is refused on the skills' surfaces, whose files are the same for every client", () => {
-    for (const surface of ["claude-skill", "cli"] as const) {
-      assert.throws(() => renderGuide(surface, "main", { tokenPay: false }), /MCP server's only/);
-      assert.throws(() => renderText("a", surface, { tokenPay: false }), /MCP server's only/);
+  it("gets a Claude skill that never names the pay tool, and is otherwise the same", () => {
+    const full = renderGuide("claude-skill", "main");
+    const without = renderGuide("claude-skill", "main", { tokenPay: false });
+    assert.match(full, MENTIONS);
+    assert.doesNotMatch(without, /pay_order|shared payment token|by token|Pay one way only|Link wallet|Paying without the link/i);
+    // Gone: the tool's row, both ends of "pay one way only", the "by token"
+    // clause and the "Paying without the link" section.
+    const section = full.slice(full.indexOf("## Paying without the link"), full.indexOf("## After payment"));
+    assert.match(section, /^## Paying without the link\n\n[\s\S]*A token pays one order only\.\n\n$/);
+    assert.equal(
+      without,
+      full
+        .replace("| `fortrip:pay_order` | Pays an order without its link, by a shared payment token from the user's wallet |\n", "")
+        .replace("3. Then pay one way only: give the payment link", "3. Then give the payment link")
+        .replace(", or pay without the link as below.", ".")
+        .replace(" or, by token, through `fortrip:pay_order`", "")
+        .replace(section, ""),
+    );
+    // What is left still reads whole.
+    assert.match(without, /\| `fortrip:cancel_order` \|[^\n]*\n\nIn that text/);
+    assert.match(without, /^3\. Then give the payment link exactly as shown \([^)]*\)\.$/m);
+    assert.match(without, /special requests is rejected\.\n\n## After payment\n/);
+  });
+
+  it("is refused on the CLI's surface: the CLI has the command whoever runs it", () => {
+    assert.throws(() => renderGuide("cli", "main", { tokenPay: false }), /always has payment by token/);
+    assert.throws(() => renderText("a", "cli", { tokenPay: false }), /always has payment by token/);
+    // The planning guides have nothing about paying: they render the same either way.
+    for (const surface of ["mcp", "claude-skill"] as const) {
+      assert.equal(renderGuide(surface, "planning", { tokenPay: false }), renderGuide(surface, "planning"));
     }
-    // The planning guide has nothing about paying: the MCP surface renders it either way.
-    assert.equal(renderGuide("mcp", "planning", { tokenPay: false }), renderGuide("mcp", "planning"));
   });
 });
