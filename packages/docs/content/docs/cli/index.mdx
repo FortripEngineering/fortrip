@@ -18,10 +18,10 @@ Or run any command with `npx fortrip`. Needs Node.js <Fact path="CLI_NODE_MAJOR"
 Each answer is compact text with the ids the next command takes.
 
 ```sh
-fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
-fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
-fortrip orders create --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
-fortrip orders get ord_…
+npx fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
+npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
+npx fortrip orders create --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
+npx fortrip orders get ord_…
 ```
 
 `--room 2` is one room for two adults; `--guest 1:First:Last` is a guest in room 1, named as on the passport. `orders create` creates an unpaid order, and `orders get` prints its payment link: nothing is charged until you pay on it.
