@@ -43,6 +43,7 @@ in with OAuth in the browser.
 | [`packages/cli`](packages/cli) | The `fortrip` CLI: hotel search, live offers, orders and payment links from a shell, the local MCP bridge (`fortrip mcp`) | npm: `fortrip`, from a `v*` tag on `main`, together with `@fortrip/agent-contract` |
 | [`plugins/claude`](plugins/claude) | Claude plugin (hosted MCP server + static skill, generated) | Submitted in the [developer portal](https://claude.ai/directory/manage); `.claude-plugin/marketplace.json` at the root lets Claude Code add this repo as a marketplace |
 | [`plugins/openai`](plugins/openai) | ChatGPT / Codex plugin | Zip uploaded in the OpenAI portal |
+| [`plugins/workbuddy`](plugins/workbuddy) | [WorkBuddy](https://open.workbuddy.cn) connector (hosted MCP server + skill, generated) | Zip uploaded in the WorkBuddy open platform |
 | [`plugins/registry`](plugins/registry) | [MCP Registry](https://registry.modelcontextprotocol.io) entry | The **Publish Fortrip to MCP Registry** workflow |
 | [`skills/fortrip-cli`](skills/fortrip-cli) | Skill for agents with a shell (generated) | `npx skills add FortripEngineering/fortrip --skill fortrip-cli` reads it from `main` |
 | `scripts` | Repo-wide scripts: `generate.ts` renders the skills, `validate.mjs` checks the listings | |
@@ -141,6 +142,22 @@ cd plugins/openai && rm -f ../../fortrip-openai.zip && zip -rX ../../fortrip-ope
 
 Upload the zip in the OpenAI portal. The portal verifies the domain through
 `https://mcp.fortrip.ai/.well-known/openai-apps-challenge`, served by mcp.fortrip.ai.
+
+### WorkBuddy connector
+
+`plugins/workbuddy` is a connector for the [WorkBuddy open platform](https://open.workbuddy.cn/docs/connector),
+in its "MCP + Skill" form: `connector-meta.json` holds the listing copy in
+Chinese and English and how a user signs in (WorkBuddy's cloud registers
+itself with our authorization server and holds the tokens), `mcp.json` the
+hosted server, `icon.png` the icon and `skills/fortrip` the generated skill.
+`mcp.json` disables `pay_order`: the user pays on the page the payment link
+opens. It holds no client ID or secret. Build the upload:
+
+```bash
+git archive --format=zip --prefix=fortrip/ -o fortrip-workbuddy.zip HEAD:plugins/workbuddy
+```
+
+Raise `version` in `connector-meta.json` with every upload.
 
 ### MCP Registry
 

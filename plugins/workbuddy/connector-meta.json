@@ -1,0 +1,36 @@
+{
+  "name": "Fortrip",
+  "name_zh": "Fortrip",
+  "name_en": "Fortrip",
+  "description": "搜索全球酒店，比较实时报价、含餐和取消条款，下单后凭付款链接付款。需要 Fortrip 账号。",
+  "description_zh": "搜索全球酒店，比较实时报价、含餐和取消条款，下单后凭付款链接付款。需要 Fortrip 账号。",
+  "description_en": "Search hotels worldwide, compare live offers and cancellation terms, and book with a payment link.",
+  "source": "fortrip",
+  "type": "mcp",
+  "auth_mode": "server-side",
+  "version": "1.0.0",
+  "examples_zh": [
+    "帮我找上海外滩附近的四星级酒店，2 位成人，下个月 10 号入住，住 2 晚，价格用人民币",
+    "比较这三家酒店可免费取消的实时报价，看看哪家含早餐",
+    "订最便宜的可免费取消房型，入住人 Zhang San，联系邮箱 zhangsan@example.com，手机 +86 138 0000 0000",
+    "我的订单现在是什么状态？酒店确认了吗？",
+    "刚才那张还没付款的订单我不要了，帮我关掉"
+  ],
+  "examples_en": [
+    "Find 4-star hotels near the Bund in Shanghai for 2 adults, 2 nights from the 10th of next month, priced in CNY",
+    "Compare live offers with free cancellation at these three hotels, and tell me which include breakfast",
+    "Book the cheapest free-cancellation room. Guest: Zhang San, email zhangsan@example.com, phone +86 138 0000 0000",
+    "What is the status of my order? Has the hotel confirmed it?",
+    "I no longer want the order I haven't paid for. Close it"
+  ],
+  "minWorkbuddyVersion": "4.24.0",
+  "server_auth": {
+    "auth_type": "mcp_oauth",
+    "data": {
+      "mcp_oauth": {
+        "server_url": "https://mcp.fortrip.ai/",
+        "scopes": "profile email offline_access"
+      }
+    }
+  }
+}

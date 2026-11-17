@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fortrip": {
+      "type": "streamableHttp",
+      "url": "https://mcp.fortrip.ai/",
+      "timeout": 180000,
+      "disabledTools": [
+        "pay_order"
+      ]
+    }
+  }
+}

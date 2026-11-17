@@ -101,6 +101,37 @@ check("plugins/openai/mcp.json url", load("plugins/openai/mcp.json").mcpServers?
 const auth = load("plugins/openai/mcp.json").mcpServers?.fortrip?.extensions?.["com.openai"]?.auth;
 check("plugins/openai/mcp.json declares OAuth by client metadata document", auth?.type === "oauth" && auth?.client?.mode === "cimd", JSON.stringify(auth));
 
+// The WorkBuddy connector (open.workbuddy.cn, "MCP + Skill"): one server,
+// the hosted one, with sign-in held by WorkBuddy's cloud after it registers
+// itself with our authorization server. pay_order is not offered there.
+const workbuddy = load("plugins/workbuddy/connector-meta.json");
+const workbuddyServers = Object.entries(load("plugins/workbuddy/mcp.json").mcpServers ?? {});
+check("workbuddy mcp.json has exactly one server", workbuddyServers.length === 1, `${workbuddyServers.length}`);
+const [workbuddyKey, workbuddyServer] = workbuddyServers[0] ?? [];
+check("workbuddy mcp.json server is the hosted one over streamable HTTP", workbuddyServer?.url === MCP_URL && workbuddyServer?.type === "streamableHttp", JSON.stringify(workbuddyServer));
+check("workbuddy mcp.json disables pay_order", workbuddyServer?.disabledTools?.includes("pay_order"), JSON.stringify(workbuddyServer?.disabledTools));
+check("workbuddy source is kebab-case and is the server's key", /^[a-z0-9]+(-[a-z0-9]+)*$/.test(workbuddy.source) && workbuddy.source === workbuddyKey, workbuddy.source);
+check("workbuddy type is mcp", workbuddy.type === "mcp", workbuddy.type);
+check("workbuddy version is semver", /^\d+\.\d+\.\d+$/.test(workbuddy.version), workbuddy.version);
+for (const key of ["name", "name_en", "description", "description_zh", "description_en"]) {
+  check(`workbuddy ${key} is filled`, typeof workbuddy[key] === "string" && workbuddy[key].trim() !== "", workbuddy[key]);
+}
+for (const key of ["description_zh", "description_en"]) {
+  const length = [...(workbuddy[key] ?? "")].length;
+  check(`workbuddy ${key} is 20–100 characters`, length >= 20 && length <= 100, `${length}`);
+}
+for (const key of ["examples_zh", "examples_en"]) {
+  const examples = workbuddy[key] ?? [];
+  check(`workbuddy ${key} has 2–5 examples`, examples.length >= 2 && examples.length <= 5 && examples.every((e) => typeof e === "string" && e.trim()), `${examples.length}`);
+}
+check("workbuddy examples come in pairs", workbuddy.examples_zh?.length === workbuddy.examples_en?.length);
+check("workbuddy sign-in is server-side, by dynamic registration at the hosted server", workbuddy.auth_mode === "server-side" && workbuddy.server_auth?.auth_type === "mcp_oauth" && workbuddy.server_auth?.data?.mcp_oauth?.server_url === MCP_URL, JSON.stringify(workbuddy.server_auth));
+// server_auth and name_zh / examples_zh need WorkBuddy 4.24.0.
+const [wbMajor, wbMinor] = (workbuddy.minWorkbuddyVersion ?? "0.0.0").split(".").map(Number);
+check("workbuddy minWorkbuddyVersion is 4.24.0 or later", wbMajor > 4 || (wbMajor === 4 && wbMinor >= 24), workbuddy.minWorkbuddyVersion);
+check("workbuddy package holds no client secret", !/client_secret|client_id/.test(read("plugins/workbuddy/connector-meta.json")));
+check("workbuddy icon exists", fs.existsSync(path.join(repo, "plugins/workbuddy/icon.png")));
+
 // OpenAI submission limits. "Supported text" has no control characters
 // (a line break only where allowed), no U+2028/U+2029 and no invisible
 // formatting characters.
@@ -167,6 +198,7 @@ for (const [locale, t] of Object.entries(openai.publication.translations)) {
 for (const skill of [
   "plugins/claude/skills/fortrip/SKILL.md",
   "plugins/openai/skills/fortrip/SKILL.md",
+  "plugins/workbuddy/skills/fortrip/SKILL.md",
   "skills/fortrip-cli/SKILL.md",
 ]) {
   const source = read(skill);

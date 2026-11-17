@@ -1,11 +1,11 @@
 /*
  * Renders the files that come from the agent contract (`packages/contract`):
  *
- * - the three skills, `plugins/claude/skills/fortrip`,
- *   `plugins/openai/skills/fortrip` and `skills/fortrip-cli`, each a
- *   `SKILL.md` (the front matter below plus the contract's main guide for
- *   that surface) and, but for the OpenAI one, a `references/planning.md`
- *   (its planning guide);
+ * - the four skills, `plugins/claude/skills/fortrip`,
+ *   `plugins/openai/skills/fortrip`, `plugins/workbuddy/skills/fortrip` and
+ *   `skills/fortrip-cli`, each a `SKILL.md` (the front matter below plus the
+ *   contract's main guide for that surface) and, but for the OpenAI and
+ *   WorkBuddy ones, a `references/planning.md` (its planning guide);
  * - the contract's `src/guide-data.generated.ts`, the guide fragments inlined
  *   by `packages/contract/scripts/embed-guide.ts`.
  *
@@ -68,6 +68,17 @@ const SKILLS: readonly {
     name: "fortrip",
     description:
       "Finds, compares, prices, orders and cancels hotel stays with Fortrip's MCP tools (search_hotels, get_hotel, get_hotel_offers, create_order, get_order, list_orders, cancel_order), from hotel search to an order's payment link. Use when those tools are available and the user wants to find, compare, price, book or cancel a hotel stay, including flexible dates, budgets, split stays or several destinations. Not for flights, activities, changing an existing booking, or coding work.",
+  },
+  // The WorkBuddy connector's skill: the same MCP guide. The connector's
+  // mcp.json disables pay_order, so the skill names no payment by token.
+  {
+    dir: "plugins/workbuddy/skills/fortrip",
+    surface: "mcp",
+    options: { tokenPay: false },
+    planning: false,
+    name: "fortrip",
+    description:
+      "用 Fortrip 的 MCP 工具（search_hotels、get_hotel、get_hotel_offers、create_order、get_order、list_orders、cancel_order）搜索、比较、预订和取消酒店住宿，从搜索酒店到拿到订单的付款链接。用户想找酒店、比价、订房或取消订单时使用，包括日期灵活、有预算或有多个目的地的情况。不用于机票、活动、修改已有订单或写代码。",
   },
   {
     dir: "skills/fortrip-cli",
