@@ -135,9 +135,11 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has eight tools:
-`search_hotels`, `get_hotel`, `get_hotel_offers`,
-`create_order`, `get_order`, `list_orders`, `cancel_order` and `pay_order`.
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has seven tools:
+`search_hotels`, `get_hotel`, `get_hotel_offers`, `create_order`, `get_order`,
+`list_orders` and `cancel_order`. The user pays on the page an order's payment
+link opens. Through the CLI's bridge, below, there is an eighth, `pay_order`,
+which pays an order with a token the user approved.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the
