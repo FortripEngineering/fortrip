@@ -17,6 +17,7 @@ const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CLAUDE_SKILL = "plugins/claude/skills/fortrip/SKILL.md";
 const CLAUDE_PLANNING = "plugins/claude/skills/fortrip/references/planning.md";
 const OPENAI_SKILL = "plugins/openai/skills/fortrip/SKILL.md";
+const WORKBUDDY_SKILL = "plugins/workbuddy/skills/fortrip/SKILL.md";
 const CLI_SKILL = "skills/fortrip-cli/SKILL.md";
 const CLI_PLANNING = "skills/fortrip-cli/references/planning.md";
 const GUIDE_DATA = "packages/contract/src/guide-data.generated.ts";
@@ -24,6 +25,7 @@ const GENERATED = [
   CLAUDE_SKILL,
   CLAUDE_PLANNING,
   OPENAI_SKILL,
+  WORKBUDDY_SKILL,
   CLI_SKILL,
   CLI_PLANNING,
   GUIDE_DATA,
@@ -145,6 +147,18 @@ describe("pnpm generate", () => {
     assert.ok(!existsSync(path.join(root, "plugins/openai/skills/fortrip/references")));
   });
 
+  // The WorkBuddy connector disables pay_order in its mcp.json: its skill is
+  // the same guide, under a description in Chinese.
+  it("renders the WorkBuddy skill as the OpenAI one, without payment by token", () => {
+    const root = rendered();
+    const body = (file: string) => read(root, file).replace(/^---\n[\s\S]*?\n---\n/, "");
+    const workbuddy = read(root, WORKBUDDY_SKILL);
+    assert.match(workbuddy, /^---\nname: fortrip\ndescription: 用 Fortrip 的 MCP 工具/);
+    assert.equal(body(WORKBUDDY_SKILL), body(OPENAI_SKILL));
+    assert.doesNotMatch(workbuddy, /pay_order|payment token|Link wallet|Pay without the link/i);
+    assert.ok(!existsSync(path.join(root, "plugins/workbuddy/skills/fortrip/references")));
+  });
+
   // Nor are Claude and Claude Code: the plugin's skill names none of it,
   // while the CLI's skill, which any agent may run, keeps the command.
   it("renders the Claude skill without payment by token", () => {
@@ -157,7 +171,7 @@ describe("pnpm generate", () => {
 
   it("points no generated skill file to a runtime guide", () => {
     const root = rendered();
-    for (const file of [CLAUDE_SKILL, OPENAI_SKILL, CLI_SKILL, CLAUDE_PLANNING, CLI_PLANNING]) {
+    for (const file of [CLAUDE_SKILL, OPENAI_SKILL, WORKBUDDY_SKILL, CLI_SKILL, CLAUDE_PLANNING, CLI_PLANNING]) {
       assert.doesNotMatch(read(root, file), /fortrip guide|get_planning_guide/, file);
     }
     assert.match(read(root, CLI_SKILL), /\]\(references\/planning\.md\)/);
@@ -168,7 +182,7 @@ describe("pnpm generate", () => {
     const { TOOLS } = await import("../packages/contract/src/index.ts");
     const tools = new Set<string>(TOOLS.map((tool) => tool.name));
     const root = rendered();
-    for (const file of [CLAUDE_SKILL, OPENAI_SKILL, CLI_SKILL]) {
+    for (const file of [CLAUDE_SKILL, OPENAI_SKILL, WORKBUDDY_SKILL, CLI_SKILL]) {
       const description = read(root, file).match(/^description: (.+)$/m)?.[1] ?? "";
       const named = [...description.matchAll(/\b[a-z]+(?:_[a-z]+)+\b/g)].map(([name]) => name);
       assert.ok(named.length >= 3, `${file}: ${named}`);
