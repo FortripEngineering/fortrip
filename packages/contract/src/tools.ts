@@ -43,10 +43,8 @@ export interface ToolSpec {
   description: string;
   annotations: {
     /** The tool's `title` again: a client or directory that reads a tool's
-     *  title from its annotations finds the same one here. Every tool of
-     *  `TOOLS` has it; optional so that a spec written before it still
-     *  type-checks. */
-    title?: string;
+     *  title from its annotations finds the same one here. */
+    title: string;
     readOnlyHint: boolean;
     idempotentHint: boolean;
     openWorldHint: boolean;
