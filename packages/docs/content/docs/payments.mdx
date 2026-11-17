@@ -86,7 +86,7 @@ An agent doesn't open or choose any of these: it gives the link, and the user pa
 
 ## After payment [#after-payment]
 
-Read the order ([`get_order`](/mcp/get-order), [`fortrip orders get`](/cli/orders-get)) until it is no longer `confirming`; [Polling](/api#polling) says how often. Its `status`:
+Read the order ([`get_order`, `fortrip orders get`](/api/reference/get_order)) until it is no longer `confirming`; [Polling](/api#polling) says how often. Its `status`:
 
 <OrderStatuses />
 
@@ -107,7 +107,7 @@ Every `failed` order has `failure`: a reason that isn't on record is `unknown`. 
 
 ## Cancel or close [#cancel]
 
-Orders can't be changed through the API. [`cancel_order`](/mcp/cancel-order), [`fortrip orders cancel`](/cli/orders-cancel) and <code><Fact path="ROUTES.cancel_order" /></code> either cancel or close, and the request says which:
+Orders can't be changed through the API. [Cancel order](/api/reference/cancel_order) (`cancel_order`, `fortrip orders cancel`, <code><Fact path="ROUTES.cancel_order" /></code>) either cancels or closes, and the request says which:
 
 | | Cancel | Close |
 | --- | --- | --- |

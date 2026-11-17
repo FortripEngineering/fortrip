@@ -351,12 +351,12 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The values of a failed order's `failure.reason`, each with what it means. */
   FailureReasons: () => statusTable(FAILURE_REASONS, FAILURE_REASON_DOCS, "reason"),
 
-  /** The tools, each linking to its page. */
+  /** The tools, each linking to its section of its operation's page. */
   ToolList: () => [
     table(
       ["Tool", "Title", "Access"],
       MCP_TOOLS.map((tool) => ({
-        cells: [[link(`/mcp/${tool.slug}`, code(tool.name))], [text(tool.title)], [text(tool.access)]],
+        cells: [[link(tool.href, code(tool.name))], [text(tool.title)], [text(tool.access)]],
       })),
     ),
   ],
@@ -397,12 +397,12 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     ),
   ],
 
-  /** The commands, each linking to its page. */
+  /** The commands, each linking to where it is documented. */
   CommandList: () => [
     table(
       ["Command", "Description"],
       CLI_COMMANDS.map((command) => ({
-        cells: [[link(`/cli/${command.slug}`, code(command.invocation))], [text(command.title)]],
+        cells: [[link(command.href, code(command.invocation))], [text(command.title)]],
       })),
     ),
   ],
@@ -433,6 +433,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       ["Endpoint", "Input", "Answer", "MCP / CLI"],
       ENDPOINTS.map((endpoint) => {
         const tool = MCP_TOOLS.find((t) => t.name === endpoint.tool);
+        const command = CLI_COMMANDS.find((c) => c.slug === endpoint.cliSlug);
         const response = responseDocForCommand(endpoint.cliSlug);
         const input: PhrasingContent[] =
           endpoint.input === "none"
@@ -450,7 +451,10 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
             [code(`${endpoint.method} ${endpoint.path}`), lineBreak(), text(endpoint.title)],
             input,
             [response ? link(schemaHref(response), text(schemaTitle(response))) : text("OAuth sign-in settings")],
-            [...(tool ? [code(tool.name), lineBreak()] : []), link(`/cli/${endpoint.cliSlug}`, text("CLI"))],
+            [
+              ...(tool ? [link(tool.href, code(tool.name)), lineBreak()] : []),
+              ...(command ? [link(command.href, code(command.invocation))] : []),
+            ],
           ],
         };
       }),
@@ -464,8 +468,8 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       const commands = CLI_COMMANDS.filter((c) => doc.cliSlugs.includes(c.slug));
       const where = [
         ...doc.http.map((endpoint) => [code(endpoint)]),
-        ...tools.map((tool) => [link(`/mcp/${tool.slug}`, code(tool.name))]),
-        ...commands.map((command) => [link(`/cli/${command.slug}`, code(command.invocation))]),
+        ...tools.map((tool) => [link(tool.href, code(tool.name))]),
+        ...commands.map((command) => [link(command.href, code(command.invocation))]),
       ];
       return [
         heading(2, [text(doc.title)], doc.id),

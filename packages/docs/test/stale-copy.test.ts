@@ -80,15 +80,15 @@ describe("stale statements stay fixed", () => {
     assert.doesNotMatch(pageHtml("/quickstart"), /href="\/install#remote-mcp"/);
   });
 
-  it("a tool page says its result is one text block, and where the JSON is", () => {
-    for (const route of ["/mcp/pay-order", "/mcp/search-hotels"]) {
+  it("an operation's MCP section says its result is one text block, and which clients are offered the tool", () => {
+    for (const route of ["/api/reference/pay_order", "/api/reference/search_hotels"]) {
       const text = pageText(route);
       assert.match(text, /The result is one text block, content\[0\]: the answer as compact text/, route);
-      assert.match(text, /There is no structuredContent: the same answer as JSON is the/, route);
-      assert.doesNotMatch(text, /image|content\[1\]/, route);
+      assert.doesNotMatch(text, /content\[1\]/, route);
     }
-    assert.match(pageText("/mcp/search-hotels"), /then the presentation hint\./);
-    assert.match(pageText("/mcp/pay-order"), /or fortrip orders pay --json\./);
+    assert.match(pageText("/api/reference/search_hotels"), /then the presentation hint\./);
+    assert.match(pageText("/api/reference/search_hotels"), /search_hotels · Read-only\. It takes the input above as one object\. The result/);
+    assert.match(pageText("/api/reference/pay_order"), /pay_order · Pays an order\. It takes the input above as one object\. It is offered through the CLI's fortrip mcp alone\./);
   });
 
   // Agents no longer open an Alipay or WeChat Pay payment: the user pays

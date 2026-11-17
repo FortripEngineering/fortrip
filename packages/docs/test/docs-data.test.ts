@@ -98,16 +98,16 @@ test("a command's page slug and invocation come from its group and name", () => 
   assert.equal(command("orders-cancel")?.invocation, "fortrip orders cancel");
   assert.equal(command("orders-pay")?.invocation, "fortrip orders pay");
   assert.equal(command("login")?.invocation, "fortrip login");
-  // The tool pages' slugs are the tool names, dashed.
-  assert.deepEqual(MCP_TOOLS.map((tool) => tool.slug).sort(), [
-    "cancel-order",
-    "create-order",
-    "get-hotel",
-    "get-hotel-offers",
-    "get-order",
-    "list-orders",
-    "pay-order",
-    "search-hotels",
+  // A tool is a section of its operation's page.
+  assert.deepEqual(MCP_TOOLS.map((tool) => tool.href).sort(), [
+    "/api/reference/cancel_order#mcp",
+    "/api/reference/create_order#mcp",
+    "/api/reference/get_hotel#mcp",
+    "/api/reference/get_hotel_offers#mcp",
+    "/api/reference/get_order#mcp",
+    "/api/reference/list_orders#mcp",
+    "/api/reference/pay_order#mcp",
+    "/api/reference/search_hotels#mcp",
   ]);
 });
 
@@ -126,16 +126,19 @@ test("a usage line lists the positionals and the flags of required fields", () =
   assert.equal(usage("logout"), "fortrip logout");
 });
 
-test("a command with a tool links to that tool's page", () => {
-  const pages = new Set(MCP_TOOLS.map((tool) => tool.slug));
+test("a command with a tool is a section of that operation's page; any other has a page of its own", () => {
   for (const spec of COMMANDS) {
     const command = CLI_COMMANDS.find((c) => c.slug === commandSlug(spec));
-    assert.equal(command?.mcp === undefined, spec.tool === null, spec.name);
-    if (command?.mcp) assert.ok(pages.has(command.mcp), spec.name);
+    assert.equal(command?.tool === undefined, spec.tool === null, spec.name);
+    assert.equal(command?.href, spec.tool ? `/api/reference/${spec.tool}#cli` : `/cli/${commandSlug(spec)}`, spec.name);
   }
+  assert.deepEqual(
+    CLI_COMMANDS.filter((command) => !command.tool).map((command) => command.slug),
+    ["login", "logout", "whoami", "mcp"],
+  );
 });
 
-test("a tool page links to the page of its CLI command", () => {
+test("a tool names its CLI command", () => {
   const pages = new Set(CLI_COMMANDS.map((command) => command.slug));
   for (const tool of MCP_TOOLS) {
     assert.ok(pages.has(tool.cliSlug), tool.name);

@@ -1,4 +1,4 @@
-import type { META_KEYS, ToolName } from "@fortrip/agent-contract";
+import { type META_KEYS, type ToolName, toolsFor } from "@fortrip/agent-contract";
 
 /**
  * Which results carry each `_meta` key and what it holds, keyed by the
@@ -82,4 +82,17 @@ export function contentSentence(tool: ToolName): string {
   });
   const ending = rules.length > 0 ? `, then ${series(rules)}` : "";
   return `The result is one text block, \`content[0]\`: the answer as compact text${ending}.`;
+}
+
+/** The headings of the sections that end an operation's page. */
+export const SURFACE_HEADINGS = { mcp: "MCP tool", cli: "CLI command" } as const;
+
+/** The tools every client of the hosted server is offered. */
+const HOSTED = new Set(toolsFor({ tokenPay: false }).map((tool) => tool.name));
+
+/** What a tool is over MCP, in words: its name, what a call does and where
+ *  it is offered. Its input is the operation's, shown above it on the page. */
+export function toolSentence(name: ToolName, access: string): string {
+  const where = HOSTED.has(name) ? "" : " It is offered through the CLI's `fortrip mcp` alone.";
+  return `\`${name}\` · ${access}. It takes the input above as one object.${where}`;
 }

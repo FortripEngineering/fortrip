@@ -56,8 +56,8 @@ test("the invalid-arguments row says how a local refusal names an issue, and tha
   const row = meaningOf(EXIT.usage);
   assert.match(row, /each issue names the flag it was typed as \(`--total is required`\), or its JSON Pointer when the value came from `--body`/);
   assert.match(row, /`orders cancel` without `--max-penalty` or `--close` is one of these\./);
-  // The command's own page says what happens instead, and when a flag does not fit the order.
-  const cancel = pageText("/cli/orders-cancel");
+  // The operation's page says what happens instead, and when a flag does not fit the order.
+  const cancel = pageText("/api/reference/cancel_order");
   assert.match(cancel, /Give exactly one of --max-penalty and --close\. With neither, the command is refused with exit 2: nothing is read and nothing is sent\./);
   assert.match(cancel, /is not sent: the command answers as the service does, order_not_cancellable with the order's Cancel line, and exits 1\./);
 });

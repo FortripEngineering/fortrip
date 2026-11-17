@@ -213,7 +213,7 @@ describe("Markdown pages", () => {
 
   it("/mcp.md, /cli.md: the tool and command lists, the rules that end a result, flags and the raw body", () => {
     const mcp = pageMarkdown("/mcp");
-    includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/mcp/${tool.slug}.md)`), "tool list");
+    includesAll(mcp, MCP_TOOLS.map((tool) => `[\`${tool.name}\`](${DOCS_ORIGIN}/api/reference/${tool.name}.md#mcp)`), "tool list");
     // The rules that end a result's text, each on the line of the tools that carry it.
     for (const rule of Object.keys(RULE_DOCS) as Array<keyof typeof RULE_DOCS>) {
       const tools = MCP_TOOLS.filter((tool) => MCP_TEXT_RULES[tool.name].includes(rule)).map((tool) => tool.name);
@@ -222,7 +222,11 @@ describe("Markdown pages", () => {
       includesAll(line, tools.map((tool) => `\`${tool}\``), rule);
     }
     const cli = pageMarkdown("/cli");
-    includesAll(cli, CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}/cli/${c.slug}.md)`), "command list");
+    includesAll(
+      cli,
+      CLI_COMMANDS.map((c) => `[\`${c.invocation}\`](${DOCS_ORIGIN}${c.tool ? `/api/reference/${c.tool}.md#cli` : `/cli/${c.slug}.md`})`),
+      "command list",
+    );
     includesAll(cli, GLOBAL_FLAGS.map((flag) => `--${flag.flag}`), "global flags");
     assert.ok(cli.includes(JSON.stringify(RAW_BODY_EXAMPLE)));
   });
@@ -313,13 +317,18 @@ describe("Markdown pages", () => {
     includesAll(pageMarkdown("/api"), CURRENCIES.filter((c) => c !== "USD"), "currencies");
   });
 
-  it("a tool page has its input fields; a command page its usage", () => {
+  it("an operation's page has its input fields once, its tool and its command's usage; a command page its usage", () => {
     for (const tool of MCP_TOOLS) {
       const rows = inputRows(TOOL_INPUTS[tool.name]);
-      includesAll(pageMarkdown(`/mcp/${tool.slug}`), [`# ${tool.title}`, ...rows.map((r) => `\`${r.path}\``)], tool.slug);
+      const markdown = pageMarkdown(`/api/reference/${tool.name}`);
+      includesAll(markdown, [`# ${tool.title}`, ...rows.map((r) => `\`${r.path}\``), `\`${tool.name}\` · ${tool.access}.`], tool.name);
+      // The input is listed once, for the HTTP request, the tool and the command.
+      assert.equal(markdown.split("\n## Input\n").length, 2, tool.name);
     }
     for (const command of CLI_COMMANDS) {
-      includesAll(pageMarkdown(`/cli/${command.slug}`), [`# ${command.title}`, command.usage], command.slug);
+      const route = command.tool ? `/api/reference/${command.tool}` : `/cli/${command.slug}`;
+      includesAll(pageMarkdown(route), [command.usage], command.slug);
+      if (!command.tool) assert.ok(pageMarkdown(route).startsWith(`# ${command.title}`), command.slug);
     }
   });
 
@@ -353,7 +362,12 @@ describe("sitemap and robots", () => {
     const xml = routeBody("/sitemap.xml");
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
     assert.deepEqual(new Set(locs), new Set(routes.map(absolute)));
-    includesAll(xml, [...MCP_TOOLS.map((t) => `/mcp/${t.slug}<`), ...CLI_COMMANDS.map((c) => `/cli/${c.slug}<`)], "sitemap");
+    includesAll(
+      xml,
+      [...MCP_TOOLS.map((t) => `/api/reference/${t.name}<`), ...CLI_COMMANDS.filter((c) => !c.tool).map((c) => `/cli/${c.slug}<`)],
+      "sitemap",
+    );
+    assert.doesNotMatch(xml, /\/mcp\/|\/cli\/(?:hotels|orders)-/);
   });
 
   it("robots allows everything and points to the sitemap", () => {
