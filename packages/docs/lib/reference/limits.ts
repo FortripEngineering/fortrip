@@ -30,13 +30,13 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   offersPerHotelDefault: (l) => [
     "Offers per hotel",
     `1–${l.offersPerHotelMax}, default ${l.offersPerHotelDefault}`,
-    "`limitPerHotel`: a spread of choices (the cheapest, the cheapest free to cancel, the cheapest with breakfast, other rooms), listed cheapest first. A hotel gets fewer when the call's hotels share its offers (next row).",
+    "`limitPerHotel`. A hotel gets fewer when the call's total is reached.",
   ],
   offersPerHotelMax: null,
   offersPerCallDefault: (l) => [
     "Offers per call",
     `${l.offersPerCallDefault}, up to ${l.offersPerCallMax}`,
-    `Across the hotels of one offers call: ${l.offersPerCallDefault} when \`limitPerHotel\` is left out, up to ${l.offersPerCallMax} when it is given. When the hotels would have more, the offers are split evenly among those that have any; each hotel's \`omitted.byCallLimit\` counts what a call for that hotel alone would add. See [the offers budget](#offers-budget).`,
+    `Across the hotels of one offers call: ${l.offersPerCallDefault} when \`limitPerHotel\` is left out, up to ${l.offersPerCallMax} when it is given. See [the offers budget](#offers-budget).`,
   ],
   offersPerCallMax: null,
   pageSizeDefault: (l) => [
