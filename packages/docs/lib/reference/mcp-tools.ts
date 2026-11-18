@@ -4,27 +4,28 @@ import {
   TOOLS,
   type ToolName,
 } from "@fortrip/agent-contract";
+import { referenceHref } from "./api-docs.ts";
 import { commandSlug } from "./cli-commands.ts";
 import { responseDocFor, schemaHref, schemaTitle } from "./response-docs.ts";
 
 export interface McpTool {
-  slug: string;
   name: ToolName;
+  /** The tool's section on its operation's page. */
+  href: string;
   title: string;
   group: string;
   /** The contract's description of the tool, as the model reads it. */
   summary: string;
   /** What the tool does for a person, and what it changes, in plain text:
-   *  the page's description (meta, header, cards, llms.txt), before the
-   *  description the model reads. The API reference page of the tool's
-   *  endpoint shares it. */
+   *  the description of its operation's page (meta, header, cards,
+   *  llms.txt), before the description the model reads. */
   human: string;
   readOnly: boolean;
   /** What a call does: "Read-only", or what it writes. */
   access: string;
   /** The matching CLI command as typed: `fortrip hotels offers`. */
   cli: string;
-  /** The slug of that command's page. */
+  /** That command's slug, as `CLI_COMMANDS` names it. */
   cliSlug: string;
   /** The response schema. */
   returns: { title: string; href: string };
@@ -97,8 +98,8 @@ export const MCP_TOOLS: McpTool[] = (Object.keys(DOCS) as ToolName[]).map(
     const response = responseDocFor(name);
     if (!response) throw new Error(`${name}: what does it return?`);
     return {
-      slug: name.replaceAll("_", "-"),
       name,
+      href: `${referenceHref(name)}#mcp`,
       title: tool.title,
       group,
       summary: tool.description,

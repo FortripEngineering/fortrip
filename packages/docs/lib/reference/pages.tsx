@@ -4,12 +4,9 @@ import type { TOCItemType } from "fumadocs-core/toc";
 import type { MDXComponents } from "mdx/types";
 import type { FC } from "react";
 
-import { CommandPage, ToolPage } from "../../components/reference.tsx";
-import { commandMarkdown, toolMarkdown } from "../markdown/pages.ts";
+import { CommandPage } from "../../components/reference.tsx";
+import { commandMarkdown } from "../markdown/pages.ts";
 import { CLI_COMMANDS } from "./cli-commands.ts";
-import { TOOL_INPUTS } from "./input-docs.ts";
-import { MCP_TOOLS } from "./mcp-tools.ts";
-import { inputRows } from "./schema-rows.ts";
 
 /** A generated page, shaped like a compiled MDX page so one route renders both. */
 export interface ReferencePageData extends PageData {
@@ -47,33 +44,11 @@ function outline(
   };
 }
 
-const toolPages: ReferencePage[] = MCP_TOOLS.map((tool) => {
-  const input = TOOL_INPUTS[tool.name];
-  const returns = `${tool.returns.title} object`;
-  return {
-    type: "page",
-    path: `mcp/${tool.slug}.mdx`,
-    data: {
-      title: tool.title,
-      description: tool.human,
-      body: () => <ToolPage name={tool.name} />,
-      markdown: () => toolMarkdown(tool.name),
-      ...outline(
-        [tool.name, tool.human, tool.summary],
-        [
-          {
-            id: "input",
-            title: "Input",
-            content: inputRows(input).map((row) => `${row.path}: ${row.description}`),
-          },
-          { id: "output", title: "Output", content: [returns] },
-        ],
-      ),
-    },
-  };
-});
+/** The commands with a page of their own: those that call no operation. An
+ *  operation's command is a section of the operation's page. */
+export const COMMANDS_WITH_PAGES = CLI_COMMANDS.filter((command) => !command.tool);
 
-const commandPages: ReferencePage[] = CLI_COMMANDS.map((command) => ({
+const commandPages: ReferencePage[] = COMMANDS_WITH_PAGES.map((command) => ({
   type: "page",
   path: `cli/${command.slug}.mdx`,
   data: {
@@ -114,14 +89,13 @@ function folder(dir: string, title: string, entries: Array<{ slug: string; group
   return { type: "meta" as const, path: `${dir}/meta.json`, data: { title, pages } };
 }
 
-/** One page per contract tool and command. */
-export const REFERENCE_PAGES: ReferencePage[] = [...toolPages, ...commandPages];
+/** One page per command that calls no operation. */
+export const REFERENCE_PAGES: ReferencePage[] = commandPages;
 
 /** The generated pages and their folders' sidebars, for the loader. */
 export const referenceSource: { files: VirtualFile<Config>[] } = {
   files: [
     ...REFERENCE_PAGES,
-    folder("mcp", "MCP server", MCP_TOOLS),
-    folder("cli", "CLI", CLI_COMMANDS),
+    folder("cli", "CLI", COMMANDS_WITH_PAGES),
   ],
 };

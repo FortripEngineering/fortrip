@@ -2,7 +2,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 
 import { Example } from "./example.tsx";
-import { CommandPage, Fields, ToolPage } from "./reference.tsx";
+import { CommandPage, Fields } from "./reference.tsx";
 
 /** The components a page renders. The data components an MDX page names
  *  (`<PayWays />`, `<EndpointTable />` …) are expanded into Markdown at
@@ -13,7 +13,6 @@ export function getMDXComponents(components?: MDXComponents) {
     CommandPage,
     Example,
     Fields,
-    ToolPage,
     ...components,
   } satisfies MDXComponents;
 }

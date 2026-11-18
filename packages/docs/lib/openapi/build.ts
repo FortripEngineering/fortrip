@@ -71,7 +71,7 @@ interface OperationSpec {
   input: z.ZodType | null;
   output: z.ZodType;
   /** The page's short description (meta, header, cards, llms.txt): the
-   *  matching MCP tool page's, or the docs' own for an account route. */
+   *  tool's in `MCP_TOOLS`, or the docs' own for an account route. */
   summary: string;
   /** The operation's full description, in the page body and openapi.json. */
   description?: string;
@@ -96,7 +96,7 @@ export const OPERATIONS: OperationSpec[] = ENDPOINTS.map((endpoint) => {
     if (!tool || !output) throw new Error(`no tool or response for ${endpoint.tool}`);
     const route = HTTP_ROUTES[endpoint.tool];
     const summary = MCP_TOOLS.find((t) => t.name === tool.name)?.human;
-    if (!summary) throw new Error(`${tool.name} has no MCP tool page`);
+    if (!summary) throw new Error(`${tool.name} is not in MCP_TOOLS`);
     return { id: tool.name, route, endpoint, input: tool.input, output, summary, description: tool.description };
   }
   const key = (Object.keys(ACCOUNT_ROUTES) as Array<keyof typeof ACCOUNT_ROUTES>).find(

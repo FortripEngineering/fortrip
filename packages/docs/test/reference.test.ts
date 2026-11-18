@@ -1,6 +1,6 @@
 // Reads the output of `next build`, which the package's test script runs first.
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
@@ -38,20 +38,21 @@ const escaped = (text: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#x27;");
 
-// Slugs as the contract names them: tools dashed, commands by group and name.
-const toolRoutes = TOOLS.map((tool) => ({
-  tool,
-  route: `/mcp/${tool.name.replaceAll("_", "-")}`,
-}));
+// One page per operation, named as the contract names the tool. A command
+// that calls an operation is on that page; any other has a page of its own,
+// named by its group and name.
+const toolRoutes = TOOLS.map((tool) => ({ tool, route: `/reference/${tool.name}` }));
 const commandRoutes = COMMANDS.map((spec) => ({
   spec,
-  route: `/cli/${spec.group === null ? spec.name : `${spec.group}-${spec.name}`}`,
+  route: spec.tool ? `/reference/${spec.tool}` : `/cli/${spec.group === null ? spec.name : `${spec.group}-${spec.name}`}`,
 }));
+const ownPages = commandRoutes.filter(({ spec }) => !spec.tool);
 
 describe("reference pages", () => {
-  it("builds one page per contract tool, titled and described by the contract", () => {
-    const built = readdirSync(join(app, "mcp")).filter((f) => f.endsWith(".html"));
-    assert.equal(built.length, TOOLS.length);
+  it("builds one page per contract tool, titled and described by the contract, and none under /mcp", () => {
+    const built = readdirSync(join(app, "reference")).filter((f) => f.endsWith(".html"));
+    for (const { tool } of toolRoutes) assert.ok(built.includes(`${tool.name}.html`), tool.name);
+    assert.ok(!existsSync(join(app, "mcp")), "the MCP overview is the only page under /mcp");
     for (const { tool, route } of toolRoutes) {
       const page = html(route);
       assert.ok(page.includes(`<h1`) && page.includes(escaped(tool.title)), route);
@@ -59,9 +60,10 @@ describe("reference pages", () => {
     }
   });
 
-  it("builds one page per contract command, with its invocation and every flag", () => {
+  it("documents every contract command, with its invocation and every flag: on its operation's page, or its own", () => {
     const built = readdirSync(join(app, "cli")).filter((f) => f.endsWith(".html"));
-    assert.equal(built.length, COMMANDS.length);
+    assert.equal(built.length, ownPages.length);
+    assert.ok(ownPages.length > 0 && ownPages.length < COMMANDS.length);
     for (const { spec, route } of commandRoutes) {
       const page = html(route);
       assert.ok(page.includes(escaped(commandInvocation(spec))), route);
@@ -69,19 +71,19 @@ describe("reference pages", () => {
     }
   });
 
-  it("lists every tool and command page in the sidebar", () => {
+  it("lists every operation and command page in the sidebar", () => {
     // Collapsed folders render no links, so read each folder's sidebar from a page inside it.
     const index = html("/");
     assert.ok(index.includes('href="/mcp"') && index.includes('href="/cli"'));
     const inMcp = html(toolRoutes[0]?.route ?? "");
     for (const { route } of toolRoutes) assert.ok(inMcp.includes(`href="${route}"`), route);
-    const inCli = html(commandRoutes[0]?.route ?? "");
-    for (const { route } of commandRoutes) assert.ok(inCli.includes(`href="${route}"`), route);
+    const inCli = html(ownPages[0]?.route ?? "");
+    for (const { route } of ownPages) assert.ok(inCli.includes(`href="${route}"`), route);
   });
 
-  it("gives every tool and command page a search entry", () => {
+  it("gives every command page a search entry", () => {
     const routes = REFERENCE_PAGES.map((page) => `/${page.path.replace(/\.mdx$/, "")}`).sort();
-    assert.deepEqual(routes, [...toolRoutes, ...commandRoutes].map(({ route }) => route).sort());
+    assert.deepEqual(routes, ownPages.map(({ route }) => route).sort());
     for (const page of REFERENCE_PAGES) {
       const { contents } = page.data.structuredData;
       assert.ok(contents.length > 1, page.path);
@@ -94,9 +96,9 @@ describe("reference pages", () => {
 
   it("lists every tool and command on the overviews", () => {
     const mcp = html("/mcp");
-    for (const { tool, route } of toolRoutes) assert.ok(mcp.includes(`href="${route}"`), tool.name);
+    for (const { tool, route } of toolRoutes) assert.ok(mcp.includes(`href="${route}#mcp"`), tool.name);
     const cli = html("/cli");
-    for (const { route } of commandRoutes) assert.ok(cli.includes(`href="${route}"`), route);
+    for (const { spec, route } of commandRoutes) assert.ok(cli.includes(`href="${route}${spec.tool ? "#cli" : ""}"`), route);
     for (const option of GLOBAL_FLAGS) assert.ok(cli.includes(`--${option.flag}`), option.flag);
     assert.ok(cli.includes(`Needs Node.js ${fact("CLI_NODE_MAJOR")} or newer.`));
   });

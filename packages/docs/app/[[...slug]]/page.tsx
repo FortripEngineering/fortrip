@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
-import { ModelReads } from "@/components/reference";
+import { ModelReads, OperationSurfaces, SurfaceLinks } from "@/components/reference";
 import { SiteFooter } from "@/components/site-footer";
 import { OPERATIONS } from "@/lib/openapi/build";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools";
@@ -30,15 +30,19 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
 
   if (page.type === "openapi") {
     // The short summary heads the page, and the body quotes the tool's
-    // description, the endpoint's full description, under its label.
+    // description, the endpoint's full description, under its label. After
+    // the HTTP request and responses come the MCP tool and the CLI command,
+    // which a line at the top links to: the page has no table of contents.
     const tool = MCP_TOOLS.find((t) => t.name === OPERATIONS.find((op) => op.id === page.slugs.at(-1))?.endpoint.tool);
     return (
       <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription>{page.data.description}</DocsDescription>
         <DocsBody>
+          {tool && <SurfaceLinks name={tool.name} />}
           {tool && <ModelReads description={tool.summary} />}
           <OpenAPIPage {...page.data.getOpenAPIPageProps()} showDescription={false} />
+          {tool && <OperationSurfaces name={tool.name} />}
         </DocsBody>
       </DocsPage>
     );

@@ -88,13 +88,13 @@ describe("order and payment guide", () => {
     assert.match(pageText("/payments"), /Pay one way only/);
   });
 
-  it("covers after payment: confirmation number, manageUrl, support, and the cancel pages", () => {
+  it("covers after payment: confirmation number, manageUrl, support, and the operations' pages", () => {
     const text = pageText("/payments");
     assert.ok(text.includes("confirmationNumber"));
     assert.ok(text.includes("manageUrl"));
     assert.ok(text.includes(SUPPORT_EMAIL));
     const html = pageHtml("/payments");
-    for (const href of ["/mcp/cancel-order", "/cli/orders-cancel"]) {
+    for (const href of ["/reference/cancel_order", "/reference/get_order"]) {
       assert.ok(html.includes(`href="${href}"`), href);
     }
   });

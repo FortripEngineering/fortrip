@@ -98,17 +98,17 @@ describe("search", () => {
     }
   });
 
-  it("indexes an API reference page by its short summary, not the rules it doesn't show", async () => {
+  it("finds an operation's page by the tool description it shows", async () => {
     for (const op of OPERATIONS) {
       if (!op.description) continue;
       // A sentence of the full description that the short summary doesn't carry.
-      const hidden = op.description.split(". ").find((sentence) => sentence.length > 40 && !op.summary.includes(sentence));
-      if (!hidden) continue;
-      const results = await search(hidden);
-      const page = `/api/reference/${op.id}`;
+      const sentence = op.description.split(". ").find((s) => s.length > 40 && !op.summary.includes(s));
+      if (!sentence) continue;
+      const results = await search(sentence);
+      const page = `/reference/${op.id}`;
       assert.ok(
-        !results.some((r) => r.url.startsWith(page) && r.content.includes(hidden)),
-        `${op.id}: ${JSON.stringify(results.filter((r) => r.url.startsWith(page)))}`,
+        results.some((r) => r.url.startsWith(page) && r.content.includes(sentence)),
+        `${op.id}: ${JSON.stringify(results.slice(0, 5))}`,
       );
     }
   });

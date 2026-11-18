@@ -6,7 +6,9 @@ import {
   type OptionSpec,
   type PositionalSpec,
   TOOLS,
+  type ToolName,
 } from "@fortrip/agent-contract";
+import { referenceHref } from "./api-docs.ts";
 import { responseDocForCommand, schemaHref, schemaTitle } from "./response-docs.ts";
 import { toJsonSchema } from "./schema-rows.ts";
 
@@ -15,8 +17,12 @@ import { toJsonSchema } from "./schema-rows.ts";
 export type CliFlag = [flag: string, field: string, description: string];
 
 export interface CliCommand {
-  /** The page slug: the group and name, `hotels-search`, or the name alone. */
+  /** The group and name, `hotels-search`, or the name alone: the page slug
+   *  of a command with a page of its own. */
   slug: string;
+  /** Where the command is documented: its section on its operation's page,
+   *  or its own page when it calls no operation. */
+  href: string;
   /** The command as typed, `fortrip hotels search`, without its arguments. */
   invocation: string;
   title: string;
@@ -30,8 +36,8 @@ export interface CliCommand {
   output: string;
   /** The response it prints with `--json`: its title and schemas anchor. */
   schema?: { title: string; href: string };
-  /** Slug of the matching MCP tool page. */
-  mcp?: string;
+  /** The operation it calls, if any: the contract tool of the same input. */
+  tool?: ToolName;
 }
 
 /** What a command that calls the API prints. */
@@ -158,6 +164,7 @@ export const CLI_COMMANDS: CliCommand[] = Object.entries(DOCS).map(
     const response = responseDocForCommand(slug);
     return {
       slug,
+      href: spec.tool ? `${referenceHref(spec.tool)}#cli` : `/cli/${slug}`,
       invocation: commandInvocation(spec),
       title,
       group,
@@ -169,7 +176,7 @@ export const CLI_COMMANDS: CliCommand[] = Object.entries(DOCS).map(
       schema: response
         ? { title: schemaTitle(response), href: schemaHref(response) }
         : undefined,
-      mcp: spec.tool?.replaceAll("_", "-"),
+      tool: spec.tool ?? undefined,
     };
   },
 );

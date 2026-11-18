@@ -1,13 +1,13 @@
-// The Markdown of the generated pages: a tool's, a command's (rendered by
-// `ToolPage` and `CommandPage`) and an API operation's (rendered by Fumadocs
-// OpenAPI). Each is built from the data its page shows.
+// The Markdown of the generated pages: a command's (rendered by
+// `CommandPage`) and an operation's (rendered by Fumadocs OpenAPI, then
+// `OperationSurfaces`). Each is built from the data its page shows.
 import { ORDER_HTTP, PUBLIC_ORIGINS, type ToolName } from "@fortrip/agent-contract";
 import type { PhrasingContent } from "mdast";
 
 import { answers, OPERATIONS } from "../openapi/build.ts";
-import { contentSentence } from "../prose/mcp-content.ts";
+import { contentSentence, SURFACE_HEADINGS, toolSentence } from "../prose/mcp-content.ts";
 import { inputAnchor } from "../reference/api-docs.ts";
-import { CLI_COMMANDS } from "../reference/cli-commands.ts";
+import { CLI_COMMANDS, type CliCommand } from "../reference/cli-commands.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { responseDocForCommand, schemaHref, schemaTitle } from "../reference/response-docs.ts";
 import {
@@ -37,53 +37,18 @@ export function modelReads(description: string): Block[] {
   return [paragraph([strong(text(MODEL_READS))]), blockquote([paragraph(inline(description))])];
 }
 
-/** A tool page's body, as `ToolPage` lays it out. */
-export function toolMarkdown(name: ToolName): string {
-  const tool = MCP_TOOLS.find((t) => t.name === name);
-  if (!tool) throw new Error(`${name} has no docs page`);
-  const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
-  const output = [
-    ...inline(contentSentence(tool.name)),
-    text(" There is no "),
-    code("structuredContent"),
-    text(": the same answer as JSON is the "),
-    link(tool.returns.href, text(tool.returns.title)),
-    text(" object, from the "),
-    link(`/api/reference/${tool.name}`, text("HTTP API")),
-    ...(cli ? [text(" or "), code(`${tool.cli} --json`)] : []),
-    text(". Errors are described in the "),
-    link("/mcp#errors", text("overview")),
-    text("."),
-  ];
-  return toMarkdown([
-    paragraph([
-      code(tool.name),
-      text(` · ${tool.access}`),
-      ...(cli ? [text(" · CLI: "), link(`/cli/${cli.slug}`, code(tool.cli))] : []),
-    ]),
-    ...modelReads(tool.summary),
-    heading(2, [text("Input")], "input"),
-    fields(`input:${tool.name}`),
-    heading(2, [text("Output")], "output"),
-    paragraph(output),
-  ]);
-}
-
-/** A command page's body, as `CommandPage` lays it out. */
-export function commandMarkdown(slug: string): string {
-  const command = CLI_COMMANDS.find((c) => c.slug === slug);
-  if (!command) throw new Error(`${slug} has no docs page`);
-  const mcp = MCP_TOOLS.find((tool) => tool.slug === command.mcp);
-  return toMarkdown([
-    ...(mcp ? [paragraph([text("MCP: "), link(`/mcp/${mcp.slug}`, code(mcp.name))])] : []),
-    heading(2, [text("Usage")], "usage"),
+/** A command's usage, how it works, options and output, as `CommandBody`
+ *  lays them out: each part under its heading on a command's own page, one
+ *  after another in an operation's CLI section. */
+function commandBlocks(command: CliCommand, headings: boolean): Block[] {
+  const title = (id: string, label: string): Block[] => (headings ? [heading(2, [text(label)], id)] : []);
+  return [
+    ...title("usage", "Usage"),
     codeBlock(null, command.usage),
-    ...(command.how
-      ? [heading(2, [text("How it works")], "how"), ...command.how.map((p) => paragraph(inline(p)))]
-      : []),
+    ...(command.how ? [...title("how", "How it works"), ...command.how.map((p) => paragraph(inline(p)))] : []),
     ...(command.flags
       ? [
-          heading(2, [text("Options")], "options"),
+          ...title("options", "Options"),
           table(
             ["Flag", "Field", "Description"],
             command.flags.map(([flag, field, description]) => ({
@@ -92,25 +57,54 @@ export function commandMarkdown(slug: string): string {
           ),
         ]
       : []),
-    heading(2, [text("Output")], "output"),
-    paragraph(inline(command.output)),
-    ...(command.schema
-      ? [
-          paragraph([
-            text("The JSON is the "),
-            link(command.schema.href, text(command.schema.title)),
-            text(" object. Errors go to stderr with an "),
+    ...title("output", "Output"),
+    paragraph([
+      ...inline(command.output),
+      ...(command.schema
+        ? [
+            // An operation's page shows the object above, under its responses.
+            ...(headings
+              ? [text(" The JSON is the "), link(command.schema.href, text(command.schema.title)), text(" object.")]
+              : []),
+            text(" Errors go to stderr with an "),
             link("/errors#exit-codes", text("exit code")),
             text("."),
-          ]),
-        ]
-      : []),
-  ]);
+          ]
+        : []),
+    ]),
+  ];
 }
 
-/** An API reference page's body, as the page shows it: the operation's
- *  tool description, route, input and answers. Its short summary heads the
- *  page; `/openapi.json` has the whole schema. */
+/** The page body of a command that calls no operation, as `CommandPage` lays it out. */
+export function commandMarkdown(slug: string): string {
+  const command = CLI_COMMANDS.find((c) => c.slug === slug);
+  if (!command) throw new Error(`${slug} has no docs page`);
+  return toMarkdown(commandBlocks(command, true));
+}
+
+/** The sections that end an operation's page, as `OperationSurfaces` lays
+ *  them out: the MCP tool and the CLI command that take the same input. */
+function surfaceBlocks(name: ToolName): Block[] {
+  const tool = MCP_TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`${name} has no docs page`);
+  const command = CLI_COMMANDS.find((c) => c.slug === tool.cliSlug);
+  return [
+    heading(2, [text(SURFACE_HEADINGS.mcp)], "mcp"),
+    paragraph(inline(toolSentence(tool.name, tool.access))),
+    paragraph([
+      ...inline(contentSentence(tool.name)),
+      text(" Errors are described in the "),
+      link("/mcp#errors", text("MCP overview")),
+      text("."),
+    ]),
+    ...(command ? [heading(2, [text(SURFACE_HEADINGS.cli)], "cli"), ...commandBlocks(command, false)] : []),
+  ];
+}
+
+/** An operation page's body, as the page shows it: the operation's tool
+ *  description, route, input and answers, then its MCP tool and its CLI
+ *  command. Its short summary heads the page; `/openapi.json` has the whole
+ *  schema. */
 export function operationMarkdown(id: string): string {
   const op = OPERATIONS.find((o) => o.id === id);
   if (!op) throw new Error(`${id} has no API reference page`);
@@ -136,6 +130,10 @@ export function operationMarkdown(id: string): string {
             : []),
         ];
   const blocks: Block[] = [
+    // As `SurfaceLinks` writes it.
+    ...(tool
+      ? [paragraph([text("MCP: "), link("#mcp", code(tool.name)), text(" · CLI: "), link("#cli", code(tool.cli))])]
+      : []),
     ...(tool ? modelReads(tool.summary) : []),
     paragraph([code(`${route.method} ${route.path}`), text(" on "), code(PUBLIC_ORIGINS.api)]),
     paragraph(
@@ -147,12 +145,7 @@ export function operationMarkdown(id: string): string {
   if (tool) {
     blocks.push(
       heading(2, [text("Input")], inputAnchor(route)),
-      paragraph([
-        text("The input of the MCP tool "),
-        link(`/mcp/${tool.slug}`, code(tool.name)),
-        ...(where.length > 0 ? [text(". "), ...joined(where, "; ")] : []),
-        text("."),
-      ]),
+      ...(where.length > 0 ? [paragraph([...joined(where, "; "), text(".")])] : []),
       fields(`input:${tool.name}`),
     );
   }
@@ -160,6 +153,7 @@ export function operationMarkdown(id: string): string {
     heading(2, [text("Responses")], "responses"),
     list(Object.keys(answers(op)).map(answer)),
     paragraph([text("The schema of every request and response: "), link("/openapi.json", code("/openapi.json")), text(".")]),
+    ...(tool ? surfaceBlocks(tool.name) : []),
   );
   return toMarkdown(blocks);
 }

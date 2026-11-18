@@ -6,12 +6,10 @@ import type { ReactNode } from "react";
 
 import { MODEL_READS } from "@/lib/markdown/pages.ts";
 import { fieldRows } from "@/lib/markdown/widgets.ts";
-import { contentSentence } from "@/lib/prose/mcp-content.ts";
-import { CLI_COMMANDS } from "@/lib/reference/cli-commands.ts";
+import { contentSentence, SURFACE_HEADINGS, toolSentence } from "@/lib/prose/mcp-content.ts";
+import { CLI_COMMANDS, type CliCommand } from "@/lib/reference/cli-commands.ts";
 import { FieldTable, inline } from "@/lib/reference/field-table.tsx";
-import { TOOL_INPUTS } from "@/lib/reference/input-docs.ts";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools.ts";
-import { inputRows } from "@/lib/reference/schema-rows.ts";
 
 /** A table as Fumadocs renders one from Markdown: scrolls sideways when narrow. */
 function Table({ head, children }: { head?: string[]; children: ReactNode }) {
@@ -47,78 +45,24 @@ export function ModelReads({ description }: { description: string }) {
   );
 }
 
-/** A tool's page body, under its description (what it does for a person):
- *  the tool, its access and command, its description as the model reads it,
- *  input fields and output. */
-export function ToolPage({ name }: { name: ToolName }) {
-  const tool = MCP_TOOLS.find((t) => t.name === name);
-  if (!tool) throw new Error(`${name} has no docs page`);
-  const input = TOOL_INPUTS[tool.name];
-  const cli = CLI_COMMANDS.find((command) => command.slug === tool.cliSlug);
+/** A command's usage, how it works, options and output. On a command's own
+ *  page each part has its heading; in an operation's CLI section they follow
+ *  one another under that section's heading. */
+function CommandBody({ command, headings }: { command: CliCommand; headings: boolean }) {
+  const title = (id: string, text: string) =>
+    headings && (
+      <Heading as="h2" id={id}>
+        {text}
+      </Heading>
+    );
   return (
     <>
-      <p className="text-sm text-fd-muted-foreground">
-        <code>{tool.name}</code> · {tool.access}
-        {cli && (
-          <>
-            {" "}
-            · CLI:{" "}
-            <Link href={`/cli/${cli.slug}`}>
-              <code>{tool.cli}</code>
-            </Link>
-          </>
-        )}
-      </p>
-      <ModelReads description={tool.summary} />
-      <Heading as="h2" id="input">
-        Input
-      </Heading>
-      <FieldTable rows={inputRows(input)} />
-      <Heading as="h2" id="output">
-        Output
-      </Heading>
-      <p>
-        {inline(contentSentence(tool.name))} There is no <code>structuredContent</code>: the same answer as JSON is the{" "}
-        <Link href={tool.returns.href}>{tool.returns.title}</Link> object, from the{" "}
-        <Link href={`/api/reference/${tool.name}`}>HTTP API</Link>
-        {cli && (
-          <>
-            {" "}
-            or <code>{tool.cli} --json</code>
-          </>
-        )}
-        . Errors are described in the <Link href="/mcp#errors">overview</Link>.
-      </p>
-    </>
-  );
-}
-
-/** A command's page body: usage, options and output (its summary is the
- *  page's description). `path` is its page slug. */
-export function CommandPage({ path }: { path: string }) {
-  const command = CLI_COMMANDS.find((c) => c.slug === path);
-  if (!command) throw new Error(`${path} has no docs page`);
-  const mcp = MCP_TOOLS.find((tool) => tool.slug === command.mcp);
-  return (
-    <>
-      {mcp && (
-        <p className="text-sm text-fd-muted-foreground">
-          MCP:{" "}
-          <Link href={`/mcp/${mcp.slug}`}>
-            <code>{mcp.name}</code>
-          </Link>
-        </p>
-      )}
-      <Heading as="h2" id="usage">
-        Usage
-      </Heading>
+      {title("usage", "Usage")}
       {/* Highlighted like a Markdown block (its lines carry the padding), spaced like one. */}
       <ServerCodeBlock lang="text" code={command.usage} codeblock={{ className: "my-4" }} />
       {command.how && (
         <>
-          <Heading as="h2" id="how">
-            How it works
-          </Heading>
+          {title("how", "How it works")}
           {command.how.map((paragraph) => (
             <p key={paragraph}>{inline(paragraph)}</p>
           ))}
@@ -126,9 +70,7 @@ export function CommandPage({ path }: { path: string }) {
       )}
       {command.flags && (
         <>
-          <Heading as="h2" id="options">
-            Options
-          </Heading>
+          {title("options", "Options")}
           <Table head={["Flag", "Field", "Description"]}>
             {command.flags.map(([flag, field, description]) => (
               <tr key={flag}>
@@ -142,15 +84,75 @@ export function CommandPage({ path }: { path: string }) {
           </Table>
         </>
       )}
-      <Heading as="h2" id="output">
-        Output
+      {title("output", "Output")}
+      <p>
+        {inline(command.output)}
+        {command.schema && (
+          <>
+            {" "}
+            {/* An operation's page shows the object above, under its responses. */}
+            {headings && (
+              <>
+                The JSON is the <Link href={command.schema.href}>{command.schema.title}</Link> object.{" "}
+              </>
+            )}
+            Errors go to stderr with an <Link href="/errors#exit-codes">exit code</Link>.
+          </>
+        )}
+      </p>
+    </>
+  );
+}
+
+/** The page body of a command that calls no operation: usage, options and
+ *  output (its summary is the page's description). `path` is its page slug. */
+export function CommandPage({ path }: { path: string }) {
+  const command = CLI_COMMANDS.find((c) => c.slug === path);
+  if (!command) throw new Error(`${path} has no docs page`);
+  return <CommandBody command={command} headings />;
+}
+
+/** The first line of an operation's page: its MCP tool and its CLI command,
+ *  each linking to its section at the end of the page. */
+export function SurfaceLinks({ name }: { name: ToolName }) {
+  const tool = MCP_TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`${name} has no docs page`);
+  return (
+    <p className="text-sm text-fd-muted-foreground">
+      MCP:{" "}
+      <Link href="#mcp">
+        <code>{tool.name}</code>
+      </Link>{" "}
+      · CLI:{" "}
+      <Link href="#cli">
+        <code>{tool.cli}</code>
+      </Link>
+    </p>
+  );
+}
+
+/** The sections that end an operation's page, after its HTTP request and
+ *  responses: the MCP tool and the CLI command that take the same input. */
+export function OperationSurfaces({ name }: { name: ToolName }) {
+  const tool = MCP_TOOLS.find((t) => t.name === name);
+  if (!tool) throw new Error(`${name} has no docs page`);
+  const command = CLI_COMMANDS.find((c) => c.slug === tool.cliSlug);
+  return (
+    <>
+      <Heading as="h2" id="mcp">
+        {SURFACE_HEADINGS.mcp}
       </Heading>
-      <p>{inline(command.output)}</p>
-      {command.schema && (
-        <p>
-          The JSON is the <Link href={command.schema.href}>{command.schema.title}</Link> object.
-          Errors go to stderr with an <Link href="/errors#exit-codes">exit code</Link>.
-        </p>
+      <p>{inline(toolSentence(tool.name, tool.access))}</p>
+      <p>
+        {inline(contentSentence(tool.name))} Errors are described in the <Link href="/mcp#errors">MCP overview</Link>.
+      </p>
+      {command && (
+        <>
+          <Heading as="h2" id="cli">
+            {SURFACE_HEADINGS.cli}
+          </Heading>
+          <CommandBody command={command} headings={false} />
+        </>
       )}
     </>
   );

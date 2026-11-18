@@ -104,11 +104,11 @@ describe("built site", () => {
     const tool = MCP_TOOLS.find((t) => t.name === "create_order");
     const full = TOOLS.find((t) => t.name === "create_order")?.description;
     assert.ok(tool && full);
-    const text = pageText("/api/reference/create_order");
+    const text = pageText("/reference/create_order");
     assert.ok(text.includes(tool.human));
     assert.ok(text.includes("What the model reads (tool description)"));
     // The contract's text is shown too, as the model reads it.
     assert.ok(text.includes(full.slice(0, 60).replaceAll("`", "")), "the full description is not shown");
-    assert.doesNotMatch(pageHtml("/api/reference/create_order"), /full rules agents follow/);
+    assert.doesNotMatch(pageHtml("/reference/create_order"), /full rules agents follow/);
   });
 });
