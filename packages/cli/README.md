@@ -3,6 +3,8 @@
 Search hotels, compare live rates, book and pay securely, and cancel
 bookings, from the terminal or an AI agent. Hotels only for now. The npm package and the command
 are both `fortrip`; they talk to Fortrip API v1, `https://api.fortrip.ai/v1`.
+The docs are at [docs.fortrip.ai](https://docs.fortrip.ai), with a
+[reference for every command](https://docs.fortrip.ai/cli).
 
 ```bash
 npx -y fortrip login
@@ -244,8 +246,7 @@ send the payment link.
 
 Both packages in this repository, `fortrip` and `@fortrip/agent-contract`,
 are released together from a `vX.Y.Z` tag. See
-[Releasing](https://github.com/FortripEngineering/fortrip#releasing) in the
-repository's README.
+[Releasing](https://github.com/FortripEngineering/fortrip/blob/main/MAINTAINING.md#releasing).
 
 ## License
 
