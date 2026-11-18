@@ -4,7 +4,8 @@ The contract of Fortrip API v1 (`https://api.fortrip.ai/v1`) and its MCP
 server (`https://mcp.fortrip.ai/`): the limits, paths, request and response
 schemas, error codes and field rules that the Fortrip CLI (`fortrip`), the
 hosted MCP server and the store listings all share, so they cannot drift
-apart.
+apart. The API it describes is documented at
+[docs.fortrip.ai](https://docs.fortrip.ai).
 
 It has one peer dependency, `zod` (`^4.4.0`), and runs anywhere
 ES2023 does. Its major version changes when the contract breaks, not with
