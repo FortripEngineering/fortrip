@@ -47,10 +47,10 @@ function surfaceRecords(toolName: string | null) {
 }
 
 /** An operation's page with the operation's short summary as its description
- *  (meta, header, cards, llms.txt) and in its search records: the page shows
- *  the summary, and the full description lives in openapi.json and under the
- *  page's "what the model reads" label. Its MCP tool and CLI command, which
- *  the OpenAPI document doesn't hold, get their search records here. */
+ *  (meta, header, cards, llms.txt). Its search records keep the full
+ *  description, which the page shows under its "what the model reads" label.
+ *  Its MCP tool and CLI command, which the OpenAPI document doesn't hold, get
+ *  their search records here. */
 const describedOpenapiPages = openapiPages.files.map((file): (typeof openapiPages.files)[number] => {
   if (file.type !== "page") return file;
   const id = file.path.split("/").at(-1)?.replace(/\.\w+$/, "");
@@ -66,12 +66,7 @@ const describedOpenapiPages = openapiPages.files.map((file): (typeof openapiPage
       structuredData: {
         ...structuredData,
         headings: [...structuredData.headings, ...surfaces.headings],
-        contents: [
-          ...structuredData.contents.map((record) =>
-            record.content === op.description ? { ...record, content: op.summary } : record,
-          ),
-          ...surfaces.contents,
-        ],
+        contents: [...structuredData.contents, ...surfaces.contents],
       },
     },
   };
