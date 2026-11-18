@@ -60,6 +60,6 @@ One offers call answers a bounded number of offers, however many hotels it price
 
 Every hotel that has offers gets the same cap: the per-hotel limit, or an even share of the call's total when that is smaller. Each hotel keeps a spread of choices: the cheapest, the cheapest free to cancel, the cheapest with breakfast, and other rooms, listed cheapest first.
 
-To see more, call again with fewer hotels, or with one hotel and a higher `limitPerHotel`, or narrow the offers with `filters.requireBreakfast` or `filters.requireFreeCancellation`. Each hotel's `omitted` counts what the call left out.
+To see more, call again with fewer hotels, or with one hotel and a higher `limitPerHotel`, or narrow the offers with `filters.requireBreakfast` or `filters.requireFreeCancellation`. Each hotel's `omitted` counts what the call left out, and its `byCallLimit` what a call for that hotel alone would add.
 
 An offer that isn't shown still exists: don't tell the user a room or a rate is unavailable because a call didn't list it.

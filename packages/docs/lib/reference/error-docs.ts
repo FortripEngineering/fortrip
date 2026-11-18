@@ -26,7 +26,7 @@ export interface ErrorRow {
  *  so a code the contract gains fails the typecheck until it is described. */
 const MEANINGS: Record<ErrorCode, string> = {
   invalid_request:
-    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). A known field sent at the wrong depth is named with the path it belongs at. A guest name the hotel's booking system refuses is answered here too, before any order is made. `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`.",
+    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). A known field sent at the wrong depth is named with the path it belongs at. A guest name the hotel's booking system refuses is answered here too, before any order is made.",
   cursor_invalid:
     "The cursor expired, belongs to another request or user, or was never a cursor. Start again from the first page.",
   unauthenticated:
@@ -36,22 +36,22 @@ const MEANINGS: Record<ErrorCode, string> = {
   offer_expired:
     "The offer's `expiresAt` has passed. Get offers again and order a new one.",
   offer_changed:
-    "The price or a term changed since the offer, and nothing was ordered. `changes` lists every change by the offer's key that changed (`field`), and `offer` is a new offer with the new terms. Show the changes, ask the user again, then order the new offer.",
+    "The price or a term changed since the offer, and nothing was ordered. Show the user `changes`, ask again, then order `offer`, a new offer with the new terms ([how](/payments#offer-changed)).",
   offer_already_ordered:
     "The offer was ordered with different details. An offer is ordered once, even when its order failed, expired or was closed: read the order in `orderId`, or get a new offer.",
   order_in_progress:
     "The same offer is being ordered by another request right now, or (for `cancel_order`) the order is still being confirmed. Retry after `retryAfterSeconds` to get its answer.",
   cancellation_changed:
-    "The order's cancellation penalty is now higher than the `maximumPenalty` sent, usually because a penalty step has passed. Nothing was cancelled. Read the order again, show the user its `cancel.penalty` and `cancel.refund`, and ask again before cancelling.",
+    "The penalty is now higher than the `maximumPenalty` sent, usually because a penalty step has passed. Nothing was cancelled. Read the order, show the user its `cancel.penalty` and `cancel.refund`, and ask again.",
   order_not_cancellable:
-    "The call asked to cancel an order that can only be closed, to close one that can only be cancelled, or for either on an order that allows neither. `orderId` is the order the call was for, and `cancel` is the order's `cancel` as it is now: its `action` is what applies instead (`cancel` with `maximumPenalty`, `close` with `close: true`), or `blockedBy` says what blocks both. `stay_started`, `cancellation_not_allowed`, `cancellation_refused` and `support_only` won't change: the user emails support.",
+    "The mode sent doesn't fit the order: a cancel of an order that can only be closed, a close of one that can only be cancelled, or either on an order that allows neither. `cancel` is the order's `cancel` as it is now ([what it shows](/payments#cancel-state)): its `action` is the mode that applies, or its `blockedBy` says what blocks both. `stay_started`, `cancellation_not_allowed`, `cancellation_refused` and `support_only` won't change: the user emails support.",
   order_not_payable: `\`pay_order\` on an order that isn't awaiting payment, or whose payment window closes within ${LIMITS.payCutoffMinutes} minutes. \`status\` is the order's. This call charged nothing.`,
   payment_in_progress:
     "Another payment of the order is under way. Read the order after `retryAfterSeconds`.",
   payment_total_mismatch:
     "The `total` sent isn't the order's; `details.total` is, and it hasn't changed. Confirm that total with the user, then call again with it and the same token. This call charged nothing.",
   payment_credential_invalid:
-    "The shared payment token can't pay this order. `reason`: `not_found`, `currency` or `amount` (its limits don't fit the order's `payment.tokenRequest.usageLimits`), `expired`, `deactivated`, `used` (it paid or tried an order before: a token pays one order only) or `other_seller`. Request a new token.",
+    "The shared payment token can't pay this order: request a new one. `currency` and `amount` mean its limits don't fit the order's `payment.tokenRequest.usageLimits`; `used` means it paid or tried an order before, and a token pays one order only.",
   payment_declined:
     "The card was declined; `declineCode` is the bank's reason when it gives one. The user can pick another payment method in their wallet, or pay by `payment.url`, which stays open.",
   payment_action_required:
@@ -80,7 +80,7 @@ const MEANINGS: Record<ErrorCode, string> = {
     "A service Fortrip depends on is briefly unavailable. Retry after `retryAfterSeconds`.",
   supplier_unavailable: `The hotel's side didn't answer. \`not_started\` (${SUPPLIER_OUTCOME_STATUS.not_started}): nothing was sent, so retrying is safe. \`unknown\` (${SUPPLIER_OUTCOME_STATUS.unknown}): the call was sent and timed out, so it may have taken effect. Either way, sending the same call again is safe ([retries](/api#retries)).`,
   client_outdated:
-    "The Fortrip CLI that sent the call is a major version behind the service. `message` says so and gives the command that updates it. Only the CLI gets this, on its HTTP calls and through `fortrip mcp`; other clients never do.",
+    "The Fortrip CLI that sent the call is a major version behind the service. `message` says so and gives the command that updates it. Only the CLI gets this, on its HTTP calls and through `fortrip mcp`.",
   internal: "An unexpected error. The `requestId` helps support find it.",
 };
 

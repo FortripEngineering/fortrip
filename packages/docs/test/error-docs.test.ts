@@ -61,7 +61,8 @@ test("details are listed field by field, as the contract's shapes", () => {
 test("the meanings say what the contract and its guide say", () => {
   const meaning = (code: keyof typeof ERROR_CODES) =>
     ERROR_ROWS.find((row) => row.code === code)?.meaning ?? "";
-  assert.match(meaning("invalid_request"), /`issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`\.$/);
+  // Its details are `issues` alone: nothing of the `filterable` and `share` that 6.0 removed.
+  assert.doesNotMatch(meaning("invalid_request"), /filterable|listedShare|`share`/);
   assert.match(meaning("order_not_cancellable"), /`cancel` is the order's `cancel` as it is now/);
   assert.match(meaning("client_outdated"), /`message` says so and gives the command that updates it/);
   assert.match(
