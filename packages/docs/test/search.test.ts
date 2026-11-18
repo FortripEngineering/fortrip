@@ -105,7 +105,7 @@ describe("search", () => {
       const hidden = op.description.split(". ").find((sentence) => sentence.length > 40 && !op.summary.includes(sentence));
       if (!hidden) continue;
       const results = await search(hidden);
-      const page = `/api/reference/${op.id}`;
+      const page = `/reference/${op.id}`;
       assert.ok(
         !results.some((r) => r.url.startsWith(page) && r.content.includes(hidden)),
         `${op.id}: ${JSON.stringify(results.filter((r) => r.url.startsWith(page)))}`,

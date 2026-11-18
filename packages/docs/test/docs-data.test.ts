@@ -100,14 +100,14 @@ test("a command's page slug and invocation come from its group and name", () => 
   assert.equal(command("login")?.invocation, "fortrip login");
   // A tool is a section of its operation's page.
   assert.deepEqual(MCP_TOOLS.map((tool) => tool.href).sort(), [
-    "/api/reference/cancel_order#mcp",
-    "/api/reference/create_order#mcp",
-    "/api/reference/get_hotel#mcp",
-    "/api/reference/get_hotel_offers#mcp",
-    "/api/reference/get_order#mcp",
-    "/api/reference/list_orders#mcp",
-    "/api/reference/pay_order#mcp",
-    "/api/reference/search_hotels#mcp",
+    "/reference/cancel_order#mcp",
+    "/reference/create_order#mcp",
+    "/reference/get_hotel#mcp",
+    "/reference/get_hotel_offers#mcp",
+    "/reference/get_order#mcp",
+    "/reference/list_orders#mcp",
+    "/reference/pay_order#mcp",
+    "/reference/search_hotels#mcp",
   ]);
 });
 
@@ -130,7 +130,7 @@ test("a command with a tool is a section of that operation's page; any other has
   for (const spec of COMMANDS) {
     const command = CLI_COMMANDS.find((c) => c.slug === commandSlug(spec));
     assert.equal(command?.tool === undefined, spec.tool === null, spec.name);
-    assert.equal(command?.href, spec.tool ? `/api/reference/${spec.tool}#cli` : `/cli/${commandSlug(spec)}`, spec.name);
+    assert.equal(command?.href, spec.tool ? `/reference/${spec.tool}#cli` : `/cli/${commandSlug(spec)}`, spec.name);
   }
   assert.deepEqual(
     CLI_COMMANDS.filter((command) => !command.tool).map((command) => command.slug),

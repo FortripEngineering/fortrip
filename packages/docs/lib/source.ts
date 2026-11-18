@@ -14,7 +14,7 @@ const docs = defineDocs({
   docs: { postprocess: { includeProcessedMarkdown: true } },
 });
 
-const REFERENCE_DIR = "api/reference";
+const REFERENCE_DIR = "reference";
 const openapiPages = await openapi.staticSource({ baseDir: REFERENCE_DIR });
 
 const plain = (text: string) => text.replaceAll("`", "");

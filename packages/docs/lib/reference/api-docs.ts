@@ -60,8 +60,8 @@ export const ENDPOINTS: Endpoint[] = [
   })),
 ];
 
-/** The API reference page of an endpoint with a tool: `/api/reference/<tool>`. */
-export const referenceHref = (tool: HttpToolName) => `/api/reference/${tool}`;
+/** The page of an operation with a tool: `/reference/<tool>`. */
+export const referenceHref = (tool: HttpToolName) => `/reference/${tool}`;
 
 /** Where the reference page's input starts, as Fumadocs OpenAPI names its
  *  sections: the JSON body of a POST, else the path or query parameters. */

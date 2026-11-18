@@ -119,7 +119,7 @@ test("the search page states every name rule from SEARCH_RULES", () => {
 });
 
 test("the API page states the order statuses, the replay header and the /me scopes from the contract", () => {
-  const page = source("api/index.mdx");
+  const page = source("api.mdx");
   for (const key of Object.keys(ORDER_HTTP)) {
     assert.ok(page.includes(`<Fact path="ORDER_HTTP.${key}" />`), key);
   }
@@ -138,7 +138,7 @@ test("the local-currency sentence is the guide's, on both pages that say what is
   assert.match(ADAPTIVE_PRICING, /local currency at Stripe's rate\.$/);
   for (const [page, route] of [
     ["payments.mdx", "/payments"],
-    ["api/index.mdx", "/api"],
+    ["api.mdx", "/api"],
   ] as const) {
     assert.ok(source(page).includes('<Fact path="GUIDE_SENTENCES.adaptivePricing" />'), page);
     assert.ok(pageText(route).includes(ADAPTIVE_PRICING), route);
@@ -152,7 +152,7 @@ test("the changelog owns the pre-release policy; the API page states it in one l
   assert.ok(pageText("/changelog").includes(plain(PRE_RELEASE_POLICY)));
   // The changelog states it without a link to itself.
   assert.doesNotMatch(pageHtml("/changelog"), /href="\/changelog"[^>]*>changelog<\/a>/);
-  assert.ok(!source("api/index.mdx").includes("<PreReleasePolicy"));
+  assert.ok(!source("api.mdx").includes("<PreReleasePolicy"));
   assert.ok(pageText("/api").includes("Pre-release: breaking changes ship as a new major version; see the changelog."));
   assert.match(pageHtml("/api"), /href="\/changelog">changelog<\/a>/);
   for (const page of [...PAGES, "changelog.mdx"]) {

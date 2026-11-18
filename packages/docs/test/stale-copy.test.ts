@@ -81,14 +81,14 @@ describe("stale statements stay fixed", () => {
   });
 
   it("an operation's MCP section says its result is one text block, and which clients are offered the tool", () => {
-    for (const route of ["/api/reference/pay_order", "/api/reference/search_hotels"]) {
+    for (const route of ["/reference/pay_order", "/reference/search_hotels"]) {
       const text = pageText(route);
       assert.match(text, /The result is one text block, content\[0\]: the answer as compact text/, route);
       assert.doesNotMatch(text, /content\[1\]/, route);
     }
-    assert.match(pageText("/api/reference/search_hotels"), /then the presentation hint\./);
-    assert.match(pageText("/api/reference/search_hotels"), /search_hotels · Read-only\. It takes the input above as one object\. The result/);
-    assert.match(pageText("/api/reference/pay_order"), /pay_order · Pays an order\. It takes the input above as one object\. It is offered through the CLI's fortrip mcp alone\./);
+    assert.match(pageText("/reference/search_hotels"), /then the presentation hint\./);
+    assert.match(pageText("/reference/search_hotels"), /search_hotels · Read-only\. It takes the input above as one object\. The result/);
+    assert.match(pageText("/reference/pay_order"), /pay_order · Pays an order\. It takes the input above as one object\. It is offered through the CLI's fortrip mcp alone\./);
   });
 
   // Agents no longer open an Alipay or WeChat Pay payment: the user pays

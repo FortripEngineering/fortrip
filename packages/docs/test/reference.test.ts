@@ -41,16 +41,16 @@ const escaped = (text: string) =>
 // One page per operation, named as the contract names the tool. A command
 // that calls an operation is on that page; any other has a page of its own,
 // named by its group and name.
-const toolRoutes = TOOLS.map((tool) => ({ tool, route: `/api/reference/${tool.name}` }));
+const toolRoutes = TOOLS.map((tool) => ({ tool, route: `/reference/${tool.name}` }));
 const commandRoutes = COMMANDS.map((spec) => ({
   spec,
-  route: spec.tool ? `/api/reference/${spec.tool}` : `/cli/${spec.group === null ? spec.name : `${spec.group}-${spec.name}`}`,
+  route: spec.tool ? `/reference/${spec.tool}` : `/cli/${spec.group === null ? spec.name : `${spec.group}-${spec.name}`}`,
 }));
 const ownPages = commandRoutes.filter(({ spec }) => !spec.tool);
 
 describe("reference pages", () => {
   it("builds one page per contract tool, titled and described by the contract, and none under /mcp", () => {
-    const built = readdirSync(join(app, "api/reference")).filter((f) => f.endsWith(".html"));
+    const built = readdirSync(join(app, "reference")).filter((f) => f.endsWith(".html"));
     for (const { tool } of toolRoutes) assert.ok(built.includes(`${tool.name}.html`), tool.name);
     assert.ok(!existsSync(join(app, "mcp")), "the MCP overview is the only page under /mcp");
     for (const { tool, route } of toolRoutes) {

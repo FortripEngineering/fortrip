@@ -94,7 +94,7 @@ describe("order and payment guide", () => {
     assert.ok(text.includes("manageUrl"));
     assert.ok(text.includes(SUPPORT_EMAIL));
     const html = pageHtml("/payments");
-    for (const href of ["/api/reference/cancel_order", "/api/reference/get_order"]) {
+    for (const href of ["/reference/cancel_order", "/reference/get_order"]) {
       assert.ok(html.includes(`href="${href}"`), href);
     }
   });

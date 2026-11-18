@@ -12,7 +12,7 @@ import { pageHtml, pageMarkdown, pageText, withoutFences } from "./built-page.ts
 /** The commands with a page of their own. */
 const routes = CLI_COMMANDS.filter((command) => !command.tool).map((command) => command.href);
 /** The operations' pages: the HTTP part is Fumadocs OpenAPI's, the sections after it ours. */
-const operations = MCP_TOOLS.map((tool) => `/api/reference/${tool.name}`);
+const operations = MCP_TOOLS.map((tool) => `/reference/${tool.name}`);
 const SURFACES = ["MCP tool", "CLI command"];
 
 /** The text of the `<h2>`s in the page's article. */

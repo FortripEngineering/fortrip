@@ -308,19 +308,19 @@ describe("built OpenAPI", () => {
 
   it("has a reference page per operation, linked from /api with the document", () => {
     for (const [, , op] of operations) {
-      const html = pageHtml(`/api/reference/${op.operationId}`);
+      const html = pageHtml(`/reference/${op.operationId}`);
       assert.ok(html.includes(op.summary ?? "?"), op.operationId);
     }
     const api = pageHtml("/api");
-    assert.ok(api.includes('href="/api/reference/'), "/api links the reference");
+    assert.ok(api.includes('href="/reference/'), "/api links the reference");
     assert.ok(api.includes('href="/openapi.json"'), "/api links the document");
   });
 
   it("samples each request with curl as the examples send it: the token, the example ids and body", () => {
     for (const op of OPERATIONS) {
-      const html = pageHtml(`/api/reference/${op.id}`);
+      const html = pageHtml(`/reference/${op.id}`);
       // The highlighted sample, as the page's text holds it.
-      const text = pageText(`/api/reference/${op.id}`);
+      const text = pageText(`/reference/${op.id}`);
       const auth = 'Authorization: Bearer $FORTRIP_TOKEN"';
       assert.equal(text.includes(auth), op.endpoint.auth, `${op.id}: the token`);
       assert.ok(!text.includes(`'Authorization`), `${op.id}: the token in single quotes isn't expanded`);
@@ -334,13 +334,13 @@ describe("built OpenAPI", () => {
       assert.doesNotMatch(text, /\bfetch\(|import requests/, op.id);
     }
     // The body sent is the example's.
-    assert.ok(pageText("/api/reference/search_hotels").includes('"countryCode": "JP"'));
-    assert.ok(pageText("/api/reference/pay_order").includes("spt_ExampleTokenFromTheUsersLinkWallet"));
+    assert.ok(pageText("/reference/search_hotels").includes('"countryCode": "JP"'));
+    assert.ok(pageText("/reference/pay_order").includes("spt_ExampleTokenFromTheUsersLinkWallet"));
   });
 
   it("quotes the tool description under its label, and sends no reader to the MCP page for it", () => {
     for (const op of OPERATIONS) {
-      const text = pageText(`/api/reference/${op.id}`);
+      const text = pageText(`/reference/${op.id}`);
       const tool = MCP_TOOLS.find((t) => t.name === op.endpoint.tool);
       assert.doesNotMatch(text, /full rules agents follow/, op.id);
       if (!tool) continue;
@@ -355,7 +355,7 @@ describe("built OpenAPI", () => {
     );
     const listed = [
       ...new Set(
-        [...pageHtml("/api/reference/me").matchAll(/href="\/api\/reference\/(\w+)"/g)].map(
+        [...pageHtml("/reference/me").matchAll(/href="\/reference\/(\w+)"/g)].map(
           (m) => m[1],
         ),
       ),
