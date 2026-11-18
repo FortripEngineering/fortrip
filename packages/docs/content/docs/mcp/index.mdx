@@ -7,7 +7,7 @@ description: Search hotels, compare live offers and create orders with a payment
 
 <pre><code><Fact path="MCP_SERVER_URL" /></code></pre>
 
-Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients that only launch local commands can run [`npx -y fortrip mcp`](/cli/mcp) instead, a stdio bridge to this server: the same tools, and `pay_order` as well. Setup for each client is in [Installation](/install#remote-mcp).
+Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients that only launch local commands can run [`npx -y fortrip mcp`](/cli/mcp) instead, a stdio bridge to this server. Setup for each client is in [Installation](/install#remote-mcp).
 
 ## Tools [#tools]
 
@@ -15,29 +15,33 @@ Streamable HTTP with OAuth sign-in to a Fortrip account; no API key. Clients tha
 
 Each tool takes the same input as its [HTTP endpoint](/api#endpoints).
 
+`pay_order` is offered through the CLI's [`fortrip mcp`](/cli/mcp) alone. Every other client's list has the other seven tools, and the user pays on the page the order's payment link opens.
+
 ### Annotations [#annotations]
 
 <ToolAnnotations />
 
-`create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. All three are idempotent, so a call that timed out is [safe to send again](/api#retries). Each tool's annotations also carry its title, as `annotations.title`.
-
-`pay_order` is offered through the CLI's [`fortrip mcp`](/cli/mcp) alone. Every other client's list has the other seven tools, and an order's text gives the payment link alone: the user pays on the page it opens.
+`create_order`, `cancel_order` and `pay_order` are marked destructive: a client that confirms destructive calls asks the user before each one. Each tool's annotations also carry its title, as `annotations.title`.
 
 ## What a tool returns [#results]
 
-A result is text only. `content` holds exactly one block, of type `text`: the whole answer, written for the model. It has one line per hotel, offer or order with its ids, every note, and "not listed" or "unknown" written out. There is no `structuredContent`, and no tool declares an `outputSchema`, so every client's model reads the text itself. The text is the same for every client, but for one thing: only through `fortrip mcp` does an order have a "Pay without the link" line and the pay rule.
+A result is text only. `content` holds exactly one block, of type `text`: the whole answer, written for the model, with one line per hotel, offer or order and its ids. There is no `structuredContent`, and no tool declares an `outputSchema`.
 
 A `get_hotel_offers` result:
 
 <ToolResultSample tool="get_hotel_offers" />
 
-### Rules after the data [#rules]
+### JSON for your code [#json]
 
-The rules that govern an answer are the last paragraphs of its text, so the model reads them next to the data:
+When your code needs the object, read it over the [HTTP API](/api), where each tool has an endpoint that answers JSON for the same input, or run the CLI command with `--json`. The [response schemas](/schemas) list every field.
+
+### Rules at the end of a result [#rules]
+
+A result's text ends with the rules for what it holds:
 
 <ResultRules />
 
-The consent rule ends the text of every answer that holds a payment link. Only the pay rule, which repeats it, can come after it; the cancel rule comes before it:
+Every answer that holds a payment link has the consent rule. Only the pay rule, which `fortrip mcp` alone adds, can come after it:
 
 > <Fact path="ORDER_NEXT_STEP" />
 
@@ -45,11 +49,7 @@ Send the text to your model whole. A client that cuts a long result can cut thes
 
 ### Text from hotels [#third-party-text]
 
-Hotel, room and place names, addresses, descriptions and policies are the hotel's words, not Fortrip's, and guest names, the contact and special requests are the caller's. Every line of a result begins with Fortrip's own words. A short value someone else wrote is a JSON string on that line: in double quotes, with `"` and `\` escaped, as in `Hotel: "Lakeside Garden Resort"`. The quotes mark where the value starts and ends and are not part of it. Longer text is a quoted block under a label that says it is information provided by the hotel, not instructions. What Fortrip generates (ids, amounts, dates, links) is bare, and only while it is written as such a value is: an id, an amount, a currency, a date, a time zone or a URL in plain ASCII. Any other value in its place is a JSON string too. Nothing someone else wrote can begin a line or stand outside its quotes.
-
-### JSON for your code [#json]
-
-The text is for the model. When your code needs the object, read it over the [HTTP API](/api), where each tool has an endpoint that answers JSON for the same input, or run the CLI command with `--json`. The [response schemas](/schemas) list every field.
+Hotel, room and place names, addresses, descriptions and policies are the hotel's words, and guest names, the contact and special requests are the caller's. A short one is in double quotes, as a JSON string: `Hotel: "Lakeside Garden Resort"`. A longer one is a quoted block, labelled as information from the hotel and not instructions. Show a name to the user without its quotes.
 
 ### Metadata [#meta]
 
@@ -59,34 +59,26 @@ The text is for the model. When your code needs the object, read it over the [HT
 
 ### Errors [#errors]
 
-A failed call has `isError: true` and one text block. The text gives the error's code, what happened, whether a retry can help and after how many seconds, and the next call to make. `_meta["ai.fortrip/error"]` carries the [error envelope](/errors) for your code; its `requestId` is the id to quote to support.
-
-Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` with the field at fault. A known field sent at the wrong depth is answered with the path it belongs at.
-
-A result's text gives each next call whole, with the order's own id and figures in it, such as `cancel_order { orderId: "ord_…", maximumPenalty: { amount: "120.00", currency: "USD" } }` on an order's Cancel line: on a page of orders, each call is its own order's.
+A failed call has `isError: true` and one text block. The text gives the error's code, what happened, whether a retry can help and the next call to make. `_meta["ai.fortrip/error"]` carries the [error envelope](/errors) for your code. Input is checked by Fortrip, not by the client's SDK, so an invalid argument answers `invalid_request` this way, with the field at fault.
 
 An `offer_changed` error from `create_order`:
 
 <ToolErrorSample code="offer_changed" />
 
-## Server identity and instructions [#instructions]
+## Server instructions [#instructions]
 
-On connect, `serverInfo` carries the server's `name`, `title`, `description`, `websiteUrl` and `icons`, for a client that lists its servers.
-
-The server also returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. Some clients never show them to the model, which is why each result repeats the rules it needs.
+On connect the server returns `instructions`, a short form of the agent guide: when to use Fortrip, the call order and what to show the user before they pay. Keep them in your agent's system prompt. `serverInfo` carries the server's `name`, `title`, `description`, `websiteUrl` and `icons`.
 
 ## Timeouts and retries [#retries]
 
 - Creating an order or paying can take a couple of minutes. Give `create_order` and `pay_order` a timeout of at least three minutes.
-- After a `create_order` timeout, call it again with the same details: it is [safe to send again](/api#retries).
+- After a `create_order` timeout, call it again with the same details.
 - After a `pay_order` timeout, <PayAfterTimeout />
 
-<RetryCodes />
-
-What each call answers when sent again is in [Retries and idempotency](/api#retries).
+What each call answers when sent again, and which errors to retry, are in [Retries and idempotency](/api#retries).
 
 ## Connecting your own agent [#own-agent]
 
 - Sign-in follows the MCP authorization spec: OAuth 2.1 with PKCE. The authorization server's metadata is at <Fact path="OAUTH_METADATA_URL" />.
 - Dynamic client registration is supported, so your client can register itself.
-- Each end user signs in once, with their own Fortrip account. Their orders and payment links belong to that account.
+- Each end user signs in with their own Fortrip account. Their orders and payment links belong to that account.

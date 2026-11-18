@@ -13,9 +13,9 @@ For Codex, Claude Code, Muse, WorkBuddy and other agents that use skills and can
 
 <pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
 
-`npx skills add` runs the open-source skills installer. It finds the agents on your machine, asks which ones to add the skill to, and writes it to their skills folders in the current project; add `-g` to install it for every project.
+The installer finds the agents on your machine, asks which ones to add the skill to, and writes it to their skills folders in the current project; add `-g` to install it for every project.
 
-The skill carries the agent guide: when to use Fortrip, the call order, how to sign in, and what to show the user before they pay. Your agent runs the CLI with `npx -y fortrip@latest`, so it may ask your permission to run those commands.
+The skill tells your agent when to use Fortrip, the call order, and what to show you before you pay. The agent runs the CLI with `npx -y fortrip@latest`, so it may ask your permission to run those commands.
 
 ## CLI [#cli]
 
@@ -41,7 +41,7 @@ A `401` before you sign in is expected: authenticate through your client.
 
 ## Local MCP [#local-mcp]
 
-For clients that launch local commands. The CLI runs a stdio server that forwards to the hosted server, so there is nothing else to install. It uses the CLI's sign-in, so run `npx -y fortrip login` first. Then add it to your client:
+For clients that launch local commands. The CLI runs a stdio server that forwards to the hosted server. It uses the CLI's sign-in, so run `npx -y fortrip login` first, then add it to your client:
 
 ```json
 {
@@ -54,7 +54,7 @@ For clients that launch local commands. The CLI runs a stdio server that forward
 }
 ```
 
-Configure either the remote or the local server in a client, not both. See [fortrip mcp](/cli/mcp).
+See [`fortrip mcp`](/cli/mcp).
 
 ## Authentication [#authentication]
 

@@ -7,7 +7,7 @@ No Fortrip account? Create one at [fortrip.ai](https://fortrip.ai).
 
 ## Chat apps: no install [#chat-apps]
 
-For claude.ai, ChatGPT and Claude Desktop. Add Fortrip as a connector, sign in to Fortrip when your app asks, and ask for a stay. Steps: [claude.ai](/install#claude-ai) · [Claude Desktop](/install#claude-desktop) · [ChatGPT](/install#chatgpt).
+For claude.ai, ChatGPT and Claude Desktop. Add Fortrip as a connector and sign in to Fortrip when your app asks. Steps: [claude.ai](/install#claude-ai) · [Claude Desktop](/install#claude-desktop) · [ChatGPT](/install#chatgpt).
 
 ## Coding agents [#coding-agents]
 
@@ -15,11 +15,11 @@ For Claude Code, Codex and other agents that run shell commands. You need Node.j
 
 ### 1. Install the skill [#install]
 
-Run this once in your project. It asks which of your agents to add the skill to; [Installation](/install#skill) says where it goes.
+Run this once in your project. It asks which of your agents to add the skill to.
 
 <pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
 
-Prefer the Claude Code plugin or MCP, or use Cursor? [Set up your client](/install#clients) instead of the skill. Use one setup per agent, not several.
+Prefer the Claude Code plugin or MCP, or use Cursor? [Set up your client](/install#clients) instead. Use one setup per agent.
 
 ### 2. Sign in [#sign-in]
 
@@ -27,7 +27,7 @@ Prefer the Claude Code plugin or MCP, or use Cursor? [Set up your client](/insta
 npx fortrip login
 ```
 
-The command prints a link and a code and opens your browser. Sign in to Fortrip, check that the code matches the one in your terminal, and approve. You stay signed in until you run `npx fortrip logout`. You can skip this step: the first time your agent needs access, it gives you a sign-in link.
+The command opens your browser. Sign in to Fortrip, check that the code matches the one in your terminal, and approve. You can skip this step: the first time your agent needs access, it gives you a sign-in link.
 
 ## Ask your agent [#ask]
 
@@ -35,35 +35,18 @@ The command prints a link and a code and opens your browser. Sign in to Fortrip,
 Find a quiet hotel in Kyoto for two adults, two nights next month, with free cancellation.
 ```
 
+You can ask it to find and compare hotels, check live prices and terms, book a stay, look up your bookings and cancel one under its terms.
+
 ## What to expect [#what-to-expect]
 
-- **What you can ask.** Find and compare hotels, check live prices and terms, book a stay, look up your bookings and cancel one under its terms. Flights, activities and changes to a booking aren't supported.
-- **What the agent asks you.** For each room, at least one guest's name as it is on their passport. A contact's name, email and phone. The hotel gets these to make the booking, and the confirmation goes to the contact's email.
-- **What you see before paying.** The total and its currency, the hotel, room and dates, the meals, the cancellation terms and any fees you pay at the hotel. The agent asks you to confirm and waits for your yes.
+- **The agent asks you** for at least one guest's name per room, as on their passport, and a contact's name, email and phone. The hotel gets these to make the booking, and the confirmation goes to the contact's email.
+- **Before you pay, you see** the total and its currency, the hotel, room and dates, the meals, the cancellation terms and any fees you pay at the hotel. The agent waits for your yes.
 
-## Paying, and what's protected [#paying]
+## Paying [#paying]
 
-- Nothing is charged until you pay.
-- You pay through Fortrip's payment page, which shows the ways to pay for the order's currency; a CNY price is paid through payment channels in mainland China. The agent never sees your card.
-- On a USD price, a card is held until the hotel confirms, then charged. Alipay and WeChat Pay are charged when you pay, as is every CNY payment. If the hotel can't confirm, the hold is released, or the payment is refunded in full.
+- Nothing is charged until you pay. You pay on Fortrip's payment page: the agent never sees your card.
+- Prices are in the currency you ask for, USD (the default) or CNY, and you pay in it. A CNY price is paid through payment channels in mainland China. On a USD price, the page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
+- On a USD price, a card is held until the hotel confirms, then charged. Alipay, WeChat Pay and every CNY payment are charged when you pay. If the hotel can't confirm, the hold is released or the payment refunded in full.
 - The payment link is for you alone: anyone who has it can pay, so don't share it.
-- Prices are in the currency you ask for, USD (the default) or CNY, and you pay in it. On a USD order, the payment page may offer to charge your card in its own currency at Stripe's rate, and Alipay and WeChat Pay show the total in yuan.
 
 Questions about a booking, or a payment that didn't go through? See [Help and support](/faq#support).
-
-## Try it by hand [#by-hand]
-
-The same steps with the CLI. Each answer is compact text with the ids the next command takes; add `--json` for the full response.
-
-```sh
-npx fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
-npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
-npx fortrip orders create --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
-npx fortrip orders get ord_…
-```
-
-`--room 2` is one room for two adults; `--guest 1:First:Last` is a guest in room 1, named as on the passport.
-
-`orders create` creates an unpaid order, and `orders get` prints its payment link. Open the link to pay; nothing is charged before you do.
-
-Each command's usage and options are in the [CLI reference](/cli).

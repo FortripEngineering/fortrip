@@ -30,26 +30,16 @@ Every failure answers the same envelope:
 ### On each surface [#surfaces]
 
 - **HTTP API:** the envelope is the response body, with the code's HTTP status.
-- **MCP:** the result has `isError: true` and one text block, which gives the code, what happened and the next call to make. `_meta["ai.fortrip/error"]` carries the envelope. See [MCP errors](/mcp#errors).
+- **MCP:** the result has `isError: true` and one text block; `_meta["ai.fortrip/error"]` carries the envelope. See [MCP errors](/mcp#errors).
 - **CLI:** the error goes to stderr, as text or, with `--json`, as the envelope, and the command exits with a code below.
 
 ## Error codes [#codes]
 
 <ErrorCodes />
 
-### Acting on a refusal [#refusals]
-
-Three codes answer with what to do instead of only what went wrong:
-
-- `offer_changed` carries the new offer. Show the user every change, and order `details.offer.offerId` if they agree.
-- `order_not_cancellable` carries the order's `cancel` as it is now. Its `action` is the mode that applies (`cancel` or `close`), or its `blockedBy` says why neither does. See [Cancel or close](/payments#cancel).
-- `payment_total_mismatch` carries the order's `total`. The order hasn't changed: confirm that total with the user and pay again with the same token.
-
 ## CLI exit codes [#exit-codes]
 
 <ExitCodes />
-
-A CLI that is a major version behind the service is answered `client_outdated` on every command, before it asks the user to sign in. The message gives the command that updates it, and the CLI exits with a code of its own, the last row above, so an agent can tell "update the CLI" from a failed request. `fortrip logout` still forgets the sign-in on this machine.
 
 ## Rate limits [#rate-limits]
 
@@ -63,18 +53,13 @@ Per account and per minute, shared by the HTTP API, the MCP tools and the CLI. O
 
 ### The offers budget [#offers-budget]
 
-One offers call answers a bounded number of offers, however many hotels it prices, so that a result stays small enough for a model to read. The rule is the same on the HTTP API, the MCP tool and the CLI.
+One offers call answers a bounded number of offers, however many hotels it prices:
 
-- **Without `limitPerHotel`:** each hotel that has offers gets up to <Fact path="LIMITS.offersPerHotelDefault" />, while the call stays within <Fact path="LIMITS.offersPerCallDefault" /> offers in all. That holds for up to three hotels. With more hotels, the <Fact path="LIMITS.offersPerCallDefault" /> are split evenly among those that have offers: nine each for five hotels, three each for <Fact path="LIMITS.offersHotels" />.
-- **With `limitPerHotel`:** each hotel gets up to that many, from 1 to <Fact path="LIMITS.offersPerHotelMax" />, while the call stays within <Fact path="LIMITS.offersPerCallMax" /> offers in all. Past that, the <Fact path="LIMITS.offersPerCallMax" /> are split evenly the same way.
-- Hotels with nothing to offer take no share.
+- **Without `limitPerHotel`:** up to <Fact path="LIMITS.offersPerHotelDefault" /> per hotel and <Fact path="LIMITS.offersPerCallDefault" /> in all.
+- **With `limitPerHotel`:** up to that many per hotel, from 1 to <Fact path="LIMITS.offersPerHotelMax" />, and <Fact path="LIMITS.offersPerCallMax" /> in all.
 
-The offers a hotel keeps are a spread of choices: the cheapest, the cheapest free to cancel, the cheapest with breakfast, and other rooms, listed cheapest first.
+Every hotel that has offers gets the same cap: the per-hotel limit, or an even share of the call's total when that is smaller. Each hotel keeps a spread of choices: the cheapest, the cheapest free to cancel, the cheapest with breakfast, and other rooms, listed cheapest first.
 
-To see more:
-
-- Each hotel's `omitted.byCallLimit` counts the offers a call for that hotel alone would add, and `omitted.byLimit` those a higher `limitPerHotel` or a filter may show. The text of a result says the same per hotel.
-- Call again with fewer hotels, or with one hotel and `limitPerHotel` up to <Fact path="LIMITS.offersPerHotelMax" />.
-- Narrow the offers with `filters.requireBreakfast` or `filters.requireFreeCancellation`.
+To see more, call again with fewer hotels, or with one hotel and a higher `limitPerHotel`, or narrow the offers with `filters.requireBreakfast` or `filters.requireFreeCancellation`. Each hotel's `omitted` counts what the call left out.
 
 An offer that isn't shown still exists: don't tell the user a room or a rate is unavailable because a call didn't list it.

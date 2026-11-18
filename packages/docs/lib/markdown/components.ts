@@ -281,7 +281,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   ],
 
   /** What to do after each code a retry can help, from `RETRY_WAYS`: the
-   *  one statement of it, on the API and MCP pages. */
+   *  one statement of it, on the API page. */
   RetryCodes: () => {
     const codes = (names: readonly string[]) => codeList(names);
     const after = [code("retryAfterSeconds")];

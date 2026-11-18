@@ -50,25 +50,19 @@ describe("stale statements stay fixed", () => {
     assert.match(text, /read it over the HTTP API, where each tool has an endpoint that answers JSON for the same input, or run the CLI command with --json/);
   });
 
-  // The CLI's text changed with the contract's: a script that read names bare has to know.
-  it("/changelog: the CLI migration table says text output quotes names, and how orders cancel changed", () => {
+  // The changelog says what each release changed in today's names: an agent
+  // that reads it must not learn a tool, field or command that is gone.
+  it("/changelog: names nothing a release removed, and lists no release before 6.0", () => {
     const changelog = readFileSync(new URL("../content/docs/changelog.mdx", import.meta.url), "utf8");
-    // 6.0.0's own entry: later entries have a Package section too.
-    const entry = changelog.slice(changelog.indexOf("## 6.0.0"));
-    const cli = entry.slice(entry.indexOf("#### CLI"), entry.indexOf("### Package"));
-    assert.match(cli, /\| Text output: names, addresses, the contact and special requests printed bare \| In double quotes, as JSON strings/);
-    assert.match(cli, /\| `orders cancel <orderId>` with no flag: .* \| Refused with exit 2, nothing read or sent/);
-    assert.match(cli, /\| A local refusal lists `Field \/pointer: …` for every issue \| The flag the value was typed as/);
-    // Every rename of the final round has its row.
-    for (const now of ["`payment.tokenRequest`", "`cancellation_not_allowed`", "`cancellation_refused`", "`status` `closed`", "`localityTotal`", "`details.orderId`", "`limitPerHotel`: the request's, or `null`"]) {
-      assert.ok(changelog.slice(0, changelog.indexOf("## 5.3.0")).includes(now), now);
-    }
+    assert.deepEqual(STALE.filter((pattern) => pattern.test(changelog)).map(String), []);
+    assert.doesNotMatch(changelog, /^## [0-5]\./m);
+    assert.match(changelog, /^## Before 6\.0$/m);
   });
 
   it("/mcp: no nextStep field, the consent rule ends the text", () => {
     const text = pageText("/mcp");
     assert.doesNotMatch(text, /nextStep/);
-    assert.match(text, /The consent rule ends the text of every answer that holds a payment link\. Only the pay rule, which repeats it, can come after it; the cancel rule comes before it:/);
+    assert.match(text, /Every answer that holds a payment link has the consent rule\. Only the pay rule, which fortrip mcp alone adds, can come after it:/);
   });
 
   it("no page states the ways to pay or the pay inputs as a closed set by hand", () => {
