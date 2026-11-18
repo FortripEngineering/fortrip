@@ -26,7 +26,7 @@ export interface ErrorRow {
  *  so a code the contract gains fails the typecheck until it is described. */
 const MEANINGS: Record<ErrorCode, string> = {
   invalid_request:
-    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). A known field sent at the wrong depth is named with the path it belongs at. A guest name the hotel's booking system refuses is answered here too, before any order is made. `issues` lists each problem: `pointer`, a JSON Pointer to the field, and `message`.",
+    "The request doesn't match the input schema, or breaks a rule between fields (a price sort without a stay, say). A known field sent at the wrong depth is named with the path it belongs at. A guest name the hotel's booking system refuses is answered here too, before any order is made.",
   cursor_invalid:
     "The cursor expired, belongs to another request or user, or was never a cursor. Start again from the first page.",
   unauthenticated:
