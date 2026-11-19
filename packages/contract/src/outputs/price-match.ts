@@ -65,6 +65,7 @@ export const priceMatch = openObject({
   checkAgainAfterSeconds: z
     .number()
     .int()
+    .nonnegative()
     .optional()
     .describe("While checking: how many seconds to wait before reading the price match again."),
   step: z.string().optional().describe("While checking: the latest step of the check."),

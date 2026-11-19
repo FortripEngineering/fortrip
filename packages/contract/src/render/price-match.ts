@@ -62,7 +62,7 @@ function headLine(r: PriceMatch): Ours {
       r.claimId === undefined ? ours`Price match` : ours`Price match ${token("id", r.claimId)}`,
       label(STATE_WORDS, r.state, ours`state not recognized`),
       ours`site ${theirs(r.site)}`,
-      ours`offer ${token("id", r.offerId)}, our total ${money(r.ourTotal)}`,
+      ours`offer ${token("id", r.offerId)}, Fortrip's total ${money(r.ourTotal)}`,
     ],
     " · ",
   );
@@ -116,7 +116,7 @@ function matchLines(r: PriceMatch, surface: RenderSurface): Ours[] {
   const other =
     r.state === "partial"
       ? [
-          ours`Other site's total: ${r.otherTotal === undefined ? ours`not stated` : money(r.otherTotal)}. Fortrip's limit on a price match stopped short of it: the new offer is the lowest Fortrip can give.`,
+          ours`Other site's total: ${r.otherTotal === undefined ? ours`not stated` : money(r.otherTotal)}. Fortrip's limit on a price match stopped short of it: the new offer is the lowest this price match can give.`,
         ]
       : [];
   return [

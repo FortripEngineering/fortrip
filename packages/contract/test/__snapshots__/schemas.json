@@ -8136,7 +8136,7 @@
       "checkAgainAfterSeconds": {
         "description": "While checking: how many seconds to wait before reading the price match again.",
         "type": "integer",
-        "minimum": -9007199254740991,
+        "minimum": 0,
         "maximum": 9007199254740991
       },
       "step": {
