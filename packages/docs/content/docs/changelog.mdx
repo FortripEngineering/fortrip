@@ -16,6 +16,10 @@ Not released yet.
 - A price match is not a guarantee. Only the site the user named is checked, a price match is limited in how far it lowers a price, and the answer can be that no match is available right now. Price matches cover USD offers of one room for now.
 - Price-match requests and reads share one rate limit, listed with the others under [Errors](/errors#rate-limits).
 
+### 6.5.0-rc.0
+
+The first release candidate of 6.5.0: `request_price_match` and `get_price_match`, with the CLI commands `fortrip hotels price-match` and `fortrip hotels price-match-status`, as described above.
+
 ### Package
 
 - New tools `request_price_match` and `get_price_match`, with the inputs `requestPriceMatchInput` and `getPriceMatchInput`, the `priceMatch` response and its `PriceMatch` type, and the `price_match` rate limit.
