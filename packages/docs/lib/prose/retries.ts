@@ -47,7 +47,7 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
   },
   {
     tools: ["request_price_match"],
-    again: "Safe. The same call answers the same price match, with the same `claimId`. To follow a check, read it with `get_price_match` after `checkAgainAfterSeconds`; don't send the request again to ask how it is going.",
+    again: "Safe once a check has started: the same call answers the same price match, with the same `claimId`. The one exception is a check that ended `declined` with `reason` `unfinished` (it could not finish in time): the same call then starts a new check. To follow a check, read it with `get_price_match` after `checkAgainAfterSeconds`; don't send the request again to ask how it is going.",
   },
   {
     tools: ["cancel_order"],

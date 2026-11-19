@@ -24,7 +24,7 @@ describe("example responses", () => {
   });
 
   it("has a price match answer for each state and decline reason it shows, each valid and about the example offer", () => {
-    assert.deepEqual(Object.keys(PRICE_MATCH_RESPONSES), ["checking", "matched", "partial", "declined-not-lower", "declined-site-unreadable"]);
+    assert.deepEqual(Object.keys(PRICE_MATCH_RESPONSES), ["checking", "matched", "partial", "declined-not-lower", "declined-not-offered", "declined-site-unreadable"]);
     for (const [name, answer] of Object.entries(PRICE_MATCH_RESPONSES)) {
       const result = strictOutput(priceMatch).safeParse(answer);
       assert.ok(result.success, `${name}: ${JSON.stringify(result.error?.issues)}`);

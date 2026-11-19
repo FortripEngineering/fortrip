@@ -23,14 +23,22 @@
   "matchedOffer": {
     "offerId": "off_Ft8wP3kD6nYc1Ra5Gx9M",
     "total": {
-      "amount": "120.00",
+      "amount": "115.00",
       "currency": "USD"
     },
     "expiresAt": "2027-02-19T10:30:00Z",
     "saved": {
-      "amount": "12.40",
+      "amount": "17.40",
       "currency": "USD"
     }
+  },
+  "otherTotal": {
+    "amount": "120.00",
+    "currency": "USD"
+  },
+  "ourFeesAtProperty": {
+    "amount": "5.00",
+    "currency": "USD"
   },
   "feeAtProperty": false
 }

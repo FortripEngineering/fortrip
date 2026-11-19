@@ -87,7 +87,7 @@ The answer, abridged:
 
 ## Price match [#price-match]
 
-When the user says they saw an offer's stay cheaper on another site, send the offer's `offerId` and that site's name, with the link or the total they saw if they gave one. Fortrip then checks that one site, which can take up to ten minutes, so the answer comes at once with a `claimId` and `state: "checking"`. It is not a guarantee: only the site named is checked, and the result can be that no match is available right now.
+When the user says they saw an offer's stay cheaper on another site, send the offer's `offerId` and that site's name, with the link or the total they saw if they gave one. Fortrip then checks that one site, which can take up to ten minutes, so the answer comes at once with a `claimId` and `state: "checking"`; a request can also be declined at once, with a `reason` and no `claimId`, when no check is started. It is not a guarantee: only the site named is checked, and the result can be that no match is available right now. If Fortrip's own price for the room changed since the offer was made, the request answers [`offer_expired`](/errors#code-offer_expired): get offers again and ask for a price match on the new offer.
 
 <Example name="price-match" />
 

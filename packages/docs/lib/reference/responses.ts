@@ -9,6 +9,7 @@ import paidByToken from "./fixtures/order-paid-by-token.json" with { type: "json
 import priceMatchChecking from "./fixtures/price-match-checking.json" with { type: "json" };
 import priceMatchMatched from "./fixtures/price-match-matched.json" with { type: "json" };
 import priceMatchNotLower from "./fixtures/price-match-declined-not-lower.json" with { type: "json" };
+import priceMatchNotOffered from "./fixtures/price-match-declined-not-offered.json" with { type: "json" };
 import priceMatchPartial from "./fixtures/price-match-partial.json" with { type: "json" };
 import priceMatchUnreadable from "./fixtures/price-match-declined-unreadable.json" with { type: "json" };
 import search from "./fixtures/search-hotels.json" with { type: "json" };
@@ -58,6 +59,7 @@ export const PRICE_MATCH_RESPONSES = {
   matched: priceMatchMatched,
   partial: priceMatchPartial,
   "declined-not-lower": priceMatchNotLower,
+  "declined-not-offered": priceMatchNotOffered,
   "declined-site-unreadable": priceMatchUnreadable,
 } as const;
 
