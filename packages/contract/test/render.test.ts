@@ -2620,17 +2620,28 @@ describe("price match", () => {
     assert.ok(!renderToolResult("get_price_match", matched).includes(ORDER_NEXT_STEP));
   });
 
-  it("Fortrip's own fees at the hotel say why the new total is below the other site's, on a match or a partial match only", () => {
-    const line =
-      "The comparison counts what is paid at the hotel: this offer also has USD 20.00 due at the property, so the new total can be below the other site's total by that amount.";
+  it("Fortrip's own fees at the hotel: on a match, why the new total is below the other site's; on a partial match, only that they are due", () => {
+    const counts = "The comparison counts what is paid at the hotel: ";
     const lines = (d: Record<string, any>) => renderToolResult("get_price_match", d).split("\n");
-    assert.ok(lines(data("price-match-matched")).includes(line));
-    const partial = data("price-match-partial");
-    assert.ok(!lines(partial).some((l) => l.startsWith("The comparison counts")));
-    partial.ourFeesAtProperty = { amount: "20.00", currency: "USD" };
-    assert.ok(lines(partial).includes(line));
-    const declined = { ...data("price-match-declined-not-lower"), ourFeesAtProperty: { amount: "20.00", currency: "USD" } };
-    assert.ok(!lines(declined).some((l) => l.startsWith("The comparison counts")));
+    const feesLine = (d: Record<string, any>) => lines(d).filter((l) => l.startsWith(counts));
+    assert.deepEqual(feesLine(data("price-match-matched")), [
+      `${counts}this offer also has USD 20.00 due at the property, so the new total can be below the other site's total by that amount.`,
+    ]);
+    assert.deepEqual(feesLine(data("price-match-partial")), [`${counts}this offer also has USD 15.00 due at the property.`]);
+    // None when absent, zero, or on a decline.
+    for (const d of [
+      { ...data("price-match-matched"), ourFeesAtProperty: undefined },
+      { ...data("price-match-matched"), ourFeesAtProperty: { amount: "0.00", currency: "USD" } },
+      { ...data("price-match-partial"), ourFeesAtProperty: { amount: "0", currency: "USD" } },
+      { ...data("price-match-declined-not-lower"), ourFeesAtProperty: { amount: "20.00", currency: "USD" } },
+    ]) {
+      assert.deepEqual(feesLine(d), [], JSON.stringify(d.ourFeesAtProperty));
+    }
+  });
+
+  it("a fee at the property left out of the comparison is said", () => {
+    const lines = renderToolResult("get_price_match", { ...data("price-match-partial"), feeAtProperty: true }).split("\n");
+    assert.ok(lines.includes("A fee payable at the property is left out of this comparison."));
   });
 
   it("a partial match without the other site's total says it is not stated", () => {
@@ -2657,7 +2668,7 @@ describe("price match", () => {
     assert.equal(why("unsupported"), "Why: price match is not available for this offer: for now it covers USD offers of one room, and not a price already matched.");
     assert.equal(why("daily_limit"), "Why: no more checks for now; try again later.");
     assert.equal(why("monthly_limit"), "Why: price match is not available for now.");
-    assert.equal(why("unfinished"), "Why: the check could not finish in time.");
+    assert.equal(why("unfinished"), "Why: the check could not finish in time; the same request again starts a new check.");
     assert.equal(why("unavailable"), "Why: price match is not available right now.");
     assert.equal(why("too_far"), "Why: too_far");
     assert.equal(why("Too Far!"), "Why: a reason not recognized.");

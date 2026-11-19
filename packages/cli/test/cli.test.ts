@@ -409,6 +409,21 @@ describe("requests", () => {
     assert.match(missing.stderr, /^Error not_found/);
   });
 
+  it("words a not_found for the price-match command that got it", async () => {
+    reply = {
+      status: 404,
+      body: { error: { code: "not_found", message: "No such price match.", retryable: false, requestId: "req_1" } },
+    };
+    const claim = await cli(["hotels", "price-match-status", `clm_${"e5".repeat(10)}`]);
+    assert.equal(claim.code, 1);
+    assert.match(claim.stderr, /^Error not_found: no such price match for this user\.$/m);
+    const offer = await cli(["hotels", "price-match", OFFER, "--site", "A site"]);
+    assert.equal(offer.code, 1);
+    assert.match(offer.stderr, /^Error not_found: no such offer\.$/m);
+    const order = await cli(["orders", "get", ORDER]);
+    assert.match(order.stderr, /^Error not_found: no such hotel, or no such order for this user\.$/m);
+  });
+
   it("hotels search posts the contract's body", async () => {
     await cli(SEARCH);
     assert.equal(requests[0]?.url, API.hotelSearch);

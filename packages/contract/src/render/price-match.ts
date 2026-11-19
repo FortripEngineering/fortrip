@@ -33,7 +33,7 @@ const REASON_WORDS: Record<string, string> = {
   unsupported: "price match is not available for this offer: for now it covers USD offers of one room, and not a price already matched.",
   daily_limit: "no more checks for now; try again later.",
   monthly_limit: "price match is not available for now.",
-  unfinished: "the check could not finish in time.",
+  unfinished: "the check could not finish in time; the same request again starts a new check.",
   unavailable: "price match is not available right now.",
 };
 
@@ -91,14 +91,19 @@ const noteLine = (r: PriceMatch): Ours[] =>
 /** The lines every state but checking ends its data with. */
 const aboutLines = (r: PriceMatch): Ours[] => [...progressLine(r), ...noteLine(r)];
 
-/** Fortrip's own fees at the hotel, counted in the comparison: why the new
- *  total can be below the other site's. */
-const ourFeesLine = (r: PriceMatch): Ours[] =>
-  r.ourFeesAtProperty === undefined
-    ? []
-    : [
-        ours`The comparison counts what is paid at the hotel: this offer also has ${money(r.ourFeesAtProperty)} due at the property, so the new total can be below the other site's total by that amount.`,
-      ];
+/** Fortrip's own fees at the hotel, counted in the comparison; none when
+ *  absent or zero. On a match, they are why the new total is below the
+ *  other site's; a partial match is above it, so it says only that. */
+function ourFeesLine(r: PriceMatch): Ours[] {
+  const fees = r.ourFeesAtProperty;
+  if (fees === undefined || /^0+(?:\.0+)?$/.test(fees.amount)) return [];
+  const due = ours`The comparison counts what is paid at the hotel: this offer also has ${money(fees)} due at the property`;
+  return [
+    r.state === "matched"
+      ? ours`${due}, so the new total can be below the other site's total by that amount.`
+      : ours`${due}.`,
+  ];
+}
 
 const feeLine = (r: PriceMatch): Ours[] =>
   r.feeAtProperty === true ? [ours`A fee payable at the property is left out of this comparison.`] : [];

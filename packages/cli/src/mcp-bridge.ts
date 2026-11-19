@@ -1,6 +1,6 @@
 import type { Readable, Writable } from "node:stream";
 
-import { CONTRACT_VERSION, META_KEYS, renderError, renderGuide, SERVER_INFO, TOOLS } from "@fortrip/agent-contract";
+import { CONTRACT_VERSION, META_KEYS, renderError, renderGuide, SERVER_INFO, type ToolName, TOOLS } from "@fortrip/agent-contract";
 import {
   type FetchLike,
   isJSONRPCErrorResponse,
@@ -212,7 +212,7 @@ function rpcErrorOf(error: unknown): RpcError {
  * here (`LOGIN_COMMAND`, the sign-in link), in the same block. Any other
  * failure has no envelope: undefined.
  */
-function toolErrorOf(error: unknown) {
+function toolErrorOf(error: unknown, tool?: ToolName) {
   let envelope: unknown;
   let text: string | undefined;
   if (error instanceof SignInRequired) {
@@ -224,7 +224,7 @@ function toolErrorOf(error: unknown) {
         requestId: localRequestId(),
       },
     };
-    text = `${renderError(envelope, undefined, "cli")}\n${error.advice}`;
+    text = `${renderError(envelope, undefined, "cli", { tool })}\n${error.advice}`;
   } else if (error instanceof SdkHttpError) {
     envelope = bodyOf(error);
   } else if (error instanceof CliError) {
@@ -233,14 +233,21 @@ function toolErrorOf(error: unknown) {
   if (!isEnvelope(envelope)) return undefined;
   return {
     isError: true,
-    content: [{ type: "text", text: text ?? renderError(envelope) }],
+    content: [{ type: "text", text: text ?? renderError(envelope, undefined, "mcp", { tool }) }],
     _meta: { [META_KEYS.error]: envelope },
   };
 }
 
-/** The answer to a request of the client's that failed with `error`. */
-function failureAnswer(id: RequestId, method: string, error: unknown): JSONRPCMessage {
-  const result = method === "tools/call" ? toolErrorOf(error) : undefined;
+/** The tool a `tools/call` request calls, when it names one of ours. */
+function toolOf(request: JSONRPCRequest): ToolName | undefined {
+  const name = (request.params as { name?: unknown } | undefined)?.name;
+  return request.method === "tools/call" ? TOOLS.find((t) => t.name === name)?.name : undefined;
+}
+
+/** The answer to a request of the client's that failed with `error`;
+ *  `tool`, the tool a `tools/call` called, words its error. */
+function failureAnswer(id: RequestId, method: string, error: unknown, tool?: ToolName): JSONRPCMessage {
+  const result = method === "tools/call" ? toolErrorOf(error, tool) : undefined;
   return result ? { jsonrpc: "2.0", id, result } : { jsonrpc: "2.0", id, error: rpcErrorOf(error) };
 }
 
@@ -373,7 +380,7 @@ export async function runMcpBridge(
   let received = 0;
   let abandonedThrough = 0;
   /** Requests sent on that the server hasn't answered, with their method. */
-  const pending = new Map<RequestId, string>();
+  const pending = new Map<RequestId, { method: string; tool?: ToolName }>();
   let initializeId: RequestId | undefined;
   /** Requests whose answer the bridge waits for itself (`ask`). */
   const asked = new Map<RequestId, (answer: JSONRPCResponse) => void>();
@@ -385,10 +392,10 @@ export async function runMcpBridge(
     stdio.send(message).catch((cause: Error) => log(cause.message));
   };
   const fail = (id: RequestId, error: unknown) => {
-    const method = pending.get(id);
-    if (closed || method === undefined) return;
+    const request = pending.get(id);
+    if (closed || request === undefined) return;
     pending.delete(id);
-    toClient(failureAnswer(id, method, error));
+    toClient(failureAnswer(id, request.method, error, request.tool));
   };
   // What a Client does once it is initialized: later requests name the
   // protocol version they agreed on.
@@ -404,7 +411,7 @@ export async function runMcpBridge(
       await http.send(message).catch(() => {});
       return;
     }
-    pending.set(message.id, message.method);
+    pending.set(message.id, { method: message.method, tool: toolOf(message) });
     if (message.method === "initialize") initializeId = message.id;
     try {
       await http.send(message, { onRequestStreamEnd: () => fail(message.id, CONNECTION_LOST) });
@@ -506,7 +513,7 @@ export async function runMcpBridge(
   const callTool = async (call: JSONRPCRequest) => {
     if (clientInitialize) {
       const failed = await handshake(clientInitialize);
-      if (failed) return toClient(failureAnswer(call.id, call.method, failed.error));
+      if (failed) return toClient(failureAnswer(call.id, call.method, failed.error, toolOf(call)));
     }
     remote = true;
     void forward(call);
