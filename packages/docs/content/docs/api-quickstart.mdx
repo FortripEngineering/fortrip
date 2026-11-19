@@ -84,3 +84,23 @@ The order's `cancel.action` says which request applies: `cancel`, sent with `max
 The answer, abridged:
 
 <ResponseExample name="cancel" />
+
+## Price match [#price-match]
+
+When the user says they saw an offer's stay cheaper on another site, send the offer's `offerId` and that site's name, with the link or the total they saw if they gave one. Fortrip then checks that one site, which can take up to ten minutes, so the answer comes at once with a `claimId` and `state: "checking"`. It is not a guarantee: only the site named is checked, and the result can be that no match is available right now.
+
+<Example name="price-match" />
+
+The answer, abridged:
+
+<ResponseExample name="price-match" />
+
+Read the price match again after `checkAgainAfterSeconds` until its `state` is not `checking`. Say nothing to the user about a lower price before then.
+
+<Example name="get-price-match" />
+
+The answer once the check is over and the price is matched, abridged. A `partial` answer carries a new offer too, at a price below the offer's but short of the other site's; a `declined` answer carries a `reason` and no new offer.
+
+<ResponseExample name="get-price-match" />
+
+Order the `matchedOffer.offerId` with [Create order](#order) as any offer, before `matchedOffer.expiresAt`.

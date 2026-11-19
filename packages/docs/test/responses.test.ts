@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { ERROR_CODES, type ErrorCode, errorEnvelope, LIMITS, order, strictOutput } from "@fortrip/agent-contract";
+import { ERROR_CODES, type ErrorCode, errorEnvelope, LIMITS, order, priceMatch, strictOutput } from "@fortrip/agent-contract";
 
 import { OPERATIONS } from "../lib/openapi/build.ts";
-import { abridge, ERRORS, EXAMPLE_IDS, PAY_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
+import { abridge, ERRORS, EXAMPLE_IDS, PAY_RESPONSES, PRICE_MATCH_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
 
 const body = (name: string) =>
   JSON.parse(readFileSync(new URL(`../examples/bodies/${name}.json`, import.meta.url), "utf8"));
@@ -23,6 +23,25 @@ describe("example responses", () => {
     }
   });
 
+  it("has a price match answer for each state and decline reason it shows, each valid and about the example offer", () => {
+    assert.deepEqual(Object.keys(PRICE_MATCH_RESPONSES), ["checking", "matched", "partial", "declined-not-lower", "declined-site-unreadable"]);
+    for (const [name, answer] of Object.entries(PRICE_MATCH_RESPONSES)) {
+      const result = strictOutput(priceMatch).safeParse(answer);
+      assert.ok(result.success, `${name}: ${JSON.stringify(result.error?.issues)}`);
+      assert.equal(answer.offerId, EXAMPLE_IDS.offerId, name);
+      assert.equal(answer.claimId, EXAMPLE_IDS.claimId, name);
+      assert.deepEqual(answer.ourTotal, RESPONSES.get_hotel_offers.hotels[0]?.offers[0]?.total, name);
+    }
+    assert.equal(RESPONSES.request_price_match, PRICE_MATCH_RESPONSES.checking);
+    assert.equal(RESPONSES.get_price_match, PRICE_MATCH_RESPONSES.matched);
+    // A matched or partial answer's new offer is cheaper than the offer, and by exactly what it says it saves.
+    for (const answer of [PRICE_MATCH_RESPONSES.matched, PRICE_MATCH_RESPONSES.partial]) {
+      const cents = (money: { amount: string }) => Math.round(Number(money.amount) * 100);
+      assert.equal(cents(answer.ourTotal) - cents(answer.matchedOffer.total), cents(answer.matchedOffer.saved));
+      assert.notEqual(answer.matchedOffer.offerId, EXAMPLE_IDS.offerId);
+    }
+  });
+
   it("has valid error envelopes, at a status their code is answered with", () => {
     for (const [code, { status, envelope }] of Object.entries(ERRORS)) {
       const result = strictOutput(errorEnvelope).safeParse(envelope);
@@ -37,7 +56,7 @@ describe("example responses", () => {
 
   it("every fixture file is used", () => {
     const files = readdirSync(new URL("../lib/reference/fixtures/", import.meta.url)).length;
-    const used = new Set([...Object.values(RESPONSES), ...Object.values(PAY_RESPONSES), ...Object.values(ERRORS).map((e) => e.envelope)]);
+    const used = new Set([...Object.values(RESPONSES), ...Object.values(PAY_RESPONSES), ...Object.values(PRICE_MATCH_RESPONSES), ...Object.values(ERRORS).map((e) => e.envelope)]);
     // list_orders and the inline errors are built in code, not read from a file.
     assert.equal(files, used.size - 3);
   });

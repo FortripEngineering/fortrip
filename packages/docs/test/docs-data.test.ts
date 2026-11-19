@@ -105,8 +105,10 @@ test("a command's page slug and invocation come from its group and name", () => 
     "/reference/get_hotel#mcp",
     "/reference/get_hotel_offers#mcp",
     "/reference/get_order#mcp",
+    "/reference/get_price_match#mcp",
     "/reference/list_orders#mcp",
     "/reference/pay_order#mcp",
+    "/reference/request_price_match#mcp",
     "/reference/search_hotels#mcp",
   ]);
 });

@@ -5,6 +5,7 @@ import cancelBody from "../../examples/bodies/cancel.json" with { type: "json" }
 import offersBody from "../../examples/bodies/offers.json" with { type: "json" };
 import orderBody from "../../examples/bodies/order.json" with { type: "json" };
 import payTokenBody from "../../examples/bodies/pay-token.json" with { type: "json" };
+import priceMatchBody from "../../examples/bodies/price-match.json" with { type: "json" };
 import searchBody from "../../examples/bodies/search.json" with { type: "json" };
 import { EXAMPLE_IDS, type OperationId } from "./responses.ts";
 
@@ -36,6 +37,8 @@ export const EXAMPLE_REQUESTS: Record<OperationId, ExampleRequest[]> = {
   search_hotels: [{ name: "search", title: "Search hotels", body: searchBody }],
   get_hotel: [{ name: "get-hotel", title: "Hotel details", params: { hotelId: EXAMPLE_IDS.hotelId } }],
   get_hotel_offers: [{ name: "offers", title: "Live offers", body: offersBody }],
+  request_price_match: [{ name: "price-match", title: "Request price match", body: priceMatchBody }],
+  get_price_match: [{ name: "get-price-match", title: "Get price match", params: { claimId: EXAMPLE_IDS.claimId } }],
   create_order: [{ name: "order", title: "Create order", body: orderBody }],
   get_order: [{ name: "get-order", title: "Get order", params: { orderId: EXAMPLE_IDS.orderId } }],
   list_orders: [{ name: "list-orders", title: "List orders", params: { limit: 10 } }],

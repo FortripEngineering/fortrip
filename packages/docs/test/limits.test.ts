@@ -50,6 +50,7 @@ test("the rate limits are the contract's, one row per scope, per minute", () => 
       ["orders_read", 60],
       ["orders_cancel", 10],
       ["orders_pay", 10],
+      ["price_match", 60],
     ],
   );
   const operations = Object.fromEntries(
@@ -59,6 +60,7 @@ test("the rate limits are the contract's, one row per scope, per minute", () => 
   assert.deepEqual(operations.orders_create, ["create_order"]);
   assert.deepEqual(operations.orders_cancel, ["cancel_order"]);
   assert.deepEqual(operations.orders_pay, ["pay_order"]);
+  assert.deepEqual(operations.price_match, ["request_price_match", "get_price_match"]);
 });
 
 test("every HTTP tool counts against exactly one scope", () => {
@@ -72,8 +74,10 @@ test("every HTTP tool counts against exactly one scope", () => {
       "get_hotel",
       "get_hotel_offers",
       "get_order",
+      "get_price_match",
       "list_orders",
       "pay_order",
+      "request_price_match",
       "search_hotels",
     ],
   );

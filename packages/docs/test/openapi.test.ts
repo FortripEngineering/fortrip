@@ -23,7 +23,7 @@ import { buildOpenApi, OPERATIONS, tidy } from "../lib/openapi/build.ts";
 import { ENDPOINTS } from "../lib/reference/api-docs.ts";
 import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
-import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
+import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, PRICE_MATCH_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
 import { pageHtml, pageText } from "./built-page.ts";
 
 const doc = buildOpenApi();
@@ -76,8 +76,8 @@ describe("OpenAPI document", () => {
   });
 
   it("has an operation per route, named by its tool", () => {
-    assert.equal(operations.length, 10);
-    assert.equal(Object.keys(doc.paths ?? {}).length, 9);
+    assert.equal(operations.length, 12);
+    assert.equal(Object.keys(doc.paths ?? {}).length, 11);
     const ids = operations.map(([, , op]) => op.operationId).sort();
     assert.deepEqual(ids, [...Object.keys(HTTP_ROUTES), "auth_config", "me"].sort());
     for (const [name, route] of Object.entries(HTTP_ROUTES)) {
@@ -148,7 +148,7 @@ describe("OpenAPI document", () => {
   });
 
   it("writes a response schema that answers share once, under components", () => {
-    assert.deepEqual(Object.keys(doc.components?.schemas ?? {}).sort(), ["ErrorEnvelope", "Order"]);
+    assert.deepEqual(Object.keys(doc.components?.schemas ?? {}).sort(), ["ErrorEnvelope", "Order", "PriceMatch"]);
     assert.deepEqual(doc.components?.schemas?.ErrorEnvelope, tidy(standalone(errorEnvelope)));
     assert.deepEqual(doc.components?.schemas?.Order, tidy(standalone(order)));
     const orderAnswers = operations.flatMap(([, , op]) =>
@@ -249,7 +249,9 @@ describe("OpenAPI document", () => {
             ? [ERRORS[errorExampleFor(opId)].envelope]
             : opId === "pay_order"
               ? Object.values(PAY_RESPONSES)
-              : [RESPONSES[opId]];
+              : opId === "request_price_match" || opId === "get_price_match"
+                ? Object.values(PRICE_MATCH_RESPONSES)
+                : [RESPONSES[opId]];
         assert.deepEqual(values, expected, `${opId} ${status}`);
         for (const value of values) valid(media!.schema, value, `${opId} ${status}`);
       }

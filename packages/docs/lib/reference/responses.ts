@@ -6,6 +6,11 @@ import me from "./fixtures/me.json" with { type: "json" };
 import order from "./fixtures/order-awaiting-payment.json" with { type: "json" };
 import cancelling from "./fixtures/order-cancelling.json" with { type: "json" };
 import paidByToken from "./fixtures/order-paid-by-token.json" with { type: "json" };
+import priceMatchChecking from "./fixtures/price-match-checking.json" with { type: "json" };
+import priceMatchMatched from "./fixtures/price-match-matched.json" with { type: "json" };
+import priceMatchNotLower from "./fixtures/price-match-declined-not-lower.json" with { type: "json" };
+import priceMatchPartial from "./fixtures/price-match-partial.json" with { type: "json" };
+import priceMatchUnreadable from "./fixtures/price-match-declined-unreadable.json" with { type: "json" };
 import search from "./fixtures/search-hotels.json" with { type: "json" };
 
 /*
@@ -21,6 +26,7 @@ export const EXAMPLE_IDS = {
   hotelId: search.data[0]!.hotelId,
   offerId: offers.hotels[0]!.offers[0]!.offerId,
   orderId: order.orderId,
+  claimId: priceMatchChecking.claimId,
 } as const;
 
 /** The answer of each operation (by its OpenAPI id) to its example request. */
@@ -28,6 +34,8 @@ export const RESPONSES = {
   search_hotels: search,
   get_hotel: hotel,
   get_hotel_offers: offers,
+  request_price_match: priceMatchChecking,
+  get_price_match: priceMatchMatched,
   create_order: order,
   get_order: order,
   list_orders: { data: [order], nextCursor: null },
@@ -41,6 +49,17 @@ export type OperationId = keyof typeof RESPONSES;
 
 /** `pay_order`'s answer to each pay example: a token pays the order. */
 export const PAY_RESPONSES = { "pay-token": paidByToken } as const;
+
+/** The price match answers by state, as both of its operations give them: the
+ *  first is what a request answers, and each of the rest is a state a read
+ *  answers once the check is over. */
+export const PRICE_MATCH_RESPONSES = {
+  checking: priceMatchChecking,
+  matched: priceMatchMatched,
+  partial: priceMatchPartial,
+  "declined-not-lower": priceMatchNotLower,
+  "declined-site-unreadable": priceMatchUnreadable,
+} as const;
 
 /** Error envelopes, with the HTTP status each is answered with. */
 export const ERRORS = {
@@ -138,6 +157,8 @@ export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[
   },
   order: { answer: order, paths: ["orderId", "reference", "status", "total", "payment.url", "payment.expiresAt"] },
   "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
+  "price-match": { answer: priceMatchChecking, paths: ["state", "claimId", "progressUrl", "checkAgainAfterSeconds"] },
+  "get-price-match": { answer: priceMatchMatched, paths: ["state", "claimId", "matchedOffer", "seen[].total"] },
   "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
   "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },
   cancel: { answer: cancelling, paths: ["orderId", "status", "cancel"] },

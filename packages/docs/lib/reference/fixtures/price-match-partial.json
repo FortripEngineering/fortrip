@@ -1,0 +1,40 @@
+{
+  "state": "partial",
+  "offerId": "off_Bz6yN1cD5fGh8JkM2pQs",
+  "site": "TravelDeals",
+  "ourTotal": {
+    "amount": "132.40",
+    "currency": "USD"
+  },
+  "claimId": "clm_Hk5vN8cR2xTq6Wm9Lp3Z",
+  "progressUrl": "https://fortrip.ai/price-match/clm_Hk5vN8cR2xTq6Wm9Lp3Z",
+  "seen": [
+    {
+      "site": "TravelDeals",
+      "total": {
+        "amount": "100.00",
+        "currency": "USD"
+      },
+      "via": "site",
+      "room": "Deluxe King Room",
+      "terms": "Free cancellation until 2027-02-17"
+    }
+  ],
+  "matchedOffer": {
+    "offerId": "off_Ft8wP3kD6nYc1Ra5Gx9M",
+    "total": {
+      "amount": "119.16",
+      "currency": "USD"
+    },
+    "expiresAt": "2027-02-19T10:30:00Z",
+    "saved": {
+      "amount": "13.24",
+      "currency": "USD"
+    }
+  },
+  "otherTotal": {
+    "amount": "100.00",
+    "currency": "USD"
+  },
+  "feeAtProperty": false
+}
