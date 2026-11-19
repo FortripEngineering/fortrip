@@ -235,10 +235,11 @@ const SPECS: readonly WrittenSpec[] = [
     name: "request_price_match",
     title: "Request price match",
     description:
-      "Use this when the user says they saw this stay cheaper on another site. Give the offerId of the offer they are looking at and the site's name as they said it, with the link or the total they saw if they gave one. It answers at once with the price match's state, a claimId and a progress link to share with the user; Fortrip then checks that site, which can take up to ten minutes. While it is checking, call get_price_match with the claimId again after the number of seconds the answer states. Say nothing to the user about a match until the state is matched (or partial: a new price below the offer's, short of the other site's). A matched or partial answer carries a new offerId at the new price: order it with create_order as any offer, with the same consent before paying as for any order. A declined answer says why. The same call again answers the same price match.",
+      "Use this when the user says they saw this stay cheaper on another site. Give the offerId of the offer they are looking at and the site's name as they said it, with the link or the total they saw if they gave one. It answers at once: with a claimId and a progress link to share with the user while Fortrip checks that site, which can take up to ten minutes, or declined with the reason when no check is started. While it is checking, call get_price_match with the claimId again after the number of seconds the answer states. Say nothing to the user about a match until the state is matched (or partial: a new price below the offer's, short of the other site's). A matched or partial answer carries a new offerId at the new price: order it with create_order as any offer, with the same consent before paying as for any order. A declined answer says why. Once a check has started, the same call again answers the same price match, unless it ended unfinished: then it starts a new check.",
     // A write that destroys nothing: it starts a check and answers a claim,
-    // and orders, pays for and cancels nothing. Idempotent: the same call
-    // answers the same claim.
+    // and orders, pays for and cancels nothing. Idempotent: once a check has
+    // started, the same call answers the same claim; only a check that ended
+    // unfinished (out of time) is started again by the same call.
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

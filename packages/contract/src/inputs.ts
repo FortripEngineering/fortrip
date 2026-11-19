@@ -692,6 +692,15 @@ const SITE_MAX = 64;
 const LINK_MAX = 512;
 
 const linkError = `link must be an https URL of at most ${LINK_MAX} characters`;
+const siteError = `site must be text of 1 to ${SITE_MAX} characters`;
+
+/** The site's name: trimmed, and not blank. */
+const site = z
+  .string({ error: siteError })
+  .trim()
+  .min(1, { error: siteError })
+  .max(SITE_MAX, { error: siteError })
+  .refine((value) => !containsCardNumber(value), { error: CARD_NUMBER_MESSAGE, abort: true });
 
 function isHttpsUrl(value: string): boolean {
   try {
@@ -708,7 +717,7 @@ export const requestPriceMatchInput = strictInput({
   offerId: offerId.describe(
     "The offerId of the offer the user saw cheaper on another site, as an offers answer gave it.",
   ),
-  site: cardFreeText("site", 1, SITE_MAX).describe(
+  site: site.describe(
     `The other site's name as the user gave it, such as a booking site or the hotel's own website; 1 to ${SITE_MAX} characters.`,
   ),
   link: cardFreeText("link", 1, LINK_MAX)

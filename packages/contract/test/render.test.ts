@@ -65,6 +65,7 @@ const GOLDENS = [
   "price-match-matched",
   "price-match-partial",
   "price-match-declined-not-lower",
+  "price-match-declined-not-offered",
   "price-match-declined-unreadable",
   "price-match-declined-before-check",
 ] as const;
@@ -678,6 +679,37 @@ describe("other errors", () => {
     assert.equal(
       renderError({ error: { code: "client_outdated", message: "Update the CLI.", retryable: "no" } }, 426).split("\n")[0],
       'Error client_outdated (HTTP 426): "Update the CLI."',
+    );
+  });
+
+  it("words not_found and offer_expired for the price-match tool that answered them", () => {
+    const notFound = envelope({ code: "not_found", retryable: false });
+    const head = (tool?: ToolName) => renderError(notFound, 404, "mcp", { tool }).split("\n")[0];
+    assert.equal(head(), "Error not_found (HTTP 404): no such hotel, or no such order for this user.");
+    assert.equal(head("get_order"), "Error not_found (HTTP 404): no such hotel, or no such order for this user.");
+    assert.equal(head("request_price_match"), "Error not_found (HTTP 404): no such offer.");
+    assert.equal(head("get_price_match"), "Error not_found (HTTP 404): no such price match for this user.");
+
+    const expired = envelope({
+      code: "offer_expired",
+      retryable: false,
+      details: { offerId: "off_0123456789abcdefABCD", expiredAt: "2026-11-01T00:00:00Z" },
+    });
+    const forOrder = renderError(expired, 409, "mcp", { tool: "create_order" });
+    assert.ok(forOrder.startsWith("Error offer_expired (HTTP 409): the offer expired, and nothing was ordered."));
+    assert.match(forOrder, /expired at 2026-11-01 00:00 UTC: get offers again/);
+    const lines = renderError(expired, 409, "mcp", { tool: "request_price_match" }).split("\n");
+    assert.equal(
+      lines[0],
+      "Error offer_expired (HTTP 409): the offer expired, or Fortrip's own price for its room changed since the offer was made; no check was started.",
+    );
+    assert.equal(
+      lines.at(-1),
+      "Offer off_0123456789abcdefABCD can't be price-matched: get offers again, let the user choose again, then call request_price_match again with the new offer.",
+    );
+    assert.match(
+      renderError(expired, 409, "cli", { tool: "request_price_match" }),
+      /then run `fortrip hotels price-match` again with the new offer\./,
     );
   });
 
@@ -2588,6 +2620,19 @@ describe("price match", () => {
     assert.ok(!renderToolResult("get_price_match", matched).includes(ORDER_NEXT_STEP));
   });
 
+  it("Fortrip's own fees at the hotel say why the new total is below the other site's, on a match or a partial match only", () => {
+    const line =
+      "The comparison counts what is paid at the hotel: this offer also has USD 20.00 due at the property, so the new total can be below the other site's total by that amount.";
+    const lines = (d: Record<string, any>) => renderToolResult("get_price_match", d).split("\n");
+    assert.ok(lines(data("price-match-matched")).includes(line));
+    const partial = data("price-match-partial");
+    assert.ok(!lines(partial).some((l) => l.startsWith("The comparison counts")));
+    partial.ourFeesAtProperty = { amount: "20.00", currency: "USD" };
+    assert.ok(lines(partial).includes(line));
+    const declined = { ...data("price-match-declined-not-lower"), ourFeesAtProperty: { amount: "20.00", currency: "USD" } };
+    assert.ok(!lines(declined).some((l) => l.startsWith("The comparison counts")));
+  });
+
   it("a partial match without the other site's total says it is not stated", () => {
     const partial = data("price-match-partial");
     delete partial.otherTotal;
@@ -2606,11 +2651,12 @@ describe("price match", () => {
     const declined = data("price-match-declined-unreadable");
     const why = (reason: string) => renderToolResult("get_price_match", { ...declined, reason }).split("\n").find((l) => l.startsWith("Why: "));
     assert.equal(why("not_lower"), "Why: the site was not lower than Fortrip's price.");
-    assert.equal(why("site_unreadable"), "Why: Fortrip could not open that site, so it could not check it.");
+    assert.equal(why("not_offered"), "Why: that site does not sell this room for these dates, so there is no price to match.");
+    assert.equal(why("site_unreadable"), "Why: Fortrip could not see this stay's price on that site, so it could not check it.");
     assert.equal(why("site_not_credible"), "Why: Fortrip only matches well-known booking sites and the hotel's own site.");
-    assert.equal(why("unsupported"), "Why: price match covers USD offers of one room for now.");
+    assert.equal(why("unsupported"), "Why: price match is not available for this offer: for now it covers USD offers of one room, and not a price already matched.");
     assert.equal(why("daily_limit"), "Why: no more checks for now; try again later.");
-    assert.equal(why("monthly_limit"), "Why: no more checks for now; try again later.");
+    assert.equal(why("monthly_limit"), "Why: price match is not available for now.");
     assert.equal(why("unfinished"), "Why: the check could not finish in time.");
     assert.equal(why("unavailable"), "Why: price match is not available right now.");
     assert.equal(why("too_far"), "Why: too_far");

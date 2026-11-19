@@ -988,8 +988,10 @@ describe("hotels price-match", () => {
       { pointer: "/link", message: "--link: link must be an https URL of at most 512 characters" },
     ]);
     assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-total", "3,20"])), [
-      { pointer: "/seenTotal/amount", message: "--seen-total: amount must be a decimal string such as 132.40" },
+      { pointer: "/seenTotal/amount", message: "--seen-total: amount must be a decimal string such as 132.40, of at most 16 characters" },
     ]);
+    assert.equal(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-total", "1".repeat(17)]))[0]?.pointer, "/seenTotal/amount");
+    assert.equal(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "   "]))[0]?.pointer, "/site");
     // A currency alone is not a total seen.
     assert.equal(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-currency", "EUR"]))[0]?.pointer, "/seenTotal/amount");
   });

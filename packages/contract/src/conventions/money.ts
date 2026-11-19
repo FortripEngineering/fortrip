@@ -57,6 +57,9 @@ export function requestMoney(
   );
 }
 
+const STATED_AMOUNT_MAX = 16;
+const statedAmountError = `amount must be a decimal string such as 132.40, of at most ${STATED_AMOUNT_MAX} characters`;
+
 /**
  * A Money a caller states from elsewhere, such as a price the user saw on
  * another site: no unknown fields, in any currency, its code upper case.
@@ -66,9 +69,10 @@ export function statedMoney(name: string): z.ZodType<Money, Money> {
   return z.strictObject(
     {
       amount: z
-        .string({ error: amountError })
-        .regex(/^\d+(\.\d+)?$/, { error: amountError })
-        .describe("Decimal string such as 132.40, never a number."),
+        .string({ error: statedAmountError })
+        .max(STATED_AMOUNT_MAX, { error: statedAmountError })
+        .regex(/^\d+(\.\d+)?$/, { error: statedAmountError })
+        .describe(`Decimal string such as 132.40, never a number; at most ${STATED_AMOUNT_MAX} characters.`),
       currency: z
         .string({ error: currencyError })
         .regex(/^[A-Z]{3}$/, { error: currencyError })

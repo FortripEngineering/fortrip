@@ -7,9 +7,10 @@ import { instant } from "../conventions/time.ts";
 
 /* A price match: what `request_price_match` and `get_price_match` answer. */
 
-/** `checking`: the other site is being checked. `matched`: a new offer at
- *  the other site's total. `partial`: a new offer below ours that stops
- *  short of the other site's total. `declined`: no new offer, and why. */
+/** `checking`: the other site is being checked. `matched`: a new offer
+ *  whose total, with Fortrip's own fees paid at the hotel, is the other
+ *  site's total. `partial`: a new offer below ours that stops short of the
+ *  other site's total. `declined`: no new offer, and why. */
 export const PRICE_MATCH_STATES = ["checking", "matched", "partial", "declined"] as const;
 
 export type PriceMatchState = (typeof PRICE_MATCH_STATES)[number];
@@ -17,6 +18,7 @@ export type PriceMatchState = (typeof PRICE_MATCH_STATES)[number];
 /** Why a price match gave no new offer. */
 export const PRICE_MATCH_REASONS = [
   "not_lower",
+  "not_offered",
   "site_unreadable",
   "site_not_credible",
   "unsupported",
@@ -53,7 +55,7 @@ export const matchedOffer = openObject({
 
 export const priceMatch = openObject({
   state: openEnum(PRICE_MATCH_STATES).describe(
-    "checking: the other site is being checked. matched: a new offer at the other site's total. partial: a new offer below the original, short of the other site's total. declined: no new offer; reason says why.",
+    "checking: the other site is being checked. matched: a new offer whose total, with ourFeesAtProperty when present, is the other site's total. partial: a new offer below the original, short of the other site's total. declined: no new offer; reason says why.",
   ),
   offerId: offerId.describe("The offer the price match is about."),
   site: z.string().describe("The other site, as the request named it."),
@@ -75,11 +77,18 @@ export const priceMatch = openObject({
     .optional()
     .describe("The prices the check saw on the other site; null or absent when none is on record."),
   matchedOffer: matchedOffer.optional().describe("When matched or partial: the new offer."),
-  otherTotal: money.optional().describe("When partial: what the other site charges."),
+  otherTotal: money
+    .optional()
+    .describe("When matched or partial: what the other site charges for the stay, with its taxes and fees."),
+  ourFeesAtProperty: money
+    .optional()
+    .describe(
+      "Fortrip's own fees for this stay paid at the hotel, known and counted in the comparison; absent when there are none or they are not known.",
+    ),
   reason: openEnum(PRICE_MATCH_REASONS)
     .optional()
     .describe(
-      "When declined: not_lower, the site was not lower. site_unreadable: the site could not be read. site_not_credible: not a site price match covers. unsupported: an offer price match does not cover. daily_limit, monthly_limit: no more checks for now. unfinished: the check could not finish in time. unavailable: price match is not available now.",
+      "When declined: not_lower, the site was not lower. not_offered: the site does not sell this room for these dates. site_unreadable: this stay's price could not be seen on the site. site_not_credible: not a site price match covers. unsupported: an offer price match does not cover. daily_limit: no more checks for now. monthly_limit: price match is not available for now. unfinished: the check could not finish in time; the same request again starts a new check. unavailable: price match is not available now.",
     ),
   note: z.string().optional().describe("One sentence about the check."),
   feeAtProperty: z

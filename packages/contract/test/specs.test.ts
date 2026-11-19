@@ -430,8 +430,9 @@ describe("TOOLS", () => {
     });
   });
 
-  // It starts a check of another site and answers a claim; the same call
-  // again answers the same claim. Nothing is ordered, paid or cancelled.
+  // It starts a check of another site and answers a claim; once a check has
+  // started, the same call again answers the same claim, unless it ended
+  // unfinished. Nothing is ordered, paid or cancelled.
   it("request_price_match's hints are a write that destroys nothing, idempotent, open world; get_price_match reads Fortrip's own records", () => {
     assert.deepEqual(tool("request_price_match").annotations, {
       title: "Request price match",
@@ -464,6 +465,8 @@ describe("TOOLS", () => {
     assert.match(description, /Say nothing to the user about a match until the state is matched/);
     assert.match(description, /create_order/);
     assert.match(description, /consent/);
+    assert.match(description, /or declined with the reason when no check is started/);
+    assert.match(description, /Once a check has started, the same call again answers the same price match, unless it ended unfinished: then it starts a new check\./);
     assert.ok(description.length <= 1024, String(description.length));
   });
 
@@ -484,6 +487,13 @@ describe("TOOLS", () => {
     assert.ok(ok({ offerId, site: "A booking site" }));
     assert.ok(ok({ offerId, site: "x".repeat(64), link: `https://example.com/${"a".repeat(512 - 20)}`, seenTotal: { amount: "320.00", currency: "EUR" }, locale: "zh" }));
     assert.ok(!ok({ offerId, site: "" }));
+    assert.ok(!ok({ offerId, site: "   " }));
+    assert.ok(!ok({ offerId, site: "\t\n" }));
+    assert.equal(requestPriceMatchInput.parse({ offerId, site: "  A booking site " }).site, "A booking site");
+    assert.ok(ok({ offerId, site: ` ${"x".repeat(64)} ` }));
+    assert.ok(ok({ offerId, site: "A site", seenTotal: { amount: "1234567890123.50", currency: "EUR" } }));
+    assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "12345678901234.50", currency: "EUR" } }));
+    assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "320.00", currency: "EURO" } }));
     assert.ok(!ok({ offerId, site: "x".repeat(65) }));
     assert.ok(!ok({ offerId, site: "A site", link: "http://example.com/hotel" }));
     assert.ok(!ok({ offerId, site: "A site", link: "not a link" }));

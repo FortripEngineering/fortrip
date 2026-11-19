@@ -1212,6 +1212,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Look again /,
     /^New offer: /,
     /^Other site's total: /,
+    /^The comparison counts what is paid at the hotel: /,
     /^Seen on /,
     /^Every other term of the new offer is as in offer /,
     /^A fee payable at the property is left out of this comparison\.$/,

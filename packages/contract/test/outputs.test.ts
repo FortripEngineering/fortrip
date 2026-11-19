@@ -890,7 +890,7 @@ const PUBLIC_KEYS = new Set([
   // A search note's details.
   "places",
   // A price match in 6.5.
-  "checkAgainAfterSeconds", "claimId", "feeAtProperty", "matchedOffer", "note", "otherTotal", "ourTotal",
+  "checkAgainAfterSeconds", "claimId", "feeAtProperty", "matchedOffer", "note", "otherTotal", "ourFeesAtProperty", "ourTotal",
   "progressUrl", "room", "saved", "seen", "site", "state", "step", "terms", "via",
 ]);
 

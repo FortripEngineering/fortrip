@@ -27,11 +27,12 @@ const VIA_WORDS: Record<string, string> = {
 /** Why there is no new offer, one sentence each. */
 const REASON_WORDS: Record<string, string> = {
   not_lower: "the site was not lower than Fortrip's price.",
-  site_unreadable: "Fortrip could not open that site, so it could not check it.",
+  not_offered: "that site does not sell this room for these dates, so there is no price to match.",
+  site_unreadable: "Fortrip could not see this stay's price on that site, so it could not check it.",
   site_not_credible: "Fortrip only matches well-known booking sites and the hotel's own site.",
-  unsupported: "price match covers USD offers of one room for now.",
+  unsupported: "price match is not available for this offer: for now it covers USD offers of one room, and not a price already matched.",
   daily_limit: "no more checks for now; try again later.",
-  monthly_limit: "no more checks for now; try again later.",
+  monthly_limit: "price match is not available for now.",
   unfinished: "the check could not finish in time.",
   unavailable: "price match is not available right now.",
 };
@@ -90,6 +91,15 @@ const noteLine = (r: PriceMatch): Ours[] =>
 /** The lines every state but checking ends its data with. */
 const aboutLines = (r: PriceMatch): Ours[] => [...progressLine(r), ...noteLine(r)];
 
+/** Fortrip's own fees at the hotel, counted in the comparison: why the new
+ *  total can be below the other site's. */
+const ourFeesLine = (r: PriceMatch): Ours[] =>
+  r.ourFeesAtProperty === undefined
+    ? []
+    : [
+        ours`The comparison counts what is paid at the hotel: this offer also has ${money(r.ourFeesAtProperty)} due at the property, so the new total can be below the other site's total by that amount.`,
+      ];
+
 const feeLine = (r: PriceMatch): Ours[] =>
   r.feeAtProperty === true ? [ours`A fee payable at the property is left out of this comparison.`] : [];
 
@@ -122,6 +132,7 @@ function matchLines(r: PriceMatch, surface: RenderSurface): Ours[] {
   return [
     ours`New offer: ${token("id", m.offerId)} · total ${money(m.total)} · saves ${money(m.saved)} · expires ${when(m.expiresAt, null)}`,
     ...other,
+    ...ourFeesLine(r),
     ...seenLines(r),
     ours`Every other term of the new offer is as in offer ${token("id", r.offerId)}: the room, meals, cancellation and fees payable at the property.`,
     ...feeLine(r),
