@@ -95,7 +95,7 @@ The answer, abridged:
 
 <ResponseExample name="price-match" />
 
-Read the price match again after `checkAgainAfterSeconds` until its `state` is not `checking`. Say nothing to the user about a lower price before then.
+Read the price match again after `checkAgainAfterSeconds` for as long as its `state` is `checking`. Say nothing to the user about a match or a lower price until the state is `matched` or `partial`.
 
 <Example name="get-price-match" />
 
