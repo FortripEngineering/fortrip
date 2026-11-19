@@ -58,6 +58,32 @@ export function requestMoney(
 }
 
 /**
+ * A Money a caller states from elsewhere, such as a price the user saw on
+ * another site: no unknown fields, in any currency, its code upper case.
+ * `name` is the field it is the value of, which the refusal names.
+ */
+export function statedMoney(name: string): z.ZodType<Money, Money> {
+  return z.strictObject(
+    {
+      amount: z
+        .string({ error: amountError })
+        .regex(/^\d+(\.\d+)?$/, { error: amountError })
+        .describe("Decimal string such as 132.40, never a number."),
+      currency: z
+        .string({ error: currencyError })
+        .regex(/^[A-Z]{3}$/, { error: currencyError })
+        .describe("3-letter uppercase ISO 4217 code, such as USD or EUR."),
+    },
+    {
+      error: (issue) =>
+        issue.code === "unrecognized_keys"
+          ? unknownFieldsMessage(issue.keys)
+          : `${name} must be Money: { amount: "132.40", currency: "EUR" }`,
+    },
+  );
+}
+
+/**
  * A Money a caller sends back exactly as it was returned: checked as a
  * response Money, so in any currency. `name` is the field it is the value
  * of, which the refusal names.

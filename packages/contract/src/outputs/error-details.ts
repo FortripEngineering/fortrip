@@ -137,6 +137,7 @@ export const ERROR_DETAILS = {
       "orders_create",
       "orders_cancel",
       "orders_pay",
+      "price_match",
     ]).describe("Which rate limit was hit, by the kind of call it counts."),
   }),
   ordering_paused: null,

@@ -95,6 +95,8 @@ const PLAIN_ENGLISH = new Set([
   "priced", "reason", "reference", "refund", "region", "required", "resolution", "retryable", "schema", "scope",
   "spec", "status", "topic", "type", "unassigned", "unavailable", "unreadable", "until", "url", "version",
   "website", "window", "worse",
+  // A price match.
+  "note", "room", "saved", "seen", "state", "step", "terms", "via",
 ]);
 
 const outputKeys = new Set(outputPaths.flat());

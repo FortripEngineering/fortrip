@@ -5,6 +5,7 @@ import { openObject, parseOpen } from "../conventions/open.ts";
 import type { Hotel } from "../outputs/hotel.ts";
 import type { HotelOffersResult } from "../outputs/offer.ts";
 import { type Order, order as orderSchema } from "../outputs/order.ts";
+import type { PriceMatch } from "../outputs/price-match.ts";
 import type { SearchResult } from "../outputs/search.ts";
 import {
   cancelNextStep,
@@ -19,6 +20,7 @@ import { raw } from "./format.ts";
 import { renderHotel } from "./hotel.ts";
 import { renderOffers } from "./offers.ts";
 import { readableOrder, renderOrder, renderOrderList, UnreadableOrder } from "./order.ts";
+import { renderPriceMatch } from "./price-match.ts";
 import { readableSearch, renderSearch } from "./search.ts";
 import { ours, own } from "./third-party.ts";
 
@@ -121,6 +123,9 @@ function resultText(tool: RenderedTool, data: unknown, surface: RenderSurface): 
       return renderHotel(parsed as Hotel);
     case "get_hotel_offers":
       return renderOffers(parsed as HotelOffersResult, surface);
+    case "request_price_match":
+    case "get_price_match":
+      return renderPriceMatch(parsed as PriceMatch, surface);
     case "create_order":
     case "get_order":
     case "cancel_order":

@@ -3586,7 +3586,8 @@
                           "orders_read",
                           "orders_create",
                           "orders_cancel",
-                          "orders_pay"
+                          "orders_pay",
+                          "price_match"
                         ]
                       },
                       {
@@ -8071,6 +8072,267 @@
     "required": [
       "data",
       "nextCursor"
+    ],
+    "additionalProperties": {}
+  },
+  "priceMatch": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "checking",
+              "matched",
+              "partial",
+              "declined"
+            ]
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "checking: the other site is being checked. matched: a new offer at the other site's total. partial: a new offer below the original, short of the other site's total. declined: no new offer; reason says why."
+      },
+      "offerId": {
+        "type": "string",
+        "pattern": "^off_[0-9A-Za-z]{20}$",
+        "description": "The offer the price match is about."
+      },
+      "site": {
+        "type": "string",
+        "description": "The other site, as the request named it."
+      },
+      "ourTotal": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "additionalProperties": {},
+        "description": "That offer's total."
+      },
+      "claimId": {
+        "description": "The price match's id, to read it again; absent only when it was declined before any check started.",
+        "type": "string",
+        "pattern": "^clm_[0-9A-Za-z]{20}$"
+      },
+      "progressUrl": {
+        "description": "A page the user can follow the check on; present with claimId.",
+        "type": "string"
+      },
+      "checkAgainAfterSeconds": {
+        "description": "While checking: how many seconds to wait before reading the price match again.",
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "step": {
+        "description": "While checking: the latest step of the check.",
+        "type": "string"
+      },
+      "seen": {
+        "description": "The prices the check saw on the other site; null or absent when none is on record.",
+        "anyOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "site": {
+                  "type": "string",
+                  "description": "The site the price was seen on."
+                },
+                "total": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^\\d+(\\.\\d+)?$"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "pattern": "^[A-Z]{3}$"
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ],
+                  "additionalProperties": {},
+                  "description": "The total seen there for the stay."
+                },
+                "via": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "site",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "description": "site: read from the site's own page. data: from price data for that site, when its page could not be read."
+                },
+                "room": {
+                  "description": "The room the price was for, as the site named it.",
+                  "type": "string"
+                },
+                "terms": {
+                  "description": "The terms that price came with, as the site gave them.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "site",
+                "total",
+                "via"
+              ],
+              "additionalProperties": {}
+            }
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "matchedOffer": {
+        "description": "When matched or partial: the new offer.",
+        "type": "object",
+        "properties": {
+          "offerId": {
+            "type": "string",
+            "pattern": "^off_[0-9A-Za-z]{20}$",
+            "description": "The new offer's offerId, to order as any offer."
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "additionalProperties": {},
+            "description": "The new offer's total."
+          },
+          "expiresAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$",
+            "description": "When the new offer can no longer be ordered."
+          },
+          "saved": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "additionalProperties": {},
+            "description": "How much less than the original offer's total it is."
+          }
+        },
+        "required": [
+          "offerId",
+          "total",
+          "expiresAt",
+          "saved"
+        ],
+        "additionalProperties": {}
+      },
+      "otherTotal": {
+        "description": "When partial: what the other site charges.",
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "additionalProperties": {}
+      },
+      "reason": {
+        "description": "When declined: not_lower, the site was not lower. site_unreadable: the site could not be read. site_not_credible: not a site price match covers. unsupported: an offer price match does not cover. daily_limit, monthly_limit: no more checks for now. unfinished: the check could not finish in time. unavailable: price match is not available now.",
+        "anyOf": [
+          {
+            "type": "string",
+            "enum": [
+              "not_lower",
+              "site_unreadable",
+              "site_not_credible",
+              "unsupported",
+              "daily_limit",
+              "monthly_limit",
+              "unfinished",
+              "unavailable"
+            ]
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "note": {
+        "description": "One sentence about the check.",
+        "type": "string"
+      },
+      "feeAtProperty": {
+        "description": "True when a fee payable at the property is left out of the comparison; null or absent when not known.",
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "state",
+      "offerId",
+      "site",
+      "ourTotal"
     ],
     "additionalProperties": {}
   },

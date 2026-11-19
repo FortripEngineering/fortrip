@@ -83,6 +83,8 @@ other command that needs to save a sign-in exits 1 too. The error says to set
 | `hotels search` | Find hotels in a place, near a point or by name, with indicative prices |
 | `hotels get <hotelId>` | Hotel details: description, policies, amenities and room types |
 | `hotels offers` | Live bookable offers for up to 15 hotels |
+| `hotels price-match <offerId>` | Ask Fortrip to match a lower price the user saw for an offer on another site |
+| `hotels price-match-status <claimId>` | Show how a price match is going, and its new offer once matched |
 | `orders create` | Create an unpaid order for an offer, with a payment link |
 | `orders get <orderId>` | Show an order and its status |
 | `orders list` | List your orders, newest first |
@@ -137,11 +139,12 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has seven tools:
-`search_hotels`, `get_hotel`, `get_hotel_offers`, `create_order`, `get_order`,
-`list_orders` and `cancel_order`. The user pays on the page an order's payment
-link opens. Through the CLI's bridge, below, there is an eighth, `pay_order`,
-which pays an order with a token the user approved.
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has nine tools:
+`search_hotels`, `get_hotel`, `get_hotel_offers`, `request_price_match`,
+`get_price_match`, `create_order`, `get_order`, `list_orders` and
+`cancel_order`. The user pays on the page an order's payment link opens.
+Through the CLI's bridge, below, there is a tenth, `pay_order`, which pays an
+order with a token the user approved.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the

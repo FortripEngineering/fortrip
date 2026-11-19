@@ -115,6 +115,7 @@ const RATE_LIMIT_WORDS: Record<string, string> = {
   orders_create: "orders created",
   orders_cancel: "cancellations",
   orders_pay: "payments",
+  price_match: "price-match requests and reads",
 };
 
 type DetailSchemas = typeof ERROR_DETAILS;

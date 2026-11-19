@@ -889,6 +889,9 @@ const PUBLIC_KEYS = new Set([
   "action", "at", "blockedBy", "cancelled", "expires_at", "failure", "limitPerHotel", "max_amount", "tokenRequest", "usageLimits",
   // A search note's details.
   "places",
+  // A price match in 6.5.
+  "checkAgainAfterSeconds", "claimId", "feeAtProperty", "matchedOffer", "note", "otherTotal", "ourTotal",
+  "progressUrl", "room", "saved", "seen", "site", "state", "step", "terms", "via",
 ]);
 
 function propertyNames(node: JsonSchema, into = new Set<string>()): Set<string> {

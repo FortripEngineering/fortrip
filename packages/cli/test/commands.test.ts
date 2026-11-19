@@ -76,6 +76,7 @@ const HOTEL = `htl_${"a1".repeat(10)}`;
 const HOTEL_2 = `htl_${"b2".repeat(10)}`;
 const OFFER = `off_${"c3".repeat(10)}`;
 const ORDER = `ord_${"d4".repeat(10)}`;
+const CLAIM = `clm_${"e5".repeat(10)}`;
 const PLACE = "plc_1850147";
 
 const CONTACT = [
@@ -288,6 +289,40 @@ const CASES: {
     inPath: { orderId: ORDER },
   },
   {
+    name: "hotels price-match",
+    argv: [OFFER, "--site", "A booking site", "--link", "https://example.com/hotel?id=7", "--seen-total", "320.00", "--seen-currency", "eur", "--locale", "zh"],
+    method: "POST",
+    path: "/v1/price-matches",
+    body: {
+      offerId: OFFER,
+      site: "A booking site",
+      link: "https://example.com/hotel?id=7",
+      seenTotal: { amount: "320.00", currency: "EUR" },
+      locale: "zh",
+    },
+  },
+  // Without --seen-currency the total seen is in USD.
+  {
+    name: "hotels price-match",
+    argv: [OFFER, "--site", "A booking site", "--seen-total", "320"],
+    method: "POST",
+    path: "/v1/price-matches",
+    body: { offerId: OFFER, site: "A booking site", seenTotal: { amount: "320", currency: "USD" } },
+  },
+  {
+    name: "hotels price-match",
+    argv: [OFFER, "--site", "A booking site"],
+    method: "POST",
+    path: "/v1/price-matches",
+    body: { offerId: OFFER, site: "A booking site" },
+  },
+  {
+    name: "hotels price-match-status",
+    argv: [CLAIM],
+    method: "GET",
+    path: `/v1/price-matches/${CLAIM}`,
+  },
+  {
     name: "orders pay",
     argv: [ORDER, "--token", "spt_1TestToken0123456789", "--total", "125.00"],
     method: "POST",
@@ -318,6 +353,8 @@ describe("every command builds the request the contract accepts", () => {
       "hotels search",
       "hotels get",
       "hotels offers",
+      "hotels price-match",
+      "hotels price-match-status",
       "orders create",
       "orders get",
       "orders list",
@@ -941,5 +978,47 @@ describe("parseOptions", () => {
     for (const [name, argv] of [["orders create", ["--first-name", "x"]], ["hotels get", [HOTEL, "--rooms"]]] as const) {
       assert.doesNotMatch(refusal(name, [...argv]), /positional argument/);
     }
+  });
+});
+
+describe("hotels price-match", () => {
+  it("needs --site, and refuses before sending what the contract refuses", () => {
+    assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER])), [{ pointer: "/site", message: "--site is required" }]);
+    assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--link", "http://example.com"])), [
+      { pointer: "/link", message: "--link: link must be an https URL of at most 512 characters" },
+    ]);
+    assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-total", "3,20"])), [
+      { pointer: "/seenTotal/amount", message: "--seen-total: amount must be a decimal string such as 132.40" },
+    ]);
+    // A currency alone is not a total seen.
+    assert.equal(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-currency", "EUR"]))[0]?.pointer, "/seenTotal/amount");
+  });
+
+  it("price-match-status takes a claimId", () => {
+    assert.deepEqual(issuesOf(() => parse("hotels price-match-status", [ORDER])), [
+      { pointer: "/path/claimId", message: "<claimId>: claimId must be clm_ followed by 20 letters or digits" },
+    ]);
+  });
+
+  // The commands a price match's text gives on the CLI parse as typed.
+  it("the commands of a price match's text parse as the CLI parses them", () => {
+    const dir = new URL("../../contract/test/fixtures/v1/", import.meta.url);
+    let found = 0;
+    for (const file of readdirSync(dir).filter((f) => f.startsWith("price-match-") && f.endsWith(".json"))) {
+      const fixture = JSON.parse(readFileSync(new URL(file, dir), "utf8"));
+      const text = renderToolResult(fixture.tool as RenderedTool, fixture.data, "cli");
+      for (const [, line] of text.matchAll(/`(fortrip hotels price-match-status [^`]+)`/g)) {
+        const [, , name, ...argv] = (line as string).split(" ");
+        assert.equal(parse(`hotels ${name}`, argv).path, `/v1/price-matches/${fixture.data.claimId}`, file);
+        found++;
+      }
+      for (const [, line] of text.matchAll(/`(fortrip orders create [^`]+)`/g)) {
+        const [, , , ...argv] = (line as string).split(" ");
+        const body = parse("orders create", [...argv, "--guest", "1:John:Smith", ...CONTACT]).body as Record<string, any>;
+        assert.equal(body.items[0].offerId, fixture.data.matchedOffer.offerId, file);
+        found++;
+      }
+    }
+    assert.equal(found, 3);
   });
 });

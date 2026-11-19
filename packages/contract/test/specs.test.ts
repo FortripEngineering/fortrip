@@ -17,9 +17,11 @@ import {
   createOrderInput,
   getHotelInput,
   getOrderInput,
+  getPriceMatchInput,
   hotelOffersInput,
   listOrdersInput,
   payOrderInput,
+  requestPriceMatchInput,
   searchHotelsInput,
 } from "../src/inputs.ts";
 import * as index from "../src/index.ts";
@@ -29,6 +31,7 @@ import { readFileSync } from "node:fs";
 import { hotel } from "../src/outputs/hotel.ts";
 import { hotelOffersResult } from "../src/outputs/offer.ts";
 import { order, orderList } from "../src/outputs/order.ts";
+import { priceMatch } from "../src/outputs/price-match.ts";
 import { searchResult } from "../src/outputs/search.ts";
 import {
   CANCEL_NEXT_STEP,
@@ -231,6 +234,8 @@ const TOOL_NAMES = [
   "search_hotels",
   "get_hotel",
   "get_hotel_offers",
+  "request_price_match",
+  "get_price_match",
   "create_order",
   "get_order",
   "list_orders",
@@ -251,7 +256,7 @@ describe("TOOLS", () => {
     }
   });
 
-  it("lists the eight tools in call order", () => {
+  it("lists the ten tools in call order", () => {
     assert.deepEqual(
       TOOLS.map((spec) => spec.name),
       [...TOOL_NAMES],
@@ -266,6 +271,8 @@ describe("TOOLS", () => {
         search_hotels: "Search hotels",
         get_hotel: "Hotel details",
         get_hotel_offers: "Live offers",
+        request_price_match: "Request price match",
+        get_price_match: "Get price match",
         create_order: "Create order",
         get_order: "Get order",
         list_orders: "List orders",
@@ -329,6 +336,8 @@ describe("TOOLS", () => {
     assert.equal(tool("search_hotels").input, searchHotelsInput);
     assert.equal(tool("get_hotel").input, getHotelInput);
     assert.equal(tool("get_hotel_offers").input, hotelOffersInput);
+    assert.equal(tool("request_price_match").input, requestPriceMatchInput);
+    assert.equal(tool("get_price_match").input, getPriceMatchInput);
     assert.equal(tool("create_order").input, createOrderInput);
     assert.equal(tool("get_order").input, getOrderInput);
     assert.equal(tool("list_orders").input, listOrdersInput);
@@ -340,6 +349,8 @@ describe("TOOLS", () => {
     assert.equal(tool("search_hotels").output, searchResult);
     assert.equal(tool("get_hotel").output, hotel);
     assert.equal(tool("get_hotel_offers").output, hotelOffersResult);
+    assert.equal(tool("request_price_match").output, priceMatch);
+    assert.equal(tool("get_price_match").output, priceMatch);
     assert.equal(tool("create_order").output, order);
     assert.equal(tool("get_order").output, order);
     assert.equal(tool("list_orders").output, orderList);
@@ -356,10 +367,12 @@ describe("TOOLS", () => {
   });
 
   // Claude's connector review asks destructiveHint: true "for tools that
-  // modify or delete data": every tool that writes is destructive, so the
-  // client confirms each call that creates, pays for or cancels an order.
-  it("states its title and all four hints on every tool; create_order, cancel_order and pay_order write, and every tool that writes is destructive", () => {
-    const writes = ["create_order", "cancel_order", "pay_order"];
+  // modify or delete data": every tool that writes an order is destructive,
+  // so the client confirms each call that creates, pays for or cancels one.
+  // request_price_match writes too, a check of a price, and destroys nothing.
+  it("states its title and all four hints on every tool; the order writes and request_price_match write, and every order write is destructive", () => {
+    const orderWrites = ["create_order", "cancel_order", "pay_order"];
+    const writes = [...orderWrites, "request_price_match"];
     for (const spec of TOOLS) {
       assert.deepEqual(
         Object.keys(spec.annotations).sort(),
@@ -370,7 +383,7 @@ describe("TOOLS", () => {
       // the tool's own.
       assert.equal(spec.annotations.title, spec.title, spec.name);
       assert.equal(spec.annotations.readOnlyHint, !writes.includes(spec.name), spec.name);
-      assert.equal(spec.annotations.destructiveHint, writes.includes(spec.name), spec.name);
+      assert.equal(spec.annotations.destructiveHint, orderWrites.includes(spec.name), spec.name);
       // The same call again answers the same order: none repeats its effect.
       assert.equal(spec.annotations.idempotentHint, true, spec.name);
     }
@@ -382,6 +395,8 @@ describe("TOOLS", () => {
         search_hotels: true,
         get_hotel: true,
         get_hotel_offers: true,
+        request_price_match: true,
+        get_price_match: false,
         create_order: true,
         get_order: false,
         list_orders: false,
@@ -413,6 +428,80 @@ describe("TOOLS", () => {
       openWorldHint: true,
       destructiveHint: true,
     });
+  });
+
+  // It starts a check of another site and answers a claim; the same call
+  // again answers the same claim. Nothing is ordered, paid or cancelled.
+  it("request_price_match's hints are a write that destroys nothing, idempotent, open world; get_price_match reads Fortrip's own records", () => {
+    assert.deepEqual(tool("request_price_match").annotations, {
+      title: "Request price match",
+      readOnlyHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+      destructiveHint: false,
+    });
+    assert.deepEqual(tool("get_price_match").annotations, {
+      title: "Get price match",
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      destructiveHint: false,
+    });
+  });
+
+  it("request_price_match says when it is used, what it takes, the wait, and to say nothing of a match before one", () => {
+    const { description } = tool("request_price_match");
+    assert.match(description, /^Use this when the user says they saw this stay cheaper on another site\./);
+    assert.match(description, /offerId/);
+    assert.match(description, /the site's name/);
+    assert.match(description, /link/);
+    assert.match(description, /total they saw/);
+    assert.match(description, /answers at once/);
+    assert.match(description, /progress link/);
+    assert.match(description, /up to ten minutes/);
+    assert.match(description, /call get_price_match/);
+    assert.match(description, /number of seconds/);
+    assert.match(description, /Say nothing to the user about a match until the state is matched/);
+    assert.match(description, /create_order/);
+    assert.match(description, /consent/);
+    assert.ok(description.length <= 1024, String(description.length));
+  });
+
+  it("get_price_match says when it is used and which states carry a new offer", () => {
+    const { description } = tool("get_price_match");
+    assert.match(description, /^Use this when the user asks how a price-match check is going/);
+    assert.match(description, /Only matched or partial carries a new offer/);
+    assert.match(description, /declined says what was seen and why/i);
+    assert.ok(description.length <= 1024, String(description.length));
+  });
+
+  it("request_price_match takes the offer, the site's name, and optionally the link, the total seen and the locale", () => {
+    assert.deepEqual(Object.keys(jsonOf(requestPriceMatchInput).properties ?? {}), ["offerId", "site", "link", "seenTotal", "locale"]);
+    assert.deepEqual(jsonOf(requestPriceMatchInput).required, ["offerId", "site"]);
+    assert.deepEqual(Object.keys(jsonOf(getPriceMatchInput).properties ?? {}), ["claimId"]);
+    const offerId = "off_0123456789abcdefABCD";
+    const ok = (input: unknown) => requestPriceMatchInput.safeParse(input).success;
+    assert.ok(ok({ offerId, site: "A booking site" }));
+    assert.ok(ok({ offerId, site: "x".repeat(64), link: `https://example.com/${"a".repeat(512 - 20)}`, seenTotal: { amount: "320.00", currency: "EUR" }, locale: "zh" }));
+    assert.ok(!ok({ offerId, site: "" }));
+    assert.ok(!ok({ offerId, site: "x".repeat(65) }));
+    assert.ok(!ok({ offerId, site: "A site", link: "http://example.com/hotel" }));
+    assert.ok(!ok({ offerId, site: "A site", link: "not a link" }));
+    assert.ok(!ok({ offerId, site: "A site", link: `https://example.com/${"a".repeat(512)}` }));
+    assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: 320, currency: "EUR" } }));
+    assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "320.00", currency: "eur" } }));
+    assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "320.00", currency: "EUR", note: "x" } }));
+    assert.ok(!ok({ offerId, site: "A site", note: "cheaper there" }));
+    // A card number is never taken as free text.
+    for (const input of [
+      { offerId, site: "4242 4242 4242 4242" },
+      { offerId, site: "A site", link: "https://example.com/?card=4242424242424242" },
+    ]) {
+      const result = requestPriceMatchInput.safeParse(input);
+      assert.ok(!result.success && result.error.issues.some((issue) => /card/i.test(issue.message)), JSON.stringify(input));
+    }
+    assert.ok(getPriceMatchInput.safeParse({ claimId: "clm_0123456789abcdefABCD" }).success);
+    assert.ok(!getPriceMatchInput.safeParse({ claimId: "ord_0123456789abcdefABCD" }).success);
   });
 
   it("get_hotel_offers names the hotel limit and the default offers per hotel from the code", () => {
@@ -591,6 +680,7 @@ describe("a flag a command needs says so, in its spec and in its help", () => {
       // --body can give each of these instead.
       "orders create": { offer: "unless-body", guest: "unless-body", name: "unless-body", email: "unless-body", phone: "unless-body" },
       "orders pay": { token: "always", total: "always" },
+      "hotels price-match": { site: "always" },
     });
     for (const spec of COMMANDS) {
       for (const flag of spec.flags) {
@@ -653,11 +743,13 @@ describe("COMMAND_GROUPS", () => {
 });
 
 describe("COMMANDS", () => {
-  it("lists the thirteen commands, as typed, each with the tool it mirrors", () => {
+  it("lists the fourteen commands, as typed, each with the tool it mirrors", () => {
     const tools: Record<string, ToolName | null> = {
       "hotels search": "search_hotels",
       "hotels get": "get_hotel",
       "hotels offers": "get_hotel_offers",
+      "hotels price-match": "request_price_match",
+      "hotels price-match-status": "get_price_match",
       "orders create": "create_order",
       "orders get": "get_order",
       "orders list": "list_orders",
@@ -679,7 +771,7 @@ describe("COMMANDS", () => {
     const invocations = COMMANDS.map(commandInvocation);
     assert.equal(new Set(invocations).size, invocations.length);
     for (const spec of COMMANDS) {
-      assert.match(spec.name, /^[a-z]+$/, typed(spec));
+      assert.match(spec.name, /^[a-z]+(-[a-z]+)*$/, typed(spec));
     }
   });
 
@@ -738,6 +830,14 @@ describe("COMMANDS", () => {
       locale: "locale",
       currency: "currency",
     });
+    assert.deepEqual(fields("hotels price-match"), {
+      site: "site",
+      link: "link",
+      "seen-total": "seenTotal",
+      "seen-currency": "seenTotal.currency",
+      locale: "locale",
+    });
+    assert.deepEqual(fields("hotels price-match-status"), {});
     assert.deepEqual(fields("orders create"), {
       offer: "items.offerId",
       guest: "items.hotel.rooms.guests",
@@ -772,6 +872,8 @@ describe("COMMANDS", () => {
       "hotels search": [],
       "hotels get": ["<hotelId> hotelId"],
       "hotels offers": [],
+      "hotels price-match": ["<offerId> offerId"],
+      "hotels price-match-status": ["<claimId> claimId"],
       "orders create": [],
       "orders get": ["<orderId> orderId"],
       "orders list": [],
@@ -879,6 +981,7 @@ describe("COMMANDS", () => {
       "hotels search point",
       "hotels search room",
       "hotels search price-max-per-room-night",
+      "hotels price-match seen-total",
       "orders pay total",
       "orders cancel max-penalty",
       "hotels offers room",
@@ -967,6 +1070,7 @@ describe("COMMANDS", () => {
       "hotels get --locale",
       "hotels offers --locale",
       "hotels offers --currency",
+      "hotels price-match --locale",
       "orders get --locale",
       "orders list --locale",
     ]);
@@ -989,6 +1093,10 @@ describe("COMMANDS", () => {
     assert.equal(placeholder("orders create", "offer"), "<off_>");
     assert.equal(placeholder("orders create", "guest"), "<room>:<first>:<last>");
     assert.equal(placeholder("orders cancel", "max-penalty"), "<amount>");
+    assert.equal(placeholder("hotels price-match", "site"), "<name>");
+    assert.equal(placeholder("hotels price-match", "link"), "<url>");
+    assert.equal(placeholder("hotels price-match", "seen-total"), "<amount>");
+    assert.equal(placeholder("hotels price-match", "seen-currency"), "<code>");
   });
 
   it("no flag or positional description names an MCP tool", () => {
@@ -1063,6 +1171,8 @@ describe("CLI-only options", () => {
       "hotels search": ["body"],
       "hotels get": [],
       "hotels offers": ["body"],
+      "hotels price-match": [],
+      "hotels price-match-status": [],
       "orders create": ["body"],
       "orders get": [],
       "orders list": [],

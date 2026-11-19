@@ -11,6 +11,8 @@ function prefixed(prefix: string, name: string) {
 export const hotelId = prefixed("htl", "hotelId");
 export const offerId = prefixed("off", "offerId");
 export const orderId = prefixed("ord", "orderId");
+/** A price-match check, from the moment it starts. */
+export const claimId = prefixed("clm", "claimId");
 
 /** `plc_` plus the GeoNames id in decimal (1 to 12 digits). */
 export const placeId = z
