@@ -455,7 +455,8 @@ describe("TOOLS", () => {
     assert.match(description, /^Use this when the user says they saw this stay cheaper on another site\./);
     assert.match(description, /offerId/);
     assert.match(description, /the site's name/);
-    assert.match(description, /link/);
+    assert.match(description, /Ask the user for the link to the page where they saw it and send it/);
+    assert.match(description, /a comparison site's link that leads to the booking site counts/);
     assert.match(description, /total they saw/);
     assert.match(description, /answers at once/);
     assert.match(description, /progress link/);
@@ -466,7 +467,10 @@ describe("TOOLS", () => {
     assert.match(description, /create_order/);
     assert.match(description, /consent/);
     assert.match(description, /or declined with the reason when no check is started/);
-    assert.match(description, /Once a check has started, the same call again answers the same price match, unless it ended unfinished: then it starts a new check\./);
+    assert.match(
+      description,
+      /Once a check has started, the same call again answers the same price match, unless the link is new or it ended unfinished: then it starts a new check\.$/,
+    );
     assert.ok(description.length <= 1024, String(description.length));
   });
 

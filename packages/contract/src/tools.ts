@@ -235,11 +235,12 @@ const SPECS: readonly WrittenSpec[] = [
     name: "request_price_match",
     title: "Request price match",
     description:
-      "Use this when the user says they saw this stay cheaper on another site. Give the offerId of the offer they are looking at and the site's name as they said it, with the link or the total they saw if they gave one. It answers at once: with a claimId and a progress link to share with the user while Fortrip checks that site, which can take up to ten minutes, or declined with the reason when no check is started. While it is checking, call get_price_match with the claimId again after the number of seconds the answer states. Say nothing to the user about a match until the state is matched (or partial: a new price below the offer's, short of the other site's). A matched or partial answer carries a new offerId at the new price: order it with create_order as any offer, with the same consent before paying as for any order. A declined answer says why. Once a check has started, the same call again answers the same price match, unless it ended unfinished: then it starts a new check.",
+      "Use this when the user says they saw this stay cheaper on another site. Give the offerId of the offer and the site's name as they said it. Ask the user for the link to the page where they saw it and send it: the check starts there; a comparison site's link that leads to the booking site counts. Send the total they saw if given. It answers at once: with a claimId and a progress link to show the user while Fortrip checks that site, which can take up to ten minutes, or declined with the reason when no check is started. While checking, call get_price_match with the claimId again after the number of seconds the answer states. Say nothing to the user about a match until the state is matched (or partial: lower, but short of the other site's price). A matched or partial answer carries a new offerId: order it with create_order, with the same consent before paying. Once a check has started, the same call again answers the same price match, unless the link is new or it ended unfinished: then it starts a new check.",
     // A write that destroys nothing: it starts a check and answers a claim,
     // and orders, pays for and cancels nothing. Idempotent: once a check has
-    // started, the same call answers the same claim; only a check that ended
-    // unfinished (out of time) is started again by the same call.
+    // started, the same call (the same link included) answers the same claim;
+    // only a check that ended unfinished (out of time) is started again by
+    // the same call.
     annotations: {
       readOnlyHint: false,
       idempotentHint: true,

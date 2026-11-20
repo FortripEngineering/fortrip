@@ -724,7 +724,7 @@ export const requestPriceMatchInput = strictInput({
     .refine(isHttpsUrl, { error: linkError })
     .optional()
     .describe(
-      `The page on that site where the user saw the price, if they gave it: an https URL of at most ${LINK_MAX} characters.`,
+      `The link to the page where the user saw the price: on that site, or on a comparison site that leads to it. Ask the user for it; the check starts from that page. An https URL of at most ${LINK_MAX} characters.`,
     ),
   seenTotal: statedMoney("seenTotal")
     .optional()
