@@ -689,7 +689,9 @@ export type PayOrderInput = z.input<typeof payOrderInput>;
 // Price match
 
 const SITE_MAX = 64;
-const LINK_MAX = 512;
+// Booking sites' own links for a dated stay run to several hundred characters
+// (one measured at 744), so the limit leaves room for them.
+const LINK_MAX = 2048;
 
 const linkError = `link must be an https URL of at most ${LINK_MAX} characters`;
 const siteError = `site must be text of 1 to ${SITE_MAX} characters`;

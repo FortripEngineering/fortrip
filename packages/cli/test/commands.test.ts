@@ -985,7 +985,7 @@ describe("hotels price-match", () => {
   it("needs --site, and refuses before sending what the contract refuses", () => {
     assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER])), [{ pointer: "/site", message: "--site is required" }]);
     assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--link", "http://example.com"])), [
-      { pointer: "/link", message: "--link: link must be an https URL of at most 512 characters" },
+      { pointer: "/link", message: "--link: link must be an https URL of at most 2048 characters" },
     ]);
     assert.deepEqual(issuesOf(() => parse("hotels price-match", [OFFER, "--site", "A site", "--seen-total", "3,20"])), [
       { pointer: "/seenTotal/amount", message: "--seen-total: amount must be a decimal string such as 132.40, of at most 16 characters" },

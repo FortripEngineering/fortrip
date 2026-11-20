@@ -489,7 +489,7 @@ describe("TOOLS", () => {
     const offerId = "off_0123456789abcdefABCD";
     const ok = (input: unknown) => requestPriceMatchInput.safeParse(input).success;
     assert.ok(ok({ offerId, site: "A booking site" }));
-    assert.ok(ok({ offerId, site: "x".repeat(64), link: `https://example.com/${"a".repeat(512 - 20)}`, seenTotal: { amount: "320.00", currency: "EUR" }, locale: "zh" }));
+    assert.ok(ok({ offerId, site: "x".repeat(64), link: `https://example.com/${"a".repeat(2048 - 20)}`, seenTotal: { amount: "320.00", currency: "EUR" }, locale: "zh" }));
     assert.ok(!ok({ offerId, site: "" }));
     assert.ok(!ok({ offerId, site: "   " }));
     assert.ok(!ok({ offerId, site: "\t\n" }));
@@ -501,7 +501,7 @@ describe("TOOLS", () => {
     assert.ok(!ok({ offerId, site: "x".repeat(65) }));
     assert.ok(!ok({ offerId, site: "A site", link: "http://example.com/hotel" }));
     assert.ok(!ok({ offerId, site: "A site", link: "not a link" }));
-    assert.ok(!ok({ offerId, site: "A site", link: `https://example.com/${"a".repeat(512)}` }));
+    assert.ok(!ok({ offerId, site: "A site", link: `https://example.com/${"a".repeat(2048)}` }));
     assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: 320, currency: "EUR" } }));
     assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "320.00", currency: "eur" } }));
     assert.ok(!ok({ offerId, site: "A site", seenTotal: { amount: "320.00", currency: "EUR", note: "x" } }));
