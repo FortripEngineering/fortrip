@@ -47,7 +47,7 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
   },
   {
     tools: ["request_price_match"],
-    again: "Safe once a check has started: the same call answers the same price match, with the same `claimId`. The one exception is a check that ended `declined` with `reason` `unfinished` (it could not finish in time): the same call then starts a new check. To follow a check, read it with `get_price_match` after `checkAgainAfterSeconds`; don't send the request again to ask how it is going.",
+    again: "Answers the same price match, with the same `claimId`, while its check runs, while its matched offer is valid, and after a decline that judged the site (`not_lower`, `not_offered`, `site_unreadable`, `site_not_credible`). With a new link, or after any other decline (`unfinished`, a limit, `unavailable`), the same call can start a new check, and each check counts against the account's checks. To follow a check, read it with `get_price_match` after `checkAgainAfterSeconds`; don't send the request again to ask how it is going.",
   },
   {
     tools: ["cancel_order"],

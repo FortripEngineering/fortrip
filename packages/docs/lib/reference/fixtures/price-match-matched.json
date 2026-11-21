@@ -40,5 +40,5 @@
     "amount": "5.00",
     "currency": "USD"
   },
-  "feeAtProperty": false
+  "propertyFeeLeftOut": false
 }

@@ -2609,9 +2609,24 @@ describe("price match", () => {
     for (const text of [mcp, cli]) {
       assert.doesNotMatch(text, /Seen on|1\.00/);
       assert.match(text, /say nothing to the user about a match or a lower price\.$/);
+      // A model that cannot wait is told what to do instead of looking again at once.
+      assert.match(
+        text,
+        /\. Do not look sooner: if you cannot wait, give the user the progress page and ask them to ask again in a few minutes\. The check can take up to ten minutes\. /,
+      );
     }
     delete checking.checkAgainAfterSeconds;
-    assert.match(renderToolResult("get_price_match", checking), /^Look again shortly: /m);
+    // With no wait stated there is nothing to be sooner than.
+    const shortly = renderToolResult("get_price_match", checking);
+    assert.match(shortly, /^Look again shortly: /m);
+    assert.match(shortly, /\. If you cannot wait, give the user the progress page and ask them to ask again in a few minutes\. /);
+    assert.doesNotMatch(shortly, /sooner/);
+    // Without a progress page there is none to give.
+    delete checking.progressUrl;
+    assert.match(
+      renderToolResult("get_price_match", checking),
+      /\. If you cannot wait, ask the user to ask again in a few minutes\. /,
+    );
   });
 
   it("a match says how to order the new offer, on each surface, and leaves consent to the order", () => {
@@ -2640,7 +2655,7 @@ describe("price match", () => {
   });
 
   it("a fee at the property left out of the comparison is said", () => {
-    const lines = renderToolResult("get_price_match", { ...data("price-match-partial"), feeAtProperty: true }).split("\n");
+    const lines = renderToolResult("get_price_match", { ...data("price-match-partial"), propertyFeeLeftOut: true }).split("\n");
     assert.ok(lines.includes("A fee payable at the property is left out of this comparison."));
   });
 

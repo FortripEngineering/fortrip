@@ -106,16 +106,25 @@ function ourFeesLine(r: PriceMatch): Ours[] {
 }
 
 const feeLine = (r: PriceMatch): Ours[] =>
-  r.feeAtProperty === true ? [ours`A fee payable at the property is left out of this comparison.`] : [];
+  r.propertyFeeLeftOut === true ? [ours`A fee payable at the property is left out of this comparison.`] : [];
 
 function checkingLines(r: PriceMatch, surface: RenderSurface): Ours[] {
   const wait =
     r.checkAgainAfterSeconds === undefined ? ours`shortly` : ours`in ${plural(r.checkAgainAfterSeconds, "second")}`;
+  // A model in a chat cannot wait within its turn: without this it reads
+  // the same answer again at once, over and over.
+  const instead =
+    r.progressUrl === undefined
+      ? ours`ask the user to ask again in a few minutes`
+      : ours`give the user the progress page and ask them to ask again in a few minutes`;
+  // With no wait stated there is nothing to be sooner than.
+  const sooner =
+    r.checkAgainAfterSeconds === undefined ? ours`If you cannot wait` : ours`Do not look sooner: if you cannot wait`;
   return [
     ...progressLine(r),
     ...(r.step === undefined ? [] : [ours`Latest step: ${theirs(r.step)}`]),
     ...noteLine(r),
-    ours`Look again ${wait}: ${lookCall(r, surface)}. The check can take up to ten minutes. Until the state is matched or partial, say nothing to the user about a match or a lower price.`,
+    ours`Look again ${wait}: ${lookCall(r, surface)}. ${sooner}, ${instead}. The check can take up to ten minutes. Until the state is matched or partial, say nothing to the user about a match or a lower price.`,
   ];
 }
 

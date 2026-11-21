@@ -15,6 +15,8 @@ Not released yet.
 - `get_price_match` (`GET /v1/price-matches/{claimId}`, `fortrip hotels price-match-status`) reads where the check stands: `checking`, `matched`, `partial` or `declined`. A `matched` answer carries a new offer at the matched price, with its total, saving and expiry (the comparison counts what is paid at the hotel, so the new total is the other site's total less Fortrip's own fees paid there, `ourFeesAtProperty`), to order with `create_order` like any offer. A `partial` answer carries a new offer at the lowest price a price match can give, short of the other site's price. A `declined` answer says why, and the original offer stays as it was.
 - A price match is not a guarantee. Only the site the user named, or the booking site their link leads to, is checked, a price match is limited in how far it lowers a price, and the answer can be that no match is available right now. Price matches cover USD offers of one room for now.
 - Price-match requests and reads share one rate limit, listed with the others under [Errors](/errors#rate-limits).
+- `request_price_match` is not marked idempotent: the same call answers the same price match while its check runs or its result stands, and a new link or a check that ended unfinished starts a new one.
+- While a check runs, the answer tells an assistant that cannot wait to give the user the progress page and ask them to ask again in a few minutes, and not to read the price match again sooner than `checkAgainAfterSeconds`.
 
 ### 6.5.0-rc.0
 

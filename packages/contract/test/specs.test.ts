@@ -385,7 +385,8 @@ describe("TOOLS", () => {
       assert.equal(spec.annotations.readOnlyHint, !writes.includes(spec.name), spec.name);
       assert.equal(spec.annotations.destructiveHint, orderWrites.includes(spec.name), spec.name);
       // The same call again answers the same order: none repeats its effect.
-      assert.equal(spec.annotations.idempotentHint, true, spec.name);
+      // But request_price_match: a repeat can start another check.
+      assert.equal(spec.annotations.idempotentHint, spec.name !== "request_price_match", spec.name);
     }
     assert.deepEqual(
       Object.fromEntries(
@@ -430,14 +431,16 @@ describe("TOOLS", () => {
     });
   });
 
-  // It starts a check of another site and answers a claim; once a check has
-  // started, the same call again answers the same claim, unless it ended
-  // unfinished. Nothing is ordered, paid or cancelled.
-  it("request_price_match's hints are a write that destroys nothing, idempotent, open world; get_price_match reads Fortrip's own records", () => {
+  // It starts a check of another site and answers a claim. The same call
+  // again answers the same claim while its check runs, while its matched
+  // offer is valid, and after a decline that judged the site; after any
+  // other decline it can start another check, which counts against the
+  // account's checks. Nothing is ordered, paid or cancelled.
+  it("request_price_match's hints are a write that destroys nothing, not idempotent, open world; get_price_match reads Fortrip's own records", () => {
     assert.deepEqual(tool("request_price_match").annotations, {
       title: "Request price match",
       readOnlyHint: false,
-      idempotentHint: true,
+      idempotentHint: false,
       openWorldHint: true,
       destructiveHint: false,
     });
@@ -462,14 +465,16 @@ describe("TOOLS", () => {
     assert.match(description, /progress link/);
     assert.match(description, /up to ten minutes/);
     assert.match(description, /call get_price_match/);
-    assert.match(description, /number of seconds/);
+    assert.match(description, /after the seconds the answer states, not sooner/);
+    // A model in a chat cannot wait within its turn.
+    assert.match(description, /if you cannot wait, ask the user to ask again in a few minutes\./);
     assert.match(description, /Say nothing to the user about a match until the state is matched/);
     assert.match(description, /create_order/);
     assert.match(description, /consent/);
-    assert.match(description, /or declined with the reason when no check is started/);
+    assert.match(description, /or declined with the reason when no check starts/);
     assert.match(
       description,
-      /Once a check has started, the same call again answers the same price match, unless the link is new or it ended unfinished: then it starts a new check\.$/,
+      /The same call again answers the same price match while its check runs or its result stands; a new link or an unfinished check starts a new one\.$/,
     );
     assert.ok(description.length <= 1024, String(description.length));
   });
@@ -478,6 +483,7 @@ describe("TOOLS", () => {
     const { description } = tool("get_price_match");
     assert.match(description, /^Use this when the user asks how a price-match check is going/);
     assert.match(description, /Only matched or partial carries a new offer/);
+    assert.match(description, /look again only after the wait the answer states; if you cannot wait, ask the user to ask again in a few minutes\./);
     assert.match(description, /declined says what was seen and why/i);
     assert.ok(description.length <= 1024, String(description.length));
   });

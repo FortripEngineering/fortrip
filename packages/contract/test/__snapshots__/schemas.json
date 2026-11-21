@@ -8336,7 +8336,7 @@
         "description": "One sentence about the check.",
         "type": "string"
       },
-      "feeAtProperty": {
+      "propertyFeeLeftOut": {
         "description": "True when a fee payable at the property is left out of the comparison; null or absent when not known.",
         "anyOf": [
           {

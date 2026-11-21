@@ -91,7 +91,7 @@ export const priceMatch = openObject({
       "When declined: not_lower, the site was not lower. not_offered: the site does not sell this room for these dates. site_unreadable: this stay's price could not be seen on the site. site_not_credible: not a site price match covers. unsupported: an offer price match does not cover. daily_limit: no more checks for now. monthly_limit: price match is not available for now. unfinished: the check could not finish in time; the same request again starts a new check. unavailable: price match is not available now.",
     ),
   note: z.string().optional().describe("One sentence about the check."),
-  feeAtProperty: z
+  propertyFeeLeftOut: z
     .boolean()
     .nullable()
     .optional()
