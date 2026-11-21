@@ -9,7 +9,7 @@ import {
   type KnownErrorBody,
 } from "../outputs/error-details.ts";
 import type { OfferChange } from "../outputs/order.ts";
-import { cancelNextStep, type RenderSurface } from "../tools.ts";
+import { cancelNextStep, type RenderSurface, type ToolName } from "../tools.ts";
 import { km, label, money, named, num, plural, raw, when } from "./format.ts";
 import {
   cancellationText,
@@ -100,6 +100,18 @@ const HAPPENED: Record<Exclude<ErrorCode, "client_outdated">, string> = {
   internal: "something went wrong on Fortrip's side.",
 };
 
+/** What happened, for the tools whose words differ from the code's. */
+const HAPPENED_BY_TOOL: Partial<Record<ToolName, Partial<Record<ErrorCode, string>>>> = {
+  request_price_match: {
+    not_found: "no such offer.",
+    offer_expired:
+      "the offer expired, or Fortrip's own price for its room changed since the offer was made; no check was started.",
+  },
+  get_price_match: {
+    not_found: "no such price match for this user.",
+  },
+};
+
 const CURSOR_WORDS: Record<string, string> = {
   expired: "has expired",
   mismatch: "is not this user's, or was changed",
@@ -115,6 +127,7 @@ const RATE_LIMIT_WORDS: Record<string, string> = {
   orders_create: "orders created",
   orders_cancel: "cancellations",
   orders_pay: "payments",
+  price_match: "price-match requests and reads",
 };
 
 type DetailSchemas = typeof ERROR_DETAILS;
@@ -259,7 +272,7 @@ function notCancellable(d: Details<"order_not_cancellable">, surface: RenderSurf
 }
 
 /** What happened in detail and what to do next, by code. */
-function detailLines(e: KnownErrorBody, surface: RenderSurface, tokenPay: boolean): Ours[] {
+function detailLines(e: KnownErrorBody, surface: RenderSurface, tokenPay: boolean, tool?: ToolName): Ours[] {
   // `id` is an order's id, or the placeholder for one.
   const getOrder = (id: Ours) => (surface === "cli" ? ours`\`fortrip orders get ${id}\`` : ours`get_order`);
   switch (e.code) {
@@ -283,6 +296,13 @@ function detailLines(e: KnownErrorBody, surface: RenderSurface, tokenPay: boolea
     case "not_found":
       return [ours`Use an id an earlier answer showed, exactly as shown.`];
     case "offer_expired":
+      if (tool === "request_price_match") {
+        const again =
+          surface === "cli" ? ours`run \`fortrip hotels price-match\` again` : ours`call request_price_match again`;
+        return [
+          ours`Offer ${token("id", e.details.offerId)} can't be price-matched: get offers again, let the user choose again, then ${again} with the new offer.`,
+        ];
+      }
       return [
         ours`Offer ${token("id", e.details.offerId)} expired at ${when(e.details.expiredAt, null)}: get offers again and let the user choose again.`,
       ];
@@ -412,12 +432,14 @@ function retryLine(retryable: unknown, after: unknown): Ours {
 /** The error envelope as text; `status` is the HTTP status, when known.
  *  `surface` names the next calls: tools (`mcp`, the default) or commands
  *  (`cli`). `options.tokenPay: false`, for a client not offered payment by
- *  token: no line names one. */
+ *  token: no line names one. `options.tool`, the tool that answered the
+ *  error, when known: a code some tools answer for another reason is then
+ *  worded for that tool. */
 export function renderError(
   envelope: unknown,
   status?: number,
   surface: RenderSurface = "mcp",
-  options: { tokenPay?: boolean } = {},
+  options: { tokenPay?: boolean; tool?: ToolName } = {},
 ): string {
   let known: KnownErrorBody | null = null;
   let body: Record<string, unknown> | null = null;
@@ -443,9 +465,10 @@ export function renderError(
   // may quote the caller: one line, after our words.
   const name = typeof body.code === "string" ? code(body.code, ours`unknown`) : ours`unknown`;
   const head = status === undefined ? ours`Error ${name}` : ours`Error ${name} (HTTP ${status})`;
+  const forTool = options.tool === undefined ? undefined : HAPPENED_BY_TOOL[options.tool]?.[body.code as ErrorCode];
   const happened =
     typeof body.code === "string" && Object.hasOwn(HAPPENED, body.code)
-      ? own(HAPPENED[body.code as keyof typeof HAPPENED])
+      ? own(forTool ?? HAPPENED[body.code as keyof typeof HAPPENED])
       : typeof body.message === "string"
         ? theirs(body.message)
         : null;
@@ -454,7 +477,7 @@ export function renderError(
     retryLine(body.retryable, body.retryAfterSeconds),
   ];
   if (typeof body.pointer === "string") lines.push(ours`Field: ${token("pointer", body.pointer)}`);
-  if (known) lines.push(...detailLines(known, surface, options.tokenPay !== false));
+  if (known) lines.push(...detailLines(known, surface, options.tokenPay !== false, options.tool));
   else if (body.details !== undefined) lines.push(ours`Details: ${raw(body.details)}`);
   // The CLI ends every error with its request id. Over MCP only the error
   // whose words ask for it does (an internal one): a tool's text holds what

@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { RATE_LIMITS } from "../src/rate-limits.ts";
 
 describe("rate limits", () => {
-  it("states the seven limits", () => {
+  it("states the eight limits", () => {
     assert.deepEqual(RATE_LIMITS, {
       search: { limit: 10, windowSeconds: 60 },
       offers: { limit: 20, windowSeconds: 60 },
@@ -13,6 +13,7 @@ describe("rate limits", () => {
       orders_read: { limit: 60, windowSeconds: 60 },
       orders_cancel: { limit: 10, windowSeconds: 60 },
       orders_pay: { limit: 10, windowSeconds: 60 },
+      price_match: { limit: 60, windowSeconds: 60 },
     });
   });
 });

@@ -25,7 +25,7 @@ async function commandTable(): Promise<Map<string, string>> {
   const rows = new Map<string, string>();
   for (const line of section.split("\n")) {
     // `hotels get <hotelId>` | What it does
-    const cells = line.match(/^\|\s*`([a-z]+(?: [a-z]+)*)[^`]*`\s*\|\s*(.*?)\s*\|$/);
+    const cells = line.match(/^\|\s*`([a-z-]+(?: [a-z-]+)*)[^`]*`\s*\|\s*(.*?)\s*\|$/);
     if (cells) rows.set(cells[1] as string, cells[2] as string);
   }
   return rows;

@@ -9,12 +9,14 @@ import { POLICY_TOPICS } from "../src/outputs/hotel.ts";
 import type { Hotel } from "../src/outputs/hotel.ts";
 import type { HotelOffersResult } from "../src/outputs/offer.ts";
 import type { Order, OrderList } from "../src/outputs/order.ts";
+import type { PriceMatch } from "../src/outputs/price-match.ts";
 import type { SearchResult } from "../src/outputs/search.ts";
 import { raw, when } from "../src/render/format.ts";
 import { renderHotel } from "../src/render/hotel.ts";
 import { renderError, renderToolResult } from "../src/render/index.ts";
 import { renderOffers } from "../src/render/offers.ts";
 import { renderOrder, renderOrderList } from "../src/render/order.ts";
+import { renderPriceMatch } from "../src/render/price-match.ts";
 import { renderSearch } from "../src/render/search.ts";
 import { code, oneLine, type Ours, ours, own, quoted, theirs, token } from "../src/render/third-party.ts";
 import { PRESENTATION_HINT, type RenderSurface, type ToolName } from "../src/tools.ts";
@@ -1140,7 +1142,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   ];
 
   /** A result the output schema refused: one line, the JSON after our words. */
-  const NOT_IN_SHAPE = /^This (?:[a-z_]+|fortrip [a-z]+ [a-z]+) result is not in the expected shape; as JSON: [[{]/;
+  const NOT_IN_SHAPE = /^This (?:[a-z_]+|fortrip [a-z]+ [a-z-]+) result is not in the expected shape; as JSON: [[{]/;
 
   /** An order of a list the schema refused: its one line, the others shown in full. */
   const ORDER_NOT_IN_SHAPE = /^This order is not in the expected shape; as JSON: \{/m;
@@ -1198,6 +1200,26 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^- Hotel /,
     // The rule after the data, on MCP
     /^Presentation: If your interface can show rich elements, /,
+  ];
+
+  /** How a line of a price match begins. */
+  const PRICE_MATCH_OWN = [
+    NOT_IN_SHAPE,
+    /^Price match(?: |$)/,
+    /^Progress page, to share with the user: /,
+    /^Latest step: /,
+    /^Note from the check: /,
+    /^Look again /,
+    /^New offer: /,
+    /^Other site's total: /,
+    /^The comparison counts what is paid at the hotel: /,
+    /^Seen on /,
+    /^Every other term of the new offer is as in offer /,
+    /^A fee payable at the property is left out of this comparison\.$/,
+    /^To book at this price: /,
+    /^Why: /,
+    /^No new offer: /,
+    /^State /,
   ];
 
   /** The presentation paragraph begins as a hostile line does: it is ours
@@ -1395,14 +1417,22 @@ describe("every string of a result, replaced by a hostile one", () => {
     cancel_order: order,
     pay_order: order,
     list_orders: (data, surface) => renderOrderList(data as OrderList, surface),
+    request_price_match: (data, surface) => renderPriceMatch(data as PriceMatch, surface),
+    get_price_match: (data, surface) => renderPriceMatch(data as PriceMatch, surface),
   };
 
   const ORDER_TOOLS = new Set<ToolName>(["create_order", "get_order", "cancel_order", "pay_order", "list_orders"]);
+  const PRICE_MATCH_TOOLS = new Set<ToolName>(["request_price_match", "get_price_match"]);
+  const HOTEL_TOOLS = new Set<ToolName>(["search_hotels", "get_hotel", "get_hotel_offers"]);
 
   /** Renders through the parse step; a result the schema refuses is checked
    *  as JSON, then rendered with the parse step bypassed. True when refused. */
   function attack(tool: ToolName, data: unknown, surface: RenderSurface, where: string): boolean {
-    const [own, lookalikes] = ORDER_TOOLS.has(tool) ? [ORDER_OWN, ORDER_LOOKALIKES] : [OWN, PRESENTATION_WHOLE];
+    const [own, lookalikes] = ORDER_TOOLS.has(tool)
+      ? [ORDER_OWN, ORDER_LOOKALIKES]
+      : PRICE_MATCH_TOOLS.has(tool)
+        ? [PRICE_MATCH_OWN, []]
+        : [OWN, PRESENTATION_WHOLE];
     const text = renderToolResult(tool, data, surface);
     const refused = NOT_IN_SHAPE.test(text) || (tool === "list_orders" && ORDER_NOT_IN_SHAPE.test(text));
     assertOurs(text, where, own, lookalikes);
@@ -1410,10 +1440,10 @@ describe("every string of a result, replaced by a hostile one", () => {
     // result on MCP, once, and is in no other.
     assert.equal(
       text.split(PRESENTATION_HINT).length - 1,
-      surface === "mcp" && !ORDER_TOOLS.has(tool) ? 1 : 0,
+      surface === "mcp" && HOTEL_TOOLS.has(tool) ? 1 : 0,
       where,
     );
-    if (surface === "mcp" && !ORDER_TOOLS.has(tool)) assert.ok(text.endsWith(OUR_PRESENTATION), where);
+    if (surface === "mcp" && HOTEL_TOOLS.has(tool)) assert.ok(text.endsWith(OUR_PRESENTATION), where);
     if (refused) assertOurs(DIRECT[tool](data, surface), `${where} (parse bypassed)`, own, lookalikes);
     return refused;
   }
@@ -1427,7 +1457,8 @@ describe("every string of a result, replaced by a hostile one", () => {
 
     it(`${name}: each string in turn, then all at once`, () => {
       const paths = stringsIn(data);
-      assert.ok(paths.length > 10, name);
+      // A price match before any check holds few strings of its own.
+      assert.ok(paths.length > (PRICE_MATCH_TOOLS.has(tool) ? 5 : 10), name);
       for (const surface of SURFACES) {
         assert.equal(attack(tool, data, surface, "as it is"), false);
         const refusedPaths = new Set<(string | number)[]>();

@@ -32,6 +32,7 @@ const read = (file: string) => readFileSync(join(root, file), "utf8");
 const HOTEL = "htl_Qm3xK9vT2pLw7Hn4Rb8Z";
 const OFFER = "off_Bz6yN1cD5fGh8JkM2pQs";
 const ORDER = "ord_Wr4tY7uI0oPa3SdF6gHj";
+const CLAIM = "clm_Hk5vN8cR2xTq6Wm9Lp3Z";
 
 interface Example {
   name: string;
@@ -49,6 +50,8 @@ const EXAMPLES: Example[] = [
   { name: "search", route: HTTP_ROUTES.search_hotels, tool: "search_hotels", body: true },
   { name: "offers", route: HTTP_ROUTES.get_hotel_offers, tool: "get_hotel_offers", body: true },
   { name: "order", route: HTTP_ROUTES.create_order, tool: "create_order", body: true },
+  { name: "price-match", route: HTTP_ROUTES.request_price_match, tool: "request_price_match", body: true },
+  { name: "get-price-match", route: HTTP_ROUTES.get_price_match, tool: "get_price_match", fromUrl: { claimId: CLAIM } },
   { name: "pay-token", route: HTTP_ROUTES.pay_order, tool: "pay_order", fromUrl: { orderId: ORDER }, body: true },
   { name: "get-order", route: HTTP_ROUTES.get_order, tool: "get_order", fromUrl: { orderId: ORDER } },
   { name: "list-orders", route: HTTP_ROUTES.list_orders, tool: "list_orders", fromUrl: { limit: 10 } },
@@ -130,7 +133,7 @@ describe("examples", () => {
       assert.deepEqual(sent.params ?? {}, example.fromUrl ?? {}, example.name);
       assert.deepEqual(sent.body, example.body ? bodyOf(example.name) : undefined, example.name);
     }
-    assert.deepEqual(Object.values(EXAMPLE_IDS).sort(), [HOTEL, OFFER, ORDER].sort());
+    assert.deepEqual(Object.values(EXAMPLE_IDS).sort(), [HOTEL, OFFER, ORDER, CLAIM].sort());
   });
 
   it("the requests without a body are valid input too", () => {
@@ -143,12 +146,12 @@ describe("examples", () => {
 
   it("the sample ids are the ones in the contract's formats", () => {
     const text = LANGS.flatMap((lang) => EXAMPLES.map((e) => read(file(lang, e.name)))).join("\n");
-    for (const [prefix, id] of [["htl", HOTEL], ["off", OFFER], ["ord", ORDER]] as const) {
+    for (const [prefix, id] of [["htl", HOTEL], ["off", OFFER], ["ord", ORDER], ["clm", CLAIM]] as const) {
       assert.match(id, new RegExp(`^${prefix}_[0-9A-Za-z]{20}$`));
     }
-    // Every id-shaped string in an example is one of the three samples.
-    const used = new Set(text.match(/\b(?:htl|off|ord)_[0-9A-Za-z]+/g));
-    assert.deepEqual([...used].sort(), [HOTEL, OFFER, ORDER].sort());
+    // Every id-shaped string in an example is one of the four samples.
+    const used = new Set(text.match(/\b(?:htl|off|ord|clm)_[0-9A-Za-z]+/g));
+    assert.deepEqual([...used].sort(), [HOTEL, OFFER, ORDER, CLAIM].sort());
   });
 
   it("the pay example covers the one way that has a pay request, and payment_link has none", () => {
@@ -237,7 +240,7 @@ describe("examples", () => {
 
   it("no file holds a card number", () => {
     const files = readdirSync(root, { recursive: true, encoding: "utf8" }).filter((f) => /\.\w+$/.test(f));
-    assert.ok(files.length >= 28, files.join(", "));
+    assert.ok(files.length >= 34, files.join(", "));
     for (const f of files) assert.ok(!containsCardNumber(read(f)), f);
   });
 

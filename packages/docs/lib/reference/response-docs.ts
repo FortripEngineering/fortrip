@@ -4,6 +4,7 @@ import {
   meResult,
   order,
   orderList,
+  priceMatch,
   searchResult,
   type ToolName,
 } from "@fortrip/agent-contract";
@@ -61,6 +62,13 @@ export const RESPONSE_DOCS: ResponseDoc[] = [
     tools: ["get_hotel_offers"],
     cliSlugs: ["hotels-offers"],
     schema: hotelOffersResult,
+  }),
+  doc({
+    id: "price-match",
+    title: "Price match",
+    tools: ["request_price_match", "get_price_match"],
+    cliSlugs: ["hotels-price-match", "hotels-price-match-status"],
+    schema: priceMatch,
   }),
   doc({
     id: "order",

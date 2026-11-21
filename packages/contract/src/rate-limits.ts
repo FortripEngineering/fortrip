@@ -18,4 +18,5 @@ export const RATE_LIMITS: Record<
   orders_read: { limit: 60, windowSeconds: 60 },
   orders_cancel: { limit: 10, windowSeconds: 60 },
   orders_pay: { limit: 10, windowSeconds: 60 },
+  price_match: { limit: 60, windowSeconds: 60 },
 };

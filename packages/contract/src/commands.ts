@@ -6,8 +6,10 @@ import {
   createOrderInput,
   getHotelInput,
   getOrderInput,
+  getPriceMatchInput,
   hotelOffersInput,
   listOrdersInput,
+  requestPriceMatchInput,
   searchHotelsInput,
 } from "./inputs.ts";
 import { CURRENCIES, LIMITS } from "./limits.ts";
@@ -104,6 +106,8 @@ export interface CommandSpec {
     | "search"
     | "get"
     | "offers"
+    | "price-match"
+    | "price-match-status"
     | "create"
     | "list"
     | "cancel"
@@ -383,6 +387,27 @@ const offersFlags = flagsOf(hotelOffersInput, [
   currencyFlag,
 ]);
 
+const priceMatchFlags = flagsOf(requestPriceMatchInput, [
+  { flag: "site", field: "site", type: "string", placeholder: "<name>", required: "always" },
+  { flag: "link", field: "link", type: "string", placeholder: "<url>" },
+  {
+    flag: "seen-total",
+    field: "seenTotal",
+    type: "string",
+    placeholder: "<amount>",
+    description:
+      "The total the user says they saw on that site for the same stay, if they gave one, as an amount in `--seen-currency`, e.g. `320.00`.",
+  },
+  {
+    flag: "seen-currency",
+    field: "seenTotal.currency",
+    type: "string",
+    placeholder: "<code>",
+    description: "The currency of `--seen-total`, a 3-letter code such as EUR. Default USD.",
+  },
+  localeFlag,
+]);
+
 const createFlags = flagsOf(createOrderInput, [
   {
     flag: "offer",
@@ -470,7 +495,7 @@ const BODY_OPTION: OptionSpec = {
 };
 
 export const COMMAND_GROUPS: readonly CommandGroupSpec[] = [
-  { name: "hotels", summary: "Search hotels, read one's details and get live offers" },
+  { name: "hotels", summary: "Search hotels, read one's details, get live offers and ask for a price match" },
   { name: "orders", summary: "Create an order from an offer; your orders, their status, paying and cancelling one" },
 ];
 
@@ -498,6 +523,22 @@ export const COMMANDS: readonly CommandSpec[] = [
     tool: "get_hotel_offers",
     flags: offersFlags,
     options: [BODY_OPTION],
+  },
+  {
+    group: "hotels",
+    name: "price-match",
+    summary: "Ask Fortrip to match a lower price the user saw for an offer on another site",
+    tool: "request_price_match",
+    flags: priceMatchFlags,
+    positionals: [positional(requestPriceMatchInput, "offerId")],
+  },
+  {
+    group: "hotels",
+    name: "price-match-status",
+    summary: "Show how a price match is going, and its new offer once matched",
+    tool: "get_price_match",
+    flags: [],
+    positionals: [positional(getPriceMatchInput, "claimId")],
   },
   {
     group: "orders",

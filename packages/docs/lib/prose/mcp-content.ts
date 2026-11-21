@@ -38,6 +38,8 @@ export const MCP_TEXT_RULES: Record<ToolName, readonly Rule[]> = {
   search_hotels: ["presentation"],
   get_hotel: ["presentation"],
   get_hotel_offers: ["presentation"],
+  request_price_match: [],
+  get_price_match: [],
   create_order: ["consent", "pay"],
   get_order: ["cancel", "consent", "pay"],
   list_orders: ["cancel", "consent", "pay"],

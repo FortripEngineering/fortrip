@@ -39,6 +39,10 @@ describe("HTTP routes", () => {
     assert.equal(p("get_order", { orderId: id, locale: "en" }), API.order(id, { locale: "en" }));
     assert.equal(p("cancel_order", { orderId: id }), API.orderCancel(id));
     assert.equal(p("pay_order", { orderId: id }), API.orderPay(id));
+    assert.equal(p("request_price_match", {}), "/v1/price-matches");
+    assert.equal(p("get_price_match", { claimId: id }), "/v1/price-matches/a%2Fb%20c");
+    assert.equal(HTTP_ROUTES.request_price_match.method, "POST");
+    assert.equal(HTTP_ROUTES.get_price_match.method, "GET");
     assert.equal(p("list_orders", {}), API.orders);
     assert.equal(
       p("list_orders", { locale: "en", limit: 5, cursor: "c" }),

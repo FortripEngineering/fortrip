@@ -2,8 +2,8 @@ import { z } from "zod";
 
 import { CARD_NUMBER_MESSAGE, containsCardNumber } from "./card-number.ts";
 import { addIsoDateDays, countIsoDateDays, isIsoDate } from "./dates.ts";
-import { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-import { echoedMoney, requestMoney } from "./conventions/money.ts";
+import { claimId, hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
+import { echoedMoney, requestMoney, statedMoney } from "./conventions/money.ts";
 import { localDate } from "./conventions/time.ts";
 import {
   flag,
@@ -684,3 +684,63 @@ export const payOrderInput = strictInput({
 });
 
 export type PayOrderInput = z.input<typeof payOrderInput>;
+
+// ---------------------------------------------------------------------------
+// Price match
+
+const SITE_MAX = 64;
+// Booking sites' own links for a dated stay run to several hundred characters
+// (one measured at 744), so the limit leaves room for them.
+const LINK_MAX = 2048;
+
+const linkError = `link must be an https URL of at most ${LINK_MAX} characters`;
+const siteError = `site must be text of 1 to ${SITE_MAX} characters`;
+
+/** The site's name: trimmed, and not blank. */
+const site = z
+  .string({ error: siteError })
+  .trim()
+  .min(1, { error: siteError })
+  .max(SITE_MAX, { error: siteError })
+  .refine((value) => !containsCardNumber(value), { error: CARD_NUMBER_MESSAGE, abort: true });
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** `POST /v1/price-matches` and the MCP `request_price_match` arguments:
+ *  the offer, the other site as the user named it, and what else the user
+ *  gave of what they saw there. */
+export const requestPriceMatchInput = strictInput({
+  offerId: offerId.describe(
+    "The offerId of the offer the user saw cheaper on another site, as an offers answer gave it.",
+  ),
+  site: site.describe(
+    `The other site's name as the user gave it, such as a booking site or the hotel's own website; 1 to ${SITE_MAX} characters.`,
+  ),
+  link: cardFreeText("link", 1, LINK_MAX)
+    .refine(isHttpsUrl, { error: linkError })
+    .optional()
+    .describe(
+      `The link to the page where the user saw the price: on that site, or on a comparison site that leads to it. Ask the user for it; the check starts from that page. An https URL of at most ${LINK_MAX} characters.`,
+    ),
+  seenTotal: statedMoney("seenTotal")
+    .optional()
+    .describe(
+      "The total the user says they saw on that site for the same stay, if they gave one, in the currency they saw it in.",
+    ),
+  locale: locale.optional(),
+});
+
+export type RequestPriceMatchInput = z.input<typeof requestPriceMatchInput>;
+
+/** `GET /v1/price-matches/{claimId}` and the MCP `get_price_match` arguments. */
+export const getPriceMatchInput = strictInput({
+  claimId: claimId.describe("The claimId the price-match request answered with."),
+});
+
+export type GetPriceMatchInput = z.input<typeof getPriceMatchInput>;
