@@ -18,7 +18,7 @@ import { z } from "zod";
 import { type Endpoint, ENDPOINTS } from "../reference/api-docs.ts";
 import { EXAMPLE_REQUESTS } from "../reference/examples.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
-import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, RESPONSES } from "../reference/responses.ts";
+import { ERRORS, errorExampleFor, type OperationId, PAY_RESPONSES, PRICE_MATCH_RESPONSES, RESPONSES } from "../reference/responses.ts";
 import { responseDocFor } from "../reference/response-docs.ts";
 
 /** A JSON Schema 2020-12 object, as `z.toJSONSchema` writes it. */
@@ -176,7 +176,9 @@ function operation(op: OperationSpec, answer: (schema: z.ZodType) => Schema) {
         ? Object.fromEntries(
             requests.map((request) => [request.name, { summary: request.title, value: PAY_RESPONSES[request.name as keyof typeof PAY_RESPONSES] }]),
           )
-        : { [id]: { summary: endpoint.title, value: RESPONSES[id as OperationId] } };
+        : id === "request_price_match" || id === "get_price_match"
+          ? Object.fromEntries(Object.entries(PRICE_MATCH_RESPONSES).map(([state, value]) => [state, { summary: `State: ${state.replaceAll("-", ", ")}`, value }]))
+          : { [id]: { summary: endpoint.title, value: RESPONSES[id as OperationId] } };
   const responses = Object.fromEntries(
     Object.entries(answers(op)).map(([status, schema]) => {
       const response = {

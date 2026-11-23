@@ -132,6 +132,8 @@ export const OPERATION_NAMES: Record<ToolName, string> = {
   search_hotels: "search",
   get_hotel: "hotel details",
   get_hotel_offers: "offers",
+  request_price_match: "price match requests",
+  get_price_match: "price match reads",
   create_order: "order creation",
   get_order: "order reads",
   list_orders: "order lists",
@@ -153,6 +155,7 @@ const SCOPES: Record<Scope, { operations: ToolName[] }> = {
   orders_read: { operations: ["get_order", "list_orders"] },
   orders_cancel: { operations: ["cancel_order"] },
   orders_pay: { operations: ["pay_order"] },
+  price_match: { operations: ["request_price_match", "get_price_match"] },
 };
 
 export interface RateLimitRow {

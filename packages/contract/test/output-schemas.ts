@@ -6,6 +6,7 @@ import * as hotel from "../src/outputs/hotel.ts";
 import * as offer from "../src/outputs/offer.ts";
 import * as order from "../src/outputs/order.ts";
 import * as place from "../src/outputs/place.ts";
+import * as priceMatch from "../src/outputs/price-match.ts";
 import * as search from "../src/outputs/search.ts";
 
 /*
@@ -22,6 +23,7 @@ const MODULES: Record<string, Record<string, unknown>> = {
   offer,
   order,
   place,
+  "price-match": priceMatch,
   search,
 };
 
@@ -53,6 +55,7 @@ export const PUBLISHED_SCHEMAS: Readonly<Record<string, z.ZodType>> = {
   hotelOffersResult: offer.hotelOffersResult,
   order: order.order,
   orderList: order.orderList,
+  priceMatch: priceMatch.priceMatch,
   meResult: account.meResult,
   authConfig: account.authConfig,
   errorEnvelope: errorDetails.errorEnvelope,

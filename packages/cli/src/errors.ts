@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { ERROR_CODES, renderError } from "@fortrip/agent-contract";
+import { ERROR_CODES, renderError, type ToolName } from "@fortrip/agent-contract";
 
 import { EXIT, type ExitCode } from "./exit-codes.ts";
 
@@ -98,7 +98,7 @@ function issueLines(details: unknown): string[] | null {
  * the code: an `invalid_request` lists its issues, none for an error of the
  * command line itself); the other facts sit beside it.
  */
-export function formatError(failure: CliError, json: boolean): string {
+export function formatError(failure: CliError, json: boolean, tool?: ToolName): string {
   const fromApi = failure.envelope?.error;
   const inError = (name: string) => (fromApi ? Object.hasOwn(fromApi, name) : ERROR_FIELDS.has(name));
   const own = Object.entries(failure.details);
@@ -120,7 +120,7 @@ export function formatError(failure: CliError, json: boolean): string {
   } else if (fromApi) {
     const status = failure.details.status;
     const known = Object.hasOwn(ERROR_CODES, fromApi.code);
-    lines.push(renderError(failure.envelope, known || typeof status !== "number" ? undefined : status, "cli"));
+    lines.push(renderError(failure.envelope, known || typeof status !== "number" ? undefined : status, "cli", { tool }));
     // What the CLI adds to Fortrip's message, such as what to do next.
     if (failure.message !== fromApi.message) lines.push(failure.message);
     lines.push(...fieldLines(Object.fromEntries(own.filter(([n]) => !inError(n) && n !== "status"))));

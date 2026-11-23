@@ -7,6 +7,27 @@ description: What changed for callers of the API, the MCP tools and the CLI, rel
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number.
 
+## 6.5.0
+
+Not released yet.
+
+- The assistant can ask for a price match: when the user saw an offer's stay cheaper on another site, `request_price_match` (`POST /v1/price-matches`, `fortrip hotels price-match`) sends the offer and the site's name, with the link to the page where the user saw the price (the assistant asks the user for it; a link on a comparison site that leads to the booking site counts) and the total they saw if they gave one. Fortrip checks that one site, which can take up to ten minutes, so the answer comes at once: with a `claimId`, a progress link to share with the user and the number of seconds to wait before reading it again, or declined with a `reason` when no check is started.
+- `get_price_match` (`GET /v1/price-matches/{claimId}`, `fortrip hotels price-match-status`) reads where the check stands: `checking`, `matched`, `partial` or `declined`. A `matched` answer carries a new offer at the matched price, with its total, saving and expiry (the comparison counts what is paid at the hotel, so the new total is the other site's total less Fortrip's own fees paid there, `ourFeesAtProperty`), to order with `create_order` like any offer. A `partial` answer carries a new offer at the lowest price a price match can give, short of the other site's price. A `declined` answer says why, and the original offer stays as it was.
+- A price match is not a guarantee. Only the site the user named, or the booking site their link leads to, is checked, a price match is limited in how far it lowers a price, and the answer can be that no match is available right now. Price matches cover USD offers of one room for now.
+- Price-match requests and reads share one rate limit, listed with the others under [Errors](/errors#rate-limits).
+- `request_price_match` is not marked idempotent: the same call answers the same price match while its check runs or its result stands, and a new link or a check that ended unfinished starts a new one.
+- While a check runs, the answer tells an assistant that cannot wait to give the user the progress page and ask them to ask again in a few minutes, and not to read the price match again sooner than `checkAgainAfterSeconds`.
+
+### 6.5.0-rc.0
+
+The first release candidate of 6.5.0: `request_price_match` and `get_price_match`, with the CLI commands `fortrip hotels price-match` and `fortrip hotels price-match-status`, as described above.
+
+### Package
+
+- New tools `request_price_match` and `get_price_match`, with the inputs `requestPriceMatchInput` and `getPriceMatchInput`, the `priceMatch` response and its `PriceMatch` type, and the `price_match` rate limit.
+- New CLI commands `fortrip hotels price-match` and `fortrip hotels price-match-status`.
+- `renderError` takes `options.tool`, the tool that answered the error: `not_found` and `offer_expired` are then worded for the price-match tools.
+
 ## 6.4.0
 
 Released 2026-11-17.

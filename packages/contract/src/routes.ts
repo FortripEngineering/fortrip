@@ -30,6 +30,8 @@ export const HTTP_ROUTES: Record<HttpToolName, HttpRoute> = {
   search_hotels: route("POST", "/v1/hotels/search"),
   get_hotel: route("GET", "/v1/hotels/{hotelId}", ["include", "locale"]),
   get_hotel_offers: route("POST", "/v1/hotels/offers"),
+  request_price_match: route("POST", "/v1/price-matches"),
+  get_price_match: route("GET", "/v1/price-matches/{claimId}"),
   create_order: route("POST", "/v1/orders"),
   get_order: route("GET", "/v1/orders/{orderId}", ["locale"]),
   list_orders: route("GET", "/v1/orders", ["cursor", "limit", "locale"]),

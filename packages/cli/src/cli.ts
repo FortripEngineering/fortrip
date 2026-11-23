@@ -10,6 +10,7 @@ import {
   orderCancel,
   type RenderedTool,
   renderToolResult,
+  type ToolName,
 } from "@fortrip/agent-contract";
 
 import { unwrap } from "./api.ts";
@@ -81,6 +82,10 @@ function findCommand(
  *  to print as text, or as JSON with `--json`. */
 type Answer = { data: unknown; text: string } | undefined;
 
+/** The tool the command being run calls, once it is known: its error is
+ *  worded for that tool. */
+let commandTool: ToolName | undefined;
+
 async function run(argv: string[]): Promise<Answer> {
   const [command] = argv;
   if (!command || command === "help" || HELP_FLAGS.includes(command)) {
@@ -97,6 +102,7 @@ async function run(argv: string[]): Promise<Answer> {
     return undefined;
   }
   const { spec, rest } = found;
+  commandTool = spec.tool ?? undefined;
   if (wantsHelp(rest)) {
     process.stdout.write(commandHelp(spec));
     return undefined;
@@ -291,7 +297,7 @@ async function main(): Promise<ExitCode> {
       error instanceof CliError
         ? error
         : new CliError((error as Error)?.message ?? String(error), EXIT.error);
-    process.stderr.write(`${formatError(failure, json)}\n`);
+    process.stderr.write(`${formatError(failure, json, commandTool)}\n`);
     return failure.exitCode;
   }
 }

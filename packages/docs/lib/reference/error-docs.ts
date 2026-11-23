@@ -32,9 +32,9 @@ const MEANINGS: Record<ErrorCode, string> = {
   unauthenticated:
     "No access token, or one Fortrip doesn't accept. Sign in again.",
   forbidden: "The token is valid but doesn't allow this call.",
-  not_found: "No such hotel or order, or the order belongs to another account.",
+  not_found: "No such hotel, offer, order or price match, or the order or price match belongs to another account.",
   offer_expired:
-    "The offer's `expiresAt` has passed. Get offers again and order a new one.",
+    "The offer's `expiresAt` has passed. Get offers again and order a new one. A price-match request also answers it when Fortrip's own price for the offer's room changed since the offer was made.",
   offer_changed:
     "The price or a term changed since the offer, and nothing was ordered. Show the user `changes`, ask again, then order `offer`, a new offer with the new terms ([how](/payments#offer-changed)).",
   offer_already_ordered:

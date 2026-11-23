@@ -53,6 +53,8 @@ const DOCS: Record<string, { title: string; group: string; output?: string; how?
     "hotels-search": { title: "Search hotels", group: "Hotels" },
     "hotels-get": { title: "Hotel details", group: "Hotels" },
     "hotels-offers": { title: "Live offers", group: "Hotels" },
+    "hotels-price-match": { title: "Request price match", group: "Hotels" },
+    "hotels-price-match-status": { title: "Get price match", group: "Hotels" },
     "orders-create": { title: "Create order", group: "Orders" },
     "orders-get": { title: "Get order", group: "Orders" },
     "orders-list": { title: "List orders", group: "Orders" },

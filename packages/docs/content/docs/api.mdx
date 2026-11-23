@@ -70,7 +70,7 @@ Live offers are not a page: one call answers a bounded number of offers, grouped
 
 ## Retries and idempotency [#retries]
 
-There is no `Idempotency-Key` header. Every call is safe to send again with the same details, and the details decide what the repeat answers:
+There is no `Idempotency-Key` header. The details of a call decide what the same call answers when sent again:
 
 <RetryTable />
 

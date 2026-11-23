@@ -10,8 +10,8 @@ export {
   type OptionSpec,
   type PositionalSpec,
 } from "./commands.ts";
-export { hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
-export { formatMoney, money, requestMoney, type Money } from "./conventions/money.ts";
+export { claimId, hotelId, offerId, orderId, placeId } from "./conventions/ids.ts";
+export { formatMoney, money, requestMoney, statedMoney, type Money } from "./conventions/money.ts";
 export {
   openEnum,
   openObject,
@@ -46,12 +46,14 @@ export {
   destination,
   getHotelInput,
   getOrderInput,
+  getPriceMatchInput,
   hotelOffersInput,
   listOrdersInput,
   offersPerHotel,
   PAY_WAYS,
   payOrderInput,
   type PayWay,
+  requestPriceMatchInput,
   searchHotelsInput,
   stay,
   type CancelOrderInput,
@@ -59,9 +61,11 @@ export {
   type Destination,
   type GetHotelInput,
   type GetOrderInput,
+  type GetPriceMatchInput,
   type HotelOffersInput,
   type ListOrdersInput,
   type PayOrderInput,
+  type RequestPriceMatchInput,
   type SearchHotelsInput,
   type Stay,
 } from "./inputs.ts";
@@ -141,6 +145,17 @@ export {
   type PaymentStatus,
   type TokenUsageLimits,
 } from "./outputs/order.ts";
+export {
+  matchedOffer,
+  PRICE_MATCH_REASONS,
+  PRICE_MATCH_STATES,
+  PRICE_SOURCES,
+  priceMatch,
+  priceSeen,
+  type PriceMatch,
+  type PriceMatchReason,
+  type PriceMatchState,
+} from "./outputs/price-match.ts";
 export {
   center,
   CENTER_BASES,

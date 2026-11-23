@@ -30,7 +30,7 @@ export interface ApiRequest {
 }
 
 /** Fields the API takes in upper case, which a user may type in lower. */
-const UPPER_CASE = new Set(["currency", "destination.countryCode"]);
+const UPPER_CASE = new Set(["currency", "destination.countryCode", "seenTotal.currency"]);
 
 /** Fields an environment variable sets when neither a flag nor `--body` does. */
 const FROM_ENV: Record<string, string> = { currency: "FORTRIP_CURRENCY" };
@@ -429,6 +429,11 @@ function readFlag(flag: FlagSpec, raw: NonNullable<Values[string]>, currency: st
     case "filters.price.maxPerRoomNight":
     case "total":
     case "maximumPenalty":
+      return { amount: (given[0] as string).trim(), currency };
+    // The total the user saw elsewhere: in USD (the currency of a command
+    // without `--currency`) unless `--seen-currency`, set after it, says
+    // otherwise.
+    case "seenTotal":
       return { amount: (given[0] as string).trim(), currency };
   }
   const parsed = given.map((value) => {

@@ -5,15 +5,18 @@ import {
   createOrderInput,
   getHotelInput,
   getOrderInput,
+  getPriceMatchInput,
   hotelOffersInput,
   listOrdersInput,
   payOrderInput,
+  requestPriceMatchInput,
   searchHotelsInput,
 } from "./inputs.ts";
 import { LIMITS, SUPPORT_EMAIL } from "./limits.ts";
 import { hotel } from "./outputs/hotel.ts";
 import { hotelOffersResult } from "./outputs/offer.ts";
 import { order, orderList } from "./outputs/order.ts";
+import { priceMatch } from "./outputs/price-match.ts";
 import { searchResult } from "./outputs/search.ts";
 
 /*
@@ -31,6 +34,8 @@ export type ToolName =
   | "search_hotels"
   | "get_hotel"
   | "get_hotel_offers"
+  | "request_price_match"
+  | "get_price_match"
   | "create_order"
   | "get_order"
   | "list_orders"
@@ -225,6 +230,36 @@ const SPECS: readonly WrittenSpec[] = [
     annotations: READ,
     input: hotelOffersInput,
     output: hotelOffersResult,
+  },
+  {
+    name: "request_price_match",
+    title: "Request price match",
+    description:
+      "Use this when the user says they saw this stay cheaper on another site. Give the offer's offerId and the site's name as they said it. Ask the user for the link to the page where they saw it and send it; a comparison site's link that leads to the booking site counts. Send the total they saw if given. It answers at once: with a claimId and a progress link to show the user while Fortrip checks that site (up to ten minutes), or declined with the reason when no check starts. While checking, call get_price_match with the claimId after the seconds the answer states, not sooner; if you cannot wait, ask the user to ask again in a few minutes. Say nothing to the user about a match until the state is matched (or partial: lower, but short of the other site's price). A matched or partial answer carries a new offerId: order it with create_order, with the same consent before paying. The same call again answers the same price match while its check runs or its result stands; a new link or an unfinished check starts a new one.",
+    // A write that destroys nothing: it starts a check and answers a claim,
+    // and orders, pays for and cancels nothing. Not idempotent: the same
+    // call answers the same claim while its check runs, while its matched
+    // offer is valid, and after a decline that judged the site. After any
+    // other decline (a check that ended unfinished, a limit, price match not
+    // available) the same call can start another check, which counts
+    // against the account's checks.
+    annotations: {
+      readOnlyHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+      destructiveHint: false,
+    },
+    input: requestPriceMatchInput,
+    output: priceMatch,
+  },
+  {
+    name: "get_price_match",
+    title: "Get price match",
+    description:
+      "Use this when the user asks how a price-match check is going, or once the wait a check stated has passed. Give the claimId request_price_match answered with. It returns the state: checking (with the latest step and when to look again), matched, partial or declined. While it is checking, look again only after the wait the answer states; if you cannot wait, ask the user to ask again in a few minutes. Only matched or partial carries a new offer, with its offerId, total, saving and expiry, to order with create_order. Declined says what was seen and why there is no new price.",
+    annotations: READ_OWN,
+    input: getPriceMatchInput,
+    output: priceMatch,
   },
   {
     name: "create_order",

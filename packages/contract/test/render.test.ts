@@ -61,8 +61,18 @@ const GOLDENS = [
   "cancel-order",
   "error-payment-total-mismatch",
   "error-offer-unavailable",
+  "price-match-checking",
+  "price-match-matched",
+  "price-match-partial",
+  "price-match-declined-not-lower",
+  "price-match-declined-not-offered",
+  "price-match-declined-unreadable",
+  "price-match-declined-before-check",
 ] as const;
 type Golden = (typeof GOLDENS)[number];
+
+/** The tools whose results hold orders. */
+const ORDER_RESULT_TOOLS = new Set<ToolName>(["create_order", "get_order", "list_orders", "cancel_order", "pay_order"]);
 
 function load(name: Golden): Fixture {
   return JSON.parse(readFileSync(new URL(`${name}.json`, DIR), "utf8")) as Fixture;
@@ -114,7 +124,7 @@ function outputOf(tool: ToolName) {
   return schema;
 }
 
-const ID = /^(?:(?:htl|off|ord)_[0-9A-Za-z]{20}|plc_\d{1,12})$/;
+const ID = /^(?:(?:htl|off|ord|clm)_[0-9A-Za-z]{20}|plc_\d{1,12})$/;
 
 /**
  * Every id in a value, except a hotel's `address.region`: the region's name
@@ -669,6 +679,37 @@ describe("other errors", () => {
     assert.equal(
       renderError({ error: { code: "client_outdated", message: "Update the CLI.", retryable: "no" } }, 426).split("\n")[0],
       'Error client_outdated (HTTP 426): "Update the CLI."',
+    );
+  });
+
+  it("words not_found and offer_expired for the price-match tool that answered them", () => {
+    const notFound = envelope({ code: "not_found", retryable: false });
+    const head = (tool?: ToolName) => renderError(notFound, 404, "mcp", { tool }).split("\n")[0];
+    assert.equal(head(), "Error not_found (HTTP 404): no such hotel, or no such order for this user.");
+    assert.equal(head("get_order"), "Error not_found (HTTP 404): no such hotel, or no such order for this user.");
+    assert.equal(head("request_price_match"), "Error not_found (HTTP 404): no such offer.");
+    assert.equal(head("get_price_match"), "Error not_found (HTTP 404): no such price match for this user.");
+
+    const expired = envelope({
+      code: "offer_expired",
+      retryable: false,
+      details: { offerId: "off_0123456789abcdefABCD", expiredAt: "2026-11-01T00:00:00Z" },
+    });
+    const forOrder = renderError(expired, 409, "mcp", { tool: "create_order" });
+    assert.ok(forOrder.startsWith("Error offer_expired (HTTP 409): the offer expired, and nothing was ordered."));
+    assert.match(forOrder, /expired at 2026-11-01 00:00 UTC: get offers again/);
+    const lines = renderError(expired, 409, "mcp", { tool: "request_price_match" }).split("\n");
+    assert.equal(
+      lines[0],
+      "Error offer_expired (HTTP 409): the offer expired, or Fortrip's own price for its room changed since the offer was made; no check was started.",
+    );
+    assert.equal(
+      lines.at(-1),
+      "Offer off_0123456789abcdefABCD can't be price-matched: get offers again, let the user choose again, then call request_price_match again with the new offer.",
+    );
+    assert.match(
+      renderError(expired, 409, "cli", { tool: "request_price_match" }),
+      /then run `fortrip hotels price-match` again with the new offer\./,
     );
   });
 
@@ -1310,7 +1351,7 @@ describe("orders and the consent rule", () => {
     assert.match(render(load("order-awaiting-payment")), /^Total: USD 365\.00 · payment unpaid · on the payment link's page, the user's card may pay in its local currency$/m);
     for (const name of GOLDENS) {
       const fixture = load(name);
-      if (!("tool" in fixture) || ["search_hotels", "get_hotel", "get_hotel_offers"].includes(fixture.tool)) continue;
+      if (!("tool" in fixture) || !ORDER_RESULT_TOOLS.has(fixture.tool)) continue;
       const orders = (fixture.tool === "list_orders" ? fixture.data.data : [fixture.data]) as Record<string, any>[];
       for (const surface of ["mcp", "cli"] as const) {
         const said: number = renderToolResult(fixture.tool, fixture.data, surface).split(LOCAL).length - 1;
@@ -2347,7 +2388,7 @@ describe("the cancel rule names the order's own penalty, never an example", () =
     }
     const inputOf = (tool: ToolName) => TOOLS.find((t) => t.name === tool)!.input;
     const orderFixtures = GOLDENS.map((name) => [name, load(name)] as const).filter(
-      (entry): entry is readonly [Golden, ToolFixture] => "tool" in entry[1] && !["search_hotels", "get_hotel", "get_hotel_offers"].includes(entry[1].tool),
+      (entry): entry is readonly [Golden, ToolFixture] => "tool" in entry[1] && ORDER_RESULT_TOOLS.has(entry[1].tool),
     );
 
     it("an order's Cancel line and pay line, in every fixture: its own id, penalty and total", () => {
@@ -2552,5 +2593,113 @@ describe("results for a client not offered payment by token", () => {
     const text = renderError(unavailable, 503, "mcp", { tokenPay: false });
     assert.match(text, /^Retry once with the same details; if it fails again, tell the user\.$/m);
     assert.doesNotMatch(text, /token/);
+  });
+});
+
+describe("price match", () => {
+  const data = (name: Golden) => copy((load(name) as ToolFixture).data) as Record<string, any>;
+
+  it("while checking, names the next read for the surface, and shows no price seen", () => {
+    const checking = data("price-match-checking");
+    checking.seen = [{ site: "TravelDeals", total: { amount: "1.00", currency: "USD" }, via: "site" }];
+    const mcp = renderToolResult("request_price_match", checking, "mcp");
+    const cli = renderToolResult("request_price_match", checking, "cli");
+    assert.match(mcp, /^Look again in 60 seconds: call get_price_match \{ claimId: "clm_BundCheck00000000000" \}\. /m);
+    assert.match(cli, /^Look again in 60 seconds: run `fortrip hotels price-match-status clm_BundCheck00000000000`\. /m);
+    for (const text of [mcp, cli]) {
+      assert.doesNotMatch(text, /Seen on|1\.00/);
+      assert.match(text, /say nothing to the user about a match or a lower price\.$/);
+      // A model that cannot wait is told what to do instead of looking again at once.
+      assert.match(
+        text,
+        /\. Do not look sooner: if you cannot wait, give the user the progress page and ask them to ask again in a few minutes\. The check can take up to ten minutes\. /,
+      );
+    }
+    delete checking.checkAgainAfterSeconds;
+    // With no wait stated there is nothing to be sooner than.
+    const shortly = renderToolResult("get_price_match", checking);
+    assert.match(shortly, /^Look again shortly: /m);
+    assert.match(shortly, /\. If you cannot wait, give the user the progress page and ask them to ask again in a few minutes\. /);
+    assert.doesNotMatch(shortly, /sooner/);
+    // Without a progress page there is none to give.
+    delete checking.progressUrl;
+    assert.match(
+      renderToolResult("get_price_match", checking),
+      /\. If you cannot wait, ask the user to ask again in a few minutes\. /,
+    );
+  });
+
+  it("a match says how to order the new offer, on each surface, and leaves consent to the order", () => {
+    const matched = data("price-match-matched");
+    assert.match(renderToolResult("get_price_match", matched, "cli"), /^To book at this price: run `fortrip orders create --offer off_BundRiverMatched0000` with the guests and the contact, as for any offer, before it expires\.$/m);
+    assert.ok(!renderToolResult("get_price_match", matched).includes(ORDER_NEXT_STEP));
+  });
+
+  it("Fortrip's own fees at the hotel: on a match, why the new total is below the other site's; on a partial match, only that they are due", () => {
+    const counts = "The comparison counts what is paid at the hotel: ";
+    const lines = (d: Record<string, any>) => renderToolResult("get_price_match", d).split("\n");
+    const feesLine = (d: Record<string, any>) => lines(d).filter((l) => l.startsWith(counts));
+    assert.deepEqual(feesLine(data("price-match-matched")), [
+      `${counts}this offer also has USD 20.00 due at the property, so the new total can be below the other site's total by that amount.`,
+    ]);
+    assert.deepEqual(feesLine(data("price-match-partial")), [`${counts}this offer also has USD 15.00 due at the property.`]);
+    // None when absent, zero, or on a decline.
+    for (const d of [
+      { ...data("price-match-matched"), ourFeesAtProperty: undefined },
+      { ...data("price-match-matched"), ourFeesAtProperty: { amount: "0.00", currency: "USD" } },
+      { ...data("price-match-partial"), ourFeesAtProperty: { amount: "0", currency: "USD" } },
+      { ...data("price-match-declined-not-lower"), ourFeesAtProperty: { amount: "20.00", currency: "USD" } },
+    ]) {
+      assert.deepEqual(feesLine(d), [], JSON.stringify(d.ourFeesAtProperty));
+    }
+  });
+
+  it("a fee at the property left out of the comparison is said", () => {
+    const lines = renderToolResult("get_price_match", { ...data("price-match-partial"), propertyFeeLeftOut: true }).split("\n");
+    assert.ok(lines.includes("A fee payable at the property is left out of this comparison."));
+  });
+
+  it("a partial match without the other site's total says it is not stated", () => {
+    const partial = data("price-match-partial");
+    delete partial.otherTotal;
+    assert.match(renderToolResult("get_price_match", partial), /^Other site's total: not stated\. /m);
+  });
+
+  it("a match without its new offer offers nothing to order", () => {
+    const matched = data("price-match-matched");
+    delete matched.matchedOffer;
+    const text = renderToolResult("get_price_match", matched);
+    assert.match(text, /^New offer: none in this answer; say nothing to the user about a match yet/m);
+    assert.doesNotMatch(text, /create_order|To book/);
+  });
+
+  it("words every reason, each once, and shows an unknown one as it came", () => {
+    const declined = data("price-match-declined-unreadable");
+    const why = (reason: string) => renderToolResult("get_price_match", { ...declined, reason }).split("\n").find((l) => l.startsWith("Why: "));
+    assert.equal(why("not_lower"), "Why: the site was not lower than Fortrip's price.");
+    assert.equal(why("not_offered"), "Why: that site does not sell this room for these dates, so there is no price to match.");
+    assert.equal(why("site_unreadable"), "Why: Fortrip could not see this stay's price on that site, so it could not check it.");
+    assert.equal(why("site_not_credible"), "Why: Fortrip only matches well-known booking sites and the hotel's own site.");
+    assert.equal(why("unsupported"), "Why: price match is not available for this offer: for now it covers USD offers of one room, and not a price already matched.");
+    assert.equal(why("daily_limit"), "Why: no more checks for now; try again later.");
+    assert.equal(why("monthly_limit"), "Why: price match is not available for now.");
+    assert.equal(why("unfinished"), "Why: the check could not finish in time; the same request again starts a new check.");
+    assert.equal(why("unavailable"), "Why: price match is not available right now.");
+    assert.equal(why("too_far"), "Why: too_far");
+    assert.equal(why("Too Far!"), "Why: a reason not recognized.");
+  });
+
+  it("a state not recognized says nothing of a match, and before a claim reads again by the same request", () => {
+    const text = renderToolResult("request_price_match", { ...data("price-match-declined-before-check"), state: "queued" });
+    assert.match(text, /^Price match · queued · /);
+    assert.match(text, /^State queued: say nothing to the user about a match, and look again: call request_price_match again with the same arguments\.$/m);
+    assert.match(
+      renderToolResult("request_price_match", { ...data("price-match-declined-before-check"), state: "queued" }, "cli"),
+      /look again: run the same `fortrip hotels price-match` command again\.$/m,
+    );
+  });
+
+  it("a result not in the expected shape names the command on the CLI", () => {
+    assert.match(renderToolResult("get_price_match", { unexpected: true }, "cli"), /^This fortrip hotels price-match-status result is not in the expected shape; as JSON: /);
   });
 });

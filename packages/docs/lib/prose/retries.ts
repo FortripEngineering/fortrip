@@ -46,11 +46,15 @@ export const RETRY_DOCS: readonly RetryDoc[] = [
     again: `Safe with the same token: it answers what the first call answered, and the order is never charged twice. After a timeout, ${PAY_AFTER_TIMEOUT} While another payment of the order is under way, the answer is \`payment_in_progress\`: read the order after \`retryAfterSeconds\`.`,
   },
   {
+    tools: ["request_price_match"],
+    again: "Answers the same price match, with the same `claimId`, while its check runs, while its matched offer is valid, and after a decline that judged the site (`not_lower`, `not_offered`, `site_unreadable`, `site_not_credible`). With a new link, or after any other decline (`unfinished`, a limit, `unavailable`), the same call can start a new check, and each check counts against the account's checks. To follow a check, read it with `get_price_match` after `checkAgainAfterSeconds`; don't send the request again to ask how it is going.",
+  },
+  {
     tools: ["cancel_order"],
     again: "Safe with the same mode. A repeated cancellation answers the order as it is now: `cancelling`, then `cancelled`. A repeated close answers the order, `closed`. The other mode is never applied: `close` on an order paid meanwhile answers `order_not_cancellable`.",
   },
   {
-    tools: ["search_hotels", "get_hotel", "get_hotel_offers", "get_order", "list_orders"],
+    tools: ["search_hotels", "get_hotel", "get_hotel_offers", "get_price_match", "get_order", "list_orders"],
     reads: true,
     again: "Safe. They change nothing; each call counts against its [rate limit](/errors#rate-limits).",
   },

@@ -56,6 +56,18 @@ const DOCS: Record<
     human:
       "Gets the live, bookable offers for one stay at the hotels you name: the total, meals, cancellation terms and confirmation of each. It only reads: nothing is booked or held.",
   },
+  request_price_match: {
+    group: "Hotels",
+    access: "Starts a price-match check",
+    human:
+      "Checks the one other site where the user saw this stay cheaper, which can take up to ten minutes, and offers a lower price within limits when that site is lower. It is no guarantee and books nothing.",
+  },
+  get_price_match: {
+    group: "Hotels",
+    access: "Read-only",
+    human:
+      "Shows where a price-match check stands: still checking, matched, partly matched or declined, with the new offer when there is one. It only reads.",
+  },
   create_order: {
     group: "Orders",
     access: "Creates an unpaid order",

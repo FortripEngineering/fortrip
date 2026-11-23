@@ -63,9 +63,11 @@ const read = (root: string, file: string) =>
   readFileSync(path.join(root, file), "utf8");
 
 /*
- * The CLI skill tells an agent which CLI to run. While the package is a prerelease, npm's
- * `latest` is still the release before it, which does not speak this contract: the skill then
- * names the exact version. Once released, it names `latest` again.
+ * The CLI skill tells an agent which CLI to run. While the package is a prerelease of a new
+ * major, npm's `latest` is still the major before it, which does not speak this contract: the
+ * skill then names the exact version. Once released, it names `latest` again. A prerelease of
+ * a minor or a patch keeps `latest`: it only adds to what `latest` speaks, and its own version
+ * is not on npm yet when the skill is read from `main`.
  */
 describe("the CLI version a skill runs", () => {
   /** A fresh render for a CLI of `version`. */
@@ -77,8 +79,8 @@ describe("the CLI version a skill runs", () => {
     return root;
   }
 
-  it("a prerelease: the exact version, wherever the skill names the package", () => {
-    for (const version of ["6.0.0-rc.0", "6.1.0-beta.2"]) {
+  it("a prerelease of a new major: the exact version, wherever the skill names the package", () => {
+    for (const version of ["6.0.0-rc.0", "7.0.0-beta.2", "10.0.0-rc.1"]) {
       const root = renderedFor(version);
       const cli = read(root, CLI_SKILL);
       assert.ok(cli.includes(`Run every command as \`npx -y fortrip@${version} <command>\``), version);
@@ -86,8 +88,8 @@ describe("the CLI version a skill runs", () => {
     }
   });
 
-  it("a release: latest", () => {
-    for (const version of ["6.0.0", "6.0.1", "7.2.0"]) {
+  it("a release, and a prerelease of a minor or a patch: latest", () => {
+    for (const version of ["6.0.0", "6.0.1", "7.2.0", "6.5.0-rc.0", "6.1.0-beta.2", "6.4.1-rc.1", "6.10.0-rc.0"]) {
       const root = renderedFor(version);
       const cli = read(root, CLI_SKILL);
       assert.ok(cli.includes("Run every command as `npx -y fortrip@latest <command>`"), version);
@@ -97,7 +99,7 @@ describe("the CLI version a skill runs", () => {
 
   it("without the option, the version is the CLI package's own, and the committed skill follows it", () => {
     const { version } = JSON.parse(readFileSync(path.join(repo, "packages/cli/package.json"), "utf8")) as { version: string };
-    const tag = version.includes("-") ? version : "latest";
+    const tag = /^\d+\.0\.0-/.test(version) ? version : "latest";
     assert.ok(read(rendered(), CLI_SKILL).includes(`npx -y fortrip@${tag} <command>`), version);
     assert.ok(read(repo, CLI_SKILL).includes(`npx -y fortrip@${tag} <command>`), version);
   });
