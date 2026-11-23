@@ -171,13 +171,18 @@ async function unifiedDiff(file: string, before: string, after: string) {
 
 /**
  * A skill's text for the CLI it is published with. The guide names the
- * package as `fortrip@latest`. While the CLI is a prerelease (`6.0.0-rc.0`),
- * npm's `latest` is still the release before it, which does not speak this
- * contract, so the skill names the exact version instead; a release keeps
- * `latest`.
+ * package as `fortrip@latest`. While the CLI is a prerelease of a new major
+ * (`6.0.0-rc.0`), npm's `latest` is still the major before it, which does not
+ * speak this contract, so the skill names the exact version instead. A
+ * prerelease of a minor or a patch (`6.5.0-rc.0`) only adds to what `latest`
+ * speaks, and its exact version is not on npm between the merge to `main`,
+ * where the skill is read from, and the publish: it keeps `latest`, as a
+ * release does.
  */
+const pinsExactCli = (version: string) => /^\d+\.0\.0-/.test(version);
+
 function forCliVersion(text: string): string {
-  return cliVersion.includes("-") ? text.replaceAll("fortrip@latest", `fortrip@${cliVersion}`) : text;
+  return pinsExactCli(cliVersion) ? text.replaceAll("fortrip@latest", `fortrip@${cliVersion}`) : text;
 }
 
 // First, so that the contract below renders from the fresh fragments.
