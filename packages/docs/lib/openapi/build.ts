@@ -235,7 +235,7 @@ export function buildOpenApi(): OpenAPIV3_1.Document {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          description: `A Fortrip OAuth access token of the signed-in user. How to get one: [Authentication](${DOCS_ORIGIN}/api#authentication).`,
+          description: `A Fortrip OAuth access token of the signed-in user, or a Fortrip API key (\`ak_…\`) of an account that has API keys. How to get one: [Authentication](${DOCS_ORIGIN}/api#authentication).`,
         },
       },
     },

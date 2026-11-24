@@ -11,14 +11,24 @@ JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST
 
 ## Authentication [#authentication]
 
-Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a Fortrip OAuth access token, sent as `Authorization: Bearer <token>`. Cookies are not accepted.
+Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs a Fortrip OAuth access token or a Fortrip API key, sent as `Authorization: Bearer <token>`. Cookies are not accepted.
 
 ### Choose a sign-in flow [#sign-in-flow]
 
 - **An app without a browser of its own, such as a CLI or a script:** the device flow below, with the `clientId` from <code><Fact path="ROUTES.authConfig" /></code>, the OAuth sign-in settings.
 - **A web app:** the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints. Request the scopes the OAuth sign-in settings list in `scopes` (they include `offline_access`, for a refresh token).
+- **Your own script or server, on your own account:** an [API key](#api-keys), if your account has them.
 
-There are no API keys or service accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to it.
+There are no service accounts. Each of your users signs in with their own Fortrip account, and their orders, payment links and rate limits belong to it.
+
+### API keys [#api-keys]
+
+An API key starts with `ak_` and is sent in place of an access token, as `Authorization: Bearer <key>`. It acts as the account that made it: the same orders, payment links and rate limits as that account's sign-ins, and the scopes `profile email`. It needs no refresh, and works until it is revoked or reaches the expiration set when it was made, if any.
+
+- API keys are turned on per account by Fortrip; to ask for them, email <Fact path="SUPPORT_EMAIL" />. Once they are on, the account's profile on the Fortrip website (Manage account) has an **API keys** tab, where you create and revoke keys. A key is shown once, when it is made.
+- A key can do everything the account can, cancelling and paying orders included. Keep it on a server, never in a web page or an app you ship.
+- A revoked key, or any key of an account whose API keys were turned off, answers `401 unauthenticated`. Turning an account's API keys back on makes its keys that weren't revoked work again.
+- Keys work on the HTTP API only. The [MCP server](/mcp) doesn't take them: MCP clients sign in with OAuth.
 
 ### Device flow [#device-flow]
 
@@ -29,7 +39,7 @@ The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/a
 3. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again.
 4. To sign out, revoke the refresh token at `revocationEndpoint`, with your `client_id`.
 
-A missing or rejected token answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
+A missing or rejected token or key answers `401 unauthenticated`. <code><Fact path="ROUTES.me" /></code> returns the signed-in account. Its `email` is `null` unless the token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>.
 
 ## Endpoints [#endpoints]
 
