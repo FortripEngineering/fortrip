@@ -3,15 +3,19 @@
 import { TOOLS, type ToolName } from "@fortrip/agent-contract";
 import type { PhrasingContent } from "mdast";
 
+import { EXAMPLE_LANGUAGES, exampleCode } from "../reference/examples.ts";
 import { TOOL_INPUTS } from "../reference/input-docs.ts";
 import { RESPONSE_DOCS } from "../reference/response-docs.ts";
 import { type FieldRow, inputRows } from "../reference/schema-rows.ts";
 import {
   type Block,
   code,
+  codeBlock,
   inline,
   joined,
   list,
+  paragraph,
+  strong,
   text,
   type Widget,
   widget,
@@ -63,6 +67,14 @@ export const WIDGETS: Record<string, WidgetText> = {
         ]),
       ),
     ],
+  },
+  Example: {
+    searchable: false,
+    blocks: ({ name = "" }) =>
+      EXAMPLE_LANGUAGES.flatMap((language) => [
+        paragraph([strong(text(language.label))]),
+        codeBlock(language.lang, exampleCode(name, language)),
+      ]),
   },
 };
 

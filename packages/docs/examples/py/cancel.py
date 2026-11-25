@@ -1,0 +1,26 @@
+# Cancel an order under its terms, accepting no penalty.
+# Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above), and httpx.
+import json
+import os
+
+import httpx
+
+token = os.environ["FORTRIP_TOKEN"]
+
+body = {
+  "maximumPenalty": {
+    "amount": "0.00",
+    "currency": "USD"
+  }
+}
+
+response = httpx.post(
+    "https://api.fortrip.ai/v1/orders/ord_Wr4tY7uI0oPa3SdF6gHj/cancel",
+    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+    json=body,
+    timeout=60,
+)
+if response.is_error:
+    raise SystemExit(f"HTTP {response.status_code}: {response.text}")
+result = response.json()
+print(json.dumps(result, indent=2))

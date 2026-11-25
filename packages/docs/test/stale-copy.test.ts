@@ -112,6 +112,7 @@ describe("stale statements stay fixed", () => {
   it("no page states the access token's lifetime or the order reference's length", () => {
     const docs = new URL("../content/docs/", import.meta.url).pathname;
     const lib = new URL("../lib/", import.meta.url).pathname;
+    const examples = new URL("../examples/", import.meta.url).pathname;
     const files = [
       ...readdirSync(docs, { recursive: true, encoding: "utf8" })
         .filter((f) => f.endsWith(".mdx") && f !== "changelog.mdx")
@@ -119,6 +120,9 @@ describe("stale statements stay fixed", () => {
       ...readdirSync(lib, { recursive: true, encoding: "utf8" })
         .filter((f) => /\.tsx?$/.test(f))
         .map((f) => join(lib, f)),
+      ...readdirSync(examples, { recursive: true, encoding: "utf8" })
+        .filter((f) => /\.(?:sh|py|ts)$/.test(f))
+        .map((f) => join(examples, f)),
     ];
     assert.ok(files.length > 20, String(files.length));
     for (const file of files) {

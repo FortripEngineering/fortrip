@@ -5,7 +5,7 @@ import { describe, it } from "node:test";
 import { ERROR_CODES, type ErrorCode, errorEnvelope, LIMITS, order, priceMatch, strictOutput } from "@fortrip/agent-contract";
 
 import { OPERATIONS } from "../lib/openapi/build.ts";
-import { ERRORS, EXAMPLE_IDS, PAY_RESPONSES, PRICE_MATCH_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
+import { abridge, ERRORS, EXAMPLE_IDS, PAY_RESPONSES, PRICE_MATCH_RESPONSES, RESPONSES } from "../lib/reference/responses.ts";
 
 const body = (name: string) =>
   JSON.parse(readFileSync(new URL(`../examples/bodies/${name}.json`, import.meta.url), "utf8"));
@@ -100,5 +100,22 @@ describe("example responses", () => {
     assert.ok(Number(RESPONSES.create_order.total.amount) <= LIMITS.tokenPaymentMaxUsd);
     assert.equal(usageLimits.max_amount, Math.round(Number(RESPONSES.create_order.total.amount) * 100));
     assert.equal(usageLimits.expires_at, Date.parse(RESPONSES.create_order.payment.expiresAt) / 1000);
+  });
+});
+
+describe("abridge", () => {
+  const value = { a: 1, b: { c: 2, d: [{ e: 3, f: 4 }, { e: 5, f: 6 }] }, g: null };
+
+  it("keeps the listed paths in the value's own order", () => {
+    assert.deepEqual(abridge(value, ["g", "a"]), { a: 1, g: null });
+    assert.deepEqual(abridge(value, ["b.d[0].e"]), { b: { d: [{ e: 3 }] } });
+    assert.deepEqual(abridge(value, ["b.d[].f", "b.c"]), { b: { c: 2, d: [{ f: 4 }, { f: 6 }] } });
+    assert.deepEqual(abridge(value, ["b.d[1]"]), { b: { d: [{ e: 5, f: 6 }] } });
+  });
+
+  it("throws on a path that leads nowhere", () => {
+    assert.throws(() => abridge(value, ["b.x"]), /no b\.x/);
+    assert.throws(() => abridge(value, ["b.d[2].e"]), /no b\.d\[2\]\.e/);
+    assert.throws(() => abridge(value, ["a.b"]), /no a\.b/);
   });
 });

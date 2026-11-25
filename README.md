@@ -48,7 +48,7 @@ Hotels only for now. Every way to connect signs in with a Fortrip account, by OA
 | **Codex, Cursor, other MCP clients** | Connect the hosted server, `https://mcp.fortrip.ai/`. Steps for [Codex](https://docs.fortrip.ai/install#codex) and [Cursor](https://docs.fortrip.ai/install#cursor). A client that only starts local servers runs `npx -y fortrip mcp`. |
 | **Any agent with a shell** | `npx skills add FortripEngineering/fortrip --skill fortrip-cli` |
 | **A terminal** | `npx -y fortrip login`, then `npx -y fortrip hotels search`. See the [CLI's README](packages/cli/README.md). |
-| **Your own code** | The [HTTP API](https://docs.fortrip.ai/api), with an API key: email support@fortrip.ai for one. |
+| **Your own code** | The [HTTP API](https://docs.fortrip.ai/api-quickstart): sign in, search, get offers and create an order in five steps. |
 
 Then ask your agent for a stay:
 

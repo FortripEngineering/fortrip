@@ -98,3 +98,77 @@ export function errorExampleFor(id: OperationId): keyof typeof ERRORS {
   if (id === "create_order") return "offer_changed";
   return id === "auth_config" ? "service_unavailable" : "unauthenticated";
 }
+
+/** A path's steps: `data[0].name` is `data`, `[0]`, `name`; `[]` is every item. */
+const steps = (path: string): string[] =>
+  path.split(".").flatMap((part) => part.match(/[^[\]]+|\[\d*\]/g) ?? []);
+
+/** Whether `steps` lead to a value in `node` (through every item, for `[]`). */
+function resolves(node: unknown, [step, ...rest]: string[]): boolean {
+  if (step === undefined) return true;
+  if (step.startsWith("[")) {
+    if (!Array.isArray(node)) return false;
+    const items = step === "[]" ? node : [node[Number(step.slice(1, -1))]];
+    return items.length > 0 && items.every((item) => item !== undefined && resolves(item, rest));
+  }
+  return typeof node === "object" && node !== null && Object.hasOwn(node, step) && resolves((node as Record<string, unknown>)[step], rest);
+}
+
+/** `value` with only the listed paths kept (`data[0].hotelId`,
+ *  `hotels[].offers[0].total`), in its own key order: an abridged answer that
+ *  is still the real one. A path that leads nowhere throws. */
+export function abridge(value: unknown, paths: readonly string[]): unknown {
+  for (const path of paths) if (!resolves(value, steps(path))) throw new Error(`abridge: no ${path}`);
+  const pick = (node: unknown, rest: string[][]): unknown => {
+    if (rest.some((p) => p.length === 0)) return node;
+    if (Array.isArray(node)) {
+      return node.flatMap((item, i) => {
+        const next = rest.filter(([s]) => s === "[]" || s === `[${i}]`).map((p) => p.slice(1));
+        return next.length > 0 ? [pick(item, next)] : [];
+      });
+    }
+    return Object.fromEntries(
+      Object.entries(node as Record<string, unknown>).flatMap(([key, child]) => {
+        const next = rest.filter(([s]) => s === key).map((p) => p.slice(1));
+        return next.length > 0 ? [[key, pick(child, next)]] : [];
+      }),
+    );
+  };
+  return pick(value, paths.map(steps));
+}
+
+/** Each example's answer, by the example's name under `examples/`, abridged
+ *  to the fields the next step reads: the real answer, cut down. */
+export const ABRIDGED: Record<string, { answer: unknown; paths: readonly string[] }> = {
+  "device-login": { answer: authConfig, paths: ["clientId", "scopes", "deviceAuthorizationEndpoint", "tokenEndpoint"] },
+  search: {
+    answer: search,
+    paths: ["destination.place.placeId", "destination.place.name", "data[0].hotelId", "data[0].name", "data[0].indicativePrice.fromPerRoomStay", "nextCursor"],
+  },
+  offers: {
+    answer: offers,
+    paths: [
+      "hotels[0].hotelId",
+      "hotels[0].offers[0].offerId",
+      "hotels[0].offers[0].expiresAt",
+      "hotels[0].offers[0].total",
+      "hotels[0].offers[0].cancellation.status",
+      "hotels[0].offers[0].cancellation.freeCancellationEndsAt",
+      "hotels[0].offers[0].confirmation.mode",
+    ],
+  },
+  order: { answer: order, paths: ["orderId", "reference", "status", "total", "payment.url", "payment.expiresAt"] },
+  "get-order": { answer: order, paths: ["orderId", "status", "payment.status", "payment.url"] },
+  "price-match": { answer: priceMatchChecking, paths: ["state", "claimId", "progressUrl", "checkAgainAfterSeconds"] },
+  "get-price-match": { answer: priceMatchMatched, paths: ["state", "claimId", "matchedOffer", "seen[].total"] },
+  "pay-token": { answer: paidByToken, paths: ["orderId", "status", "payment.status", "payment.url"] },
+  "list-orders": { answer: RESPONSES.list_orders, paths: ["data[].orderId", "data[].reference", "data[].status", "nextCursor"] },
+  cancel: { answer: cancelling, paths: ["orderId", "status", "cancel"] },
+};
+
+/** An example's answer, abridged (`ABRIDGED`). */
+export function abridgedAnswer(name: string): unknown {
+  const entry = ABRIDGED[name];
+  if (!entry) throw new Error(`no answer for the example ${name}`);
+  return abridge(entry.answer, entry.paths);
+}

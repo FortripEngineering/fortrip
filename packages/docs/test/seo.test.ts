@@ -47,6 +47,7 @@ const absolute = (route: string) => new URL(route, DOCS_ORIGIN).href;
 /** A URL without its trailing slash: Next writes the root as the bare origin. */
 const bare = (url: string | undefined) => url?.replace(/\/$/, "");
 const markdownUrl = (route: string) => `${DOCS_ORIGIN}${route === "/" ? "/index" : route}.md`;
+const examples = new URL("../examples/", import.meta.url).pathname;
 const docs = new URL("../content/docs/", import.meta.url).pathname;
 
 /** An attribute's text, as React escapes it. */
@@ -300,6 +301,19 @@ describe("Markdown pages", () => {
     const link = "[support@fortrip.ai](mailto:support@fortrip.ai)";
     assert.equal(pageMarkdown("/api").split(link).length - 1, 1);
     assert.ok(pageMarkdown("/faq").includes(link));
+  });
+
+  it("/api-quickstart.md: each example in fenced code, in every language", () => {
+    const markdown = pageMarkdown("/api-quickstart");
+    for (const [dir, ext] of [
+      ["curl", "sh"],
+      ["ts", "ts"],
+      ["py", "py"],
+    ] as const) {
+      const name = "search";
+      const code = readFileSync(join(examples, dir, `${name}.${ext}`), "utf8").trimEnd();
+      assert.ok(markdown.includes(`\n${code}\n\`\`\``), `${dir}/${name}.${ext}`);
+    }
   });
 
   it("/index.md: the ways to pay and the ways to connect; /api.md: the currencies", () => {

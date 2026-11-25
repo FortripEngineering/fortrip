@@ -32,7 +32,7 @@ const textOf = (node: Nodes): string =>
  * of a component's blocks ride on its first block (`data.structuredData`),
  * since generated nodes have no source position for Fumadocs to slice.
  *
- * Elements kept as JSX get a Markdown form too: `<Fields>` its field list,
+ * Elements kept as JSX get a Markdown form too: `<Example>` its code,
  * `<Cards>` a list of links, `<code>` Markdown inline code. A `<pre>` becomes
  * a Markdown code block on the page too. Any other
  * component fails the compilation, and with it the build, so no page's
