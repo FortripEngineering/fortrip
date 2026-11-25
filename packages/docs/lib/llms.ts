@@ -6,6 +6,7 @@ import { BLOCKS } from "./markdown/components.ts";
 import { operationMarkdown } from "./markdown/pages.ts";
 import { toMarkdown } from "./markdown/stringify.ts";
 import { buildOpenApi } from "./openapi/build.ts";
+import { POSTMAN_PATH } from "./openapi/postman.ts";
 import { SITE } from "./site.ts";
 import { source } from "./source.ts";
 
@@ -119,6 +120,7 @@ export function llmsIndex(): string {
     "## OpenAPI",
     "",
     `- [OpenAPI ${buildOpenApi().openapi} document](/openapi.json): the HTTP API's every request and response.`,
+    `- [Postman collection](${POSTMAN_PATH}): every operation with its example request, for Postman's Import.`,
     "",
   ]
     .join("\n")

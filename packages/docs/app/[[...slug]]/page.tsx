@@ -6,12 +6,18 @@ import { notFound } from "next/navigation";
 
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
+import { PageActions } from "@/components/page-actions";
 import { ModelReads, OperationSurfaces, SurfaceLinks } from "@/components/reference";
 import { SiteFooter } from "@/components/site-footer";
+import { markdownPath } from "@/lib/llms";
 import { OPERATIONS } from "@/lib/openapi/build";
 import { MCP_TOOLS } from "@/lib/reference/mcp-tools";
 import { SITE } from "@/lib/site";
 import { source } from "@/lib/source";
+
+/** The written pages about the HTTP API, which offer its Postman collection
+ *  as every operation's page does. */
+const API_PAGES = new Set(["/api", "/api-quickstart"]);
 
 /** The pages before and after `url` in sidebar order, as Fumadocs' footer
  *  lists them, by title only: a card shows the direction and the title. */
@@ -37,7 +43,8 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
     return (
       <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
-        <DocsDescription>{page.data.description}</DocsDescription>
+        <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
+        <PageActions url={page.url} markdownUrl={markdownPath(page.url)} postman />
         <DocsBody>
           {tool && <SurfaceLinks name={tool.name} />}
           {tool && <ModelReads description={tool.summary} />}
@@ -53,7 +60,13 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   return (
     <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
       <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
+      <PageActions
+        url={page.url}
+        markdownUrl={markdownPath(page.url)}
+        source={page.type === "docs" ? page.path : undefined}
+        postman={API_PAGES.has(page.url)}
+      />
       <DocsBody>
         <MDX components={getMDXComponents({ a: createRelativeLink(source, page) })} />
       </DocsBody>
