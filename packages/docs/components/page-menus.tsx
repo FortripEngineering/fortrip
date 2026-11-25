@@ -20,7 +20,7 @@ import {
 export const TRIGGER = buttonVariants({
   variant: "secondary",
   size: "sm",
-  className: "gap-2 [&_svg]:size-3.5 data-[state=open]:bg-fd-accent data-[state=open]:text-fd-accent-foreground",
+  className: "gap-2 [&_svg]:size-3.5 [&_svg:not([data-brand])]:text-fd-muted-foreground data-[state=open]:bg-fd-accent data-[state=open]:text-fd-accent-foreground",
 });
 
 export const MENU_ITEM =
@@ -79,7 +79,7 @@ export function OpenMenu({ markdownUrl, githubUrl, pageUrl }: { markdownUrl: str
           <a key={href} href={href} rel="noreferrer noopener" target="_blank" className={MENU_ITEM}>
             <Icon />
             {title}
-            <ExternalLinkIcon className="ms-auto size-3.5! opacity-70" />
+            <ExternalLinkIcon className="ms-auto size-3.5! text-fd-muted-foreground" />
           </a>
         ))}
       </PopoverContent>

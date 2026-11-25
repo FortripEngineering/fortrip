@@ -13,6 +13,7 @@ function brand(viewBox: string, color: string, children: ReactNode, fill = true)
         fill={fill ? "currentColor" : "none"}
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
+        data-brand=""
         className={cn(color, className)}
         {...props}
       >
@@ -22,8 +23,9 @@ function brand(viewBox: string, color: string, children: ReactNode, fill = true)
   };
 }
 
-/** A line icon (Lucide's), in Fortrip's blue. */
-function line(children: ReactNode, color = "text-fd-primary") {
+/** A line icon (Lucide's) for an action, in the text's colour: only brand
+ *  marks are in colour. */
+function line(children: ReactNode) {
   return function Icon({ className, ...props }: IconProps) {
     return (
       <svg
@@ -34,7 +36,7 @@ function line(children: ReactNode, color = "text-fd-primary") {
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"
-        className={cn(color, className)}
+        className={className}
         {...props}
       >
         {children}
@@ -83,7 +85,7 @@ export const CopyIcon = line(
   </>,
 );
 
-export const CheckIcon = line(<path d="M20 6 9 17l-5-5" />, "text-[#16a34a]");
+export const CheckIcon = line(<path d="M20 6 9 17l-5-5" />);
 
 export const DownloadIcon = line(
   <>
