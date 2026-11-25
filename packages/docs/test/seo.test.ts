@@ -296,6 +296,12 @@ describe("Markdown pages", () => {
     }
   });
 
+  it("the support address is a mailto link in a page's Markdown, once on /api.md", () => {
+    const link = "[support@fortrip.ai](mailto:support@fortrip.ai)";
+    assert.equal(pageMarkdown("/api").split(link).length - 1, 1);
+    assert.ok(pageMarkdown("/faq").includes(link));
+  });
+
   it("/index.md: the ways to pay and the ways to connect; /api.md: the currencies", () => {
     const markdown = pageMarkdown("/");
     includesAll(markdown, PAY_WAYS.map((way) => PAY_WAY_DOCS[way].short), "pay ways");

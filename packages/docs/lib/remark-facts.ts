@@ -68,9 +68,12 @@ export function remarkFacts() {
         let inline: Node;
         if (EMAIL.test(value) && !inCode && parent.type !== "link") {
           const url = `mailto:${value}`;
-          inline = { type: "link", url, children: [{ type: "text", value } as Node], position: node.position } as Node;
+          // The label keeps the tag's position: search records are made from
+          // the link's children, and a node without a position comes out empty.
+          const label = { type: "text", value, position: node.position } as Node;
+          replaceSource(file as SourceArgs[0], label as SourceArgs[1], value, "search");
+          inline = { type: "link", url, children: [label], position: node.position } as Node;
           replaceSource(file as SourceArgs[0], inline as SourceArgs[1], `[${value}](${url})`);
-          replaceSource(file as SourceArgs[0], inline as SourceArgs[1], value, "search");
         } else {
           inline = { type: "text", value, position: node.position } as Node;
           replaceSource(file as SourceArgs[0], inline as SourceArgs[1], value);
