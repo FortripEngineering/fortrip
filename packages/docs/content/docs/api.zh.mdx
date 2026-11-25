@@ -1,0 +1,109 @@
+---
+title: HTTP API
+description: Fortrip API v1 是 MCP 工具和 CLI 背后的 HTTP API。每个端点接受的输入与对应的 MCP 工具相同，返回的对象也相同。
+---
+
+## 基础 URL [#base-url]
+
+<pre><code><Fact path="API_BASE_URL" /></code></pre>
+
+基于 HTTPS 的 JSON。读取用 `GET` 加查询参数；其他操作都用 `POST` 加 JSON 请求体。输入中未定义的字段会以 `invalid_request` 拒绝；已知字段放错了层级时，响应会告诉你它应该放在哪个路径。不支持 CORS：请从服务器或脚本调用 API，不要从网页调用。想试一试，从 [API 快速开始](/api-quickstart)入手。
+
+## 认证 [#authentication]
+
+除 <code><Fact path="ROUTES.authConfig" /></code> 外，每个端点都需要 API key 或 OAuth 访问令牌，以 `Authorization: Bearer <token>` 发送。不接受 Cookie。
+
+| 用途 | 使用 | 有效期 |
+| --- | --- | --- |
+| 你自己的脚本和服务器 | [API key](#api-keys) | 直到你撤销它 |
+| 需要让用户登录的 CLI 或脚本，或还没有 key 时 | [设备授权流程](#device-flow) | 短期访问令牌，用刷新令牌续期 |
+
+一个 key 或令牌代表一个 Fortrip 账号：订单、支付链接和速率限制都归属于该账号。API key 只能用于你自己的账号：绝不要分享给他人。没有服务账号。
+
+### API key [#api-keys]
+
+API key 以 `ak_` 开头。如需获取 API key，或要开发供他人使用自己 Fortrip 账号的应用，请用你 Fortrip 账号的邮箱发邮件到 <Fact path="SUPPORT_EMAIL" />。开通后，Fortrip 网站上你的账号资料（Manage account）中会出现 **API keys** 标签页，你可以在那里创建和撤销 key。
+
+- key 代表创建它的账号，权限范围为 `profile email`，无需刷新。
+- key 能做账号能做的一切，包括取消和支付订单。请把它放在服务器上，绝不要放进网页或你发布的应用里。
+- 已撤销的 key，或 API key 已被关闭的账号的任何 key，都会返回 `401 unauthenticated`。重新开启账号的 API key 后，其中未被撤销的 key 会恢复可用。
+- key 只能用于 HTTP API。[MCP 服务器](/mcp)不接受 key：MCP 客户端通过 OAuth 登录。
+
+### 设备授权流程 [#device-flow]
+
+标准的 OAuth 设备授权流程（RFC 8628）。[API 快速开始](/api-quickstart#sign-in)分别用 curl、TypeScript 和 Python 演示了它。
+
+1. <code><Fact path="ROUTES.authConfig" /></code> 返回 `clientId`、`scopes`、`deviceAuthorizationEndpoint`、`tokenEndpoint` 和 `revocationEndpoint`。
+2. 把 `client_id` 和 `scope` POST 到 `deviceAuthorizationEndpoint`，把返回的 `verification_uri_complete` 展示给用户，然后每隔 `interval` 秒轮询一次 `tokenEndpoint`，直到用户批准。申请 `offline_access`（`scopes` 中已包含）以获得刷新令牌。
+3. 访问令牌有效期很短：以秒计的有效期是令牌响应中的 `expires_in`。在 `tokenEndpoint` 用 `grant_type=refresh_token` 刷新。每次刷新都会返回新的刷新令牌：只保留最新的那个，因为重复使用旧的刷新令牌会撤销整个授权，用户必须重新登录。
+4. 退出登录时，用你的 `client_id` 在 `revocationEndpoint` 撤销刷新令牌。
+
+### 检查 key 或令牌 [#check]
+
+<code><Fact path="ROUTES.me" /></code> 返回某个 key 或令牌所代表的账号。除非 key 或令牌具有 <code><Fact path="ME_SCOPES.email" /></code> 权限，否则 `email` 为 `null`；除非具有 <code><Fact path="ME_SCOPES.name" /></code> 权限，否则 `name` 为 `null`。缺少或被拒绝的 key 或令牌会返回 `401 unauthenticated`。
+
+<Example name="me" />
+
+## 端点 [#endpoints]
+
+<EndpointTable />
+
+[每个接口的页面](/reference/search_hotels)列出了它的参数、请求体和响应，以及对应的 MCP 工具和 CLI 命令；另有 [OpenAPI 3.1 文档](/openapi.json)和包含所有示例请求的 [Postman Collection](/postman.json)。成功的响应就是对象本身，没有外层包装；失败的响应是[错误信封](/errors)。
+
+## 约定 [#conventions]
+
+- 字段使用 camelCase。ID 是带前缀的不透明字符串：`htl_` 酒店、`off_` 报价、`ord_` 订单、`plc_` 地点。请原样传回。
+- 时间点以 `At` 结尾，为 UTC 的 RFC 3339 格式。日期为酒店当地日历的 `yyyy-MM-dd`，一天中的时间为酒店时区（其 IANA `timeZone`）的 `HH:mm`。
+- 坐标为 WGS84 的 `{ lat, lng }`；距离单位为米。
+- 有英文和中文两种形式的名称：`name` 使用请求的 `locale`，另附 `names: { en, zh }`。目录中的其他文本为 `{ text, locale }`，未知语言时 `locale` 为 `null`。API 自己生成的消息为英文。
+- **未知不等于没有。** 数据源没有说明的列表或标志为 `null`，或附带 `known`、`listed`、`disclosure` 或 `status` 说明这一点。没有列出的设施仍可能存在。
+- **宽容地读取响应。** 对象可能新增字段，枚举可能新增取值，联合类型可能新增分支：遇到不认识的不要报错。
+
+### 金额 [#money]
+
+- 金额格式为 `{ amount: "132.40", currency: "USD" }`。amount 是十进制字符串：请按十进制数读取，不要当作浮点数。
+- 价格使用请求的 `currency`（默认 USD，或 <OtherCurrencies />）。你回传的金额，如付款的 `total` 或取消的 `maximumPenalty`，都要从订单中原样复制。
+- 订单按其 `total` 收费，币种即 `total` 中的币种。通过 API 创建的订单按其报价的币种收费；在 Fortrip 网站上创建的订单（也会出现在订单列表中）可能使用其他币种。
+- 到店支付的费用 `payAtProperty` 不包含在总价内，以酒店当地币种计。<Fact path="GUIDE_SENTENCES.adaptivePricing" />
+
+## 请求头与响应头 [#headers]
+
+| Header | 含义 |
+| --- | --- |
+| `Request-Id` | 每个响应都有，错误中以 `requestId` 出现。联系客服时提供它。 |
+| `RateLimit-Limit`、`RateLimit-Remaining`、`RateLimit-Reset` | 计入速率限制的每个响应都有：每分钟的上限、剩余次数，以及距离窗口重置的秒数。参见[速率限制](/errors#rate-limits)。 |
+| `Retry-After` | 每个可重试的错误都有：需要等待的秒数。信封中的 `retryAfterSeconds` 与之相同。 |
+| <code><Fact path="ORDER_HTTP.replayedHeader" /></code> | 当 <code><Fact path="ROUTES.create_order" /></code> 返回的是它之前已为相同内容创建的订单时，为 `true`。 |
+
+## 分页 [#pagination]
+
+搜索结果和订单列表是分页的，包含 `data` 和 `nextCursor`。把 `nextCursor` 作为 `cursor` 传回；搜索的下一页只接受 `cursor` 和可选的 `limit`。最后一页的 `nextCursor` 为 `null`。过期或被修改的游标会返回 `400 cursor_invalid`。
+
+实时报价不分页：一次调用返回数量有限的报价，按酒店分组。[报价预算](/errors#offers-budget)说明了数量上限以及如何查看更多。
+
+## 重试与幂等 [#retries]
+
+没有 `Idempotency-Key` 请求头。重发同一个调用时返回什么，由调用的内容决定：
+
+<RetryTable />
+
+<RetryCodes />
+
+## 轮询 [#polling]
+
+没有 webhook。把支付链接交给用户后，在用户说已付款时用 <code><Fact path="ROUTES.get_order" /></code> 读取订单，或在用户付款期间每隔几秒读取一次；订单处于 `confirming` 时继续读取。每次读取都计入 `orders_read` 限制，每分钟 <Fact path="RATE_LIMITS.orders_read.limit" /> 次。酒店可能需要多长时间确认，见报价的 `confirmation`：`instant`，或在 `withinMinutes` 内完成的 `on_request`。
+
+## 订单 [#orders]
+
+- <code><Fact path="ROUTES.create_order" /></code> 返回 <Fact path="ORDER_HTTP.createdStatus" />，订单状态为 `awaiting_payment`；再次发送相同内容时返回 <Fact path="ORDER_HTTP.replayedStatus" />，并带 <code><Fact path="ORDER_HTTP.replayedHeader" />: true</code>。
+- <code><Fact path="ROUTES.pay_order" /></code> 接受 `sharedPaymentToken`（用户为该订单批准的令牌）和 `total`（与订单返回的 `total` 完全一致）。两者都必填。
+
+流程、付款方式、订单状态以及取消和关闭，见[订单与支付](/payments)。
+
+## TypeScript 类型 [#typescript]
+
+npm 上的 [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract) 导出了每个输入和响应的 zod schema 与 TypeScript 类型。
+
+## v1 内的变更 [#evolution]
+
+预发布阶段：破坏性变更会以新的主版本发布；参见 [changelog](/changelog)。

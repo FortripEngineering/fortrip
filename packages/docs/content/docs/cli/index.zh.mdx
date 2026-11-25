@@ -1,0 +1,51 @@
+---
+title: 概览
+description: "命令在 stdout 输出简洁的文本，加 --json 时输出单行 JSON 响应；错误输出到 stderr，并带有固定的退出码。"
+---
+
+例外：`fortrip mcp` 通过 stdin 和 stdout 使用 MCP 协议通信，`--help` 和 `--version` 输出纯文本。
+
+## 安装 [#install]
+
+```sh
+npm install -g fortrip
+```
+
+也可以用 `npx fortrip` 运行任何命令。需要 Node.js <Fact path="CLI_NODE_MAJOR" /> 或更高版本。用 [`fortrip login`](/cli/login) 登录。
+
+## 手动完成一次预订 [#walkthrough]
+
+每个响应都是简洁的文本，带有下一条命令需要的 ID。
+
+```sh
+npx fortrip hotels search --place-name Kyoto --country JP --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2
+npx fortrip hotels offers --hotel htl_… --check-in YYYY-MM-DD --check-out YYYY-MM-DD --room 2 --require-free-cancellation
+npx fortrip orders create --offer off_… --guest 1:First:Last --name "First Last" --email you@example.com --phone +1…
+npx fortrip orders get ord_…
+```
+
+`--room 2` 表示一间房住两位成人；`--guest 1:First:Last` 表示 1 号房间的一位住客，姓名与护照一致。`orders create` 创建一笔未付款的订单，`orders get` 会输出它的支付链接：在你通过链接付款之前不会扣款。
+
+## 命令 [#commands]
+
+<CommandList />
+
+CLI 本身的选项：
+
+<GlobalFlags />
+
+## 原始请求体 [#raw-body]
+
+`hotels search`、`hotels offers` 和 `orders create` 还接受 `--body`，值为一个 JSON 对象，或 `--body @file.json`。命令行参数会覆盖其中的字段，这些字段与 [HTTP API](/api) 的请求体相同。
+
+<RawBodyExample />
+
+## 环境变量 [#environment]
+
+<EnvironmentTable />
+
+退出码列在[错误与限制](/errors#exit-codes)中。
+
+## 更新 [#updates]
+
+让 CLI 与服务的主版本保持一致：运行 `npm install -g fortrip@latest`，或以 `npx -y fortrip@latest` 运行。落后一个主版本的 CLI 会被以 [`client_outdated`](/errors#code-client_outdated) 拒绝。

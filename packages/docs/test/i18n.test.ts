@@ -89,7 +89,8 @@ describe("built Chinese site", () => {
   it("serves each translation's Markdown, in Chinese, linking to the Chinese pages", () => {
     for (const route of translated) {
       const markdown = pageMarkdown(route);
-      assert.match(markdown.split("\n")[0] ?? "", /^# .*\p{Script=Han}/u, route);
+      // The title, which can be a name ("HTTP API"), then the description.
+      assert.match(markdown.split("\n").slice(0, 3).join("\n"), /\p{Script=Han}/u, route);
       for (const [, link] of markdown.matchAll(/\]\((https:\/\/docs\.fortrip\.ai\/[^)#]*\.md)/g)) {
         assert.ok(link?.startsWith(`${DOCS_ORIGIN}/zh/`), `${route} → ${link}`);
       }

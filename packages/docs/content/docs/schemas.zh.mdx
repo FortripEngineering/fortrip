@@ -1,0 +1,20 @@
+---
+title: 响应结构
+description: 下面的每个对象，就是 HTTP API 返回的内容，也是 CLI 加 --json 时输出的内容。MCP 工具以文本形式返回同样的回答。
+---
+
+MCP 结果本身没有 JSON：它的文本是根据这些对象写成的（见[工具返回什么](/mcp#results)）。
+
+## 如何阅读表格 [#reading]
+
+- 除非标为可选，否则每个字段都会出现；`| null` 表示该字段可能为 `null`。对于目录数据，`null` 表示未知，绝不表示没有。在其他地方它有各自的含义：`nextCursor` 在最后一页为 `null`，`payment.url` 在当前没有可付款的链接时为 `null`，`payment.tokenRequest` 在无法用令牌支付该订单时为 `null`。
+- `[]` 表示列表中的元素，“when `kind`” 或 “when `type`” 表示联合类型的一个分支，该分支的字段列在它下面。
+- 所有响应共用的字段规则（ID、[金额](/api#money)、日期、名称）见[约定](/api#conventions)，其中也说明了如何宽容地读取响应。
+
+## 跨对象共用的名称 [#names]
+
+- **`total`** 是覆盖整个入住期间和所有房间的实际收费金额，报价和订单上都有。报价的 `perRoomNight` 仅供比较：它乘回去不一定等于 `total`。
+- **`roomType`** 在报价、订单的每个房间以及酒店的 `roomTypes` 中是同一种对象。报价的 `roomType` 与酒店 `roomTypes` 中的条目之间没有关联：名称可能不同，所以不要去匹配它们。
+- **`cancellation`**、**`confirmation`** 和 **`payAtProperty`** 适用于整个入住期间，出现在报价和订单的酒店项上。`meals` 和 `roomType` 按房间计：报价对其所有房间各有一个，订单则在 `rooms` 的每一项上都有。
+
+<SchemaTables />

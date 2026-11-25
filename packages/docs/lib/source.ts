@@ -89,6 +89,11 @@ export const source = loader(
           path: `${REFERENCE_DIR}/meta.json`,
           data: { title: "Operations", pages: OPERATIONS.map((op) => op.id) },
         },
+        {
+          type: "meta",
+          path: `${REFERENCE_DIR}/meta.zh.json`,
+          data: { title: "接口", pages: OPERATIONS.map((op) => op.id) },
+        },
       ],
     },
   },
