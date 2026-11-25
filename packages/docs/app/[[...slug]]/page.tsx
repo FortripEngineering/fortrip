@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { OpenAPIPage } from "@/components/api-page";
 import { getMDXComponents } from "@/components/mdx";
+import { PageActions } from "@/components/page-actions";
 import { ModelReads, OperationSurfaces, SurfaceLinks } from "@/components/reference";
 import { SiteFooter } from "@/components/site-footer";
 import { OPERATIONS } from "@/lib/openapi/build";
@@ -37,7 +38,8 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
     return (
       <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
-        <DocsDescription>{page.data.description}</DocsDescription>
+        <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
+        <PageActions page={page} />
         <DocsBody>
           {tool && <SurfaceLinks name={tool.name} />}
           {tool && <ModelReads description={tool.summary} />}
@@ -53,7 +55,8 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   return (
     <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
       <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
+      <PageActions page={page} />
       <DocsBody>
         <MDX components={getMDXComponents({ a: createRelativeLink(source, page) })} />
       </DocsBody>
