@@ -23,6 +23,7 @@ import {
   type ToolName,
   renderError,
   renderToolResult,
+  SUPPORT_EMAIL,
   TOOLS,
 } from "@fortrip/agent-contract";
 import type { PhrasingContent } from "mdast";
@@ -121,14 +122,6 @@ export const END_TO_END_IDS = {
 const readId = (name: string, { file, path, none }: (typeof END_TO_END_IDS)[keyof typeof END_TO_END_IDS]) =>
   `${name}=$(jq -re '${path}' ${file}) || { echo "${none}" >&2; false; }`;
 
-/** The curl sign-in script, as the quickstart's first step saves it: the
- *  example file without its `#!` line. */
-function signInScript(): string {
-  const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
-  if (!curl) throw new Error("no curl examples");
-  return exampleCode("device-login", curl).replace(/^#!.*\n/, "").trimEnd();
-}
-
 /** One call of the quickstart in curl: its example's body and time limit,
  *  with the ids an earlier call gave as shell variables, and its answer
  *  saved to `file`. */
@@ -192,25 +185,23 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     const order = RESPONSES.create_order as { payment: { url: string } };
     const { hotel, offer } = END_TO_END_IDS;
     return [
-      heading(3, [text("1. Sign in")], "step-sign-in"),
+      heading(3, [text("1. Set your API key")], "step-api-key"),
       paragraph([
-        text("Run this, then approve the sign-in in your browser. It saves the sign-in script as "),
-        code("device-login.sh"),
-        text(" and runs it, keeping the access token and the refresh token in "),
-        code("token.json"),
-        text(". "),
-        link("#sign-in", text("Sign in")),
-        text(" explains the flow."),
+        text("To get one, email "),
+        link(`mailto:${SUPPORT_EMAIL}`, text(SUPPORT_EMAIL)),
+        text(" (see "),
+        link("/api#api-keys", text("API keys")),
+        text("). Without a key, "),
+        link("#sign-in", text("sign in")),
+        text(" instead and set "),
+        code("FORTRIP_TOKEN"),
+        text(" to the access token."),
       ]),
       codeBlock(
         "sh",
         [
-          "umask 077 # token.json and the files after it are readable by you only",
-          "cat > device-login.sh <<'SH'",
-          signInScript(),
-          "SH",
-          "bash device-login.sh > token.json",
-          "export FORTRIP_TOKEN=$(jq -r .access_token token.json)",
+          "umask 077 # the files the next steps save are readable by you only",
+          "export FORTRIP_TOKEN='ak_…' # your API key",
         ].join("\n"),
       ),
       heading(3, [text("2. Search")], "step-search"),
@@ -244,7 +235,7 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   },
 
   /** Renewing the access token with the refresh token the sign-in kept,
-   *  in curl, after the sign-in script's `token.json`, which a failed
+   *  in curl, after the sign-in's `token.json`, which a failed
    *  refresh leaves as it was. */
   RefreshTokenExample: () => [
     codeBlock(

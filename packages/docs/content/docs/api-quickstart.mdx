@@ -3,7 +3,7 @@ title: API quickstart
 description: Book a stay over HTTP in five steps, then each call in curl, TypeScript and Python.
 ---
 
-Every call sends `FORTRIP_TOKEN`, an access token of the user who signs in. There is no test environment: any payment is real. See [Testing your integration](/faq#testing).
+Every call sends `FORTRIP_TOKEN`: your [API key](/api#api-keys), or an access token from [signing in](#sign-in). There is no test environment: any payment is real. See [Testing your integration](/faq#testing).
 
 The TypeScript examples use `fetch` on Node.js, and the Python examples use [`httpx`](https://www.python-httpx.org/).
 
@@ -13,11 +13,19 @@ You need curl and jq. Each call saves its answer to a file, and the next call ta
 
 <EndToEnd />
 
-## Sign in [#sign-in]
+## Sign in without a key [#sign-in]
 
-This script runs the OAuth device flow and prints the access token and the refresh token. [Authentication](/api#authentication) explains the flow and when to use another.
+Until you have an API key, sign in instead. This script runs the OAuth device flow and prints the access token and the refresh token: set `FORTRIP_TOKEN` to the access token. [Authentication](/api#authentication) explains the flow and when to use another.
 
 <Example name="device-login" />
+
+In curl, save the script as `device-login.sh` and keep its output in `token.json`, which [Refresh a token](#refresh) reads:
+
+```sh
+umask 077 # token.json is readable by you only
+bash device-login.sh > token.json
+export FORTRIP_TOKEN=$(jq -r .access_token token.json)
+```
 
 <code><Fact path="ROUTES.authConfig" /></code> answers, abridged. The values are examples: read them from it each time, as the script does.
 

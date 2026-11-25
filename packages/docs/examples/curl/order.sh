@@ -2,7 +2,7 @@
 # Create an order from an offer. Nothing is charged until it is paid.
 # It can take a couple of minutes. A call that timed out is safe to send again:
 # https://docs.fortrip.ai/api#retries
-# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
+# Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above).
 set -euo pipefail
 
 curl -sS --fail-with-body --max-time 180 -X POST "https://api.fortrip.ai/v1/orders" \

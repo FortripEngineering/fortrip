@@ -297,6 +297,12 @@ describe("Markdown pages", () => {
     }
   });
 
+  it("the support address is a mailto link in a page's Markdown, once on /api.md", () => {
+    const link = "[support@fortrip.ai](mailto:support@fortrip.ai)";
+    assert.equal(pageMarkdown("/api").split(link).length - 1, 1);
+    assert.ok(pageMarkdown("/faq").includes(link));
+  });
+
   it("/api-quickstart.md: each example in fenced code, in every language", () => {
     const markdown = pageMarkdown("/api-quickstart");
     for (const [dir, ext] of [

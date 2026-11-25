@@ -64,6 +64,23 @@ describe("remarkFacts", () => {
     assert.deepEqual(search, ["Connect to https://mcp.fortrip.ai/ for up to 8 rooms.", "80,000"]);
   });
 
+  it("makes an email address a mailto link, with the address alone in the search index", async () => {
+    const { html, search } = await compile('Email <Fact path="SUPPORT_EMAIL" />.');
+    assert.equal(html, '<p>Email <a href="mailto:support@fortrip.ai">support@fortrip.ai</a>.</p>');
+    assert.deepEqual(search, ["Email support@fortrip.ai."]);
+  });
+
+  it("keeps an email address as text in code and inside a link", async () => {
+    assert.equal(
+      await render('Send <code><Fact path="SUPPORT_EMAIL" /></code>.'),
+      "<p>Send <code>support@fortrip.ai</code>.</p>",
+    );
+    assert.equal(
+      await render('[write to <Fact path="SUPPORT_EMAIL" />](/faq)'),
+      '<p><a href="/faq">write to support@fortrip.ai</a></p>',
+    );
+  });
+
   it("adds no children to a leaf", async () => {
     const leaves: string[] = [];
     const capture = () => (tree: Node) => {

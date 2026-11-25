@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # List your orders, newest first.
-# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
+# Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above).
 set -euo pipefail
 
 curl -sS --fail-with-body --max-time 60 "https://api.fortrip.ai/v1/orders?limit=10" \
