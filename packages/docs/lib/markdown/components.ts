@@ -2,7 +2,6 @@
 // at compile time (`lib/remark-components.ts`). The page, its search records
 // and its Markdown text are all made from these trees.
 import {
-  ACCOUNT_ROUTES,
   CANCEL_BLOCKERS,
   type Destination,
   destination,
@@ -18,12 +17,10 @@ import {
   ORDER_STATUSES,
   PAY_WAYS,
   PAYMENT_STATUSES,
-  PUBLIC_ORIGINS,
   type RenderedTool,
   type ToolName,
   renderError,
   renderToolResult,
-  SUPPORT_EMAIL,
   TOOLS,
 } from "@fortrip/agent-contract";
 import type { PhrasingContent } from "mdast";
@@ -47,8 +44,7 @@ import { EXIT_ROWS } from "../reference/exit-codes.ts";
 import { limitRows, OPERATION_NAMES, rateLimitRows } from "../reference/limits.ts";
 import { MCP_TOOLS } from "../reference/mcp-tools.ts";
 import { regionGroups } from "../reference/regions.ts";
-import { EXAMPLE_LANGUAGES, EXAMPLE_REQUESTS, exampleCode } from "../reference/examples.ts";
-import { abridgedAnswer, ERRORS, EXAMPLE_IDS, type OperationId, RESPONSES } from "../reference/responses.ts";
+import { ERRORS, type OperationId, RESPONSES } from "../reference/responses.ts";
 import {
   RESPONSE_DOCS,
   type ResponseDoc,
@@ -109,48 +105,6 @@ function responseBody(doc: ResponseDoc): Block[] {
   return [fields(`response:${doc.id}`)];
 }
 
-/** The jq filters the quickstart's calls read their ids with: the first
- *  hotel found, and the first offer of any hotel offered, which is where
- *  `EXAMPLE_IDS` takes them from the example answers. */
-export const END_TO_END_IDS = {
-  hotel: { file: "search.json", path: ".data[0].hotelId", none: "No hotel found: search another place or other dates." },
-  offer: { file: "offers.json", path: "[.hotels[].offers[]][0].offerId", none: "No offer matches: pick another hotel from step 2." },
-} as const;
-
-/** Reads an id into a shell variable with `jq -e`, which fails on `null`;
- *  when there is none it says so and fails too, without leaving the shell. */
-const readId = (name: string, { file, path, none }: (typeof END_TO_END_IDS)[keyof typeof END_TO_END_IDS]) =>
-  `${name}=$(jq -re '${path}' ${file}) || { echo "${none}" >&2; false; }`;
-
-/** One call of the quickstart in curl: its example's body and time limit,
- *  with the ids an earlier call gave as shell variables, and its answer
- *  saved to `file`. */
-function endToEndCall(op: "search_hotels" | "get_hotel_offers" | "create_order", file: string): string {
-  const route = HTTP_ROUTES[op];
-  const example = EXAMPLE_REQUESTS[op][0];
-  const curl = EXAMPLE_LANGUAGES.find((language) => language.dir === "curl");
-  const maxTime = curl && example && /--max-time (\d+)/.exec(exampleCode(example.name, curl))?.[1];
-  if (!maxTime) throw new Error(`no curl time limit for ${op}`);
-  const body = JSON.stringify(example?.body, null, 2)
-    // An id an earlier step didn't find stops the call before it is sent.
-    .replaceAll(`"${EXAMPLE_IDS.hotelId}"`, '"${hotel:?no hotelId: run step 2 first}"')
-    .replaceAll(`"${EXAMPLE_IDS.offerId}"`, '"${offer:?no offerId: run step 3 first}"');
-  return [
-    `curl -sS --fail-with-body --max-time ${maxTime} -X ${route.method} "${PUBLIC_ORIGINS.api}${route.path}" \\`,
-    `  -H "Authorization: Bearer $FORTRIP_TOKEN" \\`,
-    `  -H "Content-Type: application/json" \\`,
-    `  --data @- > ${file} <<JSON`,
-    body,
-    "JSON",
-  ].join("\n");
-}
-
-/** The answer under a step, abridged. */
-const abridged = (name: string): Block[] => [
-  paragraph([text("The answer, abridged:")]),
-  codeBlock("json", json(abridgedAnswer(name))),
-];
-
 /** Components that stand on their own line, by name. */
 export const BLOCKS: Record<string, (props: Props) => Block[]> = {
   /** The ways to pay an order, in the contract's order: named in one
@@ -178,79 +132,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       ];
     });
   },
-
-  /** The API quickstart's five steps in curl, each step's answer abridged
-   *  under it. */
-  EndToEnd: () => {
-    const order = RESPONSES.create_order as { payment: { url: string } };
-    const { hotel, offer } = END_TO_END_IDS;
-    return [
-      heading(3, [text("1. Set your API key")], "step-api-key"),
-      paragraph([
-        text(`To get one, email ${SUPPORT_EMAIL}`),
-        text(" (see "),
-        link("/api#api-keys", text("API keys")),
-        text("). Without a key, "),
-        link("#sign-in", text("sign in")),
-        text(" instead and set "),
-        code("FORTRIP_TOKEN"),
-        text(" to the access token."),
-      ]),
-      codeBlock(
-        "sh",
-        [
-          "umask 077 # the files the next steps save are readable by you only",
-          "export FORTRIP_TOKEN='ak_…' # your API key",
-        ].join("\n"),
-      ),
-      heading(3, [text("2. Search")], "step-search"),
-      paragraph([text("Search a city for the stay, and take the first hotel's "), code("hotelId"), text(".")]),
-      codeBlock("sh", `${endToEndCall("search_hotels", hotel.file)}\n${readId("hotel", hotel)}`),
-      ...abridged("search"),
-      heading(3, [text("3. Get offers")], "step-offers"),
-      paragraph([text("Get live offers for that hotel, and take the first offer's "), code("offerId"), text(".")]),
-      codeBlock("sh", `${endToEndCall("get_hotel_offers", offer.file)}\n${readId("offer", offer)}`),
-      ...abridged("offers"),
-      heading(3, [text("4. Create the order")], "step-order"),
-      paragraph([
-        text("Order the offer with the guests and a contact. Nothing is charged. It can take a couple of minutes, so allow at least three."),
-      ]),
-      codeBlock("sh", endToEndCall("create_order", "order.json")),
-      ...abridged("order"),
-      paragraph(
-        inline(
-          "If the price or terms changed, the answer is `409 offer_changed` instead, and `order.json` holds the error. Show the user `error.details.changes`; if they agree, order `error.details.offer.offerId` the same way. See [When the offer changed](/payments#offer-changed).",
-        ),
-      ),
-      heading(3, [text("5. Give the user the payment link")], "step-pay"),
-      paragraph([
-        text("Show the user the total and every term, and wait for a clear yes. Then give them "),
-        code("payment.url"),
-        text(", where they pay."),
-      ]),
-      codeBlock("sh", "jq -r .payment.url order.json"),
-      codeBlock("text", order.payment.url),
-    ];
-  },
-
-  /** Renewing the access token with the refresh token the sign-in kept,
-   *  in curl, after the sign-in's `token.json`, which a failed
-   *  refresh leaves as it was. */
-  RefreshTokenExample: () => [
-    codeBlock(
-      "sh",
-      [
-        "umask 077 # the new token.json is readable by you only",
-        `config=$(curl -sS --fail-with-body "${PUBLIC_ORIGINS.api}${ACCOUNT_ROUTES.authConfig.path}")`,
-        "refresh_token=$(jq -r .refresh_token token.json)",
-        'curl -sS --fail-with-body "$(jq -r .tokenEndpoint <<<"$config")" \\',
-        "  -d grant_type=refresh_token \\",
-        '  -d refresh_token="$refresh_token" \\',
-        '  -d client_id="$(jq -r .clientId <<<"$config")" > token.new.json && mv token.new.json token.json',
-        "export FORTRIP_TOKEN=$(jq -r .access_token token.json)",
-      ].join("\n"),
-    ),
-  ],
 
   /** What sending each call again does, for the HTTP API and the MCP tools. */
   RetryTable: () => [
@@ -567,10 +448,6 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
       text("."),
     ]),
   ],
-
-  /** An example's answer as JSON, abridged to the fields the next step reads
-   *  (`name` is the example's, as `<Example>` takes it). */
-  ResponseExample: ({ name = "" }) => [codeBlock("json", json(abridgedAnswer(name)))],
 
   /** An error envelope the reference shows, as JSON: the whole envelope, or
    *  with `part="details"` its `details`. */

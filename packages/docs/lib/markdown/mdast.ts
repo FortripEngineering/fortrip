@@ -19,7 +19,7 @@ import type {
 
 /**
  * A component a page keeps as JSX, for a look Markdown has no element for
- * (`Fields`, a field list; `Example`, code in tabs). It still has a Markdown
+ * (`Fields`, a field list). It still has a Markdown
  * form and search records: `widgets.ts`.
  */
 export interface Widget {

@@ -7,7 +7,7 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page. To get an [API key](#api-keys), email <Fact path="SUPPORT_EMAIL" />.
 
 ## Authentication [#authentication]
 
@@ -31,7 +31,7 @@ An API key starts with `ak_`. To get API keys, email <Fact path="SUPPORT_EMAIL" 
 
 ### Device flow [#device-flow]
 
-The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/api-quickstart#sign-in) runs it in curl, TypeScript and Python.
+The standard OAuth device authorization flow (RFC 8628).
 
 1. <code><Fact path="ROUTES.authConfig" /></code> returns `clientId`, `scopes`, `deviceAuthorizationEndpoint`, `tokenEndpoint` and `revocationEndpoint`.
 2. Post `client_id` and `scope` to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete`, then poll `tokenEndpoint` every `interval` seconds until the user approves. Request `offline_access`, which `scopes` includes, to get a refresh token.
@@ -41,8 +41,6 @@ The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/a
 ### Check a key or token [#check]
 
 <code><Fact path="ROUTES.me" /></code> returns the account a key or token acts as. Its `email` is `null` unless the key or token has the <code><Fact path="ME_SCOPES.email" /></code> scope, and its `name` unless it has <code><Fact path="ME_SCOPES.name" /></code>. A missing or rejected key or token answers `401 unauthenticated`.
-
-<Example name="me" />
 
 ## Endpoints [#endpoints]
 

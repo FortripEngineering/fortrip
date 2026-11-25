@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import cancelBody from "../../examples/bodies/cancel.json" with { type: "json" };
 import offersBody from "../../examples/bodies/offers.json" with { type: "json" };
 import orderBody from "../../examples/bodies/order.json" with { type: "json" };
@@ -9,21 +6,8 @@ import priceMatchBody from "../../examples/bodies/price-match.json" with { type:
 import searchBody from "../../examples/bodies/search.json" with { type: "json" };
 import { EXAMPLE_IDS, type OperationId } from "./responses.ts";
 
-/** The languages each example is written in: its tab, folder, extension and highlighting. */
-export const EXAMPLE_LANGUAGES = [
-  { label: "curl", dir: "curl", ext: "sh", lang: "bash" },
-  { label: "TypeScript", dir: "ts", ext: "ts", lang: "ts" },
-  { label: "Python", dir: "py", ext: "py", lang: "python" },
-] as const;
-
-/** An example's code in one language, read from `examples/` at build time.
- *  The files are what the examples test holds to the contract. */
-export function exampleCode(name: string, language: (typeof EXAMPLE_LANGUAGES)[number]): string {
-  return readFileSync(join(process.cwd(), "examples", language.dir, `${name}.${language.ext}`), "utf8").trimEnd();
-}
-
-/** An example request: its name under `examples/`, a title, the path and
- *  query values it sends, and its JSON body. */
+/** An example request: its name, a title, the path and query values it
+ *  sends, and its JSON body (`examples/bodies/<name>.json`). */
 export interface ExampleRequest {
   name: string;
   title: string;

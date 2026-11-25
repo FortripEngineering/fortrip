@@ -88,10 +88,10 @@ describe("built site", () => {
       }
     }
     assert.deepEqual(cards, []);
-    // On /quickstart, the next card is the API quickstart's: its title, not its description.
+    // On /quickstart, the next card is the install page's: its title, not its description.
     const quickstart = pageHtml("/quickstart");
-    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/api-quickstart">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
-    const target = readFileSync(join(server, "app/api-quickstart.html"), "utf8");
+    const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/install">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
+    const target = readFileSync(join(server, "app/install.html"), "utf8");
     const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(target)?.[1] ?? "";
     const description = /<meta name="description" content="([^"]+)"/.exec(target)?.[1] ?? "";
     assert.ok(title && description);
