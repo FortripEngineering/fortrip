@@ -12,6 +12,8 @@ export function baseOptions(lang: Lang): BaseLayoutProps {
       ),
       url: localize(lang, "/"),
     },
+    // Both sit above each page's table of contents instead (`PageControls`).
+    slots: { languageSelect: false, themeSwitch: false },
     links: [
       { text: t.forAgents, url: "https://fortrip.ai/agents", external: true },
       { type: "button", text: t.quickstart, url: localize(lang, "/quickstart") },

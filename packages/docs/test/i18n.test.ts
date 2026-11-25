@@ -95,4 +95,14 @@ describe("built Chinese site", () => {
       }
     }
   });
+
+  it("puts the language and theme controls above the table of contents, not in the sidebar", () => {
+    for (const route of ["/quickstart", "/zh/quickstart"]) {
+      const html = pageHtml(route);
+      const toc = html.slice(html.indexOf('id="nd-toc"'));
+      const sidebar = html.slice(html.indexOf('id="nd-sidebar"'), html.indexOf('id="nd-page"'));
+      assert.ok(toc.indexOf('aria-label="Choose a language"') !== -1 || toc.indexOf('aria-label="选择语言"') !== -1, route);
+      assert.ok(!/aria-label="(Choose a language|选择语言)"/.test(sidebar), route);
+    }
+  });
 });

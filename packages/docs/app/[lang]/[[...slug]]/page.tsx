@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { OpenAPIPage } from "@/components/api-page";
 import { localizedComponents } from "@/components/mdx";
 import { PageActions } from "@/components/page-actions";
+import { PageControls } from "@/components/page-controls";
 import { ModelReads, OperationSurfaces, SurfaceLinks } from "@/components/reference";
 import { SiteFooter } from "@/components/site-footer";
 import { markdownPath } from "@/lib/llms";
@@ -36,6 +37,10 @@ function Untranslated({ lang }: { lang: Lang }) {
   return <p className="rounded-lg border bg-fd-card px-4 py-3 text-sm text-fd-muted-foreground">{UI[lang].untranslated}</p>;
 }
 
+/** The language and theme controls on a page with no table of contents: its
+ *  top right corner, inside the page's padding, level with the breadcrumb. */
+const TOP_RIGHT = "absolute end-4 top-6 md:end-6 md:top-8 xl:end-8 xl:top-14";
+
 /** The page at `slug` in `lang`, or a 404. */
 function pageOf(lang: string, slug: string[] | undefined) {
   const page = isLang(lang) ? source.getPage(slug, lang) : undefined;
@@ -54,7 +59,13 @@ export default async function Page(props: PageProps<"/[lang]/[[...slug]]">) {
     // which a line at the top links to: the page has no table of contents.
     const tool = MCP_TOOLS.find((t) => t.name === OPERATIONS.find((op) => op.id === page.slugs.at(-1))?.endpoint.tool);
     return (
-      <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}>
+      <DocsPage
+        toc={page.data.toc}
+        full
+        className="relative"
+        footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}
+      >
+        <PageControls className={TOP_RIGHT} />
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
         <PageActions lang={lang} url={page.url} markdownUrl={markdownPath(page.url)} postman />
@@ -72,7 +83,15 @@ export default async function Page(props: PageProps<"/[lang]/[[...slug]]">) {
   const MDX = page.data.body;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}>
+    <DocsPage
+      toc={page.data.toc}
+      full={page.data.full}
+      className="relative"
+      tableOfContent={{ header: <PageControls className="mb-6" /> }}
+      footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}
+    >
+      {/* Where the table of contents is hidden, the controls head the page. */}
+      <PageControls className={page.data.full ? TOP_RIGHT : "xl:hidden"} />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <PageActions
