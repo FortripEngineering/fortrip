@@ -3,51 +3,155 @@
 @import "fumadocs-ui/css/preset.css";
 @import "fumadocs-openapi/css/preset.css";
 
-/* Fortrip's colours (light, from fortrip.ai's docs) over Fumadocs' neutral theme. */
+/*
+ * The design system: Vercel's Geist language over Fumadocs' neutral theme,
+ * with Fortrip blue as its one accent.
+ *
+ * - Achromatic: a near-white canvas, white raised surfaces, a near-black
+ *   text and a grayscale between them. Fortrip blue marks what is
+ *   interactive (links, the active page, focus) and nothing else; status
+ *   colours are for small icons, never fills.
+ * - Geist Sans and Geist Mono, in three weights: 400, 500 and 600. No 700.
+ *   Headings are tracked tight.
+ * - Borders are one hairline, rgba(0, 0, 0, 0.08), the colour of Geist's
+ *   shadow-as-border; elevation adds soft depth layers on top of it.
+ * - Radii: 6px for controls, 12px for cards and panels, and no more.
+ * - Focus is a double ring: the background's colour, then the accent. The
+ *   search field keeps Fumadocs' own focus, inside its dialog.
+ */
+
 @theme {
-  --color-fd-background: #ffffff;
-  --color-fd-foreground: #1f2124;
-  --color-fd-muted: #f6f7f8;
-  --color-fd-muted-foreground: #62656b;
+  --color-fd-background: #fafafa;
+  --color-fd-foreground: #171717;
+  --color-fd-muted: #f2f2f2;
+  --color-fd-muted-foreground: #4d4d4d;
   --color-fd-popover: #ffffff;
-  --color-fd-popover-foreground: #1f2124;
-  --color-fd-card: #f6f7f8;
-  --color-fd-card-foreground: #1f2124;
-  --color-fd-border: #e0e2e5;
+  --color-fd-popover-foreground: #171717;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #171717;
+  --color-fd-border: rgba(0, 0, 0, 0.08);
   --color-fd-primary: #3152f4;
   --color-fd-primary-foreground: #ffffff;
-  --color-fd-secondary: #f1f2f3;
-  --color-fd-secondary-foreground: #1f2124;
-  --color-fd-accent: #f4f6ff;
-  --color-fd-accent-foreground: #1f2124;
+  --color-fd-secondary: #f2f2f2;
+  --color-fd-secondary-foreground: #171717;
+  --color-fd-accent: #ebebeb;
+  --color-fd-accent-foreground: #171717;
   --color-fd-ring: #3152f4;
-  --color-fd-error: #b42318;
+  --color-fd-overlay: rgba(242, 242, 242, 0.8);
+  --color-fd-article: #ffffff;
+
+  --color-fd-info: #3152f4;
+  --color-fd-success: #398e4a;
+  --color-fd-warning: #ff990a;
+  --color-fd-error: #cb2a2f;
+  --color-fd-idea: #7820bc;
+
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 12px;
+  --radius-2xl: 12px;
+  --radius-3xl: 12px;
+
+  --shadow-sm: 0 2px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 8px -8px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --shadow-2xl: var(--shadow-xl);
 }
 
-/* Dark: the same roles, derived; the accent is lightened to keep its contrast. */
+/* Dark: Geist's dark grays; the accent is lightened to keep its contrast. */
 .dark {
-  --color-fd-background: #111214;
-  --color-fd-foreground: #ecedee;
-  --color-fd-muted: #1a1b1e;
-  --color-fd-muted-foreground: #9a9da3;
-  --color-fd-popover: #17181b;
-  --color-fd-popover-foreground: #ecedee;
-  --color-fd-card: #17181b;
-  --color-fd-card-foreground: #ecedee;
-  --color-fd-border: #2c2e33;
+  --color-fd-background: #0a0a0a;
+  --color-fd-foreground: #ededed;
+  --color-fd-muted: #1a1a1a;
+  --color-fd-muted-foreground: #a1a1a1;
+  --color-fd-popover: #111111;
+  --color-fd-popover-foreground: #ededed;
+  --color-fd-card: #111111;
+  --color-fd-card-foreground: #ededed;
+  --color-fd-border: rgba(255, 255, 255, 0.14);
   --color-fd-primary: #7b93ff;
   --color-fd-primary-foreground: #0b0d1a;
-  --color-fd-secondary: #1f2124;
-  --color-fd-secondary-foreground: #ecedee;
-  --color-fd-accent: #1b2142;
-  --color-fd-accent-foreground: #ecedee;
+  --color-fd-secondary: #1a1a1a;
+  --color-fd-secondary-foreground: #ededed;
+  --color-fd-accent: #1f1f1f;
+  --color-fd-accent-foreground: #ededed;
   --color-fd-ring: #7b93ff;
-  --color-fd-error: #f97066;
+  --color-fd-overlay: rgba(0, 0, 0, 0.8);
+  --color-fd-article: #0a0a0a;
+  --color-fd-info: #7b93ff;
+  --color-fd-error: #ff6166;
+
+  --shadow-sm: 0 2px 2px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 2px 2px rgba(0, 0, 0, 0.32), 0 8px 8px -8px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 1px 1px rgba(0, 0, 0, 0.16), 0 4px 8px -4px rgba(0, 0, 0, 0.32), 0 16px 24px -8px rgba(0, 0, 0, 0.48);
+  --shadow-xl: 0 1px 1px rgba(0, 0, 0, 0.16), 0 8px 16px -4px rgba(0, 0, 0, 0.32), 0 24px 32px -8px rgba(0, 0, 0, 0.48);
+}
+
+/* The sidebar sits on the canvas, not on a raised surface. */
+#nd-sidebar {
+  background-color: var(--color-fd-background);
+}
+
+/* Fumadocs' neutral theme tints the dark sidebar on its own; keep it on the grays above. */
+.dark #nd-sidebar {
+  --color-fd-muted: #1a1a1a;
+  --color-fd-secondary: #1f1f1f;
+  --color-fd-muted-foreground: #a1a1a1;
 }
 
 @theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "Roboto Mono", monospace;
+}
+
+/* Tracking is normal at reading sizes; only headings are tightened. */
+:root {
+  letter-spacing: normal;
+  font-feature-settings: "liga";
+}
+
+h1 {
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.prose :where(h2):not(:where(.not-prose *)) {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.prose :where(h3):not(:where(.not-prose *)) {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.prose :where(h4, h5, h6, thead th):not(:where(.not-prose *)) {
+  font-weight: 500;
+}
+
+:where(b, strong) {
+  font-weight: 600;
+}
+
+:where(code, kbd, pre) {
+  font-weight: 500;
+}
+
+/* The double focus ring: a gap in the background's colour, then the accent. */
+:where(a, button, summary, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-fd-background),
+    0 0 0 4px var(--color-fd-ring);
+}
+
+:where(a):focus-visible {
+  border-radius: 4px;
 }
 
 /* Table cells read from the top: a short code or status stays level with the
