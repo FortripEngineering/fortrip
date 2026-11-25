@@ -174,6 +174,16 @@ pnpm --filter ./packages/docs dev   # local dev server
 pnpm --filter ./packages/docs test  # its tests
 ```
 
+The site is in English, at `/`, and Chinese, at `/zh`
+([`lib/i18n.ts`](packages/docs/lib/i18n.ts)). A page's Chinese translation
+is the file next to it with `.zh` before the extension (`payments.zh.mdx`,
+`meta.zh.json`); write its links to other pages as in English (`/payments`),
+and they lead to the Chinese pages. A page with no translation is served in
+English under `/zh`, with a note saying so, and the English page is its
+canonical. When you change an English page that has a translation, change the
+translation too. The site's own words (menus, footer) are in `UI` in
+`lib/i18n.ts`.
+
 Production docs follow the live server, not `main`. A docs deploy is a
 `docs-*` tag, and the order is:
 

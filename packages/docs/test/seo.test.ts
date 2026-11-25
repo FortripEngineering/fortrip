@@ -40,7 +40,7 @@ import { limitRows, rateLimitRows } from "../lib/reference/limits.ts";
 import { MCP_TOOLS } from "../lib/reference/mcp-tools.ts";
 import { RESPONSE_DOCS, responseDoc } from "../lib/reference/response-docs.ts";
 import { inputRows } from "../lib/reference/schema-rows.ts";
-import { pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
+import { mdxRoute, pageHtml, pageMarkdown, pageRoutes, routeBody, withoutCode, withoutFences } from "./built-page.ts";
 
 const routes = pageRoutes();
 const absolute = (route: string) => new URL(route, DOCS_ORIGIN).href;
@@ -111,7 +111,7 @@ describe("Markdown pages", () => {
     assert.ok(mdx.length > 10);
     const bad: string[] = [];
     for (const file of mdx) {
-      const route = `/${file.replace(/(^|\/)index\.mdx$|\.mdx$/, "")}`.replace(/(.)\/$/, "$1");
+      const route = mdxRoute(file);
       const brace = /.{0,40}[{}].{0,40}/.exec(withoutCode(pageMarkdown(route)));
       if (brace) bad.push(`${route}: ${brace[0]}`);
     }
@@ -367,7 +367,12 @@ describe("sitemap and robots", () => {
   it("the sitemap lists every page, on the docs origin", () => {
     const xml = routeBody("/sitemap.xml");
     const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-    assert.deepEqual(new Set(locs), new Set(routes.map(absolute)));
+    // Every English page, and each page that has a translation under it.
+    const translated = readdirSync(docs, { recursive: true, encoding: "utf8" })
+      .filter((f) => /\.zh\.mdx$/.test(f))
+      .map(mdxRoute);
+    assert.ok(translated.length > 0);
+    assert.deepEqual(new Set(locs), new Set([...routes, ...translated].map(absolute)));
     includesAll(
       xml,
       [...MCP_TOOLS.map((t) => `/reference/${t.name}<`), ...CLI_COMMANDS.filter((c) => !c.tool).map((c) => `/cli/${c.slug}<`)],

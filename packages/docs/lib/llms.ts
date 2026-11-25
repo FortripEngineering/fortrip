@@ -2,6 +2,7 @@ import { DOCS_ORIGIN } from "@fortrip/agent-contract";
 import type { InferPageType } from "fumadocs-core/source";
 import { llms } from "fumadocs-core/source/llms";
 
+import { i18n, isLang, type Lang, localizeHref } from "./i18n.ts";
 import { BLOCKS } from "./markdown/components.ts";
 import { operationMarkdown } from "./markdown/pages.ts";
 import { toMarkdown } from "./markdown/stringify.ts";
@@ -12,9 +13,12 @@ import { source } from "./source.ts";
 
 type Page = InferPageType<typeof source>;
 
-/** Where a page's Markdown is served: `/payments.md`, the root's `/index.md`. */
+/** Where a page's Markdown is served: `/payments.md`, `/zh/payments.md`; a
+ *  root page's is `/index.md`, `/zh/index.md`. */
 export function markdownPath(url: string): string {
-  return `${url === "/" ? "/index" : url}.md`;
+  if (url === "/") return "/index.md";
+  if (isLang(url.slice(1))) return `${url}/index.md`;
+  return `${url}.md`;
 }
 
 /** A link on the docs origin as `llms.txt` writes it: a page to its Markdown
@@ -28,7 +32,7 @@ function absolute(path: string): string {
 /** Markdown for reading off the site: headings without their Fumadocs anchor
  *  (`## Input [#input]`), and relative links (`/errors`, `#local-mcp`)
  *  absolute on the docs origin. Fenced code is left as it is. */
-function offSite(markdown: string, url: string): string {
+function offSite(markdown: string, url: string, lang: Lang): string {
   return markdown
     .split(/^(```+[^\n]*\n[\s\S]*?^```+[ \t]*$)/m)
     .map((part, i) =>
@@ -37,7 +41,7 @@ function offSite(markdown: string, url: string): string {
         : part
             .replace(/^(#{1,6} .*?) \[#[^\]]+\][ \t]*$/gm, "$1")
             .replace(/\]\(([/#][^)]*)\)/g, (_, link: string) =>
-              `](${absolute(link.startsWith("#") ? `${url}${link}` : link)})`,
+              `](${absolute(link.startsWith("#") ? `${url}${link}` : (localizeHref(lang, link) ?? link))})`,
             ),
     )
     .join("");
@@ -51,7 +55,7 @@ export async function pageMarkdown(page: Page): Promise<string> {
   else if (page.type === "reference") body = page.data.markdown();
   else body = operationMarkdown(page.slugs.at(-1) ?? "");
   const description = page.data.description ? [`> ${page.data.description}`] : [];
-  return `${offSite([`# ${page.data.title}`, ...description, body.trim()].join("\n\n"), page.url)}\n`;
+  return `${offSite([`# ${page.data.title}`, ...description, body.trim()].join("\n\n"), page.url, isLang(page.locale ?? "") ? (page.locale as Lang) : i18n.defaultLanguage)}\n`;
 }
 
 /** Pages of lookup data, by URL, with their data's Markdown: an agent gets

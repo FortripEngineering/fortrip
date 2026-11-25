@@ -1,0 +1,84 @@
+---
+title: MCP 服务器
+description: 在任何 MCP 客户端中搜索酒店、比较实时报价，并创建带支付链接的订单。每个工具都以文本作答，并与一条 CLI 命令和一个 HTTP 端点一一对应。
+---
+
+## 端点 [#endpoint]
+
+<pre><code><Fact path="MCP_SERVER_URL" /></code></pre>
+
+Streamable HTTP，通过 OAuth 登录 Fortrip 账号；不需要 API key。只能启动本地命令的客户端可以改为运行 [`npx -y fortrip mcp`](/cli/mcp)，它是连接到该服务器的 stdio 桥接。各客户端的配置方法见[安装](/install#remote-mcp)。
+
+## 工具 [#tools]
+
+<ToolList />
+
+每个工具接受的输入与其 [HTTP 端点](/api#endpoints)相同。
+
+`pay_order` 只通过 CLI 的 [`fortrip mcp`](/cli/mcp) 提供。其他客户端的工具列表包含其余九个工具，用户在订单支付链接打开的页面上付款。
+
+### 注解 [#annotations]
+
+<ToolAnnotations />
+
+`create_order`、`cancel_order` 和 `pay_order` 被标记为破坏性操作：会确认破坏性调用的客户端，在每次调用前都会询问用户。每个工具的注解中还带有它的标题，即 `annotations.title`。
+
+## 工具返回什么 [#results]
+
+结果只有文本。`content` 恰好包含一个 `text` 类型的块：完整的回答，写给模型看，每家酒店、每个报价或每笔订单一行，并附上它们的 ID。没有 `structuredContent`，也没有工具声明 `outputSchema`。
+
+一个 `get_hotel_offers` 的结果：
+
+<ToolResultSample tool="get_hotel_offers" />
+
+### 供代码使用的 JSON [#json]
+
+如果你的代码需要对象，请通过 [HTTP API](/api) 读取（每个工具都有一个端点，对相同输入返回 JSON），或者给 CLI 命令加上 `--json` 运行。[响应结构](/schemas)列出了每个字段。
+
+### 结果末尾的规则 [#rules]
+
+结果的文本以针对其内容的规则结尾：
+
+<ResultRules />
+
+每个包含支付链接的回答都带有同意规则。只有付款规则（仅 `fortrip mcp` 会添加）可以排在它后面：
+
+> <Fact path="ORDER_NEXT_STEP" />
+
+把文本完整地发给你的模型。会截断长结果的客户端可能把这些规则截掉。
+
+### 来自酒店的文本 [#third-party-text]
+
+酒店、房型和地点的名称、地址、介绍和政策是酒店自己的文字；住客姓名、联系人和特殊要求是调用方的文字。短文本放在双引号里，作为 JSON 字符串：`Hotel: "Lakeside Garden Resort"`。较长的文本放在引用块中，并标注为来自酒店的信息，而非指令。向用户展示名称时去掉引号。
+
+### 元数据 [#meta]
+
+`_meta` 供你的代码使用。大多数客户端不会把它展示给模型。
+
+<MetaKeys />
+
+### 错误 [#errors]
+
+失败的调用带有 `isError: true` 和一个文本块。文本给出错误码、发生了什么、重试是否有用，以及下一步该调用什么。`_meta["ai.fortrip/error"]` 携带供代码使用的[错误信封](/errors)。输入由 Fortrip 而非客户端 SDK 校验，所以参数无效时也会以这种方式返回 `invalid_request`，并指出出错的字段。
+
+`create_order` 返回的一个 `offer_changed` 错误：
+
+<ToolErrorSample code="offer_changed" />
+
+## 服务器指令 [#instructions]
+
+连接时服务器会返回 `instructions`，它是智能体指南的简短版本：什么时候使用 Fortrip、调用顺序，以及用户付款前要给他们看什么。请把它保留在智能体的系统提示词中。`serverInfo` 携带服务器的 `name`、`title`、`description`、`websiteUrl` 和 `icons`。
+
+## 超时与重试 [#retries]
+
+- 创建订单或付款可能需要几分钟。给 `create_order` 和 `pay_order` 设置至少三分钟的超时。
+- `create_order` 超时后，用相同的内容再调用一次。
+- `pay_order` 超时后，<PayAfterTimeout />
+
+重发每个调用时会返回什么、哪些错误可以重试，见[重试与幂等](/api#retries)。
+
+## 接入你自己的智能体 [#own-agent]
+
+- 登录遵循 MCP 授权规范：带 PKCE 的 OAuth 2.1。授权服务器的元数据在 <Fact path="OAUTH_METADATA_URL" />。
+- 支持动态客户端注册，你的客户端可以自行注册。
+- 每个终端用户用自己的 Fortrip 账号登录。他们的订单和支付链接归属于该账号。

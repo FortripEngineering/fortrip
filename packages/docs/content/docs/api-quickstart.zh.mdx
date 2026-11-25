@@ -1,0 +1,114 @@
+---
+title: API 快速开始
+description: 用五步通过 HTTP 预订住处，然后逐个查看每个调用的 curl、TypeScript 和 Python 示例。
+---
+
+每个调用都会发送 `FORTRIP_TOKEN`：你的 [API key](/api#api-keys)，或通过[登录](#sign-in)拿到的访问令牌。没有测试环境：任何付款都是真实的。参见[测试你的集成](/faq#testing)。
+
+TypeScript 示例在 Node.js 上使用 `fetch`，Python 示例使用 [`httpx`](https://www.python-httpx.org/)。
+
+## 五步走完全流程 [#end-to-end]
+
+需要 curl 和 jq。每个调用把响应保存到文件，下一个调用从这个文件里取 ID。
+
+<EndToEnd />
+
+## 没有 key 时登录 [#sign-in]
+
+拿到 API key 之前，可以改为登录。下面的脚本执行 OAuth 设备授权流程，输出访问令牌和刷新令牌：把 `FORTRIP_TOKEN` 设为访问令牌。[认证](/api#authentication)一节解释了这个流程，以及什么时候该用其他方式。
+
+<Example name="device-login" />
+
+用 curl 时，把脚本保存为 `device-login.sh`，并把输出保存到 `token.json`，[刷新令牌](#refresh)会读取它：
+
+```sh
+umask 077 # token.json is readable by you only
+bash device-login.sh > token.json
+export FORTRIP_TOKEN=$(jq -r .access_token token.json)
+```
+
+<code><Fact path="ROUTES.authConfig" /></code> 的响应（节选）。其中的值只是示例：每次都要像脚本那样从接口读取。
+
+<ResponseExample name="device-login" />
+
+### 刷新令牌 [#refresh]
+
+在同一个令牌端点用刷新令牌换取新的访问令牌。每次刷新都会返回新的刷新令牌；只保留最新的那个（[原因](/api#device-flow)）。
+
+<RefreshTokenExample />
+
+## 搜索 [#search]
+
+<Example name="search" />
+
+## 报价 [#offers]
+
+<Example name="offers" />
+
+## 下单 [#order]
+
+下单不会扣款；在任何人付款之前，先[和用户确认订单](/payments#confirm)。这个调用可能需要几分钟，超时后[可以安全地重发](/api#retries)。
+
+<Example name="order" />
+
+## 付款 [#pay]
+
+用户通过订单的支付链接付款，或者由智能体用用户批准的令牌付款。[订单与支付](/payments#pay)说明了各自的适用场景。
+
+### 支付链接 [#pay-link]
+
+从订单中读取 `payment.url`，交给用户。
+
+<Example name="get-order" />
+
+响应（节选）：
+
+<ResponseExample name="get-order" />
+
+### Link token [#pay-token]
+
+仅当订单的 `payment.tokenRequest` 存在时可用。用该字段的 `handler` 和 `usageLimits` 申请令牌，然后连同订单的 `total` 一起发送。
+
+<Example name="pay-token" />
+
+响应（节选）：
+
+<ResponseExample name="pay-token" />
+
+## 列出订单 [#list]
+
+<Example name="list-orders" />
+
+响应（节选）：
+
+<ResponseExample name="list-orders" />
+
+## 取消 [#cancel]
+
+订单的 `cancel.action` 说明该发哪种请求：`cancel` 时，把 `maximumPenalty` 设为订单的 `cancel.penalty` 一起发送；`close` 时，发送 `close: true`。参见[取消或关闭](/payments#cancel)。
+
+<Example name="cancel" />
+
+响应（节选）：
+
+<ResponseExample name="cancel" />
+
+## 比价保障 [#price-match]
+
+当用户说在其他网站看到同一住处更便宜时，发送该报价的 `offerId` 和那个网站的名称。向用户要看到该价格的页面链接，作为 `link` 发送：核查会从这个页面开始，比价网站上跳转到预订网站的链接也算数。没有链接也会照常核查。如果用户给了看到的总价，也一并发送。Fortrip 随后只核查这一个网站，最长可能需要十分钟，所以响应会立即返回，带一个 `claimId` 和 `state: "checking"`；如果没有启动核查，请求也可能被立即拒绝，此时带 `reason`，没有 `claimId`。这不是保证：只核查指定的网站，或链接跳转到的预订网站，结果也可能是目前没有可匹配的价格。如果报价生成后 Fortrip 自己的房价变了，请求会返回 [`offer_expired`](/errors#code-offer_expired)：重新获取报价，再针对新报价申请比价。
+
+<Example name="price-match" />
+
+响应（节选）：
+
+<ResponseExample name="price-match" />
+
+只要 `state` 还是 `checking`，就在 `checkAgainAfterSeconds` 之后再次读取。在状态变为 `matched` 或 `partial` 之前，不要向用户提任何匹配或更低价格的事。
+
+<Example name="get-price-match" />
+
+核查结束、价格已匹配时的响应（节选）。`partial` 响应也会带一个新报价，价格低于原报价，但没有低到其他网站的价格；`declined` 响应带 `reason`，没有新报价。
+
+<ResponseExample name="get-price-match" />
+
+在 `matchedOffer.expiresAt` 之前，像对待任何报价一样，用[创建订单](#order)为 `matchedOffer.offerId` 下单。

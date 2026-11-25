@@ -1,0 +1,79 @@
+---
+title: 搜索原理
+description: 地名按公开的规则解析；有歧义的地名会返回错误并列出候选；每个响应都说明它覆盖了哪些范围。
+---
+
+## 目的地 [#destinations]
+
+一次搜索接受 `destination`、`text` 或两者都传。目的地是以下几种之一：
+
+<DestinationKinds />
+
+把之前响应里的 `placeId` 原样以 `{ kind: "place", placeId }` 传回，不要传它的名称。地点 ID 会一直有效：即使后续版本移除了某个地点，它仍然能被解析。
+
+## 区域与半径 [#scopes]
+
+一个地点要么覆盖它的整个**区域（area）**，要么覆盖它周围的一个**半径（radius）**。响应里的 `destination.scope`、`center` 和 `radiusMeters` 说明是哪一种；按 locality 搜索时 scope 为 `locality`。
+
+| 地点 | Scope | 覆盖范围 |
+| --- | --- | --- |
+| 国家 | `area` | 该国的所有酒店。 |
+| 地区（省、州） | `area` | 该地区的所有酒店，前提是该地区已[启用](/regions)。 |
+| 地级市（中国） | `area` | 该地级市的所有酒店。 |
+| 主要岛屿 | `area` | 覆盖自身陆地面积的岛屿，例如巴厘岛、普吉岛、北海道或西西里岛。 |
+| 城镇、街区、行政区、小岛 | `radius` | 以该地点为中心的圆，默认 <Fact path="LIMITS.radiusMetersDefault" /> 米，除非 `radiusMeters` 另行指定。 |
+| 坐标点 | `radius` | 以该点为中心的圆，默认 <Fact path="LIMITS.radiusMetersDefault" /> 米。 |
+
+- `radiusMeters` 可选，取值 1 到 <Fact path="LIMITS.radiusMetersMax" />。用在区域上时，会把区域缩小为以其中心为圆心的圆。
+- 以具名地点为中心的半径不会超出该地点所在的国家；以坐标点为中心的半径则不受此限制。
+- 搜索不会自行扩大半径。如果范围外不远处还有更多酒店，响应会在计数和说明里告诉你。
+
+## 地名如何解析 [#names]
+
+`place_name` 目的地总是带有 `countryCode`。名称会在该国家内与地点的名称和别名做精确匹配，匹配前会做 Unicode 规范化、统一排版用的撇号、转为小写并合并空格。重音符号、连字符、撇号和句点都会影响匹配："Köln" 和 "Cologne" 能匹配，"Koln" 不能；"St. Moritz" 能匹配，"St Moritz" 不能；"Xi'an" 和 "Xi’an" 视为同一个名称。
+
+1. **没有匹配**：返回 `destination_not_found`。
+2. **只剩一个地点**：当下面的规则筛到只剩一个，或者其中一个的人口远多于其他时，就使用它。说明 `area_absorbed` 和 `place_resolved_dominant` 会指出是哪条规则选中的。
+3. **其他情况**：返回 `destination_ambiguous`，附最多 <Fact path="LIMITS.candidatesShown" /> 个候选，每个都带 `placeId` 和它覆盖的酒店数。先问用户，再以 `{ kind: "place", placeId }` 搜索用户选的那个。
+
+<details>
+<summary>精确的解析规则</summary>
+
+1. **区域会吸收其内部的同名地点**：地区 "Okinawa" 会吸收同名岛屿，"Shanghai" 指整个直辖市，并以市中心为起点（说明 `area_absorbed` 会指出这一点）。不像城市的区域不会吸收人口在 <Fact path="SEARCH_RULES.largeSettlementPopulation" /> 及以上的同名城市：两者都会作为候选，例如纽约州和纽约市。
+2. **相近的重复地点算作一个**：彼此相距 <Fact path="SEARCH_RULES.nearDuplicateMeters" /> 米以内的同名城镇、街区和小岛。
+3. **只剩一个地点**时使用它。
+4. **剩下多个**时：如果人口最多的那个至少有 <Fact path="SEARCH_RULES.largeSettlementPopulation" /> 人，且是第二名的 <Fact path="SEARCH_RULES.dominanceRatio" /> 倍，就使用它（说明 `place_resolved_dominant` 会指出这一点，`otherMatches` 统计其余的地点）。
+
+</details>
+
+未启用的地区不会按名称匹配，所以这个名称仍然可以匹配到同名的城镇或岛屿。
+
+## Locality [#localities]
+
+在区域上搜索时会列出它的 `localities`：匹配酒店最多的 <Fact path="LIMITS.localitiesShown" /> 个城镇，每个城镇汇集其附近的酒店。每一项都有本次搜索中的 `count`、不限条件的 `total`，以及它 `includes` 的最多 <Fact path="SEARCH_RULES.localityIncludes" /> 个地点（如 "Mestre, incl. Venice"）。以 `{ kind: "locality", placeId }` 搜索其中一个：返回的数量正好是它的 `total`。
+
+按价格排序或按价格筛选时，最多为 <Fact path="LIMITS.poolLimit" /> 家酒店计算价格。在半径内酒店更多时，只为最近的那些计算价格，说明 `pool_limited` 会给出覆盖的距离。在区域或文本搜索中酒店更多时，返回 `search_too_broad`，并附可供选择的 localities。
+
+## 文本 [#text]
+
+`text` 在酒店名称和地址中按完整词匹配，支持英文和中文。响应会把它原样作为 `text` 返回（纯字符串），没有传时为 `null`。
+
+- 每个词都必须按原样匹配：单复数、重音、空格和缩写都会影响结果（"Saint Regis" 和 "St Regis" 不同）。连字符和撇号会被统一，所以 Ritz-Carlton 能匹配 Ritz Carlton。
+- 中文按索引的分词规则匹配，所以一个词的一部分可能匹配到不相关的名称。繁体和简体可以互相匹配。
+- 使用有区分度的词：酒店或品牌名、街区或地标，而不是“酒店”“附近”“便宜”这类词。拼错的词什么都匹配不到。搜索国家或城市时，请使用目的地。
+
+设施筛选只接受这些代码：<FilterableAmenities />。其他代码会以 `invalid_request` 拒绝，尽管酒店自己的 `amenities` 里可能包含更多。没有列出某项设施的酒店会被排除，但它实际上可能有这项设施（说明 `amenities_listed_only`）。
+
+## 参考价 [#prices]
+
+传了 `stay` 时，每家酒店可以带一个 `indicativePrice`：`fromPerRoomStay` 是入住期间每晚最低价之和，`fromPerRoomNight` 是这个总和除以晚数。两者都使用搜索的 `currency`；USD 价格按市场汇率换算。
+
+它只是估算，不是针对这批住客的价格，也不代表有房：它是单个房源的最低价（可能是合住房间里的一张床），而且可能是几天前的数据。它可能高于也可能低于最便宜的实时报价，并且不能预订：实际收取的是报价的 `total`。
+
+没有参考价的酒店仍会列出，`indicativePrice` 为 `null`；按价格排序时排在最后，按价格筛选时会被排除并计入统计。`pricing.covers` 说明为哪些酒店计算了价格：`page` 表示本页的酒店，`pool` 表示所有匹配的酒店（按价格排序或筛选时需要）。查不到价格时，搜索仍会返回，此时 `pricing.status` 为 `"unavailable"`，并带说明 `prices_unavailable`。
+
+每个搜索响应都有 `currencyHint`。当搜索币种不是 CNY，且请求来自中国大陆（`request_location`）或用户最近一次登录 Fortrip 是在中国大陆（`sign_in_location`）时，它为 `{ currency: "CNY", reason }`：表示也可以使用 CNY 价格，通过中国大陆的支付渠道付款。这只是建议；其他情况下为 `null`，并不说明用户身在何处。
+
+## 计数与说明 [#coverage]
+
+每个响应都带 `coverage`：匹配了多少家酒店、为多少家计算了价格以及其中多少家有价格，并在适用时说明在最大半径内、不限目的地或把名称当作文本时分别有多少家匹配。`notes` 用英文说明这些计数对下一步意味着什么，每条都有 `code` 和 `message`。逐个字段的说明见[搜索结果](/schemas#search-result)。

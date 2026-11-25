@@ -13,8 +13,8 @@ export const POLICIES = {
 
 /** The footer on every page, in order. */
 export const FOOTER_LINKS = [
-  { text: "Terms", url: POLICIES.terms },
-  { text: "Privacy", url: POLICIES.privacy },
-  { text: "Booking conditions", url: POLICIES.bookingConditions },
-  { text: "Support", url: "/faq#support" },
+  { key: "terms", text: "Terms", url: POLICIES.terms },
+  { key: "privacy", text: "Privacy", url: POLICIES.privacy },
+  { key: "bookingConditions", text: "Booking conditions", url: POLICIES.bookingConditions },
+  { key: "support", text: "Support", url: "/faq#support" },
 ] as const;

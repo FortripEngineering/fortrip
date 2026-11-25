@@ -19,15 +19,12 @@ import { fact } from "../components/fact.tsx";
 import { limitRows } from "../lib/reference/limits.ts";
 import { REFERENCE_PAGES } from "../lib/reference/pages.tsx";
 import { RESPONSE_DOCS } from "../lib/reference/response-docs.ts";
+import { pageHtml } from "./built-page.ts";
 
 const app = new URL("../.next/server/app/", import.meta.url).pathname;
 
 /** A built page's HTML, React's `<!-- -->` text separators removed. */
-const html = (route: string) =>
-  readFileSync(join(app, `${route === "/" ? "index" : route.slice(1)}.html`), "utf8").replaceAll(
-    "<!-- -->",
-    "",
-  );
+const html = (route: string) => pageHtml(route).replaceAll("<!-- -->", "");
 
 /** HTML-escaped as React writes text and attributes. */
 const escaped = (text: string) =>
@@ -50,9 +47,9 @@ const ownPages = commandRoutes.filter(({ spec }) => !spec.tool);
 
 describe("reference pages", () => {
   it("builds one page per contract tool, titled and described by the contract, and none under /mcp", () => {
-    const built = readdirSync(join(app, "reference")).filter((f) => f.endsWith(".html"));
+    const built = readdirSync(join(app, "en", "reference")).filter((f) => f.endsWith(".html"));
     for (const { tool } of toolRoutes) assert.ok(built.includes(`${tool.name}.html`), tool.name);
-    assert.ok(!existsSync(join(app, "mcp")), "the MCP overview is the only page under /mcp");
+    assert.ok(!existsSync(join(app, "en", "mcp")), "the MCP overview is the only page under /mcp");
     for (const { tool, route } of toolRoutes) {
       const page = html(route);
       assert.ok(page.includes(`<h1`) && page.includes(escaped(tool.title)), route);
@@ -61,7 +58,7 @@ describe("reference pages", () => {
   });
 
   it("documents every contract command, with its invocation and every flag: on its operation's page, or its own", () => {
-    const built = readdirSync(join(app, "cli")).filter((f) => f.endsWith(".html"));
+    const built = readdirSync(join(app, "en", "cli")).filter((f) => f.endsWith(".html"));
     assert.equal(built.length, ownPages.length);
     assert.ok(ownPages.length > 0 && ownPages.length < COMMANDS.length);
     for (const { spec, route } of commandRoutes) {

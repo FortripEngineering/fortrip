@@ -1,0 +1,65 @@
+---
+title: 错误与限制
+description: HTTP API、MCP 工具和 CLI 共用同一个错误信封、同一套错误码和相同的限制。
+---
+
+## 错误格式 [#format]
+
+每个失败都返回同样的信封：
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many requests; retry later.",
+    "retryable": true,
+    "retryAfterSeconds": 42,
+    "details": { "rateLimit": "search" },
+    "requestId": "req_…"
+  }
+}
+```
+
+- `code` 是下面列出的错误码之一；请根据它而不是 `message` 处理，`message` 是写给人看的英文。遇到不认识的错误码：按 HTTP 状态码和 `retryable` 处理。
+- `pointer` 存在时，指出错误涉及的那一个请求字段：指向请求体的 JSON Pointer（`/stay/checkIn`），或 `/query/<name>` 和 `/path/<name>`。`invalid_request` 的每个问题都有自己的 `pointer`。
+- `details` 是该错误码自己的数据，随每个错误码列在下方。没有数据的错误码没有 `details`。
+- 可重试的错误带有 `retryAfterSeconds` 和 `Retry-After` 响应头。
+- `requestId` 是联系客服时要提供的 ID。
+- 方法错误时返回 `invalid_request`，HTTP 状态为 405，并带 `Allow` 响应头。
+
+### 在各个接入方式上 [#surfaces]
+
+- **HTTP API：**信封就是响应体，HTTP 状态为该错误码对应的状态。
+- **MCP：**结果带有 `isError: true` 和一个文本块；`_meta["ai.fortrip/error"]` 携带信封。参见 [MCP 错误](/mcp#errors)。
+- **CLI：**错误输出到 stderr，为文本，加 `--json` 时为信封，命令以下方列出的退出码退出。
+
+## 错误码 [#codes]
+
+<ErrorCodes />
+
+## CLI 退出码 [#exit-codes]
+
+<ExitCodes />
+
+## 速率限制 [#rate-limits]
+
+按账号、按分钟计算，HTTP API、MCP 工具和 CLI 共用。超出限制时返回 `429 rate_limited`，`details.rateLimit` 指出是哪项限制。
+
+<RateLimitsTable />
+
+## 限制 [#limits]
+
+<LimitsTable />
+
+### 报价预算 [#offers-budget]
+
+一次报价调用返回的报价数量有上限，无论它为多少家酒店报价：
+
+- **不传 `limitPerHotel`：**每家酒店最多 <Fact path="LIMITS.offersPerHotelDefault" /> 个，总共最多 <Fact path="LIMITS.offersPerCallDefault" /> 个。
+- **传了 `limitPerHotel`：**每家酒店最多为该值（1 到 <Fact path="LIMITS.offersPerHotelMax" />），总共最多 <Fact path="LIMITS.offersPerCallMax" /> 个。
+
+每家有报价的酒店上限相同：取每家酒店的上限与该次调用总额平均分配后的较小值。每家酒店都会保留多样的选择：最便宜的、可免费取消中最便宜的、含早餐中最便宜的，以及其他房型，按价格从低到高排列。
+
+想看更多，可以减少酒店数量重新调用，或只查一家酒店并提高 `limitPerHotel`，或用 `filters.requireBreakfast` 或 `filters.requireFreeCancellation` 缩小报价范围。每家酒店的 `omitted` 统计了这次调用省略了多少，`byCallLimit` 统计了只查这一家酒店时会多出多少。
+
+没有显示的报价仍然存在：不要因为某次调用没有列出，就告诉用户某个房间或价格不可订。

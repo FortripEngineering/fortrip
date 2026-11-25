@@ -1,8 +1,10 @@
 // Reads the output of `next build`, which the package's test script runs first.
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+
+import { allPageRoutes, pageHtml } from "./built-page.ts";
 
 const app = new URL("../.next/server/app/", import.meta.url).pathname;
 const publicDir = new URL("../public/", import.meta.url).pathname;
@@ -13,15 +15,8 @@ const publicDir = new URL("../public/", import.meta.url).pathname;
  */
 const PENDING = new Set<string>();
 
-/** Every built page by its route: `index.html` is `/`, `mcp/x.html` is `/mcp/x`. */
-const pages = new Map(
-  readdirSync(app, { recursive: true, encoding: "utf8" })
-    .filter((file) => file.endsWith(".html") && !/(^|\/)_/.test(file))
-    .map((file) => {
-      const route = `/${file.replace(/\.html$/, "")}`.replace(/^\/index$/, "/");
-      return [route, readFileSync(join(app, file), "utf8")] as const;
-    }),
-);
+/** Every built page by its route, in every language: `/mcp/x`, `/zh/mcp/x`. */
+const pages = new Map(allPageRoutes().map((route) => [route, pageHtml(route)] as const));
 
 const ids = (html: string) => new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
 const decode = (text: string) => text.replaceAll("&amp;", "&");

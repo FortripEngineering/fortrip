@@ -16,7 +16,7 @@ const server = new URL("../.next/server/", import.meta.url).pathname;
 describe("built site", () => {
   it("states the contract's values on the index page", () => {
     // React separates adjacent text with <!-- -->; the reader sees one run of text.
-    const html = readFileSync(join(server, "app/index.html"), "utf8").replaceAll("<!-- -->", "");
+    const html = pageHtml("/").replaceAll("<!-- -->", "");
     assert.ok(html.includes(`live offers for up to ${fact("LIMITS.offersHotels")} hotels`));
   });
 
@@ -91,7 +91,7 @@ describe("built site", () => {
     // On /quickstart, the next card is the API quickstart's: its title, not its description.
     const quickstart = pageHtml("/quickstart");
     const next = /<a\b[^>]*class="flex flex-col gap-2 rounded-lg border[^"]*text-end"[^>]*href="\/api-quickstart">([\s\S]*?)<\/a>/.exec(quickstart)?.[1] ?? "";
-    const target = readFileSync(join(server, "app/api-quickstart.html"), "utf8");
+    const target = pageHtml("/api-quickstart");
     const title = /<h1[^>]*>([^<]+)<\/h1>/.exec(target)?.[1] ?? "";
     const description = /<meta name="description" content="([^"]+)"/.exec(target)?.[1] ?? "";
     assert.ok(title && description);

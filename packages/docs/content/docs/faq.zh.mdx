@@ -1,0 +1,33 @@
+---
+title: 常见问题
+description: 费用和条款、测试集成、你的账号、获取帮助，以及智能体能否不经用户直接付款。
+---
+
+## 费用和条款 [#fees]
+
+- 调用 API、MCP 服务器和 CLI 都是免费的。
+- 开发者没有佣金或收入分成。
+- Fortrip 按页面显示的价格向住客收费。
+- 适用 Fortrip 的[服务条款](https://fortrip.ai/terms)、[隐私政策](https://fortrip.ai/privacy)和[预订条款](https://fortrip.ai/booking-conditions)。
+
+## 测试你的集成 [#testing]
+
+- 没有测试环境。任何付款都是真实的，取消产生的罚金也是真实的。
+- 搜索、查看报价和创建订单都不收费。未付款的订单会在 `payment.expiresAt` 到期；想提前结束，可以[关闭订单](/payments#close)。
+- 每个测试订单都需要单独的报价：一个报价只能下单一次。
+
+## 你的账号 [#account]
+
+在 [fortrip.ai](https://fortrip.ai) 注册。订单归属于下单时登录的账号，订单的支付链接和[速率限制](/errors#rate-limits)也一样。
+
+## 帮助与支持 [#support]
+
+- **已付款，仍在确认中。** 酒店正在确认预订。有些酒店会立即确认，有些需要一段时间（见报价的 `confirmation`）。让你的智能体查一下订单。
+- **失败。** 没有订到住处。银行卡预授权会被释放，或全额退款。订单的 `failure.reason` 会说明原因。
+- **你的预订。** 登录下单时用的账号，在 [fortrip.ai](https://fortrip.ai) 查看（订单的 `manageUrl` 链接到那里）。
+- **其他问题。** 发邮件到 <Fact path="SUPPORT_EMAIL" />，附上以 `FT-` 开头的预订编号（订单的 `reference`）；如果是报错，附上它的 `requestId`。
+- **安全问题。** 发邮件到 <Fact path="SUPPORT_EMAIL" />。
+
+## 智能体能不经用户直接付款吗？ [#agent-pay]
+
+不能。用户确认总价和条款后，在支付链接打开的页面上付款。智能体只能用 [Link token](/payments#pay) 付款，而这需要用户在自己的 Stripe Link 钱包里针对这一笔订单批准。
