@@ -21,7 +21,9 @@ import type { UIText } from "@/lib/i18n";
 export const TRIGGER = buttonVariants({
   variant: "secondary",
   size: "sm",
-  className: "gap-2 [&_svg]:size-3.5 [&_svg:not([data-brand])]:text-fd-muted-foreground data-[state=open]:bg-fd-accent data-[state=open]:text-fd-accent-foreground",
+  // As tall and as rounded as the toolbar above the table of contents.
+  className:
+    "h-8 gap-2 rounded-lg bg-fd-secondary/50 px-3 text-[13px] shadow-xs [&_svg]:size-3.5 [&_svg:not([data-brand])]:text-fd-muted-foreground data-[state=open]:bg-fd-accent data-[state=open]:text-fd-accent-foreground",
 });
 
 export const MENU_ITEM =

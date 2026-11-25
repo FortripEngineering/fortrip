@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { describe, it } from "node:test";
 
-import { DOCS_ORIGIN } from "@fortrip/agent-contract";
+import { DOCS_ORIGIN, REPOSITORY_URL } from "@fortrip/agent-contract";
 
 import { FUMADOCS_ZH, i18n, localize, localizeHref, UI } from "../lib/i18n.ts";
 import { mdxRoute, pageHtml, pageMarkdown, pageRoutes, pageText } from "./built-page.ts";
@@ -96,13 +96,14 @@ describe("built Chinese site", () => {
     }
   });
 
-  it("puts the language and theme controls above the table of contents, not in the sidebar", () => {
+  it("puts GitHub, the language and the theme above the table of contents, not in the sidebar", () => {
     for (const route of ["/quickstart", "/zh/quickstart"]) {
       const html = pageHtml(route);
       const toc = html.slice(html.indexOf('id="nd-toc"'));
       const sidebar = html.slice(html.indexOf('id="nd-sidebar"'), html.indexOf('id="nd-page"'));
       assert.ok(toc.indexOf('aria-label="Choose a language"') !== -1 || toc.indexOf('aria-label="选择语言"') !== -1, route);
       assert.ok(!/aria-label="(Choose a language|选择语言)"/.test(sidebar), route);
+      assert.ok(toc.includes(`href="${REPOSITORY_URL}"`) && toc.includes('aria-label="GitHub"'), `${route}: GitHub`);
     }
   });
 });

@@ -1,3 +1,4 @@
+import { REPOSITORY_URL } from "@fortrip/agent-contract";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import { flattenTree } from "fumadocs-core/page-tree";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layouts/docs/page";
@@ -65,7 +66,7 @@ export default async function Page(props: PageProps<"/[lang]/[[...slug]]">) {
         className="relative"
         footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}
       >
-        <PageControls className={TOP_RIGHT} />
+        <PageControls repositoryUrl={REPOSITORY_URL} className={TOP_RIGHT} />
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
         <PageActions lang={lang} url={page.url} markdownUrl={markdownPath(page.url)} postman />
@@ -87,11 +88,11 @@ export default async function Page(props: PageProps<"/[lang]/[[...slug]]">) {
       toc={page.data.toc}
       full={page.data.full}
       className="relative"
-      tableOfContent={{ header: <PageControls className="mb-6" /> }}
+      tableOfContent={{ header: <PageControls repositoryUrl={REPOSITORY_URL} className="mb-6" /> }}
       footer={{ component: <SiteFooter lang={lang} items={neighbours(page.url, lang)} /> }}
     >
       {/* Where the table of contents is hidden, the controls head the page. */}
-      <PageControls className={page.data.full ? TOP_RIGHT : "xl:hidden"} />
+      <PageControls repositoryUrl={REPOSITORY_URL} className={page.data.full ? TOP_RIGHT : "xl:hidden"} />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <PageActions

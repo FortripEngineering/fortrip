@@ -1,10 +1,10 @@
-import { DOCS_ORIGIN } from "@fortrip/agent-contract";
+import { DOCS_ORIGIN, REPOSITORY_URL } from "@fortrip/agent-contract";
 import { CopyMarkdownButton, OpenMenu } from "@/components/page-menus";
 import { PostmanActions } from "@/components/postman-actions";
 import { type Lang, UI } from "@/lib/i18n";
 import { POSTMAN_FILENAME, POSTMAN_PATH } from "@/lib/openapi/postman";
 
-const CONTENT_ON_GITHUB = "https://github.com/fortripengineering/fortrip/blob/main/packages/docs/content/docs";
+const CONTENT_ON_GITHUB = `${REPOSITORY_URL}/blob/main/packages/docs/content/docs`;
 
 /** Under a page's title: copy its Markdown, or open it on GitHub, as
  *  Markdown, or in an AI chat that reads it from the docs origin. A page
