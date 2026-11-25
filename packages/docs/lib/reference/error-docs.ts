@@ -30,7 +30,7 @@ const MEANINGS: Record<ErrorCode, string> = {
   cursor_invalid:
     "The cursor expired, belongs to another request or user, or was never a cursor. Start again from the first page.",
   unauthenticated:
-    "No access token or API key, or one Fortrip doesn't accept. Sign in again; for an API key, check it wasn't revoked and that the account's API keys are on.",
+    "No API key or access token, or one Fortrip doesn't accept. For a key, check it wasn't revoked and that the account's API keys are on; for a token, sign in again.",
   forbidden: "The token is valid but doesn't allow this call.",
   not_found: "No such hotel, offer, order or price match, or the order or price match belongs to another account.",
   offer_expired:

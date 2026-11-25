@@ -1,11 +1,11 @@
 // Create an order from an offer. Nothing is charged until it is paid.
 // It can take a couple of minutes. A call that timed out is safe to send again:
 // https://docs.fortrip.ai/api#retries
-// Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
+// Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above).
 import process from "node:process";
 
 const token = process.env.FORTRIP_TOKEN;
-if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip access token");
+if (!token) throw new Error("Set FORTRIP_TOKEN to a Fortrip API key or access token");
 
 const body = {
   "contact": {

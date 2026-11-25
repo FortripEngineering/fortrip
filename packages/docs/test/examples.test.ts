@@ -298,8 +298,9 @@ describe("the API quickstart", () => {
       assert.deepEqual(sent, bodyOf(name), name);
       assert.ok(script?.includes(`--max-time ${SLOW.has(name) ? 180 : 60} `), name);
     }
-    // The first step saves the curl sign-in script as it is.
-    assert.ok(scripts[0]?.includes(readFileSync(join(root, "curl", "device-login.sh"), "utf8").replace(/^#!.*\n/, "").trimEnd()));
+    // The first step sets an API key, and the quickstart's sign-in is the way without one.
+    assert.match(scripts[0] ?? "", /^export FORTRIP_TOKEN='ak_…'/m);
+    assert.match(pageText("/api-quickstart"), /Without a key, sign in instead/);
     const probe = spawnSync("bash", ["--version"]);
     if (probe.error) return t.skip("bash is not installed");
     for (const script of scripts) {

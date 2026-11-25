@@ -1,5 +1,5 @@
 # Ask for a price match: the user saw this stay cheaper on TravelDeals.
-# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above), and httpx.
+# Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above), and httpx.
 import json
 import os
 

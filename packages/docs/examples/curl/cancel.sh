@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cancel an order under its terms, accepting no penalty.
-# Needs FORTRIP_TOKEN, a Fortrip access token (see Sign in above).
+# Needs FORTRIP_TOKEN, a Fortrip API key or access token (see step 1 above).
 set -euo pipefail
 
 curl -sS --fail-with-body --max-time 60 -X POST "https://api.fortrip.ai/v1/orders/ord_Wr4tY7uI0oPa3SdF6gHj/cancel" \

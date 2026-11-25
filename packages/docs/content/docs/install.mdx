@@ -62,7 +62,7 @@ See [`fortrip mcp`](/cli/mcp).
 | --- | --- |
 | Skill, CLI, local MCP | `npx fortrip login` prints a link and a code; open the link, sign in to Fortrip and approve. You stay signed in until `npx fortrip logout`. In a remote agent environment or a CI run, set `FORTRIP_TOKEN` to an access token instead; see [Environment](/cli#environment). |
 | Remote MCP | Your client opens a Fortrip sign-in page and you approve access. |
-| HTTP API | OAuth access tokens, or [API keys](/api#api-keys) for accounts that have them, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
+| HTTP API | An [API key](/api#api-keys), which you ask <Fact path="SUPPORT_EMAIL" /> for, or an OAuth access token, sent as `Authorization: Bearer`. See [HTTP API](/api#authentication). |
 
 When a CLI command needs a sign-in it doesn't wait: it exits with [code <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes) and prints a `loginUrl` and a `userCode` (for a rejected `FORTRIP_TOKEN`, its `tokenSource` instead). An agent can give both to the user and run the command again once they have approved.
 
