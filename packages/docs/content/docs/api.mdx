@@ -7,7 +7,7 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page. To get an [API key](#api-keys), email <Fact path="SUPPORT_EMAIL" />.
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page.
 
 ## Authentication [#authentication]
 
@@ -18,11 +18,11 @@ Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs an AP
 | Your own scripts and server | An [API key](#api-keys) | Until you revoke it |
 | A CLI or script that signs a user in, or before you have a key | The [device flow](#device-flow) | A short-lived access token, renewed with a refresh token |
 
-A key or a token acts as one Fortrip account: the orders, payment links and rate limits are that account's. An API key is for your own account only: never share it with other people. To build an app that other people use with their own Fortrip accounts, email <Fact path="SUPPORT_EMAIL" />. There are no service accounts.
+A key or a token acts as one Fortrip account: the orders, payment links and rate limits are that account's. An API key is for your own account only: never share it with other people. There are no service accounts.
 
 ### API keys [#api-keys]
 
-An API key starts with `ak_`. To get API keys, email <Fact path="SUPPORT_EMAIL" /> from your Fortrip account's address. Once they are on, your account's profile on the Fortrip website (Manage account) has an **API keys** tab, where you create and revoke keys.
+An API key starts with `ak_`. To get API keys, or to build an app that other people use with their own Fortrip accounts, email <Fact path="SUPPORT_EMAIL" /> from your Fortrip account's address. Once they are on, your account's profile on the Fortrip website (Manage account) has an **API keys** tab, where you create and revoke keys.
 
 - A key acts as the account that made it, with the scopes `profile email`, and needs no refresh.
 - A key can do everything the account can, cancelling and paying orders included. Keep it on a server, never in a web page or an app you ship.
