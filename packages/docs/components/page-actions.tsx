@@ -8,7 +8,7 @@ const CONTENT_ON_GITHUB = "https://github.com/fortripengineering/fortrip/blob/ma
  *  without `source` (`content/docs/...`) is generated and has no file to open. */
 export function PageActions({ url, markdownUrl, source }: { url: string; markdownUrl: string; source?: string }) {
   return (
-    <div className="flex flex-row flex-wrap items-center gap-2 border-b pb-6">
+    <div className="mb-2 flex flex-row flex-wrap items-center gap-2 border-b pt-2 pb-6">
       <MarkdownCopyButton markdownUrl={markdownUrl} />
       <ViewOptionsPopover
         markdownUrl={markdownUrl}

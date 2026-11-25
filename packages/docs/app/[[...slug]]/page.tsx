@@ -39,7 +39,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
     return (
       <DocsPage toc={page.data.toc} full footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
         <DocsTitle>{page.data.title}</DocsTitle>
-        <DocsDescription>{page.data.description}</DocsDescription>
+        <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
         <PageActions url={page.url} markdownUrl={markdownPath(page.url)} />
         <DocsBody>
           {tool && <SurfaceLinks name={tool.name} />}
@@ -56,7 +56,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
   return (
     <DocsPage toc={page.data.toc} full={page.data.full} footer={{ component: <SiteFooter items={neighbours(page.url)} /> }}>
       <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+      <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <PageActions
         url={page.url}
         markdownUrl={markdownPath(page.url)}
