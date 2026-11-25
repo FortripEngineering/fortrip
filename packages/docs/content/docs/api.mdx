@@ -17,9 +17,8 @@ Every endpoint except <code><Fact path="ROUTES.authConfig" /></code> needs an AP
 | --- | --- | --- |
 | Your own scripts and server | An [API key](#api-keys) | Until you revoke it |
 | A CLI or script that signs a user in, or before you have a key | The [device flow](#device-flow) | A short-lived access token, renewed with a refresh token |
-| An app other Fortrip users sign in to | The [authorization code flow](#user-apps) | A short-lived access token, renewed with a refresh token |
 
-A key or a token acts as one Fortrip account: the orders, payment links and rate limits are that account's. An API key is for your own account only. An app used by other people has each of them sign in with OAuth, so that their orders are theirs; never share your key with them. There are no service accounts.
+A key or a token acts as one Fortrip account: the orders, payment links and rate limits are that account's. An API key is for your own account only: never share it with other people. To build an app that other people use with their own Fortrip accounts, email <Fact path="SUPPORT_EMAIL" />. There are no service accounts.
 
 ### API keys [#api-keys]
 
@@ -38,10 +37,6 @@ The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/a
 2. Post `client_id` and `scope` to `deviceAuthorizationEndpoint`, show the user its `verification_uri_complete`, then poll `tokenEndpoint` every `interval` seconds until the user approves. Request `offline_access`, which `scopes` includes, to get a refresh token.
 3. The access token is short-lived: its lifetime, in seconds, is the token response's `expires_in`. Refresh it at `tokenEndpoint` with `grant_type=refresh_token`. Every refresh returns a new refresh token: keep only the newest, because reusing an old one revokes the whole grant and the user has to sign in again.
 4. To sign out, revoke the refresh token at `revocationEndpoint`, with your `client_id`.
-
-### Apps other users sign in to [#user-apps]
-
-Use the authorization code flow with PKCE. Register your app with the authorization server's dynamic client registration first. The server's metadata, at <Fact path="OAUTH_METADATA_URL" />, lists its registration, authorization, token and revocation endpoints. Request the scopes that <code><Fact path="ROUTES.authConfig" /></code> lists in `scopes` (they include `offline_access`, for a refresh token). Refresh and sign out as in the device flow.
 
 ### Check a key or token [#check]
 
