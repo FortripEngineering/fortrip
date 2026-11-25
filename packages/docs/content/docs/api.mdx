@@ -30,6 +30,10 @@ An API key starts with `ak_` and is sent in place of an access token, as `Author
 - A revoked key, or any key of an account whose API keys were turned off, answers `401 unauthenticated`. Turning an account's API keys back on makes its keys that weren't revoked work again.
 - Keys work on the HTTP API only. The [MCP server](/mcp) doesn't take them: MCP clients sign in with OAuth.
 
+To check a key, set `FORTRIP_TOKEN` to it and read the account it acts as. The [API quickstart](/api-quickstart)'s calls send `FORTRIP_TOKEN` the same way, so with a key you can skip its sign-in.
+
+<Example name="me" />
+
 ### Device flow [#device-flow]
 
 The standard OAuth device authorization flow (RFC 8628). The [API quickstart](/api-quickstart#sign-in) runs it in curl, TypeScript and Python.

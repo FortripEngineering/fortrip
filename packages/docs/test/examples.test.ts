@@ -43,6 +43,8 @@ interface Example {
   fromUrl?: Record<string, unknown>;
   /** The shared body, examples/bodies/<name>.json. */
   body?: boolean;
+  /** The page that shows it, when not the API quickstart. */
+  page?: "api";
 }
 
 const EXAMPLES: Example[] = [
@@ -56,6 +58,7 @@ const EXAMPLES: Example[] = [
   { name: "get-order", route: HTTP_ROUTES.get_order, tool: "get_order", fromUrl: { orderId: ORDER } },
   { name: "list-orders", route: HTTP_ROUTES.list_orders, tool: "list_orders", fromUrl: { limit: 10 } },
   { name: "cancel", route: HTTP_ROUTES.cancel_order, tool: "cancel_order", fromUrl: { orderId: ORDER }, body: true },
+  { name: "me", route: ACCOUNT_ROUTES.me, page: "api" },
 ];
 
 /** The examples that order or pay, which can take a couple of minutes. */
@@ -264,20 +267,23 @@ describe("examples", () => {
 });
 
 describe("the API quickstart", () => {
-  const mdx = readFileSync(new URL("../content/docs/api-quickstart.mdx", import.meta.url), "utf8");
+  const mdxOf = (page: string) => readFileSync(new URL(`../content/docs/${page}.mdx`, import.meta.url), "utf8");
+  const pageOf = (example: Example) => example.page ?? "api-quickstart";
 
-  it("shows every example once, by name", () => {
+  it("shows every example once, by name, on its page and no other", () => {
     for (const example of EXAMPLES) {
-      assert.equal(mdx.split(`<Example name="${example.name}" />`).length - 1, 1, example.name);
+      for (const page of ["api-quickstart", "api"]) {
+        const count = mdxOf(page).split(`<Example name="${example.name}" />`).length - 1;
+        assert.equal(count, page === pageOf(example) ? 1 : 0, `${example.name} on ${page}`);
+      }
     }
     assert.ok(existsSync(new URL("../components/example.tsx", import.meta.url)));
   });
 
   it("renders each example's curl and links to /payments", () => {
-    const text = pageText("/api-quickstart");
     for (const example of EXAMPLES) {
       const url = `${PUBLIC_ORIGINS.api}${routePath(example.route, example.fromUrl ?? {})}`;
-      assert.ok(text.includes(url), `${example.name}: ${url}`);
+      assert.ok(pageText(`/${pageOf(example)}`).includes(url), `${example.name}: ${url}`);
     }
     assert.match(readFileSync(new URL("../.next/server/app/api-quickstart.html", import.meta.url), "utf8"), /href="\/payments/);
   });
