@@ -23,7 +23,7 @@ import {
 import { EXAMPLE_REQUESTS } from "../lib/reference/examples.ts";
 import { BLOCKS, END_TO_END_IDS } from "../lib/markdown/components.ts";
 import { EXAMPLE_IDS, RESPONSES } from "../lib/reference/responses.ts";
-import { pageText } from "./built-page.ts";
+import { pageHtml, pageText } from "./built-page.ts";
 
 const root = new URL("../examples/", import.meta.url).pathname;
 const read = (file: string) => readFileSync(join(root, file), "utf8");
@@ -285,7 +285,7 @@ describe("the API quickstart", () => {
       const url = `${PUBLIC_ORIGINS.api}${routePath(example.route, example.fromUrl ?? {})}`;
       assert.ok(pageText(`/${pageOf(example)}`).includes(url), `${example.name}: ${url}`);
     }
-    assert.match(readFileSync(new URL("../.next/server/app/api-quickstart.html", import.meta.url), "utf8"), /href="\/payments/);
+    assert.match(pageHtml("/api-quickstart"), /href="\/payments/);
   });
 
   it("runs end to end in curl: each call parses, sends its example body, and takes the next id where the answer has it", (t) => {

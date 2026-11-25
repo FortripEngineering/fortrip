@@ -16,6 +16,7 @@ import {
   MarkdownIcon,
   SciraIcon,
 } from "@/components/icons";
+import type { UIText } from "@/lib/i18n";
 
 export const TRIGGER = buttonVariants({
   variant: "secondary",
@@ -30,7 +31,7 @@ const cache = new Map<string, string>();
 
 /** Fumadocs' Markdown copy button with the site's icons: the Markdown is
  *  fetched inside the clipboard write, so Safari keeps the user's gesture. */
-export function CopyMarkdownButton({ markdownUrl }: { markdownUrl: string }) {
+export function CopyMarkdownButton({ t, markdownUrl }: { t: UIText; markdownUrl: string }) {
   const [loading, setLoading] = useState(false);
   const [checked, onClick] = useCopyButton(async () => {
     const cached = cache.get(markdownUrl);
@@ -51,27 +52,37 @@ export function CopyMarkdownButton({ markdownUrl }: { markdownUrl: string }) {
   return (
     <button type="button" disabled={loading} aria-live="polite" onClick={onClick} className={TRIGGER}>
       {checked ? <CheckIcon /> : <CopyIcon />}
-      {checked ? "Copied Markdown" : "Copy Markdown"}
+      {checked ? t.copiedMarkdown : t.copyMarkdown}
     </button>
   );
 }
 
 /** Where to open the page: its source on GitHub, its Markdown, or an AI chat
  *  asked to read `pageUrl`. */
-export function OpenMenu({ markdownUrl, githubUrl, pageUrl }: { markdownUrl: string; githubUrl?: string; pageUrl: string }) {
-  const q = `Read ${pageUrl}, I want to ask questions about it.`;
+export function OpenMenu({
+  t,
+  markdownUrl,
+  githubUrl,
+  pageUrl,
+}: {
+  t: UIText;
+  markdownUrl: string;
+  githubUrl?: string;
+  pageUrl: string;
+}) {
+  const q = t.askPrompt.replace("{url}", pageUrl);
   const items = [
-    ...(githubUrl ? [{ title: "Open in GitHub", href: githubUrl, Icon: GitHubIcon }] : []),
-    { title: "View as Markdown", href: markdownUrl, Icon: MarkdownIcon },
-    { title: "Open in Scira AI", href: `https://scira.ai/?${new URLSearchParams({ q })}`, Icon: SciraIcon },
-    { title: "Open in ChatGPT", href: `https://chatgpt.com/?${new URLSearchParams({ prompt: q, hints: "search" })}`, Icon: ChatGPTIcon },
-    { title: "Open in Claude", href: `https://claude.ai/new?${new URLSearchParams({ q })}`, Icon: ClaudeIcon },
-    { title: "Open in Cursor", href: `https://cursor.com/link/prompt?${new URLSearchParams({ text: q })}`, Icon: CursorIcon },
+    ...(githubUrl ? [{ title: t.openInGitHub, href: githubUrl, Icon: GitHubIcon }] : []),
+    { title: t.viewAsMarkdown, href: markdownUrl, Icon: MarkdownIcon },
+    { title: t.openInScira, href: `https://scira.ai/?${new URLSearchParams({ q })}`, Icon: SciraIcon },
+    { title: t.openInChatGPT, href: `https://chatgpt.com/?${new URLSearchParams({ prompt: q, hints: "search" })}`, Icon: ChatGPTIcon },
+    { title: t.openInClaude, href: `https://claude.ai/new?${new URLSearchParams({ q })}`, Icon: ClaudeIcon },
+    { title: t.openInCursor, href: `https://cursor.com/link/prompt?${new URLSearchParams({ text: q })}`, Icon: CursorIcon },
   ];
   return (
     <Popover>
       <PopoverTrigger className={TRIGGER}>
-        Open
+        {t.open}
         <ChevronDownIcon />
       </PopoverTrigger>
       <PopoverContent className="flex flex-col">

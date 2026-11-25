@@ -1,17 +1,20 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
-export function baseOptions(): BaseLayoutProps {
+import { type Lang, localize, UI } from "@/lib/i18n";
+
+export function baseOptions(lang: Lang): BaseLayoutProps {
+  const t = UI[lang];
   return {
     nav: {
       title: (
         // The logo is black (currentColor in an <img>), so dark mode inverts it.
         <img src="/fortrip-logo.svg" alt="Fortrip" width={152} height={16} className="h-4 w-auto dark:invert" />
       ),
-      url: "/",
+      url: localize(lang, "/"),
     },
     links: [
-      { text: "Fortrip for agents", url: "https://fortrip.ai/agents", external: true },
-      { type: "button", text: "Quickstart", url: "/quickstart" },
+      { text: t.forAgents, url: "https://fortrip.ai/agents", external: true },
+      { type: "button", text: t.quickstart, url: localize(lang, "/quickstart") },
     ],
   };
 }

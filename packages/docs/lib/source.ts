@@ -1,6 +1,8 @@
+import type { InferPageType } from "fumadocs-core/source";
 import { loader } from "fumadocs-core/source";
 import { defineDocs } from "fumadocs-mdx/macro";
 
+import { i18n } from "./i18n.ts";
 import { openapi } from "./openapi.ts";
 import { OPERATIONS } from "./openapi/build.ts";
 import { contentSentence, SURFACE_HEADINGS, toolSentence } from "./prose/mcp-content.ts";
@@ -90,5 +92,14 @@ export const source = loader(
       ],
     },
   },
-  { baseUrl: "/", plugins: [openapi.loaderPlugin()] },
+  { baseUrl: "/", i18n, plugins: [openapi.loaderPlugin()] },
 );
+
+type Page = InferPageType<typeof source>;
+
+/** Whether a page has its own file in its language (`quickstart.zh.mdx`),
+ *  rather than being the default language's page under its URL. */
+export function isTranslated(page: Page): boolean {
+  if (page.locale === undefined || page.locale === i18n.defaultLanguage) return true;
+  return source.getPage(page.slugs, i18n.defaultLanguage)?.data !== page.data;
+}
