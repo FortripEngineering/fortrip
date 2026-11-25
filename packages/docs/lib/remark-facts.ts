@@ -21,6 +21,9 @@ type SourceArgs = Parameters<typeof replaceSource>;
 /** JSX elements whose content is text, never a paragraph. */
 const TEXT_ONLY = new Set(["code", "pre"]);
 
+/** A value that is an email address, rendered as a `mailto:` link. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]+$/i;
+
 function isFact(node: Node): node is JsxElement {
   return (
     (node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement") &&
@@ -30,7 +33,8 @@ function isFact(node: Node): node is JsxElement {
 
 /**
  * Replaces every `<Fact path="…" />` with the contract's value as plain text
- * (a paragraph when the tag stands on its own line, except in <code>/<pre>).
+ * (a paragraph when the tag stands on its own line, except in <code>/<pre>),
+ * or a `mailto:` link when the value is an email address.
  * It also replaces the tag's source for Fumadocs' source-backed outputs (the
  * search index, Markdown/LLM text), which slice the authored MDX. An unknown or
  * non-literal path fails the compilation, and with it the build.
@@ -56,15 +60,24 @@ export function remarkFacts() {
         } catch (error) {
           file.fail((error as Error).message, node);
         }
-        const text: Node & { value: string } = { type: "text", value, position: node.position };
-        replaceSource(file as SourceArgs[0], text as SourceArgs[1], value);
-        // On its own line a value is a paragraph, except inside <code> or <pre>,
-        // which hold text only.
+        // Inside <code> or <pre>, which hold text only, a value stays text and
+        // is never a paragraph or a link.
         const inCode =
-          parent.type === "mdxJsxFlowElement" && TEXT_ONLY.has((parent as JsxElement).name ?? "");
+          (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
+          TEXT_ONLY.has((parent as JsxElement).name ?? "");
+        let inline: Node;
+        if (EMAIL.test(value) && !inCode && parent.type !== "link") {
+          const url = `mailto:${value}`;
+          inline = { type: "link", url, children: [{ type: "text", value } as Node], position: node.position } as Node;
+          replaceSource(file as SourceArgs[0], inline as SourceArgs[1], `[${value}](${url})`);
+          replaceSource(file as SourceArgs[0], inline as SourceArgs[1], value, "search");
+        } else {
+          inline = { type: "text", value, position: node.position } as Node;
+          replaceSource(file as SourceArgs[0], inline as SourceArgs[1], value);
+        }
         return node.type === "mdxJsxFlowElement" && !inCode
-          ? { type: "paragraph", children: [text], position: node.position }
-          : text;
+          ? { type: "paragraph", children: [inline], position: node.position }
+          : inline;
       });
     };
     visit(tree);

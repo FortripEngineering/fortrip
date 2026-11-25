@@ -6,6 +6,8 @@ import {
   SUPPORT_EMAIL,
 } from "@fortrip/agent-contract";
 
+const SUPPORT_LINK = `[${SUPPORT_EMAIL}](mailto:${SUPPORT_EMAIL})`;
+
 /**
  * What each order status means, keyed by the contract's `OrderStatus`, so a
  * status the contract gains fails the typecheck until it is described.
@@ -28,7 +30,7 @@ export const ORDER_STATUS_DOCS: Record<OrderStatus, string> = {
     "A cancellation is under way with the hotel. If the hotel refuses it, the order reads as it did before, with `cancel.blockedBy` `cancellation_refused`.",
   cancelled:
     "Cancelled under its terms. `cancelled` holds what the cancellation kept (`penalty`) and returned (`refund`): `payment.status` is `refund_pending` then `refunded`, `released` when the amount was only held, or stays `paid` when the penalty takes the whole amount.",
-  needs_attention: `Something needs a person to resolve, and Fortrip is looking into it. The user can email ${SUPPORT_EMAIL} with the order's \`reference\`.`,
+  needs_attention: `Something needs a person to resolve, and Fortrip is looking into it. The user can email ${SUPPORT_LINK} with the order's \`reference\`.`,
 };
 
 /**
@@ -48,7 +50,7 @@ export const PAYMENT_STATUS_DOCS: Record<PaymentStatus, string> = {
     "Refunded: in full when no stay was booked, or what was paid less the penalty when the order was cancelled.",
 };
 
-const SUPPORT = `the user emails ${SUPPORT_EMAIL} with the order's \`reference\``;
+const SUPPORT = `the user emails ${SUPPORT_LINK} with the order's \`reference\``;
 
 /**
  * What each value of an order's `cancel.blockedBy` means and what to do,
