@@ -1,0 +1,22 @@
+{
+  "pages": [
+    "---快速上手---",
+    "index",
+    "quickstart",
+    "api-quickstart",
+    "install",
+    "---指南---",
+    "search",
+    "payments",
+    "faq",
+    "---参考---",
+    "api",
+    "mcp",
+    "cli",
+    "reference",
+    "schemas",
+    "errors",
+    "regions",
+    "changelog"
+  ]
+}

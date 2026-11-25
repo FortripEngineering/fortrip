@@ -1,0 +1,69 @@
+---
+title: 安装
+description: 以 Agent Skill、CLI、带 OAuth 的远程 MCP 服务器或本地 stdio MCP 服务器的形式安装 Fortrip，并在你的客户端中完成配置。
+---
+
+## 选择配置方式 [#choosing]
+
+编程智能体（Claude Code、Codex 等）→ [Skill](#skill)。不用 Skill 的话，Claude Code 也可以用[插件](#claude-code)，Codex 可以用 [MCP](#codex)。聊天应用 → 远程 MCP 连接器（[claude.ai](#claude-ai)、[Claude Desktop](#claude-desktop)、[ChatGPT](#chatgpt)）。每个智能体只装一种，不要装多个。每种方式都使用同一个 Fortrip 账号，返回的数据也完全一样。
+
+## Agent Skill [#skill]
+
+适用于 Codex、Claude Code、Muse、WorkBuddy 等使用 Skill 并能运行 shell 命令的智能体。
+
+<pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
+
+安装程序会找出你机器上的智能体，问你要把 Skill 加到哪些上面，然后写入它们在当前项目中的 skills 目录；加上 `-g` 可以为所有项目安装。
+
+Skill 会告诉智能体什么时候使用 Fortrip、调用顺序，以及在你付款前要给你看什么。智能体通过 `npx -y fortrip@latest` 运行 CLI，所以它可能会请求你允许运行这些命令。
+
+## CLI [#cli]
+
+需要 Node.js <Fact path="CLI_NODE_MAJOR" /> 或更高版本。用 `npx` 运行，或全局安装：
+
+```sh
+npm install -g fortrip
+```
+
+包名和命令名都是 `fortrip`。源码在 <Fact path="REPOSITORY_URL" />。参见 [CLI 参考](/cli)。
+
+## 远程 MCP [#remote-mcp]
+
+无需安装。使用支持 Streamable HTTP 和 MCP OAuth 的客户端即可。
+
+<RemoteMcpTable />
+
+登录之前收到 `401` 是正常的：通过你的客户端完成认证即可。
+
+## 配置你的客户端 [#clients]
+
+<ClientSetup />
+
+## 本地 MCP [#local-mcp]
+
+适用于能启动本地命令的客户端。CLI 会运行一个 stdio 服务器，把请求转发到托管服务器。它使用 CLI 的登录状态，所以先运行 `npx -y fortrip login`，再把它加到你的客户端：
+
+```json
+{
+  "mcpServers": {
+    "fortrip": {
+      "command": "npx",
+      "args": ["-y", "fortrip", "mcp"]
+    }
+  }
+}
+```
+
+参见 [`fortrip mcp`](/cli/mcp)。
+
+## 认证 [#authentication]
+
+| 连接方式 | 如何登录 |
+| --- | --- |
+| Skill、CLI、本地 MCP | `npx fortrip login` 会输出一个链接和一个验证码；打开链接，登录 Fortrip 并批准。之后会一直保持登录，直到运行 `npx fortrip logout`。在远程智能体环境或 CI 中，改为把 `FORTRIP_TOKEN` 设为访问令牌；参见[环境变量](/cli#environment)。 |
+| 远程 MCP | 你的客户端会打开 Fortrip 登录页面，由你批准访问。 |
+| HTTP API | 使用 [API key](/api#api-keys)（向 <Fact path="SUPPORT_EMAIL" /> 申请）或 OAuth 访问令牌，以 `Authorization: Bearer` 发送。参见 [HTTP API](/api#authentication)。 |
+
+当 CLI 命令需要登录时，它不会等待：它以[退出码 <Fact path="CLI_EXIT.unauthenticated" />](/errors#exit-codes) 退出，并输出 `loginUrl` 和 `userCode`（如果是 `FORTRIP_TOKEN` 被拒绝，则输出它的 `tokenSource`）。智能体可以把这两项交给用户，等用户批准后重新运行命令。
+
+要断开连接，在客户端里移除连接器即可；CLI 用 `npx fortrip logout` 退出登录。

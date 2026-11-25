@@ -1,0 +1,145 @@
+---
+title: 订单与支付
+description: 从实时报价到酒店确认的预订。创建订单、和用户确认、选一种方式付款，然后跟踪订单直到酒店确认。已付款的订单可以取消，未付款的可以关闭。
+---
+
+## 流程 [#flow]
+
+1. **报价。** <code><Fact path="ROUTES.get_hotel_offers" /></code> 返回实时报价。每个报价都有 `offerId`、覆盖整个入住期间和所有房间的 `total`、条款，以及可下单的截止时间 `expiresAt`。
+2. **下单。** <code><Fact path="ROUTES.create_order" /></code> 为一个报价创建未付款的订单。不会扣款。
+3. **和用户确认**（[要展示什么](#confirm)），等用户明确同意。
+4. **付款。** 用户通过订单的支付链接付款，或者由智能体用用户批准的令牌付款。
+5. **跟踪。** 用 <code><Fact path="ROUTES.get_order" /></code> 读取订单，直到酒店确认。
+
+MCP 工具和 CLI 命令走的是同样的步骤：`get_hotel_offers`、`create_order` 和 `get_order`，或 `fortrip hotels offers`、`fortrip orders create` 和 `fortrip orders get`。在 MCP 中，`pay_order` [只通过 CLI 的 `fortrip mcp` 提供](/mcp#tools)。
+
+## 下单 [#order]
+
+发送 `items`（只包含一项）和 `contact`：
+
+```text
+{ items: [{ offerId, hotel: { rooms: [{ guests }], specialRequests? } }], contact: { name, email, phone } }
+```
+
+- `hotel.rooms` 按报价中的房间顺序，每个房间一项，每项至少一位住客，姓名用拉丁字母书写，与护照一致。
+- `contact` 是酒店和确认邮件要联系的人：一个 `name`（任何文字均可）、一个 `email`，以及带国家区号的 `phone`。
+- 绝不要收集银行卡信息。住客姓名、联系人或特殊要求中出现卡号会被拒绝。
+
+住客姓名、联系人和特殊要求会发给酒店用于办理预订，Fortrip 会把预订确认邮件发到联系人邮箱。Fortrip 如何处理这些数据，见其[隐私政策](https://fortrip.ai/privacy)。[Schemas](/schemas) 列出了每个字段。
+
+需要预先考虑的情况（所有错误码见[错误码](/errors#codes)）：
+
+- **报价变了。** Fortrip 会先向酒店核对报价。如果价格或任何条款变了，返回 `409 offer_changed`，不会创建订单（[见下文](#offer-changed)）。
+- **住客姓名被拒。** 如果酒店预订系统会拒绝某个住客姓名，在创建订单之前就会返回 `invalid_request`，并指向这个姓名。如果这确实是住客护照上的真实姓名，不要为了通过检查去改它：预订会以这个姓名办理。请用户改为发邮件到 <Fact path="SUPPORT_EMAIL" />。
+- **调用超时。** 用同样的内容[可以安全地重发](/api#retries)。
+
+一个报价只能下单一次。同一住处的另一笔订单（给另一批住客，或修正了姓名）需要新的报价：重新获取报价。如果新订单要替代一笔未付款的订单，告诉用户只付新订单。
+
+### 报价变了的时候 [#offer-changed]
+
+`409 offer_changed` 的 `details`：
+
+<ErrorExample code="offer_changed" part="details" />
+
+每项变化的 `field` 是报价中发生变化的键：`total`、`meals`、`cancellation`、`confirmation` 或 `payAtProperty`。逐项展示 `previous` → `current`；`worse: true` 表示这项变化对用户更不利。用户同意后，为 `details.offer.offerId` 下单；不需要重新获取报价。通过 HTTP 时，它在错误信封里，是 `error.details.offer.offerId`。
+
+### 订单 [#the-order]
+
+订单的 `reference` 以 `FT-` 开头，是用户联系客服时报的编号。`total` 是实际收取的金额，覆盖整个入住期间和所有房间；到店支付的费用不包含在内。
+
+`items[0].hotel` 记录下单时的住宿信息。`cancellation`、`confirmation` 和 `payAtProperty` 适用于整个入住期间，与报价一致。`rooms` 的每一项都有住客组成、`guests`、`roomType` 和 `meals`：请逐个读取每个房间，因为在 Fortrip 网站上下的订单可能包含不同的房间。
+
+## 和用户确认 [#confirm]
+
+在任何付款之前，向用户展示：
+
+- 总价及币种；
+- 住宿信息：酒店、房型、日期，以及每个房间的住客组成和住客姓名；
+- 联系人（姓名、邮箱、电话）和特殊要求，以订单中的为准；
+- 每一项条款：餐食、取消（是否免费、截止到什么时候、罚金多少），以及到店支付的费用；不确定的信息要明确说不确定。
+
+在这条消息的最后请用户确认，并等待明确的同意；催促不等于同意。之后才把 `payment.url` 交给用户，或用令牌付款。
+
+<Fact path="GUIDE_SENTENCES.adaptivePricing" /> 支付宝和微信支付会按它们自己的汇率以人民币显示总价。Link token 只能支付 USD 订单，用其他币种的银行卡可能会产生境外交易手续费。
+
+## 付款 [#pay]
+
+只用一种方式付款。每个待付款的订单都有支付链接 `payment.url`。当订单的 `payment.tokenRequest` 存在时，能申请 Link token 的智能体也可以改用 Link token 付款。
+
+- `payment.url` 相当于支付凭证：除非 `requiresSignIn` 为 `true`，否则任何拿到它的人都能付款。只交给这位用户，并且与返回的完全一致。
+- 如果订单处于 `awaiting_payment`、`payment.status` 为 `unpaid`，但 `payment.url` 为 `null`，说明有一笔付款正在处理：稍后再读取订单，不要给出之前的链接。
+- 链接会在 `payment.expiresAt`、订单被[关闭](#close)或令牌付款成功时失效。令牌付款失败不会让链接失效。
+- 如果用户先通过链接付了款，期间产生的令牌预授权会被释放。
+
+<PayWays variant="full" />
+
+金额与订单不一致时，返回 [`payment_total_mismatch`](/errors#code-payment_total_mismatch)，不会扣款。其他拒绝付款的情况都列在[错误码](/errors#codes)中。
+
+### 支付页面 [#payment-page]
+
+链接会打开一个汇总订单信息的 Fortrip 页面。用户在这里选择付款方式：
+
+- **USD 订单：**通过 Stripe Checkout 用银行卡付款，或用支付宝、微信支付。
+- **CNY 订单：**中国大陆的收银台。
+
+智能体不会打开或选择其中任何一种：它只负责给出链接，由用户付款。用户在页面上打开了支付宝或微信支付付款时，订单的 `payment.tokenRequest` 为 `null`，`pay_order` 会返回 [`payment_method_unavailable`](/errors#code-payment_method_unavailable)，`reason` 为 `payment_open_on_page`。
+
+## 付款之后 [#after-payment]
+
+读取订单（[`get_order`、`fortrip orders get`](/reference/get_order)），直到它不再是 `confirming`；[轮询](/api#polling)说明了读取频率。它的 `status`：
+
+<OrderStatuses />
+
+它的 `payment.status` 说明钱在哪个阶段：
+
+<PaymentStatuses />
+
+- 酒店给出确认号后，`items[0].hotel.confirmationNumber` 就是酒店的确认号。
+- `manageUrl` 是订单在 fortrip.ai 上的页面，供登录了下单账号的用户使用。
+
+### 预订失败时 [#failure]
+
+`failed` 的订单没有订到住处，付款会被释放或全额退款。它的 `failure.reason` 说明原因，避免智能体再次下同样的单：
+
+<FailureReasons />
+
+每个 `failed` 订单都有 `failure`：没有记录原因时为 `unknown`。其他订单的 `failure` 为 `null`。
+
+## 取消或关闭 [#cancel]
+
+订单不能通过 API 修改。[取消订单](/reference/cancel_order)（`cancel_order`、`fortrip orders cancel`、<code><Fact path="ROUTES.cancel_order" /></code>）要么取消，要么关闭，由请求指定：
+
+| | 取消 | 关闭 |
+| --- | --- | --- |
+| 适用于 | 已付款的订单，按其取消条款。 | 通过 API 创建的未付款订单。 |
+| 发送 | `maximumPenalty` | `close: true` |
+| CLI | `--max-penalty <amount>` | `--close` |
+| 效果 | 取消酒店预订。扣除罚金，其余退款。 | 不扣款。订单变为 `closed`，之后不能再付款。 |
+| 询问用户 | 展示罚金和退款金额，等待明确的同意。 | 只有在用户表示不再需要时才关闭。 |
+
+`maximumPenalty` 和 `close` 只能发送其中一个。另一种模式绝不会取消或关闭订单：如果请求的模式不适用于该订单，例如对期间已付款的订单发送 `close`，会返回 [`order_not_cancellable`](/errors#code-order_not_cancellable)，并附上订单当前的 `cancel`。再次发送相同的模式，会返回它已经取消或关闭的那笔订单；对已经 `expired` 的订单发送 `close`，会返回订单的当前状态。
+
+### `cancel` 显示什么 [#cancel-state]
+
+每个订单都在 `cancel` 中说明当前能对它做什么：`{ action, blockedBy, penalty, refund }`。`action` 和 `blockedBy` 有且只有一个有值。
+
+- **`action: "cancel"`**：现在可以取消的已付款订单。`penalty` 是取消时扣除的金额，`refund` 是退回的金额。过了免费取消期限后，罚金可能是全部总价、退款为 0：此时 action 仍然是 `cancel`。
+- **`action: "close"`**：可以关闭的未付款订单。`penalty` 和 `refund` 为 `null`。
+- **`action: null`**：两者都不适用，`blockedBy` 说明原因：
+
+<CancelBlockers />
+
+### 取消已付款的订单 [#cancel-paid]
+
+把 `maximumPenalty` 设为订单的 `cancel.penalty`，与返回的完全一致。它是上限：如果罚金已经超过这个值，会返回 [`cancellation_changed`](/errors#code-cancellation_changed)，不会取消任何东西。重新读取订单，再问一次用户。
+
+酒店处理取消期间，订单为 `cancelling`；完成后为 `cancelled`。已取消订单的 `cancelled` 记录了取消扣除和退回的金额：`{ at, penalty, refund }`。退款会原路退回到付款方式，`payment.status` 说明是否已到账。如果酒店拒绝取消，订单会重新变为 `confirmed`，`cancel.blockedBy` 为 `cancellation_refused`。
+
+### 关闭未付款的订单 [#close]
+
+未付款的订单不需要关闭：放着不管，它会在 `payment.expiresAt` 到期，不产生任何扣款。想提前结束，发送 `close: true`（`fortrip orders cancel <orderId> --close`）。
+
+- 如果订单有一笔付款正在进行，关闭会返回 [`payment_in_progress`](/errors#code-payment_in_progress)：稍后再读取订单。
+- 在 Fortrip 网站上创建的订单不能通过 API 关闭。
+
+如需修改订单，或进行上述方式无法完成的取消，请用户发邮件到 <Fact path="SUPPORT_EMAIL" />，并附上订单的 `reference`。

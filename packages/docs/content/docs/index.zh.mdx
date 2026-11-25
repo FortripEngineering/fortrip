@@ -1,0 +1,41 @@
+---
+title: 简介
+description: Fortrip 为 AI 智能体提供酒店搜索、实时报价和订单。智能体负责找房和比价，用户确认条款后付款。
+---
+
+## 选择你的路径 [#pick-your-path]
+
+<Cards>
+  <Card title="在你的 AI 应用中使用 Fortrip" href="/quickstart">
+    连接 Claude、ChatGPT、Codex 或其他智能体，直接让它帮你订住处。
+  </Card>
+  <Card title="基于 HTTP API 开发" href="/api-quickstart">
+    五步完成登录、搜索、获取报价和创建订单。
+  </Card>
+  <Card title="开发 MCP 客户端" href="/mcp">
+    把你自己的智能体接入 Fortrip 的 MCP 服务器。
+  </Card>
+</Cards>
+
+## 能做什么 [#what-you-can-do]
+
+- 按城市、地区或国家搜索酒店，也可以按某个地点或坐标附近、酒店名称或品牌搜索。参见[搜索原理](/search)。
+- 查看酒店详情：地址、入住和退房时间、介绍、政策、设施和房型。
+- 一次获取最多 <Fact path="LIMITS.offersHotels" /> 家酒店的实时报价：房型、餐食、总价、到店支付的费用以及取消条款。
+- 为报价下单并由用户付款；之后可以跟踪订单、按条款取消，以及列出历史订单。参见[订单与支付](/payments#flow)。
+
+暂不支持机票、活动，也不支持修改已有订单。
+
+<PayWays variant="sentence" />
+
+## 关键术语 [#key-terms]
+
+- **报价（Offer）**：一个可实时预订的房间，带总价和条款。搜索结果里的**参考价**只大致反映酒店的价格水平，不能直接预订。
+- **订单（Order）**：为报价下单后生成。用户付款之前不会扣任何钱。
+- **支付链接**：订单的 `payment.url`，是用户付款用的 Fortrip 页面。
+- **Link token**：来自用户 Stripe Link 钱包的共享支付令牌。部分智能体在用户批准后，可以用它直接支付订单。
+- **订单号（Reference）**：订单编号，以 `FT-` 开头。用户联系客服时报这个编号。
+
+## 接入方式 [#ways-to-connect]
+
+Fortrip 可以通过 [Agent Skill](/install#skill)、[CLI](/install#cli)、[远程 MCP 服务器](/install#remote-mcp)、[本地 MCP 服务器](/install#local-mcp) 或 [HTTP API](/api) 接入。每种方式都用 Fortrip 账号登录，返回的数据完全一样。

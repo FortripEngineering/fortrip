@@ -1,0 +1,52 @@
+---
+title: 快速开始
+description: 在你的 AI 应用里使用 Fortrip。聊天应用无需安装即可连接；编程智能体添加一个 Skill。然后让它帮你订住处，准备好了再付款。
+---
+
+还没有 Fortrip 账号？在 [fortrip.ai](https://fortrip.ai) 注册一个。
+
+## 聊天应用：无需安装 [#chat-apps]
+
+适用于 claude.ai、ChatGPT 和 Claude Desktop。把 Fortrip 添加为连接器（connector），应用提示时登录 Fortrip 即可。步骤：[claude.ai](/install#claude-ai) · [Claude Desktop](/install#claude-desktop) · [ChatGPT](/install#chatgpt)。
+
+## 编程智能体 [#coding-agents]
+
+适用于 Claude Code、Codex 等能运行 shell 命令的智能体。需要 Node.js <Fact path="CLI_NODE_MAJOR" /> 或更高版本。
+
+### 1. 安装 Skill [#install]
+
+在你的项目里运行一次。它会问你要把 Skill 加到哪些智能体上。
+
+<pre><code><Fact path="SKILL_INSTALL_COMMAND" /></code></pre>
+
+更想用 Claude Code 插件或 MCP，或者在用 Cursor？请改为[配置你的客户端](/install#clients)。每个智能体只用一种配置方式。
+
+### 2. 登录 [#sign-in]
+
+```sh
+npx fortrip login
+```
+
+该命令会打开浏览器。登录 Fortrip，确认页面上的验证码与终端里的一致，然后批准。这一步也可以跳过：智能体第一次需要访问权限时，会给你一个登录链接。
+
+## 向智能体提问 [#ask]
+
+```text
+帮我找一家京都的安静酒店，两位成人，下个月住两晚，要可以免费取消的。
+```
+
+你可以让它查找和比较酒店、查看实时价格和条款、预订、查询你的预订，以及按条款取消预订。
+
+## 会发生什么 [#what-to-expect]
+
+- **智能体会问你**每个房间至少一位住客的姓名（与护照一致），以及联系人的姓名、邮箱和电话。酒店需要这些信息来办理预订，确认邮件会发到联系人的邮箱。
+- **付款之前你会看到**总价及币种、酒店、房型和日期、餐食、取消条款，以及需要到店支付的费用。智能体会等你确认。
+
+## 付款 [#paying]
+
+- 你付款之前不会产生任何扣款。付款在 Fortrip 的支付页面完成：智能体看不到你的卡信息。
+- 价格使用你要求的币种：USD（默认）或 CNY，并以该币种付款。CNY 价格通过中国大陆的支付渠道支付。对于 USD 价格，支付页面可能提供按 Stripe 汇率以你的卡币种扣款的选项，支付宝和微信支付会以人民币显示总价。
+- 对于 USD 价格，银行卡会先预授权，酒店确认后再扣款。支付宝、微信支付以及所有 CNY 付款在付款时即扣款。如果酒店无法确认，预授权会被释放，或全额退款。
+- 支付链接只给你一个人用：任何拿到链接的人都能付款，所以不要分享。
+
+对预订有疑问，或者付款没有成功？参见[帮助与支持](/faq#support)。
