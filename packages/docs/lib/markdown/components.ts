@@ -187,7 +187,8 @@ export const BLOCKS: Record<string, (props: Props) => Block[]> = {
     return [
       heading(3, [text("1. Set your API key")], "step-api-key"),
       paragraph([
-        text(`To get one, email ${SUPPORT_EMAIL}`),
+        text("To get one, email "),
+        link(`mailto:${SUPPORT_EMAIL}`, text(SUPPORT_EMAIL)),
         text(" (see "),
         link("/api#api-keys", text("API keys")),
         text("). Without a key, "),
