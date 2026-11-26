@@ -2656,7 +2656,7 @@ describe("price match", () => {
 
   it("a fee at the property left out of the comparison is said", () => {
     const lines = renderToolResult("get_price_match", { ...data("price-match-partial"), propertyFeeLeftOut: true }).split("\n");
-    assert.ok(lines.includes("A fee payable at the property is left out of this comparison."));
+    assert.ok(lines.includes("Fortrip's own fees paid at the hotel for this stay are not known, so this comparison leaves out any there may be."));
   });
 
   it("a partial match without the other site's total says it is not stated", () => {

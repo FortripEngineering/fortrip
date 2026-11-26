@@ -9,18 +9,15 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 ## 6.5.0
 
-Not released yet.
+Released 2026-11-26.
 
-- The assistant can ask for a price match: when the user saw an offer's stay cheaper on another site, `request_price_match` (`POST /v1/price-matches`, `fortrip hotels price-match`) sends the offer and the site's name, with the link to the page where the user saw the price (the assistant asks the user for it; a link on a comparison site that leads to the booking site counts) and the total they saw if they gave one. Fortrip checks that one site, which can take up to ten minutes, so the answer comes at once: with a `claimId`, a progress link to share with the user and the number of seconds to wait before reading it again, or declined with a `reason` when no check is started.
-- `get_price_match` (`GET /v1/price-matches/{claimId}`, `fortrip hotels price-match-status`) reads where the check stands: `checking`, `matched`, `partial` or `declined`. A `matched` answer carries a new offer at the matched price, with its total, saving and expiry (the comparison counts what is paid at the hotel, so the new total is the other site's total less Fortrip's own fees paid there, `ourFeesAtProperty`), to order with `create_order` like any offer. A `partial` answer carries a new offer at the lowest price a price match can give, short of the other site's price. A `declined` answer says why, and the original offer stays as it was.
+- The assistant can ask for a price match: when the user saw an offer's stay cheaper on another site, `request_price_match` (`POST /v1/price-matches`, `fortrip hotels price-match`) sends the offer and the site's name, with the link to the page where the user saw the price (the assistant asks the user for it; a link on a comparison site that leads to the booking site counts) and the total they saw if they gave one. Fortrip checks that one site, which can take up to ten minutes, so the answer comes at once: with a `claimId`, a progress link to share with the user and the number of seconds to wait before reading it again, or declined with a `reason`, in which case the answer may have no `claimId`.
+- `get_price_match` (`GET /v1/price-matches/{claimId}`, `fortrip hotels price-match-status`) reads where the check stands: `checking`, `matched`, `partial` or `declined`. A `matched` answer carries a new offer at the matched price, with its total, saving and expiry (the comparison counts what is paid at the hotel, so the new total is the other site's total less Fortrip's own fees paid there, `ourFeesAtProperty`; when those fees aren't known, `propertyFeeLeftOut` is `true` and the comparison leaves them out), to order with `create_order` like any offer. A `partial` answer carries a new offer at the lowest price a price match can give, short of the other site's price. A `declined` answer says why, and the original offer stays as it was.
 - A price match is not a guarantee. Only the site the user named, or the booking site their link leads to, is checked, a price match is limited in how far it lowers a price, and the answer can be that no match is available right now. Price matches cover USD offers of one room for now.
+- `request_price_match` and `get_price_match` are in an account's MCP tool list only while price match is open to that account; for any other account a request is declined with `unavailable`.
 - Price-match requests and reads share one rate limit, listed with the others under [Errors](/errors#rate-limits).
 - `request_price_match` is not marked idempotent: the same call answers the same price match while its check runs or its result stands, and a new link or a check that ended unfinished starts a new one.
 - While a check runs, the answer tells an assistant that cannot wait to give the user the progress page and ask them to ask again in a few minutes, and not to read the price match again sooner than `checkAgainAfterSeconds`.
-
-### 6.5.0-rc.0
-
-The first release candidate of 6.5.0: `request_price_match` and `get_price_match`, with the CLI commands `fortrip hotels price-match` and `fortrip hotels price-match-status`, as described above.
 
 ### Package
 

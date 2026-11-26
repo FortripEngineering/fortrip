@@ -95,7 +95,9 @@ export const priceMatch = openObject({
     .boolean()
     .nullable()
     .optional()
-    .describe("True when a fee payable at the property is left out of the comparison; null or absent when not known."),
+    .describe(
+      "When matched or partial: true when Fortrip's own fees paid at the hotel for this stay are not known, so the comparison leaves out any there may be; false when they are known and counted. Null or absent otherwise.",
+    ),
 });
 
 export type PriceMatch = z.infer<typeof priceMatch>;
