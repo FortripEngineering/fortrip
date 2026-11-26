@@ -11,10 +11,10 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 Released 2026-11-26.
 
-The schemas, the tools, the commands and the errors keep their shape. The change is to the text that agents read.
+The schemas, the tools, the commands and the errors keep their shape. The change is to the descriptions of two fields of an order.
 
-- An order started on the Fortrip website can await payment with no payment link: `payment.url` is `null` and `cancel.blockedBy` is `website_checkout`. The user finishes paying in the browser tab they started it in, or the order expires unpaid at `payment.expiresAt`. The order's text, the description of `payment.url` and the guide say so, and that reading the order again gives no link; they no longer call it a payment being processed.
-- The text of `payment_method_unavailable` with reason `token_not_offered` sends the reader to the order's Payment link line for how the order is paid, since such an order may have no link.
+- `payment.url`: a link that needs a sign-in (`requiresSignIn` `true`, an order started on the Fortrip website) opens the order's payment page on Fortrip, where only the order's owner can pay.
+- `payment.tokenRequest`: of the orders started on the Fortrip website, the ones that take no token are those on the website's own checkout (`cancel.blockedBy` `website_checkout`), not every one.
 
 ## 6.5.0
 

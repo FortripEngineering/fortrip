@@ -300,7 +300,7 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link.",
+        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it opens the order's payment page on Fortrip once the user signs in, and only the order's owner can pay there. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link.",
       ),
     requiresSignIn: z.boolean(),
     expiresAt: instant
@@ -321,7 +321,7 @@ export const order = openObject({
     tokenRequest: paymentTokenRequest
       .nullable()
       .describe(
-        `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,
+        `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order on the Fortrip website's own checkout (its cancel.blockedBy is website_checkout), a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,
       ),
   }),
   cancel: orderCancel,

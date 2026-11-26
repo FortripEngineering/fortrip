@@ -950,7 +950,9 @@ describe("field descriptions", () => {
   it("the payment token says when it is null, its cap from LIMITS", () => {
     const text = descriptionAt(order, "payment.tokenRequest") ?? "";
     assert.match(text, /^What to request a Stripe shared payment token with, for pay_order\. null when no token can pay this order: /);
-    assert.match(text, /a CNY order, an order from the Fortrip website's own checkout, /);
+    // Not every order started on the website: only one on its own checkout, which the blocker names.
+    assert.match(text, /a CNY order, an order on the Fortrip website's own checkout \(its cancel\.blockedBy is website_checkout\), /);
+    assert.doesNotMatch(text, /an order from the Fortrip website/);
     assert.ok(text.includes(`a total over $${LIMITS.tokenPaymentMaxUsd}`), text);
     assert.match(text, /then the user pays by url\.$/);
   });
@@ -1124,5 +1126,17 @@ describe("field descriptions", () => {
       collect(jsonSchemaOf(schema));
       for (const text of descriptions) assert.doesNotMatch(text, /\bhubs?\b/i, `${name}: ${text}`);
     }
+  });
+
+  // A sign-in link opens that order's own payment page. A booking page, where
+  // a submit makes another order, is not where it is paid.
+  it("the payment link says what a sign-in link opens, and the one reason it is null on an unpaid order awaiting payment", () => {
+    const text = descriptionAt(order, "payment.url") ?? "";
+    assert.match(
+      text,
+      /with requiresSignIn true \(an order started on the Fortrip website\) it opens the order's payment page on Fortrip once the user signs in, and only the order's owner can pay there\./,
+    );
+    assert.doesNotMatch(text, /booking page|browser tab|website_checkout/);
+    assert.match(text, /while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link\.$/);
   });
 });

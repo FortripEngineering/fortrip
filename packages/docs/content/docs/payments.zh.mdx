@@ -64,10 +64,10 @@ MCP 工具和 CLI 命令走的是同样的步骤：`get_hotel_offers`、`create_
 
 ## 付款 [#pay]
 
-只用一种方式付款。通过 API 创建的订单在待付款期间有支付链接 `payment.url`。当订单的 `payment.tokenRequest` 存在时，能申请 Link token 的智能体也可以改用 Link token 付款。
+只用一种方式付款。每个待付款的订单都有支付链接 `payment.url`。当订单的 `payment.tokenRequest` 存在时，能申请 Link token 的智能体也可以改用 Link token 付款。
 
 - `payment.url` 相当于支付凭证：除非 `requiresSignIn` 为 `true`，否则任何拿到它的人都能付款。只交给这位用户，并且与返回的完全一致。
-- 如果订单处于 `awaiting_payment`、`payment.status` 为 `unpaid`，但 `payment.url` 为 `null`，说明没有可以给出的链接，原因有两种。`cancel.blockedBy` 为 `website_checkout` 时，订单是在 Fortrip 网站上开始的：用户在开始下单的那个浏览器标签页里完成付款，否则订单在 `payment.expiresAt` 过期且不扣款，再次读取也不会有链接。其他情况是有一笔付款正在处理：稍后再读取订单，不要给出之前的链接。
+- 如果订单处于 `awaiting_payment`、`payment.status` 为 `unpaid`，但 `payment.url` 为 `null`，说明有一笔付款正在处理：稍后再读取订单，不要给出之前的链接。
 - 链接会在 `payment.expiresAt`、订单被[关闭](#close)或令牌付款成功时失效。令牌付款失败不会让链接失效。
 - 如果用户先通过链接付了款，期间产生的令牌预授权会被释放。
 
@@ -140,6 +140,6 @@ MCP 工具和 CLI 命令走的是同样的步骤：`get_hotel_offers`、`create_
 未付款的订单不需要关闭：放着不管，它会在 `payment.expiresAt` 到期，不产生任何扣款。想提前结束，发送 `close: true`（`fortrip orders cancel <orderId> --close`）。
 
 - 如果订单有一笔付款正在进行，关闭会返回 [`payment_in_progress`](/errors#code-payment_in_progress)：稍后再读取订单。
-- 在 Fortrip 网站上创建的订单不能通过 API 关闭。
+- 仍在 Fortrip 网站自己的结账流程里的订单（`cancel.blockedBy` 为 `website_checkout`）不能通过 API 关闭。
 
 如需修改订单，或进行上述方式无法完成的取消，请用户发邮件到 <Fact path="SUPPORT_EMAIL" />，并附上订单的 `reference`。
