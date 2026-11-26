@@ -882,6 +882,12 @@ describe("other errors", () => {
       /^The user has a payment open on the order's payment page, so a token can't pay it: they finish paying on that page\. Read the order with get_order\. This call charged nothing\.$/m,
     );
     assert.match(refusal("payment_open_on_page", "cli"), /Read the order with `fortrip orders get <orderId>`\./);
+    // An order that offers no token may have no payment link either (one on the
+    // website's checkout): the order's own line says how it is paid.
+    assert.match(
+      refusal("token_not_offered"),
+      /^This order takes no token now: the user pays as the order's "Payment link" line says\. Read the order with get_order\. This call charged nothing\.$/m,
+    );
     const lines = new Set<string>();
     for (const reason of PAYMENT_METHOD_UNAVAILABLE_REASONS) {
       // The line after the head (the code and message) and the retry line.
