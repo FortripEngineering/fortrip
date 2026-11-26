@@ -8292,7 +8292,7 @@
         "additionalProperties": {}
       },
       "ourFeesAtProperty": {
-        "description": "Fortrip's own fees for this stay paid at the hotel, known and counted in the comparison; absent when there are none or they are not known.",
+        "description": "Fortrip's own fees for this stay paid at the hotel, known and counted in the comparison; absent when there are none or they can't all be counted (propertyFeeLeftOut says so on a matched or partial answer).",
         "type": "object",
         "properties": {
           "amount": {
@@ -8337,7 +8337,7 @@
         "type": "string"
       },
       "propertyFeeLeftOut": {
-        "description": "True when a fee payable at the property is left out of the comparison; null or absent when not known.",
+        "description": "When matched or partial: true when Fortrip's own fees paid at the hotel for this stay can't all be counted (one is not known, or is not in the offer's currency), so the comparison leaves them out; false when they are counted or there are none. Null or absent otherwise.",
         "anyOf": [
           {
             "type": "boolean"

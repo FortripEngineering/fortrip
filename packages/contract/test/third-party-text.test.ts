@@ -1215,7 +1215,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^The comparison counts what is paid at the hotel: /,
     /^Seen on /,
     /^Every other term of the new offer is as in offer /,
-    /^A fee payable at the property is left out of this comparison\.$/,
+    /^Fortrip's own fees paid at the hotel for this stay can't all be counted \(one is not known, or is not in the offer's currency\), so this comparison leaves them out\.$/,
     /^To book at this price: /,
     /^Why: /,
     /^No new offer: /,

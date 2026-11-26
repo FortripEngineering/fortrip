@@ -139,12 +139,13 @@ npx skills add FortripEngineering/fortrip --skill fortrip-cli
 
 ## MCP server
 
-Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. It has nine tools:
+Fortrip's hosted MCP server is `https://mcp.fortrip.ai/`. Its tools are
 `search_hotels`, `get_hotel`, `get_hotel_offers`, `request_price_match`,
 `get_price_match`, `create_order`, `get_order`, `list_orders` and
-`cancel_order`. The user pays on the page an order's payment link opens.
-Through the CLI's bridge, below, there is a tenth, `pay_order`, which pays an
-order with a token the user approved.
+`cancel_order`; `request_price_match` and `get_price_match` are listed only for
+an account that price match is open to. The user pays on the page an order's
+payment link opens. Through the CLI's bridge, below, there is also
+`pay_order`, which pays an order with a token the user approved.
 
 Clients that support remote MCP servers with OAuth don't need the CLI: add
 `https://mcp.fortrip.ai/` as a remote server and sign in to Fortrip in the
@@ -162,10 +163,13 @@ text says what happened and what to do next, with Fortrip's error envelope in
 `--json`.
 
 You can add the bridge to a client before you sign in: signed out, it still
-starts and lists its tools. A tool call is then answered with a tool error
-(`isError: true`, code `unauthenticated`) whose text says to run
-`npx -y fortrip login` in a terminal, or to open the sign-in link it names and
-approve it. Once you have, the next tool call works, with no restart. If a
+starts and lists every tool, `pay_order` and the two price-match tools
+included. A tool call is then answered with a tool error (`isError: true`,
+code `unauthenticated`) whose text says to run `npx -y fortrip login` in a
+terminal, or to open the sign-in link it names and approve it. Once you have,
+the next tool call works, with no restart, and from then on the tool list is
+the hosted server's for your account: the bridge tells the client the list may
+have changed. If a
 sign-in stops working later, only the request that hit it fails, the same way
 for a tool call; any other request that hits a sign-in problem gets the
 JSON-RPC error `-32001` instead. The server keeps running.

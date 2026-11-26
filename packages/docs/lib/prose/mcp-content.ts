@@ -89,12 +89,16 @@ export function contentSentence(tool: ToolName): string {
 /** The headings of the sections that end an operation's page. */
 export const SURFACE_HEADINGS = { mcp: "MCP tool", cli: "CLI command" } as const;
 
-/** The tools every client of the hosted server is offered. */
+/** The tools the hosted server offers a client other than the CLI's bridge. */
 const HOSTED = new Set(toolsFor({ tokenPay: false }).map((tool) => tool.name));
+
+/** The tools listed only for an account price match is open to. */
+const BY_ACCESS: ReadonlySet<ToolName> = new Set(["request_price_match", "get_price_match"]);
 
 /** What a tool is over MCP, in words: its name, what a call does and where
  *  it is offered. Its input is the operation's, shown above it on the page. */
 export function toolSentence(name: ToolName, access: string): string {
   const where = HOSTED.has(name) ? "" : " It is offered through the CLI's `fortrip mcp` alone.";
-  return `\`${name}\` · ${access}. It takes the input above as one object.${where}`;
+  const listed = BY_ACCESS.has(name) ? " It is listed only for an account that price match is open to." : "";
+  return `\`${name}\` · ${access}. It takes the input above as one object.${where}${listed}`;
 }
