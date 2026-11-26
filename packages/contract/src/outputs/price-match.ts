@@ -83,7 +83,7 @@ export const priceMatch = openObject({
   ourFeesAtProperty: money
     .optional()
     .describe(
-      "Fortrip's own fees for this stay paid at the hotel, known and counted in the comparison; absent when there are none or they can't all be counted (propertyFeeLeftOut).",
+      "Fortrip's own fees for this stay paid at the hotel, known and counted in the comparison; absent when there are none or they can't all be counted (propertyFeeLeftOut says so on a matched or partial answer).",
     ),
   reason: openEnum(PRICE_MATCH_REASONS)
     .optional()
