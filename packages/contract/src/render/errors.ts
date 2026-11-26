@@ -37,7 +37,9 @@ const CREDENTIAL_INVALID_WORDS: Record<string, string> = {
 const PAYMENT_METHOD_UNAVAILABLE_WORDS: Record<string, string> = {
   payment_open_on_page:
     "The user has a payment open on the order's payment page, so a token can't pay it: they finish paying on that page",
-  token_not_offered: "This order takes no token now: the user pays by its payment link",
+  // An order that offers no token may have no link either (one on the
+  // website's own checkout), so the order's line says how it is paid.
+  token_not_offered: "This order takes no token now: the user pays as the order's \"Payment link\" line says",
   charge_refused:
     "The charge was refused for a reason a new token wouldn't fix: the user pays by the order's payment link",
 };

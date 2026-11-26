@@ -6358,7 +6358,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "requiresSignIn": {
             "type": "boolean"
@@ -7634,7 +7634,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
+                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link."
                 },
                 "requiresSignIn": {
                   "type": "boolean"

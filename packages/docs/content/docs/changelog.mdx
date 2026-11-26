@@ -7,6 +7,15 @@ description: What changed for callers of the API, the MCP tools and the CLI, rel
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number.
 
+## 6.5.1
+
+Released 2026-11-26.
+
+The schemas, the tools, the commands and the errors keep their shape. The change is to the text that agents read.
+
+- An order started on the Fortrip website can await payment with no payment link: `payment.url` is `null` and `cancel.blockedBy` is `website_checkout`. The user finishes paying in the browser tab they started it in, or the order expires unpaid at `payment.expiresAt`. The order's text, the description of `payment.url` and the guide say so, and that reading the order again gives no link; they no longer call it a payment being processed.
+- The text of `payment_method_unavailable` with reason `token_not_offered` sends the reader to the order's Payment link line for how the order is paid, since such an order may have no link.
+
 ## 6.5.0
 
 Released 2026-11-26.
