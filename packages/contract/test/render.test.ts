@@ -49,6 +49,7 @@ const GOLDENS = [
   "order-cancelled",
   "order-rooms-differ",
   "order-website-checkout",
+  "order-website-no-link",
   "order-payment-processing",
   "order-free-to-cancel",
   "order-expired",
@@ -1358,8 +1359,8 @@ describe("orders and the consent rule", () => {
         assert.equal(said, orders.filter((o) => o.payment.url !== null && o.payment.localCurrencyAtCheckout).length, `${name} (${surface})`);
       }
     }
-    // The same order, its link gone: closed, expired, paid, or a payment being processed.
-    for (const name of ["order-closed", "order-expired", "order-confirmed", "order-payment-processing", "order-cancelled"] as const) {
+    // The same order, its link gone: closed, expired, paid, a payment being processed, or on the website's own checkout.
+    for (const name of ["order-closed", "order-expired", "order-confirmed", "order-payment-processing", "order-website-no-link", "order-cancelled"] as const) {
       const data = (load(name) as ToolFixture).data as Record<string, any>;
       assert.deepEqual([data.payment.url, data.payment.localCurrencyAtCheckout], [null, true], name);
       assert.ok(!render(load(name)).includes(LOCAL), name);
@@ -1839,8 +1840,37 @@ describe("orders and the consent rule", () => {
     const data = fixture.data as Record<string, any>;
     data.payment.url = null;
     const text = renderToolResult("get_order", data);
-    assert.match(text, /read this order again/);
+    assert.match(text, /^Payment link: none while a payment is being processed; read this order again shortly\.$/m);
     assert.ok(!text.includes(ORDER_NEXT_STEP));
+  });
+
+  // Nothing is being processed for it and no link will come: it is paid in
+  // the tab it was started in, so an agent told to read it again would poll.
+  it("an awaiting_payment order on the website's checkout without a link says where it is paid, not to read it again", () => {
+    const data = copy((load("order-website-no-link") as ToolFixture).data) as Record<string, any>;
+    for (const surface of ["mcp", "cli"] as const) {
+      const text = renderToolResult("get_order", data, surface);
+      assert.match(
+        text,
+        /^Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in; unpaid, it expires 2026-11-01 14:05 UTC\. Reading it again gives no link\.$/m,
+        surface,
+      );
+      assert.doesNotMatch(text, /being processed|read this order again/, surface);
+      assert.ok(!text.includes(ORDER_NEXT_STEP), surface);
+    }
+    // The time to pay, when the order states none, is left out.
+    data.payment.expiresAt = null;
+    assert.match(
+      renderToolResult("get_order", data),
+      /^Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in, or it expires unpaid\. Reading it again gives no link\.$/m,
+    );
+    // Any other blocker of an unpaid order with no link keeps the line it had.
+    data.cancel.blockedBy = "payment_in_progress";
+    assert.match(renderToolResult("get_order", data), /^Payment link: none while a payment is being processed; read this order again shortly\.$/m);
+    // And a website order whose payment is held has no such line at all.
+    data.cancel.blockedBy = "website_checkout";
+    data.payment.status = "authorized";
+    assert.doesNotMatch(renderToolResult("get_order", data), /^Payment link/m);
   });
 
   it("an awaiting_payment order with a payment held has no link and says none is unreadable", () => {
@@ -2514,6 +2544,14 @@ describe("the goldens show the lines the rules name", () => {
     const text = golden("order-payment-processing");
     assert.match(text, /^Payment link: none while a payment is being processed; read this order again shortly\.$/m);
     assert.match(text, /^Cancel: not available: a payment is under way; read the order again shortly$/m);
+    for (const rule of [ORDER_NEXT_STEP, PAY_NEXT_STEP, CANCEL_NEXT_STEP]) assert.ok(!text.includes(rule));
+  });
+
+  it("an order on the website's checkout with no payment link", () => {
+    const text = golden("order-website-no-link");
+    assert.match(text, /^Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in; unpaid, it expires 2026-11-01 14:05 UTC\. Reading it again gives no link\.$/m);
+    assert.match(text, /^Cancel: not available: it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there$/m);
+    assert.doesNotMatch(text, /being processed/);
     for (const rule of [ORDER_NEXT_STEP, PAY_NEXT_STEP, CANCEL_NEXT_STEP]) assert.ok(!text.includes(rule));
   });
 });

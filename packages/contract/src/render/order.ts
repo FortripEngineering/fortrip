@@ -198,7 +198,17 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
     );
     lines.push(ours`Payment link (${about}): ${token("url", p.url)}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
-    lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
+    // Unpaid with no link is one of two things. On the website's own
+    // checkout nothing is being processed and no link will come: the order
+    // is paid in the tab it was started in, so reading it again is no use.
+    if (o.cancel.blockedBy === "website_checkout") {
+      const left = p.expiresAt !== null ? ours`; unpaid, it expires ${when(p.expiresAt, null)}` : ours`, or it expires unpaid`;
+      lines.push(
+        ours`Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in${left}. Reading it again gives no link.`,
+      );
+    } else {
+      lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
+    }
   }
   if (p.tokenRequest) lines.push(tokenLine(o, p.tokenRequest, surface));
   lines.push(cancelLine(o.cancel, o.orderId, surface));
