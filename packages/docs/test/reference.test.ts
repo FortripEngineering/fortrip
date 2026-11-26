@@ -19,7 +19,7 @@ import { fact } from "../components/fact.tsx";
 import { limitRows } from "../lib/reference/limits.ts";
 import { REFERENCE_PAGES } from "../lib/reference/pages.tsx";
 import { RESPONSE_DOCS } from "../lib/reference/response-docs.ts";
-import { pageHtml } from "./built-page.ts";
+import { pageHtml, pageText } from "./built-page.ts";
 
 const app = new URL("../.next/server/app/", import.meta.url).pathname;
 
@@ -54,6 +54,16 @@ describe("reference pages", () => {
       const page = html(route);
       assert.ok(page.includes(`<h1`) && page.includes(escaped(tool.title)), route);
       assert.ok(page.includes(tool.name), route);
+    }
+  });
+
+  it("says on a tool's page where it is offered: pay_order through the bridge alone, the price-match tools by account", () => {
+    const alone = "It is offered through the CLI's fortrip mcp alone.";
+    const byAccess = "It is listed only for an account that price match is open to.";
+    for (const { tool, route } of toolRoutes) {
+      const text = pageText(route);
+      assert.equal(text.includes(alone), tool.name === "pay_order", route);
+      assert.equal(text.includes(byAccess), ["request_price_match", "get_price_match"].includes(tool.name), route);
     }
   });
 

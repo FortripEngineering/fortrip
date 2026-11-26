@@ -106,7 +106,7 @@ function ourFeesLine(r: PriceMatch): Ours[] {
 }
 
 const feeLine = (r: PriceMatch): Ours[] =>
-  r.propertyFeeLeftOut === true ? [ours`Fortrip's own fees paid at the hotel for this stay are not known, so this comparison leaves out any there may be.`] : [];
+  r.propertyFeeLeftOut === true ? [ours`Fortrip's own fees paid at the hotel for this stay can't all be counted (one is not known, or is not in the offer's currency), so this comparison leaves them out.`] : [];
 
 function checkingLines(r: PriceMatch, surface: RenderSurface): Ours[] {
   const wait =
