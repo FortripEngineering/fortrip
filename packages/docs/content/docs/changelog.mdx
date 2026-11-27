@@ -9,7 +9,7 @@ The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip
 
 ## 7.0.0
 
-Not released yet.
+Released 2026-11-27.
 
 A major release, with no compatibility with earlier versions. What breaks, and what to do:
 
@@ -28,10 +28,6 @@ A major release, with no compatibility with earlier versions. What breaks, and w
 - `CANCEL_BLOCKERS` has no `website_checkout`.
 - `ERROR_CODES.payment_method_unavailable.status` is `[409]`, and `ERROR_CODES.not_found.status` is `[404, 422]`.
 - The `Order` type has no `payment.requiresSignIn`, and its `manageUrl` is `string | null`. A TypeScript build that reads either must change.
-
-### 7.0.0-rc.0
-
-The first release candidate of 7.0.0. It has the package and CLI changes described above; the service's changes (the two statuses, the refused body `orderId`, closing an order started on the Fortrip website, refusing a 6.x CLI) follow when the service runs 7.0.0.
 
 ## 6.5.0
 
