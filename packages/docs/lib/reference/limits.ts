@@ -42,9 +42,10 @@ const ROWS: Record<keyof Limits, ((l: Limits) => [string, string, string]) | nul
   pageSizeDefault: (l) => [
     "Page size",
     `1–${l.pageSizeMax}, default ${l.pageSizeDefault}`,
-    "`limit`: hotels per search page, orders per list page.",
+    `\`limit\`: hotels per search page. Orders per list page: 1–${l.ordersPageSizeMax}, default ${l.pageSizeDefault}.`,
   ],
   pageSizeMax: null,
+  ordersPageSizeMax: null,
   textLength: (l) => ["Search text", `1–${l.textLength} characters`, "`text` in a search."],
   radiusMetersMax: (l) => [
     "Search radius",

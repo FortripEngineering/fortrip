@@ -16,9 +16,13 @@ export const LIMITS = {
    *  no `limitPerHotel`. */
   offersPerCallDefault: 45,
   /** Offers a call answers in all, across its hotels, at most. */
-  offersPerCallMax: 100,
+  offersPerCallMax: 60,
   pageSizeDefault: 20,
+  /** The most hotels `limit` can ask for in a search page. */
   pageSizeMax: 50,
+  /** The most orders `limit` can ask for in a page of orders: a page of the
+   *  longest orders must stay under the result-size budget. */
+  ordersPageSizeMax: 25,
   textLength: 128,
   radiusMetersMax: 80_000,
   radiusMetersDefault: 8_000,

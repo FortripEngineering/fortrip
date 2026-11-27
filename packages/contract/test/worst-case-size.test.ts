@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import { strictOutput } from "../src/conventions/open.ts";
 import { offersPerHotel } from "../src/inputs.ts";
 import { LIMITS } from "../src/limits.ts";
 import { type HotelOffersResult, hotelOffersResult } from "../src/outputs/offer.ts";
+import { orderList } from "../src/outputs/order.ts";
 import { renderToolResult } from "../src/render/index.ts";
 import { offerLine } from "../src/render/offers.ts";
 import { PRESENTATION_HINT } from "../src/tools.ts";
@@ -19,9 +20,8 @@ import { PRESENTATION_HINT } from "../src/tools.ts";
  * of the budget is measured too.
  */
 
-/** Under these a result fits the tool-result caps of the clients measured. */
-const DEFAULT_BUDGET_CHARS = 48_000;
-const CEILING_CHARS = 100_000;
+/** Under this a result fits the tool-result caps of the clients measured. */
+const BUDGET_CHARS = 48_000;
 
 const fixture = (
   JSON.parse(
@@ -70,24 +70,46 @@ function sizes(limitPerHotel: number | undefined) {
 }
 
 describe("the largest offers result", () => {
-  it(`at the default budget is under ${DEFAULT_BUDGET_CHARS} characters`, () => {
+  it(`at the default budget is under ${BUDGET_CHARS} characters`, () => {
     const all = sizes(undefined);
     const most = all.at(-1)!;
     // The most hotels a call takes, three offers each: the whole default budget.
     assert.deepEqual([most.hotels, most.offers], [LIMITS.offersHotels, LIMITS.offersPerCallDefault]);
     for (const { hotels, offers, chars } of all) {
       assert.ok(offers <= LIMITS.offersPerCallDefault, `${hotels} hotels: ${offers} offers`);
-      assert.ok(chars < DEFAULT_BUDGET_CHARS, `${hotels} hotels, ${offers} offers: ${chars} characters`);
+      assert.ok(chars < BUDGET_CHARS, `${hotels} hotels, ${offers} offers: ${chars} characters`);
     }
   });
 
-  it(`at the ceiling of a call is under ${CEILING_CHARS} characters`, () => {
+  it(`at the ceiling of a call is under ${BUDGET_CHARS} characters`, () => {
     const all = sizes(LIMITS.offersPerHotelMax);
     // Some number of hotels fills the ceiling exactly.
     assert.equal(Math.max(...all.map((s) => s.offers)), LIMITS.offersPerCallMax);
     for (const { hotels, offers, chars } of all) {
       assert.ok(offers <= LIMITS.offersPerCallMax, `${hotels} hotels: ${offers} offers`);
-      assert.ok(chars < CEILING_CHARS, `${hotels} hotels, ${offers} offers: ${chars} characters`);
+      assert.ok(chars < BUDGET_CHARS, `${hotels} hotels, ${offers} offers: ${chars} characters`);
     }
+  });
+});
+
+describe("the largest page of orders", () => {
+  it(`is under ${BUDGET_CHARS} characters`, () => {
+    const dir = new URL("./fixtures/v1/", import.meta.url);
+    const fixtures = readdirSync(dir)
+      .filter((name) => /^order-.*\.json$/.test(name))
+      .map((name) => ({
+        name,
+        order: (JSON.parse(readFileSync(new URL(name, dir), "utf8")) as { data: unknown }).data,
+      }));
+    const measured = fixtures.map((f) => ({ ...f, chars: renderToolResult("get_order", f.order).length }));
+    const longest = measured.reduce((a, b) => (b.chars > a.chars ? b : a));
+    const page = {
+      data: Array.from({ length: LIMITS.ordersPageSizeMax }, () => longest.order),
+      nextCursor: "c".repeat(120),
+    };
+    orderList.parse(page);
+    const text = renderToolResult("list_orders", page);
+    assert.equal(text.split("\n").filter((line) => /^Order ord_/.test(line)).length, LIMITS.ordersPageSizeMax, text.slice(0, 600));
+    assert.ok(text.length < BUDGET_CHARS, `${LIMITS.ordersPageSizeMax} of ${longest.name}: ${text.length} characters`);
   });
 });

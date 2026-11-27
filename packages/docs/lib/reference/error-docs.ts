@@ -32,7 +32,8 @@ const MEANINGS: Record<ErrorCode, string> = {
   unauthenticated:
     "No API key or access token, or one Fortrip doesn't accept. For a key, check it wasn't revoked and that the account's API keys are on; for a token, sign in again.",
   forbidden: "The token is valid but doesn't allow this call.",
-  not_found: "No such hotel, offer, order or price match, or the order or price match belongs to another account.",
+  not_found:
+    "No such hotel, offer, order or price match, or the order or price match belongs to another account. Sent as 404 when the path names what is missing, and as 422 when the request body does.",
   offer_expired:
     "The offer's `expiresAt` has passed. Get offers again and order a new one. A price-match request also answers it when Fortrip's own price for the offer's room changed since the offer was made.",
   offer_changed:
