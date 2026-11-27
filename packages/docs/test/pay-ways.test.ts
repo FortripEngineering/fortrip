@@ -41,7 +41,7 @@ describe("ways to pay", () => {
     assert.match(when, /while the order's `payment\.tokenRequest` is set; that field says when it is `null`/);
     assert.match(body, /`payment\.tokenRequest\.handler\.config\.business_profile` and `payment\.tokenRequest\.usageLimits`/);
     // The eligibility conditions are the field's (A8), not repeated here.
-    assert.doesNotMatch(`${when} ${body}`, /negotiated price|tokens tried/);
+    assert.doesNotMatch(`${when} ${body}`, /requiresSignIn|negotiated price|tokens tried/);
     assert.doesNotMatch(body, /instruments|stripe_payment_token/);
   });
 });

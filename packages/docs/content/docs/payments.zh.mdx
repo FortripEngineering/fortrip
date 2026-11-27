@@ -95,7 +95,7 @@ MCP 工具和 CLI 命令走的是同样的步骤：`get_hotel_offers`、`create_
 <PaymentStatuses />
 
 - 酒店给出确认号后，`items[0].hotel.confirmationNumber` 就是酒店的确认号。
-- `manageUrl` 是订单在 fortrip.ai 上的页面，供登录了下单账号的用户使用。
+- `manageUrl` 是订单在 fortrip.ai 上的页面，供登录了下单账号的用户使用；账号没有这个页面时为 `null`。
 
 ### 预订失败时 [#failure]
 

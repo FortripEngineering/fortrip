@@ -1668,8 +1668,17 @@ describe("orders and the consent rule", () => {
     const data = unpaidOrder();
     data.cancel = blocked("website_checkout");
     const text = renderToolResult("get_order", data);
-    assert.match(text, /^Cancel: not available: /m);
+    // A value that reads as a code is shown as it came; any other is not recognized.
+    assert.match(text, /^Cancel: not available: website_checkout$/m);
     assert.match(text, /^Payment link \(/m);
+    data.cancel = blocked("Website checkout");
+    assert.match(renderToolResult("get_order", data), /^Cancel: not available: reason not recognized$/m);
+  });
+
+  it("a payment link with no expiry is the link alone", () => {
+    const data = unpaidOrder();
+    data.payment.expiresAt = null;
+    assert.ok(renderToolResult("get_order", data).split("\n").includes(`Payment link: ${data.payment.url}`));
   });
 
   // One status each for the two ways an unpaid order ends: its time ran out, or the caller closed it.
