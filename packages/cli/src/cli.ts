@@ -284,9 +284,9 @@ async function main(): Promise<ExitCode> {
     if (answer !== undefined) {
       const { data, text } = answer;
       if (json) {
-        const output =
-          data && typeof data === "object" && !Array.isArray(data) ? { ...data, ...notices } : data;
-        process.stdout.write(`${JSON.stringify(output)}\n`);
+        process.stdout.write(`${JSON.stringify(data)}\n`);
+        const lines = fieldLines(notices);
+        if (lines.length) process.stderr.write(`${lines.join("\n")}\n`);
       } else {
         process.stdout.write(`${[text, ...fieldLines(notices)].join("\n")}\n`);
       }
