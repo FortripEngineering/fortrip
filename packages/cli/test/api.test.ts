@@ -55,6 +55,17 @@ describe("unwrap", () => {
     }
   });
 
+  it("exits 1 for payment_method_unavailable and not_found, at every status either is sent with", () => {
+    for (const [code, statuses] of [
+      ["payment_method_unavailable", [403, 409]],
+      ["not_found", [404, 422]],
+    ] as const) {
+      for (const status of statuses) {
+        assert.equal(exitCodeOf(() => unwrap(response(status, envelope(code)))), EXIT.error, `${code} ${status}`);
+      }
+    }
+  });
+
   it("an unknown code falls back to the HTTP status", () => {
     for (const [status, exit] of [
       [400, EXIT.usage],

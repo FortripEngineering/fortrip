@@ -54,8 +54,6 @@ const SUPPORT = `for help, the user emails ${SUPPORT_EMAIL} with the order's ref
  *  `blockerText` says it, for an order and for `order_not_cancellable`. */
 const CANCEL_BLOCKER_WORDS: Record<string, string> = {
   payment_in_progress: "a payment is under way; read the order again shortly",
-  website_checkout:
-    "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there",
   expired: "its time to pay ran out, so there is nothing to cancel or close",
   closed: "it was closed unpaid, as asked, so there is nothing to cancel or close",
   failed: "no stay was booked, so there is nothing to cancel",
@@ -189,30 +187,17 @@ function paymentLines(o: Order, surface: RenderSurface): Ours[] {
     ),
   ];
   if (p.url !== null) {
-    const about = joined(
-      [
-        p.expiresAt !== null && ours`expires ${when(p.expiresAt, null)}`,
-        p.requiresSignIn ? ours`the user signs in to Fortrip to pay` : ours`no sign-in needed`,
-      ],
-      "; ",
+    lines.push(
+      p.expiresAt !== null
+        ? ours`Payment link (expires ${when(p.expiresAt, null)}): ${token("url", p.url)}`
+        : ours`Payment link: ${token("url", p.url)}`,
     );
-    lines.push(ours`Payment link (${about}): ${token("url", p.url)}`);
   } else if (o.status === "awaiting_payment" && p.status === "unpaid") {
-    // Unpaid with no link is one of two things. On the website's own
-    // checkout nothing is being processed and no link will come: the order
-    // is paid in the tab it was started in, so reading it again is no use.
-    if (o.cancel.blockedBy === "website_checkout") {
-      const left = p.expiresAt !== null ? ours`; unpaid, it expires ${when(p.expiresAt, null)}` : ours`, or it expires unpaid`;
-      lines.push(
-        ours`Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in${left}. Reading it again gives no link.`,
-      );
-    } else {
-      lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
-    }
+    lines.push(ours`Payment link: none while a payment is being processed; read this order again shortly.`);
   }
   if (p.tokenRequest) lines.push(tokenLine(o, p.tokenRequest, surface));
   lines.push(cancelLine(o.cancel, o.orderId, surface));
-  lines.push(ours`Manage: ${token("url", o.manageUrl)}`);
+  if (o.manageUrl !== null) lines.push(ours`Manage: ${token("url", o.manageUrl)}`);
   return lines;
 }
 

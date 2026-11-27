@@ -259,7 +259,6 @@ const orderFixture = {
   payment: {
     status: "unpaid",
     url: `https://fortrip.ai/pay/${ORD}?s=Lk91`,
-    requiresSignIn: false,
     expiresAt: "2026-10-25T08:00:00Z",
     localCurrencyAtCheckout: true,
     localCharge: null,
@@ -501,14 +500,13 @@ describe("v1 response fixtures parse, open and strict", () => {
     parsesBoth(order, orderFixture);
     const { tokenRequest: _gone, ...without } = orderFixture.payment;
     assert.equal(order.safeParse({ ...orderFixture, payment: without }).success, false);
-    for (const gone of [{ methods: [] }, { chargeCurrency: "USD" }]) {
+    for (const gone of [{ methods: [] }, { chargeCurrency: "USD" }, { requiresSignIn: false }]) {
       assert.equal(strictOutput(order).safeParse({ ...orderFixture, payment: { ...orderFixture.payment, ...gone } }).success, false);
     }
     const payment = (jsonSchemaOf(order).properties as Record<string, JsonSchema>).payment!;
     assert.deepEqual(Object.keys(payment.properties as Record<string, unknown>), [
       "status",
       "url",
-      "requiresSignIn",
       "expiresAt",
       "localCurrencyAtCheckout",
       "localCharge",
@@ -581,7 +579,6 @@ describe("v1 response fixtures parse, open and strict", () => {
     // order a person at Fortrip is resolving is not a sound one only support can cancel.
     assert.deepEqual([...CANCEL_BLOCKERS], [
       "payment_in_progress",
-      "website_checkout",
       "expired",
       "closed",
       "failed",
@@ -879,7 +876,7 @@ const PUBLIC_KEYS = new Set([
   "payAtProperty", "payment", "penalties", "penalty", "perRoomNight", "phone", "photo", "photos", "place", "placeId",
   "pointer", "policies", "poolLimit", "poolRadiusMeters", "population", "previous",
   "priced", "pricing", "radiusMeters", "radiusSource", "rateLimit", "readAt", "reason", "reference", "refund",
-  "region", "requestId", "required", "requiresSignIn", "resolution", "retryAfterSeconds",
+  "region", "requestId", "required", "resolution", "retryAfterSeconds",
   "retryable", "revocationEndpoint", "roomCount", "roomType", "roomTypes", "rooms", "schema", "scope", "scopes",
   "sort", "spec", "specialRequests", "stars", "startsAt", "status", "stay", "text", "textAnywhere", "timeZone",
   "tokenEndpoint", "topic", "total", "type", "unassigned", "unavailable", "unreadable",
@@ -950,7 +947,10 @@ describe("field descriptions", () => {
   it("the payment token says when it is null, its cap from LIMITS", () => {
     const text = descriptionAt(order, "payment.tokenRequest") ?? "";
     assert.match(text, /^What to request a Stripe shared payment token with, for pay_order\. null when no token can pay this order: /);
-    assert.match(text, /a CNY order, an order from the Fortrip website's own checkout, /);
+    // Some orders started on the website, not every one.
+    assert.match(text, /a CNY order, some orders started on the Fortrip website, a total over \$/);
+    assert.doesNotMatch(text, /website_checkout|own checkout/);
+    assert.doesNotMatch(text, /an order from the Fortrip website/);
     assert.ok(text.includes(`a total over $${LIMITS.tokenPaymentMaxUsd}`), text);
     assert.match(text, /then the user pays by url\.$/);
   });
@@ -1124,5 +1124,25 @@ describe("field descriptions", () => {
       collect(jsonSchemaOf(schema));
       for (const text of descriptions) assert.doesNotMatch(text, /\bhubs?\b/i, `${name}: ${text}`);
     }
+  });
+
+  it("the payment link description: the page, who gets it, and the one reason it is null on an unpaid order awaiting payment", () => {
+    const text = descriptionAt(order, "payment.url") ?? "";
+    assert.equal(
+      text,
+      "The payment page, on fortrip.ai; it continues to the payment provider. Give it to this user only, exactly as returned. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link.",
+    );
+    assert.doesNotMatch(text, /sign|anyone holding/i);
+  });
+
+  it("manageUrl is the order's page or null, and always said", () => {
+    assert.ok(order.safeParse({ ...orderFixture, manageUrl: null }).success);
+    assert.ok(strictOutput(order).safeParse({ ...orderFixture, manageUrl: null }).success);
+    const { manageUrl: _gone, ...without } = orderFixture;
+    assert.equal(order.safeParse(without).success, false);
+    assert.equal(
+      descriptionAt(order, "manageUrl"),
+      "The order's page on fortrip.ai, for its signed-in owner; null when the account has no such page.",
+    );
   });
 });

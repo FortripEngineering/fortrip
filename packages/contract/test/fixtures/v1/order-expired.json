@@ -100,7 +100,6 @@
     "payment": {
       "status": "unpaid",
       "url": null,
-      "requiresSignIn": false,
       "expiresAt": null,
       "localCurrencyAtCheckout": true,
       "localCharge": null,

@@ -104,7 +104,6 @@
     "payment": {
       "status": "unpaid",
       "url": "https://fortrip.ai/pay/ord_BundTokenPay00000000?s=Lk9e5F6g7H8",
-      "requiresSignIn": false,
       "expiresAt": "2026-11-01T12:50:00Z",
       "localCurrencyAtCheckout": true,
       "localCharge": null,

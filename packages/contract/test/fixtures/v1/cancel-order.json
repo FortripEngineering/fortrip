@@ -113,7 +113,6 @@
     "payment": {
       "status": "paid",
       "url": null,
-      "requiresSignIn": false,
       "expiresAt": null,
       "localCurrencyAtCheckout": true,
       "localCharge": {

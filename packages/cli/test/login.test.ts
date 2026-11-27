@@ -465,10 +465,16 @@ describe("login from a command (agents)", () => {
     const failed = await cli(["hotels", "search", "--text", "x", "--json"], env);
     api.hooks.onPoll = undefined;
     assert.equal(failed.code, 1);
-    const error = JSON.parse(failed.stderr);
+    // The first line is the error's JSON and nothing of the notices; they follow as lines.
+    const [errorLine, ...noticeLines] = failed.stderr.trimEnd().split("\n");
+    const error = JSON.parse(errorLine ?? "");
     assert.equal(error.error.code, "not_found");
-    assert.match(error.warning, /kept in/);
-    assert.match(error.recoveryFile, /credentials\.recovered-/);
+    assert.equal(Object.hasOwn(error, "warning"), false);
+    assert.equal(Object.hasOwn(error, "recoveryFile"), false);
+    assert.equal(noticeLines.length, 2);
+    assert.match(noticeLines[0] ?? "", /^warning: .*kept in/);
+    assert.match(noticeLines[1] ?? "", /^recoveryFile: .*credentials\.recovered-/);
+    assert.equal(failed.stdout, "");
 
     // The user moves the broken file away, as the warning says.
     await rename(path, `${path}.broken`);
@@ -853,6 +859,16 @@ describe("logout when the service can't be asked to revoke", () => {
     assert.equal(run.code, 0, run.stderr);
     assert.match(run.stdout, new RegExp(`^Logged out of ${apiUrl}\\.\nwarning: The sign-in was removed from this machine, but Fortrip was not told to revoke it: `));
     assert.equal(await loadSession(apiUrl), null);
+
+    // With --json, stdout is the answer and nothing else; the warning is a line on stderr.
+    await saveSession(apiUrl, api.session());
+    api.scripts.config = [CLIENT_OUTDATED];
+    const asJson = await cli(["logout", "--json"], cliEnv());
+    assert.equal(asJson.code, 0, asJson.stderr);
+    assert.equal(asJson.stdout, `${JSON.stringify({ loggedOut: true, apiUrl, revoked: false })}\n`);
+    assert.match(asJson.stderr, new RegExp(`^warning: The sign-in was removed from this machine, but Fortrip was not told to revoke it: .*\n$`));
+    assert.equal(asJson.stderr.trimEnd().split("\n").length, 1);
+
     const again = await cli(["logout"], cliEnv());
     assert.equal(again.code, EXIT.unauthenticated);
   });

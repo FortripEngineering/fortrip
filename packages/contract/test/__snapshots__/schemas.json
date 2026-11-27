@@ -2011,7 +2011,6 @@
                                 "type": "string",
                                 "enum": [
                                   "payment_in_progress",
-                                  "website_checkout",
                                   "expired",
                                   "closed",
                                   "failed",
@@ -2035,7 +2034,7 @@
                             "type": "null"
                           }
                         ],
-                        "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+                        "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
                       },
                       "penalty": {
                         "anyOf": [
@@ -5344,7 +5343,7 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
-                  "description": "Offers left out because the call's hotels share 45 offers in all (100 when limitPerHotel is given): a call for this hotel alone shows this many more."
+                  "description": "Offers left out because the call's hotels share 45 offers in all (50 when limitPerHotel is given): a call for this hotel alone shows this many more."
                 }
               },
               "required": [
@@ -5437,7 +5436,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Offers left out because the call's hotels share 45 offers in all (100 when limitPerHotel is given): a call for this hotel alone shows this many more."
+                      "description": "Offers left out because the call's hotels share 45 offers in all (50 when limitPerHotel is given): a call for this hotel alone shows this many more."
                     }
                   },
                   "required": [
@@ -6358,10 +6357,7 @@
                 "type": "null"
               }
             ],
-            "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link."
-          },
-          "requiresSignIn": {
-            "type": "boolean"
+            "description": "The payment page, on fortrip.ai; it continues to the payment provider. Give it to this user only, exactly as returned. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
           },
           "expiresAt": {
             "anyOf": [
@@ -6529,13 +6525,12 @@
                 "type": "null"
               }
             ],
-            "description": "What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $500, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url."
+            "description": "What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, some orders started on the Fortrip website, a total over $500, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url."
           }
         },
         "required": [
           "status",
           "url",
-          "requiresSignIn",
           "expiresAt",
           "localCurrencyAtCheckout",
           "localCharge",
@@ -6576,7 +6571,6 @@
                     "type": "string",
                     "enum": [
                       "payment_in_progress",
-                      "website_checkout",
                       "expired",
                       "closed",
                       "failed",
@@ -6600,7 +6594,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+            "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
           },
           "penalty": {
             "anyOf": [
@@ -6760,7 +6754,15 @@
         "description": "Why no stay was booked: always set on a failed order, its reason unknown when not on record. null unless status is failed."
       },
       "manageUrl": {
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "The order's page on fortrip.ai, for its signed-in owner; null when the account has no such page."
       }
     },
     "required": [
@@ -7634,10 +7636,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link."
-                },
-                "requiresSignIn": {
-                  "type": "boolean"
+                  "description": "The payment page, on fortrip.ai; it continues to the payment provider. Give it to this user only, exactly as returned. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link."
                 },
                 "expiresAt": {
                   "anyOf": [
@@ -7805,13 +7804,12 @@
                       "type": "null"
                     }
                   ],
-                  "description": "What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $500, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url."
+                  "description": "What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, some orders started on the Fortrip website, a total over $500, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url."
                 }
               },
               "required": [
                 "status",
                 "url",
-                "requiresSignIn",
                 "expiresAt",
                 "localCurrencyAtCheckout",
                 "localCharge",
@@ -7852,7 +7850,6 @@
                           "type": "string",
                           "enum": [
                             "payment_in_progress",
-                            "website_checkout",
                             "expired",
                             "closed",
                             "failed",
@@ -7876,7 +7873,7 @@
                       "type": "null"
                     }
                   ],
-                  "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
+                  "description": "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it."
                 },
                 "penalty": {
                   "anyOf": [
@@ -8036,7 +8033,15 @@
               "description": "Why no stay was booked: always set on a failed order, its reason unknown when not on record. null unless status is failed."
             },
             "manageUrl": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The order's page on fortrip.ai, for its signed-in owner; null when the account has no such page."
             }
           },
           "required": [

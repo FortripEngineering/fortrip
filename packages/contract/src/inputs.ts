@@ -590,7 +590,7 @@ export const getOrderInput = strictInput({
 
 export type GetOrderInput = z.input<typeof getOrderInput>;
 
-const listLimitError = `limit must be a whole number from 1 to ${LIMITS.pageSizeMax}`;
+const listLimitError = `limit must be a whole number from 1 to ${LIMITS.ordersPageSizeMax}`;
 
 /** `GET /v1/orders` and the MCP `list_orders` arguments. A query string gives
  *  `limit` as text, so it is coerced. */
@@ -602,10 +602,10 @@ export const listOrdersInput = strictInput({
     .number({ error: listLimitError })
     .int({ error: listLimitError })
     .min(1, { error: listLimitError })
-    .max(LIMITS.pageSizeMax, { error: listLimitError })
+    .max(LIMITS.ordersPageSizeMax, { error: listLimitError })
     .optional()
     .describe(
-      `Orders per page, 1 to ${LIMITS.pageSizeMax}. Default ${LIMITS.pageSizeDefault}.`,
+      `Orders per page, 1 to ${LIMITS.ordersPageSizeMax}. Default ${LIMITS.pageSizeDefault}.`,
     ),
   locale: locale.optional(),
 });

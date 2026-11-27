@@ -30,7 +30,6 @@ export const UNKNOWN_IS_NOT_NO_EXEMPTIONS: Readonly<Record<string, string>> = {
   retryable: `${API_DECIDES} (whether retrying can help).`,
   mandatory: `${API_DECIDES} (whether a fee is charged whatever the guest chooses).`,
   worse: `${API_DECIDES} (whether a change is worse for the guest).`,
-  requiresSignIn: `${API_DECIDES} (whether the payment link needs a website sign-in).`,
   localCurrencyAtCheckout: `${API_DECIDES} (whether checkout may charge in the card's currency).`,
   available_instruments: `${RESULT_LIST} (the instruments a payment handler takes).`,
   bookable: `${API_DECIDES} (whether the hotel is still in the index).`,

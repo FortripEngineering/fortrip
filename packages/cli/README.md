@@ -66,7 +66,8 @@ be damaged), the `hotels` and `orders` commands and `whoami` still work for that
 run, with the new token. The sign-in is kept in a `credentials.recovered-*.json`
 file next to the credentials file, and the command's output carries a
 `warning` and, when the sign-in could be kept, that file in `recoveryFile`
-(as lines after the result, or as fields of the JSON with `--json`). Later
+(as `name: value` lines after the result; with `--json`, on stderr, so stdout
+stays the API's JSON). Later
 commands use it, and the next successful save merges it back. `login` doesn't
 carry on in that case: it exits 1, with `recoveryFile` in the error, and the
 sign-in is kept in that file all the same.
@@ -227,8 +228,8 @@ instead, on one line. `fortrip mcp` speaks MCP over stdio.
 
 Errors go to stderr, as text, or with `--json` as one line of JSON:
 `{ "error": { "code", "message", "retryable", "requestId", … } }`, Fortrip's
-error envelope, with the CLI's own facts (`loginUrl`, `tokenSource`, `warning`)
-beside it. An error the CLI makes itself, such as a request it refuses to send
+error envelope, with the CLI's own facts (`loginUrl`, `tokenSource`)
+beside it; a `warning` follows as a `warning: …` line. An error the CLI makes itself, such as a request it refuses to send
 before it asks Fortrip, has an envelope of the same shape, with a `requestId`
 that starts with `local_`.
 

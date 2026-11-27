@@ -59,8 +59,6 @@ const SUPPORT = `the user emails ${SUPPORT_LINK} with the order's \`reference\``
  */
 export const CANCEL_BLOCKER_DOCS: Record<CancelBlocker, string> = {
   payment_in_progress: "Unpaid, with a payment under way. Read the order again shortly.",
-  website_checkout:
-    "Unpaid, on the Fortrip website's own checkout. It can't be closed here: it expires at `payment.expiresAt` unless the user pays there.",
   expired: "Unpaid, and its time to pay ran out: nothing is booked, and there is nothing to cancel or close.",
   closed: "Unpaid, and closed at the caller's request: nothing is booked, and there is nothing to cancel or close.",
   failed: "No stay was booked, so there is nothing to cancel.",

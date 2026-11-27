@@ -26,7 +26,7 @@ For flexible dates, a budget, split stays, several destinations or "find me the 
 
 ## Setup
 
-Run every command as `npx -y fortrip@latest <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
+Run every command as `npx -y fortrip@7.0.0-rc.0 <command>` (Node.js 22 or newer). The examples below shorten that to `fortrip`; `fortrip <command> --help` lists a command's flags. `fortrip hotels search`, `fortrip hotels offers` and `fortrip orders create` also take `--body '<json>'` (or `--body @file.json`), the raw request body; flags override its fields. Add `--json` to any command that calls Fortrip to get its answer as one line of JSON instead of text.
 
 Running `fortrip whoami` when the user first asks about hotels lets the sign-in happen while they answer your follow-up questions.
 
@@ -171,10 +171,10 @@ An offer expires at the time its line gives, about 30 minutes after it was made;
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
 3. Then pay one way only: give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it), or pay without the link as below.
 
-- The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. When its line says the user signs in to Fortrip to pay (an order started on the Fortrip website), they sign in first.
+- The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets.
 - The link expires at the time its line gives; the order then reads as not paid, and can no longer be paid. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip orders cancel` and `--close` once the user says they no longer want it.
-- An order awaiting payment whose Payment link line says there is none has no link to give, and the line says why. While a payment is being processed, read it again shortly with `fortrip orders get`, and don't give an earlier link. An order started on the Fortrip website is paid in the browser tab the user started it in: reading it again gives no link.
+- An order awaiting payment whose Payment link line says there is none has a payment being processed: read it again shortly with `fortrip orders get`, and don't give an earlier link.
 - Never ask for, accept or pass on payment card details; payment happens only on the payment link or, by token, through `fortrip orders pay`. A card number in a guest name, the contact or the special requests is rejected with exit 2.
 
 ## Paying without the link

@@ -36,7 +36,9 @@ export type ErrorCode =
  *  `SUPPLIER_OUTCOME_STATUS`). */
 export const SUPPLIER_STATUSES = [503, 504] as const;
 
-/** The HTTP statuses each code is sent with, and whether a retry can help. */
+/** The HTTP statuses each code is sent with, and whether a retry can help.
+ *  `not_found` is 404 when the path names what is missing and 422 when the
+ *  request body does. */
 export const ERROR_CODES: Readonly<
   Record<ErrorCode, { status: readonly number[]; retryable: boolean }>
 > = {
@@ -44,7 +46,7 @@ export const ERROR_CODES: Readonly<
   cursor_invalid: { status: [400], retryable: false },
   unauthenticated: { status: [401], retryable: false },
   forbidden: { status: [403], retryable: false },
-  not_found: { status: [404], retryable: false },
+  not_found: { status: [404, 422], retryable: false },
   offer_expired: { status: [409], retryable: false },
   offer_changed: { status: [409], retryable: false },
   offer_already_ordered: { status: [409], retryable: false },
@@ -57,7 +59,7 @@ export const ERROR_CODES: Readonly<
   payment_credential_invalid: { status: [422], retryable: false },
   payment_declined: { status: [402], retryable: false },
   payment_action_required: { status: [402], retryable: false },
-  payment_method_unavailable: { status: [403], retryable: false },
+  payment_method_unavailable: { status: [409], retryable: false },
   destination_ambiguous: { status: [422], retryable: false },
   destination_not_found: { status: [422], retryable: false },
   search_too_broad: { status: [422], retryable: false },

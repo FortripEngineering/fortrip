@@ -47,7 +47,6 @@ export type CancelAction = (typeof CANCEL_ACTIONS)[number];
 
 /** What keeps an order from being cancelled or closed now, one situation
  *  each. `payment_in_progress`: unpaid, with a payment under way.
- *  `website_checkout`: unpaid, on the Fortrip website's own checkout.
  *  `expired`: unpaid, its time to pay ran out. `closed`: unpaid, closed at
  *  the caller's request. `failed`: no stay was booked. `confirming`: paid or
  *  held, the booking still with the hotel. `cancelling`: a cancellation is
@@ -60,7 +59,6 @@ export type CancelAction = (typeof CANCEL_ACTIONS)[number];
  *  `needs_attention`. */
 export const CANCEL_BLOCKERS = [
   "payment_in_progress",
-  "website_checkout",
   "expired",
   "closed",
   "failed",
@@ -174,7 +172,7 @@ export const orderCancel = openObject({
   blockedBy: openEnum(CANCEL_BLOCKERS)
     .nullable()
     .describe(
-      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. website_checkout: unpaid, on the Fortrip website's own checkout, where it expires unpaid. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it.",
+      "Why the order can be neither cancelled nor closed now; null when action is set. payment_in_progress: unpaid, a payment is under way. expired: unpaid, its time to pay ran out. closed: unpaid, closed at the caller's request. failed: no stay was booked. confirming: the booking is still with the hotel. cancelling: a cancellation is under way. already_cancelled. stay_started. cancellation_not_allowed: the hotel takes no cancellation for this order at all, even one that keeps the whole total; a non-refundable rate, which only keeps the whole total, has action cancel instead. cancellation_refused: the hotel refused a cancellation and the booking stands. terms_unknown: the cancellation terms are not on record. support_only: the booking stands and cancel_order can't cancel it; Fortrip's support can. needs_attention: the order's status is needs_attention, and a person at Fortrip has to resolve it.",
     ),
   penalty: money
     .nullable()
@@ -300,9 +298,8 @@ export const order = openObject({
       .string()
       .nullable()
       .describe(
-        "The payment page, on fortrip.ai; it continues to the payment provider. With requiresSignIn false anyone holding it can pay; with requiresSignIn true (an order started on the Fortrip website) it continues to the Fortrip booking page, where only the signed-in owner can pay. null while a payment is held (authorized) or when the order isn't awaiting payment. While it is and its payment is unpaid, null in two cases. cancel.blockedBy website_checkout: an order started on the Fortrip website, which the user finishes paying in the browser tab they started it in, or it expires unpaid; reading it again gives no link. Otherwise a payment is being processed: read the order again shortly, and don't give an earlier link.",
+        "The payment page, on fortrip.ai; it continues to the payment provider. Give it to this user only, exactly as returned. null while a payment is held (authorized) or when the order isn't awaiting payment, or, while it is and its payment is unpaid, while a payment is being processed: read the order again shortly, and don't give an earlier link.",
       ),
-    requiresSignIn: z.boolean(),
     expiresAt: instant
       .nullable()
       .describe(
@@ -321,7 +318,7 @@ export const order = openObject({
     tokenRequest: paymentTokenRequest
       .nullable()
       .describe(
-        `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, an order from the Fortrip website's own checkout, a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,
+        `What to request a Stripe shared payment token with, for pay_order. null when no token can pay this order: a CNY order, some orders started on the Fortrip website, a total over $${LIMITS.tokenPaymentMaxUsd}, or when none can be taken now (too little time left to pay, the order's limit of tokens reached, or a payment open on its payment page); then the user pays by url.`,
       ),
   }),
   cancel: orderCancel,
@@ -335,7 +332,7 @@ export const order = openObject({
     .describe(
       "Why no stay was booked: always set on a failed order, its reason unknown when not on record. null unless status is failed.",
     ),
-  manageUrl: z.string(),
+  manageUrl: z.string().nullable().describe("The order's page on fortrip.ai, for its signed-in owner; null when the account has no such page."),
 }).refine((o) => o.status !== "failed" || o.failure !== null, {
   error: "a failed order says why: failure is set, with the reason unknown when it is not on record",
 });

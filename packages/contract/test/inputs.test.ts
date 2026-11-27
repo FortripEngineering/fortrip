@@ -363,6 +363,7 @@ describe("searchHotelsInput", () => {
   it("limit runs from 1 to 50 and is not defaulted by the schema", () => {
     assertRefusedAt(searchHotelsInput, { text: "x", limit: 0 }, "limit");
     assertRefusedAt(searchHotelsInput, { text: "x", limit: 51 }, "limit");
+    assertAccepted(searchHotelsInput, { text: "x", limit: 50 });
     assertRefusedAt(searchHotelsInput, { text: "x", limit: 1.5 }, "limit");
     const parsed = searchHotelsInput.parse({ cursor: "c" });
     assert.equal("limit" in parsed ? parsed.limit : undefined, undefined);
@@ -660,7 +661,7 @@ describe("hotelOffersInput", () => {
     const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.limitPerHotel?.description,
-      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 100 offers in all, otherwise 100 split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.",
+      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 50 offers in all, otherwise 50 split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.",
     );
   });
 
@@ -723,7 +724,9 @@ describe("offersPerHotel", () => {
     assert.equal(LIMITS.offersPerHotelDefault, 15);
     assert.equal(LIMITS.offersPerHotelMax, 30);
     assert.equal(LIMITS.offersPerCallDefault, 45);
-    assert.equal(LIMITS.offersPerCallMax, 100);
+    assert.equal(LIMITS.offersPerCallMax, 50);
+    assert.equal(LIMITS.pageSizeMax, 50);
+    assert.equal(LIMITS.ordersPageSizeMax, 25);
   });
 
   it("without a limit: 15 per hotel while that fits 45 offers, otherwise 45 split evenly", () => {
@@ -738,19 +741,22 @@ describe("offersPerHotel", () => {
     }
   });
 
-  it("with a limit: honoured per hotel while that fits 100 offers, otherwise 100 split evenly", () => {
+  it("with a limit: honoured per hotel while that fits 50 offers, otherwise 50 split evenly", () => {
     for (const [limit, hotels, each] of [
       [30, 1, 30],
-      [30, 3, 30],
-      [30, 4, 25],
-      [30, 5, 20],
-      [30, 15, 6],
-      [20, 5, 20],
-      [20, 15, 6],
-      // What the default would have cut is honoured when asked for.
-      [15, 4, 15],
-      [15, 5, 15],
-      [15, 15, 6],
+      [30, 2, 25],
+      [30, 3, 16],
+      [30, 4, 12],
+      [30, 5, 10],
+      [30, 15, 3],
+      [20, 2, 20],
+      [20, 3, 16],
+      [20, 5, 10],
+      [20, 15, 3],
+      // What the default would have cut is given more when asked for.
+      [15, 4, 12],
+      [15, 5, 10],
+      [15, 15, 3],
       // A small limit is what the caller asked for.
       [1, 1, 1],
       [2, 15, 2],
@@ -1061,12 +1067,13 @@ describe("getOrderInput and listOrdersInput", () => {
     );
   });
 
-  it("listOrdersInput takes a cursor, a limit of 1 to 50 and a locale", () => {
+  it("listOrdersInput takes a cursor, a limit of 1 to 25 and a locale", () => {
     assertAccepted(listOrdersInput, {});
-    assertAccepted(listOrdersInput, { cursor: "c", limit: 50, locale: "en" });
+    assertAccepted(listOrdersInput, { cursor: "c", limit: 25, locale: "en" });
     assertAccepted(listOrdersInput, { limit: "20" });
     assertRefusedAt(listOrdersInput, { limit: 0 }, "limit");
-    assertRefusedAt(listOrdersInput, { limit: 51 }, "limit");
+    assertRefusedAt(listOrdersInput, { limit: 26 }, "limit");
+    assert.match(refusalOf(listOrdersInput, { limit: 26 })[0]?.message ?? "", /1 to 25/);
     assertRefusedAt(listOrdersInput, { limit: "" }, "limit");
     assertRefusedAt(listOrdersInput, { cursor: "" }, "cursor");
     assert.equal(

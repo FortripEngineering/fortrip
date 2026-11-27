@@ -1250,7 +1250,7 @@ describe("every string of a result, replaced by a hostile one", () => {
     /^Hotel confirmation number: /,
     /^Contact: /,
     /^Total: /,
-    /^Payment link(?: \(|: none while a payment is being processed; read this order again shortly\.$|: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in(?:; unpaid, it expires .+|, or it expires unpaid)\. Reading it again gives no link\.$)/,
+    /^Payment link(?: \(|: none while a payment is being processed; read this order again shortly\.$)/,
     /^Pay without the link: /,
     /^Cancel: /,
     /^Manage: /,
@@ -1268,7 +1268,7 @@ describe("every string of a result, replaced by a hostile one", () => {
   /*
    * An order has lines of its own that begin as two of the hostile lines do.
    * Such a line must be ours whole, not only at its beginning: every "Cancel:"
-   * line the renderer writes, and its two "Payment link:" lines. The error
+   * line the renderer writes, and its one "Payment link:" line. The error
    * `order_not_cancellable` shows the order's Cancel line too.
    */
   const CANCEL_LOOKALIKES = [
@@ -1279,7 +1279,6 @@ describe("every string of a result, replaced by a hostile one", () => {
   ];
   const ORDER_LOOKALIKES = [
     /^Payment link: none while a payment is being processed; read this order again shortly\.$/,
-    /^Payment link: none for an order started on the Fortrip website: the user finishes paying in the browser tab they started it in(?:; unpaid, it expires .+|, or it expires unpaid)\. Reading it again gives no link\.$/,
     ...CANCEL_LOOKALIKES,
   ];
 

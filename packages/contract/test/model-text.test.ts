@@ -163,7 +163,7 @@ describe("the list of output JSON paths", () => {
     for (const chain of ["payment.url", "cancel.penalty", "cancel.refund", "payment.tokenRequest", "payment.status", "indicativePrice.fromPerRoomNight", "handler.config.business_profile", "error.details", "details.issues"]) {
       assert.ok(REFUSED_CHAINS.has(chain), chain);
     }
-    for (const key of ["fromPerRoomNight", "usageLimits", "nextCursor", "payAtProperty", "expiresAt", "requiresSignIn", "manageUrl", "blockedBy", "retryAfterSeconds", "roomType", "perRoomNight", "currencyHint", "localCharge"]) {
+    for (const key of ["fromPerRoomNight", "usageLimits", "nextCursor", "payAtProperty", "expiresAt", "manageUrl", "blockedBy", "retryAfterSeconds", "roomType", "perRoomNight", "currencyHint", "localCharge"]) {
       assert.ok(REFUSED_KEYS.has(key), key);
     }
     assert.ok(REFUSED_CHAINS.size > 1000 && REFUSED_KEYS.size > 50, `${REFUSED_CHAINS.size} chains, ${REFUSED_KEYS.size} keys`);

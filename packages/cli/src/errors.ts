@@ -34,8 +34,9 @@ export function localRequestId(): string {
   return `local_${randomBytes(10).toString("hex")}`;
 }
 
-/** Said alongside a command's result, or its error, as extra fields
- *  (`warning`, `recoveryFile`) with `--json` and as extra lines otherwise. */
+/** Said alongside a command's result, or its error, as `name: value` lines
+ *  (`warning`, `recoveryFile`): after the result on stdout as text, on stderr
+ *  with `--json`, where stdout and the error's JSON stay the API's own. */
 export const notices: Record<string, unknown> = {};
 
 export function usageError(message: string): CliError {
@@ -91,12 +92,13 @@ function issueLines(details: unknown): string[] | null {
  * message as it came and nothing else of the error: it says what happened
  * and the command that updates the CLI.
  *
- * With `--json`, one line: `{ error, ...facts, ...notices }`, where `error`
+ * With `--json`, first one line: `{ error, ...facts }`, where `error`
  * is Fortrip's error object, or one shaped like it for the CLI's own
  * (`{ code, message, retryable, requestId, retryAfterSeconds?, details? }`,
  * the request id a `local_…` one, and `details` as the contract requires for
  * the code: an `invalid_request` lists its issues, none for an error of the
- * command line itself); the other facts sit beside it.
+ * command line itself); the other facts sit beside it. The notices follow it,
+ * one `name: value` line each, as in text.
  */
 export function formatError(failure: CliError, json: boolean, tool?: ToolName): string {
   const fromApi = failure.envelope?.error;
@@ -112,7 +114,8 @@ export function formatError(failure: CliError, json: boolean, tool?: ToolName): 
       ...(code === "invalid_request" ? { details: { issues: [] } } : {}),
       ...Object.fromEntries(own.filter(([n]) => inError(n) && n !== "retryable")),
     };
-    return JSON.stringify({ error, ...Object.fromEntries(own.filter(([n]) => !inError(n))), ...notices });
+    const line = JSON.stringify({ error, ...Object.fromEntries(own.filter(([n]) => !inError(n))) });
+    return [line, ...fieldLines(notices)].join("\n");
   }
   const lines: string[] = [];
   if (fromApi?.code === "client_outdated" && typeof fromApi.message === "string") {

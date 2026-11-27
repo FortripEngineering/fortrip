@@ -7,14 +7,31 @@ description: What changed for callers of the API, the MCP tools and the CLI, rel
 
 The contract, [`@fortrip/agent-contract`](https://www.npmjs.com/package/@fortrip/agent-contract), and the CLI, [`fortrip`](https://www.npmjs.com/package/fortrip), share one version number.
 
-## 6.5.1
+## 7.0.0
 
-Released 2026-11-26.
+Not released yet.
 
-The schemas, the tools, the commands and the errors keep their shape. The change is to the text that agents read.
+A major release, with no compatibility with earlier versions. What breaks, and what to do:
 
-- An order started on the Fortrip website can await payment with no payment link: `payment.url` is `null` and `cancel.blockedBy` is `website_checkout`. The user finishes paying in the browser tab they started it in, or the order expires unpaid at `payment.expiresAt`. The order's text, the description of `payment.url` and the guide say so, and that reading the order again gives no link; they no longer call it a payment being processed.
-- The text of `payment_method_unavailable` with reason `token_not_offered` sends the reader to the order's Payment link line for how the order is paid, since such an order may have no link.
+- `payment.requiresSignIn` is removed. Give the user `payment.url` as before, to this user only.
+- `cancel.blockedBy` no longer has `website_checkout`. An unpaid order started on the Fortrip website can be closed with `close: true`, like any other unpaid order.
+- `manageUrl` can be `null`, when the account has no page for the order. Handle `null`: leave the link out.
+- `get_hotel_offers` answers at most 50 offers a call (it was 100), and `list_orders` takes a `limit` of at most 25 (it was 50); a `limit` over 25 is refused with `invalid_request`, so read further pages with `cursor`. A larger answer is too long for an assistant to read. See [the offers budget](/errors#offers-budget).
+- `payment_method_unavailable` is sent with HTTP 409 (it was 403). An `offerId` in a request body that names no offer, in `create_order` or `request_price_match`, is `not_found` with HTTP 422 (it was 404); a `not_found` for a path is still 404.
+- `POST /v1/orders/{orderId}/pay` and `POST /v1/orders/{orderId}/cancel` refuse an `orderId` in the body with `invalid_request`: the path names the order.
+- With `--json`, stdout is the API's object alone, and an error is one JSON line on stderr. The CLI's own notices (`warning`, `recoveryFile`) follow on stderr as `name: value` lines; they are no longer fields of either. Read only the first line of stderr as JSON.
+- Once the service runs 7.0.0, it refuses a 6.x CLI with `client_outdated`, and the local MCP bridge (`fortrip mcp`) of a 6.x CLI too; the message gives the command to update it.
+
+### Package
+
+- `LIMITS.offersPerCallMax` is 50 (was 100), and the new `LIMITS.ordersPageSizeMax`, 25, is `list_orders`' limit.
+- `CANCEL_BLOCKERS` has no `website_checkout`.
+- `ERROR_CODES.payment_method_unavailable.status` is `[409]`, and `ERROR_CODES.not_found.status` is `[404, 422]`.
+- The `Order` type has no `payment.requiresSignIn`, and its `manageUrl` is `string | null`. A TypeScript build that reads either must change.
+
+### 7.0.0-rc.0
+
+The first release candidate of 7.0.0. It has the package and CLI changes described above; the service's changes (the two statuses, the refused body `orderId`, closing an order started on the Fortrip website, refusing a 6.x CLI) follow when the service runs 7.0.0.
 
 ## 6.5.0
 
