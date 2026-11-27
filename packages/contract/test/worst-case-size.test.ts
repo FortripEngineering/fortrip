@@ -7,7 +7,7 @@ import { offersPerHotel } from "../src/inputs.ts";
 import { LIMITS } from "../src/limits.ts";
 import { type HotelOffersResult, hotelOffersResult, UNAVAILABLE_REASONS } from "../src/outputs/offer.ts";
 import { orderList } from "../src/outputs/order.ts";
-import type { SearchResult } from "../src/outputs/search.ts";
+import { type SearchResult, searchResult } from "../src/outputs/search.ts";
 import { renderToolResult } from "../src/render/index.ts";
 import { offerLine } from "../src/render/offers.ts";
 import { PRESENTATION_HINT } from "../src/tools.ts";
@@ -143,7 +143,7 @@ describe("the largest page of orders", () => {
     const measured = fixtures.map((f) => ({ ...f, chars: renderToolResult("list_orders", pageOf(f.order, 1)).length }));
     const longest = measured.reduce((a, b) => (b.chars > a.chars ? b : a));
     const page = pageOf(longest.order, LIMITS.ordersPageSizeMax);
-    orderList.parse(page);
+    strictOutput(orderList).parse(page);
     const text = renderToolResult("list_orders", page);
     assert.equal(text.split("\n").filter((line) => /^Order ord_/.test(line)).length, LIMITS.ordersPageSizeMax, text.slice(0, 600));
     assert.ok(text.length < BUDGET_CHARS, `${LIMITS.ordersPageSizeMax} of ${longest.name}: ${text.length} characters`);
@@ -164,6 +164,7 @@ describe("the largest page of search results", () => {
     const pages = fixtures.flatMap(({ name, result }) =>
       result.data.map((hotel) => {
         const page = { ...result, data: Array.from({ length: LIMITS.pageSizeMax }, () => hotel) };
+        strictOutput(searchResult).parse(page);
         return { name, hotelId: hotel.hotelId, text: renderToolResult("search_hotels", page) };
       }),
     );
