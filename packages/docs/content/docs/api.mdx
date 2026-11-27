@@ -7,7 +7,7 @@ description: Fortrip API v1 is the HTTP API behind the MCP tools and the CLI. Ea
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. There is no CORS: call the API from a server or a script, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
+JSON over HTTPS. Reads are `GET` with query parameters; everything else is `POST` with a JSON body. A field the input doesn't define is refused with `invalid_request`; a known field sent at the wrong depth is answered with the path it belongs at. An `orderId` in the body of `POST /v1/orders/{orderId}/pay` or `/cancel` is refused the same way: the path names the order. There is no CORS: call the API from a server or a script, not from a web page. To try it, start with the [API quickstart](/api-quickstart).
 
 ## Authentication [#authentication]
 

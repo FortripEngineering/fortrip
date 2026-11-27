@@ -7,7 +7,7 @@ description: Fortrip API v1 是 MCP 工具和 CLI 背后的 HTTP API。每个端
 
 <pre><code><Fact path="API_BASE_URL" /></code></pre>
 
-基于 HTTPS 的 JSON。读取用 `GET` 加查询参数；其他操作都用 `POST` 加 JSON 请求体。输入中未定义的字段会以 `invalid_request` 拒绝；已知字段放错了层级时，响应会告诉你它应该放在哪个路径。不支持 CORS：请从服务器或脚本调用 API，不要从网页调用。想试一试，从 [API 快速开始](/api-quickstart)入手。
+基于 HTTPS 的 JSON。读取用 `GET` 加查询参数；其他操作都用 `POST` 加 JSON 请求体。输入中未定义的字段会以 `invalid_request` 拒绝；已知字段放错了层级时，响应会告诉你它应该放在哪个路径。`POST /v1/orders/{orderId}/pay` 或 `/cancel` 的请求体里带 `orderId` 也会这样被拒绝：订单由路径指定。不支持 CORS：请从服务器或脚本调用 API，不要从网页调用。想试一试，从 [API 快速开始](/api-quickstart)入手。
 
 ## 认证 [#authentication]
 
