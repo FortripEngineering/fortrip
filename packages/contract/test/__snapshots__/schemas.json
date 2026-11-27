@@ -5343,7 +5343,7 @@
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991,
-                  "description": "Offers left out because the call's hotels share 45 offers in all (60 when limitPerHotel is given): a call for this hotel alone shows this many more."
+                  "description": "Offers left out because the call's hotels share 45 offers in all (50 when limitPerHotel is given): a call for this hotel alone shows this many more."
                 }
               },
               "required": [
@@ -5436,7 +5436,7 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991,
-                      "description": "Offers left out because the call's hotels share 45 offers in all (60 when limitPerHotel is given): a call for this hotel alone shows this many more."
+                      "description": "Offers left out because the call's hotels share 45 offers in all (50 when limitPerHotel is given): a call for this hotel alone shows this many more."
                     }
                   },
                   "required": [

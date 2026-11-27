@@ -661,7 +661,7 @@ describe("hotelOffersInput", () => {
     const json = z.toJSONSchema(hotelOffersInput, { io: "input" }) as Json;
     assert.equal(
       json.properties?.limitPerHotel?.description,
-      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 60 offers in all, otherwise 60 split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.",
+      "Offers per hotel, 1 to 30. Left out: 15 for each hotel that has offers while that is at most 45 offers in all, otherwise 45 split evenly among those hotels (5 hotels: 9 each; 15 hotels: 3 each). Given: that many for each hotel while that is at most 50 offers in all, otherwise 50 split evenly the same way. The answer says, for each hotel, how many more offers a call for that hotel alone would show.",
     );
   });
 
@@ -724,7 +724,7 @@ describe("offersPerHotel", () => {
     assert.equal(LIMITS.offersPerHotelDefault, 15);
     assert.equal(LIMITS.offersPerHotelMax, 30);
     assert.equal(LIMITS.offersPerCallDefault, 45);
-    assert.equal(LIMITS.offersPerCallMax, 60);
+    assert.equal(LIMITS.offersPerCallMax, 50);
     assert.equal(LIMITS.pageSizeMax, 50);
     assert.equal(LIMITS.ordersPageSizeMax, 25);
   });
@@ -741,21 +741,22 @@ describe("offersPerHotel", () => {
     }
   });
 
-  it("with a limit: honoured per hotel while that fits 60 offers, otherwise 60 split evenly", () => {
+  it("with a limit: honoured per hotel while that fits 50 offers, otherwise 50 split evenly", () => {
     for (const [limit, hotels, each] of [
       [30, 1, 30],
-      [30, 2, 30],
-      [30, 3, 20],
-      [30, 4, 15],
-      [30, 5, 12],
-      [30, 15, 4],
-      [20, 3, 20],
-      [20, 5, 12],
-      [20, 15, 4],
-      // What the default would have cut is honoured when asked for.
-      [15, 4, 15],
-      [15, 5, 12],
-      [15, 15, 4],
+      [30, 2, 25],
+      [30, 3, 16],
+      [30, 4, 12],
+      [30, 5, 10],
+      [30, 15, 3],
+      [20, 2, 20],
+      [20, 3, 16],
+      [20, 5, 10],
+      [20, 15, 3],
+      // What the default would have cut is given more when asked for.
+      [15, 4, 12],
+      [15, 5, 10],
+      [15, 15, 3],
       // A small limit is what the caller asked for.
       [1, 1, 1],
       [2, 15, 2],

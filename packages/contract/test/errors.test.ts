@@ -115,7 +115,7 @@ describe("LIMITS and friends", () => {
       offersPerHotelDefault: 15,
       offersPerHotelMax: 30,
       offersPerCallDefault: 45,
-      offersPerCallMax: 60,
+      offersPerCallMax: 50,
       pageSizeDefault: 20,
       pageSizeMax: 50,
       ordersPageSizeMax: 25,

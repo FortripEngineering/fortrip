@@ -15,8 +15,9 @@ export const LIMITS = {
   /** Offers a call answers in all, across its hotels, when the request gives
    *  no `limitPerHotel`. */
   offersPerCallDefault: 45,
-  /** Offers a call answers in all, across its hotels, at most. */
-  offersPerCallMax: 60,
+  /** Offers a call answers in all, across its hotels, at most: an answer of
+   *  the longest offers must stay under the result-size budget. */
+  offersPerCallMax: 50,
   pageSizeDefault: 20,
   /** The most hotels `limit` can ask for in a search page. */
   pageSizeMax: 50,
