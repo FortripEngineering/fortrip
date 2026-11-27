@@ -171,7 +171,7 @@ An offer expires at the time its line gives, about 30 minutes after it was made;
 2. End that reply by asking the user to confirm, and wait for a clear yes. Urgency is not consent.
 3. Then pay one way only: give the payment link exactly as shown (it is not in quotes; don't shorten, rebuild or re-encode it), or pay without the link as below.
 
-- The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets. When its line says the user signs in to Fortrip to pay (an order started on the Fortrip website), they sign in first.
+- The payment link works like a payment credential: anyone holding it can pay. Give it to this user only, never in shared channels, documents, logs or tickets.
 - The link expires at the time its line gives; the order then reads as not paid, and can no longer be paid. To order the stay again, get offers again, and confirm the new order with the user before giving its link.
 - Another order of the stay (another party, or a corrected guest name or contact) needs a new offer: get offers again. When it replaces an unpaid order, tell the user to pay only the new link; the earlier one expires unpaid, or can be closed now with `fortrip orders cancel` and `--close` once the user says they no longer want it.
 - An order awaiting payment whose Payment link line says there is none has a payment being processed: read it again shortly with `fortrip orders get`, and don't give an earlier link.

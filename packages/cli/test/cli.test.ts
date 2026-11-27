@@ -333,13 +333,11 @@ describe("requests", () => {
   it("orders cancel --close on an order that shows no action, or one this version doesn't know, is sent and the service answers", async () => {
     const order = structuredClone((await fixture("order-awaiting-payment")).data) as Record<string, any>;
     for (const [action, blockedBy, why] of [
-      [null, "website_checkout", "it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there"],
       [null, "payment_in_progress", "a payment is under way; read the order again shortly"],
       ["a_later_action", null, null],
     ] as const) {
       requests = [];
       order.cancel = { action, blockedBy, penalty: null, refund: null };
-      order.payment.requiresSignIn = blockedBy === "website_checkout";
       const envelope = {
         error: {
           code: "order_not_cancellable",

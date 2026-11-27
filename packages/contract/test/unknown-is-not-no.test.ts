@@ -72,10 +72,6 @@ const EXEMPT_PATHS: Record<string, readonly string[]> = {
     "errorEnvelope.error.details.changes.current.items.mandatory",
   ],
   worse: ["errorEnvelope.error.details.changes.worse"],
-  requiresSignIn: [
-    "order.payment.requiresSignIn",
-    "orderList.data.payment.requiresSignIn",
-  ],
   localCurrencyAtCheckout: [
     "order.payment.localCurrencyAtCheckout",
     "orderList.data.payment.localCurrencyAtCheckout",
@@ -200,7 +196,6 @@ describe("the exemption list", () => {
       "retryable",
       "mandatory",
       "worse",
-      "requiresSignIn",
       "localCurrencyAtCheckout",
       "available_instruments",
       "bookable",

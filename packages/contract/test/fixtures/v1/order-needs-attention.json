@@ -109,7 +109,6 @@
     "payment": {
       "status": "paid",
       "url": null,
-      "requiresSignIn": false,
       "expiresAt": null,
       "localCurrencyAtCheckout": false,
       "localCharge": null,

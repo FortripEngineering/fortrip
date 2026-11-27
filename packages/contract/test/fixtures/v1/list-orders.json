@@ -71,15 +71,14 @@
         "payment": {
           "status": "unpaid",
           "url": "https://fortrip.ai/stays/book/sb_9f3k2Lx",
-          "requiresSignIn": true,
           "expiresAt": "2026-11-02T10:30:00Z",
           "localCurrencyAtCheckout": false,
           "localCharge": null,
           "tokenRequest": null
         },
         "cancel": {
-          "action": null,
-          "blockedBy": "website_checkout",
+          "action": "close",
+          "blockedBy": null,
           "penalty": null,
           "refund": null
         },
@@ -234,7 +233,6 @@
         "payment": {
           "status": "authorized",
           "url": null,
-          "requiresSignIn": false,
           "expiresAt": null,
           "localCurrencyAtCheckout": true,
           "localCharge": null,
@@ -354,7 +352,6 @@
         "payment": {
           "status": "unpaid",
           "url": "https://fortrip.ai/pay/ord_BundAwaiting00000000?s=Lk9a1B2c3D4",
-          "requiresSignIn": false,
           "expiresAt": "2026-11-01T12:50:00Z",
           "localCurrencyAtCheckout": true,
           "localCharge": null,
@@ -483,7 +480,6 @@
         "payment": {
           "status": "paid",
           "url": null,
-          "requiresSignIn": false,
           "expiresAt": null,
           "localCurrencyAtCheckout": true,
           "localCharge": {

@@ -66,7 +66,7 @@ End that message by asking the user to confirm, and wait for a clear yes; urgenc
 
 Pay one way only. Every order awaiting payment has a payment link, `payment.url`. While the order's `payment.tokenRequest` is set, an agent that can request a Link token can pay with one instead.
 
-- `payment.url` is like a payment credential: anyone holding it can pay, unless `requiresSignIn` is `true`. Give it to this user only, exactly as returned.
+- `payment.url` is like a payment credential: give it to this user only, exactly as returned.
 - An order `awaiting_payment` with `payment.status` `unpaid` whose `payment.url` is `null` has a payment being processed: read the order again shortly, and don't give an earlier link.
 - The link closes at `payment.expiresAt`, when the order is [closed](#close), or once a token payment succeeds. A token payment that fails leaves it open.
 - If the user pays on the link first, a token hold made meanwhile is released.
@@ -140,6 +140,5 @@ The order is `cancelling` while the hotel cancels, and `cancelled` once it has. 
 An unpaid order needs no closing: left alone, it expires at `payment.expiresAt` with nothing charged. To end it sooner, send `close: true` (`fortrip orders cancel <orderId> --close`).
 
 - While a payment of the order is under way, closing answers [`payment_in_progress`](/errors#code-payment_in_progress): read the order again shortly.
-- An order on the Fortrip website's own checkout (`cancel.blockedBy` is `website_checkout`) isn't closed through the API.
 
 For a change, or a cancellation these can't make, the user emails <Fact path="SUPPORT_EMAIL" /> with the order's `reference`.

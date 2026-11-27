@@ -100,7 +100,6 @@
     "payment": {
       "status": "released",
       "url": null,
-      "requiresSignIn": false,
       "expiresAt": null,
       "localCurrencyAtCheckout": false,
       "localCharge": null,

@@ -100,7 +100,6 @@
     "payment": {
       "status": "authorized",
       "url": null,
-      "requiresSignIn": false,
       "expiresAt": null,
       "localCurrencyAtCheckout": false,
       "localCharge": null,

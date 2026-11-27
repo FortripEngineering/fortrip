@@ -1499,7 +1499,8 @@ describe("orders and the consent rule", () => {
     const list = renderToolResult("list_orders", (load("list-orders") as ToolFixture).data);
     assert.equal(list.split('call cancel_order { orderId: "ord_LakeConfirmed0000000", maximumPenalty: { amount:').length - 1, 1);
     assert.equal(list.split('(call cancel_order { orderId: "ord_BundAwaiting00000000", close: true })').length - 1, 1);
-    assert.equal(list.split("call cancel_order {").length - 1, 2);
+    assert.equal(list.split('(call cancel_order { orderId: "ord_OtherStore0000000000", close: true })').length - 1, 1);
+    assert.equal(list.split("call cancel_order {").length - 1, 3);
   });
 
   it("a paid order past its free deadline can still be cancelled: the whole total kept, nothing refunded", () => {
@@ -1630,11 +1631,7 @@ describe("orders and the consent rule", () => {
     assert.equal(renderToolResult("list_orders", list).split(CANCEL_NEXT_STEP).length, 2);
   });
 
-  it("an unpaid order that can't be closed says which: on the website's checkout, or a payment under way", () => {
-    assert.match(
-      render(load("order-website-checkout")),
-      /^Cancel: not available: it was started on the Fortrip website and isn't paid; it expires unpaid unless the user pays there$/m,
-    );
+  it("an unpaid order that can't be closed says which: a payment under way", () => {
     const data = unpaidOrder();
     data.cancel = blocked("payment_in_progress");
     for (const surface of ["mcp", "cli"] as const) {
@@ -1642,6 +1639,37 @@ describe("orders and the consent rule", () => {
       assert.match(text, /^Cancel: not available: a payment is under way; read the order again shortly$/m, surface);
       assert.doesNotMatch(text, /expires unpaid/, surface);
     }
+  });
+
+  it("an order awaiting payment says its payment link and when it expires, and nothing of a sign-in", () => {
+    for (const name of ["order-awaiting-payment", "order-website-checkout"] as const) {
+      const fixture = load(name) as ToolFixture;
+      const data = fixture.data as Record<string, any>;
+      const text = render(fixture);
+      assert.ok(
+        text.split("\n").includes(`Payment link (expires ${data.payment.expiresAt.replace("T", " ").slice(0, 16)} UTC): ${data.payment.url}`),
+        `${name}: ${text}`,
+      );
+      assert.doesNotMatch(text, /sign-in|signs in/i, name);
+    }
+    assert.match(render(load("order-website-checkout")), /^Payment link \(expires 2026-11-02 10:30 UTC\): /m);
+  });
+
+  it("an order whose page is null renders no Manage line, and the same order with a page renders it", () => {
+    const data = unpaidOrder();
+    assert.match(renderToolResult("get_order", data), /^Manage: https:\/\/fortrip\.ai\/orders\/\S+$/m);
+    data.manageUrl = null;
+    const text = renderToolResult("get_order", data);
+    assert.doesNotMatch(text, /^Manage:/m);
+    assert.match(text, /^Payment link \(/m);
+  });
+
+  it("a blocker this build doesn't know, one an older server sent, still renders a not available line", () => {
+    const data = unpaidOrder();
+    data.cancel = blocked("website_checkout");
+    const text = renderToolResult("get_order", data);
+    assert.match(text, /^Cancel: not available: /m);
+    assert.match(text, /^Payment link \(/m);
   });
 
   // One status each for the two ways an unpaid order ends: its time ran out, or the caller closed it.
